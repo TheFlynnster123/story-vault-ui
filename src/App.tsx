@@ -2,8 +2,21 @@ import "./App.css";
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import config from "./Config";
 
+function AuthContent() {
+  const { isAuthenticated, loginWithRedirect } = useAuth0();
+
+  return (
+    <div>
+      {isAuthenticated ? (
+        "Welcome back!"
+      ) : (
+        <button onClick={() => loginWithRedirect()}>Log In</button>
+      )}
+    </div>
+  );
+}
+
 function App() {
-  const { isAuthenticated } = useAuth0();
   return (
     <Auth0Provider
       domain={config.domain}
@@ -12,7 +25,7 @@ function App() {
         redirect_uri: window.location.origin,
       }}
     >
-      <div> {isAuthenticated ? "Welcome back!" : "Please log in"} </div>
+      <AuthContent />
     </Auth0Provider>
   );
 }
