@@ -1,6 +1,6 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { GrokChatAPI } from "../clients/GrokChatAPI";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface UseGrokChatAPIResult {
   grokChatApiClient: GrokChatAPI | null;

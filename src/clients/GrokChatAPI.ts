@@ -24,18 +24,10 @@ export class GrokChatAPI {
       const responseData = await response.json();
 
       return responseData.reply;
-    } catch (fetchError: any) {
-      throw fetchError(fetchError);
+    } catch (error: any) {
+      throw fetchError(error);
     }
   }
-}
-
-function fetchError(fetchError: any): Error {
-  console.error("[GrokChatAPI] Fetch error in postChatMessage:", fetchError);
-
-  return fetchError instanceof Error
-    ? fetchError
-    : new Error(String(fetchError));
 }
 
 function buildPostChatMessageRequest(
@@ -59,4 +51,10 @@ function invalidResponseError(response: Response): Error {
   );
 
   return new Error(`Grok API Error: ${response.status} ${response.statusText}`);
+}
+
+function fetchError(error: any): Error {
+  console.error("[GrokChatAPI] Fetch error in postChatMessage:", error);
+
+  return error instanceof Error ? error : new Error(String(error));
 }

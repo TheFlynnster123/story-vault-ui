@@ -24,13 +24,13 @@ function LoginBarrier() {
   const { isAuthenticated, loginWithRedirect } = useAuth0();
 
   return (
-    <>
+    <div style={{ margin: "0 auto" }}>
       {isAuthenticated ? (
         <AuthenticatedContent />
       ) : (
         <button onClick={() => loginWithRedirect()}>Log in</button>
       )}
-    </>
+    </div>
   );
 }
 
@@ -38,7 +38,7 @@ const AuthenticatedContent: React.FC = () => {
   const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
 
   if (hasValidGrokKey === undefined) {
-    return <div>Loading Grok Key status...</div>;
+    return <div style={{ margin: "0 auto" }}>Loading Grok Key status...</div>;
   }
 
   if (hasValidGrokKey) {
