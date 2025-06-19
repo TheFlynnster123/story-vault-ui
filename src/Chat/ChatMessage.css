@@ -1,20 +1,20 @@
 .message-item {
-  marginbottom: 10px;
+  margin-bottom: 10px;
 }
 
 .message-user {
-  textalign: right;
+  text-align: right;
 }
 
 .message-system {
-  textalign: left;
+  text-align: left;
 }
 
 .message-text {
   padding: 8px 12px;
-  borderradius: 10px;
+  border-radius: 10px;
   display: inline-block;
-  maxwidth: 80%;
+  max-width: 80%;
 }
 
 .message-text.user {

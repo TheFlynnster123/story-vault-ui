@@ -5,6 +5,7 @@ import {
 } from "../hooks/useGrokChatAPI";
 import { ChatInput } from "./ChatInput";
 import { ChatMessage, type Message } from "./ChatMessage";
+import "./Chat.css";
 
 interface UseChatLogicArgs {
   grokChatApiClient: UseGrokChatAPIResult["grokChatApiClient"];
@@ -89,13 +90,7 @@ interface MessageListProps {
   messages: Message[];
 }
 const MessageList: React.FC<MessageListProps> = ({ messages }) => (
-  <div
-    style={{
-      flexGrow: 1,
-      overflowY: "auto",
-      padding: "10px",
-    }}
-  >
+  <div className="message-list">
     {messages.map((msg) => (
       <ChatMessage key={msg.id} message={msg} />
     ))}
@@ -136,21 +131,13 @@ export const Chat: React.FC = () => {
   }
 
   return (
-    <div
-      style={{
-        fontFamily: "sans-serif",
-        width: "100vw",
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        padding: "0",
-        margin: "0",
-        boxSizing: "border-box",
-      }}
-    >
-      {isLoadingClient && <p>Loading chat client...</p>}
+    <div className="chat-container">
+      {isLoadingClient && (
+        <p className="loading-client-message">Loading chat client...</p>
+      )}
+
       {!isLoadingClient && clientError && !chatLogicError && (
-        <p style={{ color: "orange" }}>
+        <p className="client-error-message">
           Could not initialize chat: {clientError.message}
         </p>
       )}
@@ -162,9 +149,7 @@ export const Chat: React.FC = () => {
         isDisabled={isChatCompletelyDisabled}
         placeholder={placeholderText}
       />
-      {overallError && (
-        <p style={{ color: "red", marginTop: "10px" }}>{overallError}</p>
-      )}
+      {overallError && <p className="overall-error-message">{overallError}</p>}
     </div>
   );
 };

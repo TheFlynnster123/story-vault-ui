@@ -1,0 +1,29 @@
+.chat-container {
+  font-family: sans-serif;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.message-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.loading-client-message {
+  /* Add styles if needed, or remove if p tag default is fine */
+}
+
+.client-error-message {
+  color: orange;
+}
+
+.overall-error-message {
+  color: red;
+  margin-top: 10px;
+}
