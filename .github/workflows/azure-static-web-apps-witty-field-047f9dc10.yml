@@ -38,8 +38,8 @@ jobs:
         env:
           VITE_AUTH0_DOMAIN: ${{ secrets.VITE_AUTH0_DOMAIN }}
           VITE_AUTH0_CLIENT_ID: ${{ secrets.VITE_AUTH0_CLIENT_ID }}
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_STORY_VAULT_API_URL: ${{ secrets.VITE_STORY_VAULT_API_URL }}
+          VITE_AUTH0_AUDIENCE: ${{ secrets.VITE_AUTH0_AUDIENCE }}
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WITTY_FIELD_047F9DC10 }}
           action: "upload"
