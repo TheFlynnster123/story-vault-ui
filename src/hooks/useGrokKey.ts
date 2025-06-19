@@ -4,7 +4,7 @@ import { useStoryVaultAPI } from "./useStoryVaultAPI";
 export const useGrokKey = () => {
   const storyVaultAPI = useStoryVaultAPI();
   const [hasValidGrokKey, setHasValidGrokKey] = useState<boolean | undefined>(
-    false
+    undefined // Initialize as undefined to represent loading state
   );
 
   const refreshGrokKeyStatus = async () => {

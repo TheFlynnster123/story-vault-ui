@@ -3,6 +3,7 @@ import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import config from "./Config";
 import { useGrokKey } from "./hooks/useGrokKey";
 import { GrokKeyInput } from "./GrokKeyInput";
+import { Chat } from "./Chat/Chat";
 
 function App() {
   return (
@@ -34,14 +35,21 @@ function LoginBarrier() {
 }
 
 const AuthenticatedContent: React.FC = () => {
-  const { user } = useAuth0();
   const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
 
-  return hasValidGrokKey ? (
-    <h1>Welcome back, {user?.name}!</h1>
-  ) : (
-    <GrokKeyInput onGrokKeyUpdated={refreshGrokKeyStatus} />
-  );
+  if (hasValidGrokKey === undefined) {
+    return <div>Loading Grok Key status...</div>;
+  }
+
+  if (hasValidGrokKey) {
+    return (
+      <>
+        <Chat />
+      </>
+    );
+  }
+
+  return <GrokKeyInput onGrokKeyUpdated={refreshGrokKeyStatus} />;
 };
 
 export default App;

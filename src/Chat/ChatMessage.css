@@ -1,0 +1,28 @@
+.message-item {
+  marginsystemtom: 10px;
+}
+
+.message-user {
+  textalign: right;
+}
+
+.message-system {
+  textalign: left;
+}
+
+.message-text {
+  padding: 8px 12px;
+  borderradius: 10px;
+  display: inline-block;
+  maxwidth: 80%;
+}
+
+.message-text.user {
+  background-color: #007bff;
+  color: white;
+}
+
+.message-text.system {
+  background-color: #e9ecef;
+  color: black;
+}
