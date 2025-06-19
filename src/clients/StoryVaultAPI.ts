@@ -5,12 +5,13 @@ export interface IStoryVaultAPI {
 }
 
 export class StoryVaultAPI implements IStoryVaultAPI {
-  URL: string = Config.storyVaultAPIURL;
+  URL: string = "";
 
   AccessToken: string = "";
 
   constructor(accessToken: string) {
     if (!accessToken) throw new Error("Access token is required");
+    this.URL = Config.storyVaultAPIURL;
     this.AccessToken = accessToken;
   }
 
