@@ -7,8 +7,9 @@ When deployed, we need to make them GitHub Environment Secrets. Here's what we n
 1. Add it to .env.local
 2. Add it to example.env
 3. Add it to Config.ts
-4. Add it to GitHub pipeline
-5. Add it to GitHub Secrets for Dev
-6. Add it to GitHub Secrets for Prod
+4. Add it to GitHub dev pipeline
+5. Add it to GitHub prod pipeline
+6. Add it to GitHub Secrets for Dev
+7. Add it to GitHub Secrets for Prod
 
 Kinda involved but whatever 🤷‍♂️
