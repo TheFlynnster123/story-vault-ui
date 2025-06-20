@@ -68,6 +68,7 @@ export const Chat: React.FC = () => {
     </div>
   );
 };
+
 function toUserMessage(userMessageText: string): Message {
   return {
     id: `user-${Date.now()}`,
