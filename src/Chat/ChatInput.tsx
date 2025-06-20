@@ -6,12 +6,14 @@ export interface ChatInputProps {
   isSending: boolean;
   isDisabled: boolean;
   placeholder: string;
+  toggleMenu: () => any;
 }
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSubmit,
   isSending,
   isDisabled,
   placeholder,
+  toggleMenu,
 }) => {
   const [internalInputValue, setInternalInputValue] = useState<string>("");
 
@@ -24,6 +26,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <form onSubmit={handleFormSubmit} className="chat-input-form">
+      <button
+        className="chat-menu-button"
+        type="button"
+        onClick={() => toggleMenu()}
+      >
+        Menu
+      </button>
       <input
         type="text"
         value={internalInputValue}

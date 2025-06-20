@@ -1,0 +1,29 @@
+.chat-menu-container h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.4em;
+  color: white;
+}
+
+.chat-menu-item,
+.chat-menu-create-item {
+  padding: 10px 15px;
+  margin-bottom: 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  color: black;
+  transition: background-color 0.2s ease-in-out;
+  background-color: #fff;
+  border: 1px solid #ddd;
+}
+
+.chat-menu-item:hover,
+.chat-menu-create-item:hover {
+  background-color: #e9e9e9;
+}
+
+.chat-menu-create-item {
+  font-weight: bold;
+  color: #007bff;
+  text-align: center;
+}

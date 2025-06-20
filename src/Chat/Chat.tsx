@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useGrokChatAPI } from "../hooks/useGrokChatAPI";
 import { ChatInput } from "./ChatInput";
 import { ChatMessage, type Message } from "./ChatMessage";
@@ -53,17 +53,23 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => (
   </div>
 );
 
-export const Chat: React.FC = () => {
+interface ChatProps {
+  chatId: string;
+  toggleMenu: () => any;
+}
+
+export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const { messages, isSendingMessage, submitMessage } = useChatLogic();
 
   return (
-    <div className="chat-container">
+    <div className="chat-container" data-chatid={chatId}>
       <MessageList messages={messages} />
       <ChatInput
         onSubmit={submitMessage}
         isSending={isSendingMessage}
         isDisabled={false}
         placeholder={"Type your message here..."}
+        toggleMenu={toggleMenu}
       />
     </div>
   );
@@ -72,15 +78,15 @@ export const Chat: React.FC = () => {
 function toUserMessage(userMessageText: string): Message {
   return {
     id: `user-${Date.now()}`,
-    sender: "user",
-    text: userMessageText,
+    role: "user",
+    content: userMessageText,
   };
 }
 
 function toSystemMessage(systemReplyText: string): Message {
   return {
     id: `system-${Date.now()}`,
-    sender: "system",
-    text: systemReplyText,
+    role: "system",
+    content: systemReplyText,
   };
 }

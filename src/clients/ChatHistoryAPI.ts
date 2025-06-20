@@ -52,8 +52,14 @@ export class ChatHistoryAPI {
     }
   }
 
-  public async getChats(): Promise<ChatPage> {
-    var response = await fetch(`${this.URL}/api/GetChats`);
+  public async getChats(): Promise<string[]> {
+    var response = await fetch(`${this.URL}/api/GetChats`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+    });
 
     if (response.ok) {
       return response.json();

@@ -4,21 +4,37 @@ import config from "./Config";
 import { useGrokKey } from "./hooks/useGrokKey";
 import { GrokKeyInput } from "./GrokKeyInput";
 import { Chat } from "./Chat/Chat";
+import React, { useState } from "react";
+import ChatMenu from "./Chat/ChatMenu";
 
-function App() {
-  return (
-    <Auth0Provider
-      domain={config.domain}
-      clientId={config.clientId}
-      authorizationParams={{
-        redirect_uri: window.location.origin,
-        audience: config.audience,
-      }}
-    >
-      <LoginBarrier />
-    </Auth0Provider>
-  );
-}
+const AuthenticatedContent: React.FC = ({}) => {
+  const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
+
+  if (hasValidGrokKey === undefined) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          margin: "auto",
+          alignContent: "center",
+          height: "100vh",
+        }}
+      >
+        Loading Grok Key status...
+      </div>
+    );
+  }
+
+  if (hasValidGrokKey) {
+    return (
+      <>
+        <ChatMenu />
+      </>
+    );
+  }
+
+  return <GrokKeyInput onGrokKeyUpdated={refreshGrokKeyStatus} />;
+};
 
 function LoginBarrier() {
   const { isAuthenticated, loginWithRedirect } = useAuth0();
@@ -43,33 +59,21 @@ function LoginBarrier() {
   );
 }
 
-const AuthenticatedContent: React.FC = () => {
-  const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
+interface AppProps {}
 
-  if (hasValidGrokKey === undefined) {
-    return (
-      <div
-        style={{
-          width: "100%",
-          margin: "auto",
-          alignContent: "center",
-          height: "100vh",
-        }}
-      >
-        Loading Grok Key status...
-      </div>
-    );
-  }
-
-  if (hasValidGrokKey) {
-    return (
-      <>
-        <Chat />
-      </>
-    );
-  }
-
-  return <GrokKeyInput onGrokKeyUpdated={refreshGrokKeyStatus} />;
+const App: React.FC<AppProps> = () => {
+  return (
+    <Auth0Provider
+      domain={config.domain}
+      clientId={config.clientId}
+      authorizationParams={{
+        redirect_uri: window.location.origin,
+        audience: config.audience,
+      }}
+    >
+      <LoginBarrier />
+    </Auth0Provider>
+  );
 };
 
 export default App;
