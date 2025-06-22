@@ -32,6 +32,10 @@ export class ChatPageManager {
     }
   }
 
+  public getMessageList(): Message[] {
+    return this.pages.flatMap((page) => page.messages);
+  }
+
   public getPages(): ChatPage[] {
     return this.pages;
   }

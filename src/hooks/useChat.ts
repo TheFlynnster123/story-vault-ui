@@ -5,8 +5,6 @@ import { useChatPages } from "./useChatPages";
 import type { Message } from "../Chat/ChatMessage";
 import { useCallback, useState } from "react";
 
-const MAX_MESSAGES_PER_PAGE = 20;
-
 interface UseChatReturn {
   pages: ChatPage[];
   isSendingMessage: boolean;
@@ -22,10 +20,9 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
   const { grokChatApiClient } = useGrokChatAPI();
   const { getAccessTokenSilently } = useAuth0();
 
-  const { pages, addMessageExchangeToPages, isLoadingHistory } = useChatPages({
+  const { pages, addMessage, isLoadingHistory, getMessageList } = useChatPages({
     chatId,
     getAccessTokenSilently,
-    maxMessagesPerPage: MAX_MESSAGES_PER_PAGE,
   });
 
   const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false);
@@ -36,27 +33,24 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
         console.error("ChatId or Grok API client not available.");
         return;
       }
+
       setIsSendingMessage(true);
+
       try {
-        const userMessage = toUserMessage(userMessageText);
+        await addMessage(toUserMessage(userMessageText));
 
-        const allMessages: Message[] = pages.reduce((acc: Message[], page) => {
-          return acc.concat(page.messages);
-        }, [] as Message[]);
-        allMessages.push(userMessage);
+        const systemReplyText = await grokChatApiClient.postChat(
+          getMessageList()
+        );
 
-        const systemReplyText = await grokChatApiClient.postChat(allMessages);
-
-        const systemMessage = toSystemMessage(systemReplyText);
-
-        await addMessageExchangeToPages(userMessage, systemMessage);
+        await addMessage(toSystemMessage(systemReplyText));
       } catch (error) {
         console.error("Error during message submission or Grok call:", error);
       } finally {
         setIsSendingMessage(false);
       }
     },
-    [chatId, grokChatApiClient, addMessageExchangeToPages]
+    [chatId, grokChatApiClient, addMessage, getMessageList]
   );
 
   return {

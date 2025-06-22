@@ -1,13 +1,12 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { ChatInput } from "./ChatInput";
-import { type Message } from "./ChatMessage";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { useChat } from "../hooks/useChat";
 
 interface ChatProps {
   chatId: string;
-  toggleMenu: () => void; // Changed to void
+  toggleMenu: () => void;
 }
 
 export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
@@ -17,14 +16,11 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!isSendingMessage) {
-      inputRef.current?.focus();
-    }
+    if (!isSendingMessage) inputRef.current?.focus();
   }, [isSendingMessage]);
 
-  if (isLoadingHistory) {
+  if (isLoadingHistory)
     return <div className="chat-container">Loading chat history...</div>;
-  }
 
   return (
     <div className="chat-container" data-chatid={chatId}>

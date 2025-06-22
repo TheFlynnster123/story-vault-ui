@@ -1,29 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
-import React, { useMemo } from "react"; // Added useMemo
+import React from "react"; // Added useMemo
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatPageManager } from "../Managers/ChatPageManager"; // Added import
 
 interface UseChatPagesProps {
   chatId: string;
   getAccessTokenSilently: () => Promise<string>;
-  maxMessagesPerPage: number;
 }
 
 interface UseChatPagesReturn {
   pages: ChatPage[];
   isLoadingHistory: boolean;
-  addMessageExchangeToPages: (
-    userMessage: Message,
-    systemMessage: Message
-  ) => Promise<void>;
+  addMessage: (message: Message) => Promise<void>;
+  getMessageList: () => Message[];
 }
 
 export const useChatPages = ({
   chatId,
   getAccessTokenSilently,
-  maxMessagesPerPage,
 }: UseChatPagesProps): UseChatPagesReturn => {
   const [pages, setPages] = useState<ChatPage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
@@ -105,17 +101,20 @@ export const useChatPages = ({
     loadHistory();
   }, [chatId, getAccessTokenSilently]); // Removed maxMessagesPerPage
 
-  const addMessageExchangeToPages = useCallback(
-    async (userMessage: Message, systemMessage: Message) => {
+  const getMessageList = useCallback(() => {
+    return chatPageManagerRef.current.getMessageList();
+  }, []);
+
+  const addMessage = useCallback(
+    async (message: Message) => {
       if (!chatId || !chatPageManagerRef.current) {
         console.error(
-          "useChatPages: Cannot add messages, chatId or ChatPageManager not available."
+          "useChatPages: Cannot add message, chatId or ChatPageManager not available."
         );
         return;
       }
 
-      chatPageManagerRef.current.addMessage(userMessage);
-      chatPageManagerRef.current.addMessage(systemMessage);
+      chatPageManagerRef.current.addMessage(message);
 
       const updatedPages = chatPageManagerRef.current.getPages();
       setPages([...updatedPages]);
@@ -130,7 +129,8 @@ export const useChatPages = ({
 
   return {
     pages,
-    addMessageExchangeToPages,
+    addMessage,
     isLoadingHistory,
+    getMessageList,
   };
 };

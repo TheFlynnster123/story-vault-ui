@@ -15,7 +15,9 @@ export const ChatInput = forwardRef<HTMLInputElement, ChatInputProps>(
     const handleFormSubmit = (event: FormEvent) => {
       event.preventDefault();
       if (!internalInputValue.trim()) return;
+
       onSubmit(internalInputValue);
+
       setInternalInputValue("");
     };
 

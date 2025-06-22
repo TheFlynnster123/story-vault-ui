@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { ChatMessage } from "./ChatMessage";
+import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 
 interface ChatMessageListProps {
@@ -8,28 +8,41 @@ interface ChatMessageListProps {
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({ pages }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
+  const messages = pages.flatMap((page) => page.messages);
 
-  useEffect(() => {
-    if (messageListRef.current) {
-      const { scrollHeight, clientHeight, scrollTop } = messageListRef.current;
-      // A threshold to decide if we should scroll down.
-      // If the user is within 100px of the bottom, we'll scroll.
-      const atBottom = scrollHeight - clientHeight <= scrollTop + 100;
-      if (atBottom) {
-        messageListRef.current.scrollTop = scrollHeight;
-      }
-    }
-  }, [pages]);
+  useAutoScrolling(pages, messageListRef, messages);
 
   return (
     <div className="message-list" ref={messageListRef}>
-      {pages.map((page) => (
-        <React.Fragment key={page.pageId}>
-          {page.messages.map((msg) => (
-            <ChatMessage key={msg.id} message={msg} />
-          ))}
-        </React.Fragment>
+      {messages.map((msg) => (
+        <ChatMessage key={msg.id} message={msg} />
       ))}
     </div>
   );
 };
+
+function useAutoScrolling(
+  pages: ChatPage[],
+  messageListRef: React.RefObject<HTMLDivElement | null>,
+  messages: Message[]
+) {
+  const isInitialRender = useRef(true);
+
+  useEffect(() => {
+    if (isInitialRender.current && pages.length > 0) {
+      if (messageListRef.current)
+        messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+
+      isInitialRender.current = false;
+    }
+  }, [pages]);
+
+  useEffect(() => {
+    if (!messageListRef.current) return;
+
+    const { scrollHeight, clientHeight, scrollTop } = messageListRef.current;
+    const atBottom = scrollHeight - clientHeight <= scrollTop + 100;
+
+    if (atBottom) messageListRef.current.scrollTop = scrollHeight;
+  }, [messages.length]);
+}

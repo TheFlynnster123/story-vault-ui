@@ -22,7 +22,6 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
   useEffect(() => {
     const initializeClient = async () => {
       if (isLoadingAuth) {
-        // Wait for Auth0 to finish loading
         setIsLoadingClient(true);
         return;
       }
@@ -33,8 +32,6 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
         );
         setGrokChatApiClient(null);
         setIsLoadingClient(false);
-        // Optionally set an error or specific state if unauthenticated is an error for the hook's consumer
-        // setClientError(new Error("User not authenticated."));
         return;
       }
 
@@ -66,12 +63,6 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
     };
 
     initializeClient();
-
-    // Cleanup function or dependency array considerations:
-    // If GrokChatAPI had a cleanup method (e.g., closing a persistent connection),
-    // it could be called here. For the current simple fetch-based API, it's not strictly necessary.
-    // Dependencies: isAuthenticated and getAccessTokenSilently.
-    // getAccessTokenSilently is generally stable from useAuth0.
   }, [isAuthenticated, getAccessTokenSilently, isLoadingAuth]);
 
   return { grokChatApiClient, isLoadingClient, clientError };
