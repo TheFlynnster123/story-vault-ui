@@ -3,8 +3,7 @@ import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import config from "./Config";
 import { useGrokKey } from "./hooks/useGrokKey";
 import { GrokKeyInput } from "./GrokKeyInput";
-import { Chat } from "./Chat/Chat";
-import React, { useState } from "react";
+import React from "react";
 import ChatMenu from "./Chat/ChatMenu";
 
 const AuthenticatedContent: React.FC = ({}) => {

@@ -1,6 +1,8 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { GrokChatAPI } from "../clients/GrokChatAPI";
 import { useEffect, useState } from "react";
+import { useEncryption } from "./useEncryption";
+import type { EncryptionManager } from "../Managers/EncryptionManager";
 
 export interface UseGrokChatAPIResult {
   grokChatApiClient: GrokChatAPI | null;
@@ -18,6 +20,7 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
     useState<GrokChatAPI | null>(null);
   const [isLoadingClient, setIsLoadingClient] = useState<boolean>(true);
   const [clientError, setClientError] = useState<Error | null>(null);
+  const { encryptionManager } = useEncryption();
 
   useEffect(() => {
     const initializeClient = async () => {
@@ -46,7 +49,9 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
           setClientError(new Error("Failed to retrieve access token."));
           setGrokChatApiClient(null);
         } else {
-          setGrokChatApiClient(new GrokChatAPI(token));
+          setGrokChatApiClient(
+            new GrokChatAPI(encryptionManager as EncryptionManager, token)
+          );
         }
       } catch (error: any) {
         console.error(
@@ -62,8 +67,13 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
       }
     };
 
-    initializeClient();
-  }, [isAuthenticated, getAccessTokenSilently, isLoadingAuth]);
+    if (encryptionManager) initializeClient();
+  }, [
+    isAuthenticated,
+    getAccessTokenSilently,
+    isLoadingAuth,
+    encryptionManager,
+  ]);
 
   return { grokChatApiClient, isLoadingClient, clientError };
 }

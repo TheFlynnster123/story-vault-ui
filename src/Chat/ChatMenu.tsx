@@ -1,21 +1,27 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { v4 as uuidv4 } from "uuid";
 import { Chat } from "./Chat";
-import "./ChatMenu.css"; // Import the CSS file
+import "./ChatMenu.css";
+import { useEncryption } from "../hooks/useEncryption";
+import type { EncryptionManager } from "../Managers/EncryptionManager";
 
 function ChatMenu() {
-  const { getAccessTokenSilently } = useAuth0(); // Get access token function
+  const { getAccessTokenSilently } = useAuth0();
   const [chatIds, setChatIds] = useState<string[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [showMenu, setShowMenu] = useState<boolean>(true); // Default showMenu to true
+  const [showMenu, setShowMenu] = useState<boolean>(true);
+  const { encryptionManager } = useEncryption();
 
   useEffect(() => {
     const fetchChats = async () => {
       try {
         const accessToken = await getAccessTokenSilently();
-        const chatHistoryAPI = new ChatHistoryAPI(accessToken);
+        const chatHistoryAPI = new ChatHistoryAPI(
+          encryptionManager as EncryptionManager,
+          accessToken
+        );
         const fetchedChatIds = await chatHistoryAPI.getChats();
         setChatIds(fetchedChatIds);
       } catch (error) {
@@ -23,8 +29,8 @@ function ChatMenu() {
       }
     };
 
-    fetchChats();
-  }, [getAccessTokenSilently]); // Add getAccessTokenSilently to dependency array
+    if (encryptionManager) fetchChats();
+  }, [getAccessTokenSilently, encryptionManager]);
 
   const handleSelectChat = (id: string) => {
     setSelectedChatId(id);

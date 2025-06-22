@@ -1,4 +1,3 @@
-import { useAuth0 } from "@auth0/auth0-react";
 import type { ChatPage } from "../models/ChatPage";
 import { useGrokChatAPI } from "./useGrokChatAPI";
 import { useChatPages } from "./useChatPages";
@@ -18,11 +17,9 @@ interface UseChatProps {
 
 export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
   const { grokChatApiClient } = useGrokChatAPI();
-  const { getAccessTokenSilently } = useAuth0();
 
   const { pages, addMessage, isLoadingHistory, getMessageList } = useChatPages({
     chatId,
-    getAccessTokenSilently,
   });
 
   const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false);

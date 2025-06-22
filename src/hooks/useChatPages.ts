@@ -3,13 +3,13 @@ import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatPageManager } from "../Managers/ChatPageManager";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useEncryption } from "./useEncryption";
+import type { EncryptionManager } from "../Managers/EncryptionManager";
 
-export const useChatPages = ({
-  chatId,
-  getAccessTokenSilently,
-}: UseChatPagesProps) => {
+export const useChatPages = ({ chatId }: UseChatPagesProps) => {
   const { chatPageManager, pages, setPages, isLoadingHistory, chatHistoryApi } =
-    useChatPageManager({ chatId, getAccessTokenSilently });
+    useChatPageManager({ chatId });
 
   const savePageToApi = useCallback(
     async (pageToSave: ChatPage) => {
@@ -53,13 +53,9 @@ export const useChatPages = ({
   };
 };
 
-interface UseChatHistoryApiProps {
-  getAccessTokenSilently: () => Promise<string>;
-}
-
-const useChatHistoryApi = ({
-  getAccessTokenSilently,
-}: UseChatHistoryApiProps) => {
+const useChatHistoryApi = () => {
+  const { getAccessTokenSilently } = useAuth0();
+  const { encryptionManager } = useEncryption();
   const [chatHistoryApi, setChatHistoryApi] = useState<ChatHistoryAPI | null>(
     null
   );
@@ -68,29 +64,30 @@ const useChatHistoryApi = ({
     const initializeApi = async () => {
       try {
         const accessToken = await getAccessTokenSilently();
-        setChatHistoryApi(new ChatHistoryAPI(accessToken));
+        setChatHistoryApi(
+          new ChatHistoryAPI(
+            encryptionManager as EncryptionManager,
+            accessToken
+          )
+        );
       } catch (error) {
         console.error("Failed to initialize ChatHistoryAPI:", error);
         setChatHistoryApi(null);
       }
     };
 
-    initializeApi();
-  }, [getAccessTokenSilently]);
+    if (encryptionManager) initializeApi();
+  }, [getAccessTokenSilently, encryptionManager]);
 
   return chatHistoryApi;
 };
 
 interface UseChatPageManagerProps {
   chatId: string | null;
-  getAccessTokenSilently: () => Promise<string>;
 }
 
-const useChatPageManager = ({
-  chatId,
-  getAccessTokenSilently,
-}: UseChatPageManagerProps) => {
-  const chatHistoryApi = useChatHistoryApi({ getAccessTokenSilently });
+const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
+  const chatHistoryApi = useChatHistoryApi();
   const [chatPageManager, setChatPageManager] =
     useState<ChatPageManager | null>(null);
   const [pages, setPages] = useState<ChatPage[]>([]);
@@ -127,5 +124,4 @@ const useChatPageManager = ({
 
 interface UseChatPagesProps {
   chatId: string;
-  getAccessTokenSilently: () => Promise<string>;
 }
