@@ -1,7 +1,7 @@
 export interface Message {
   id: string;
-  sender: "user" | "system";
-  text: string;
+  role: "user" | "system";
+  content: string;
 }
 
 import "./ChatMessage.css";
@@ -12,13 +12,13 @@ export interface MessageItemProps {
 
 export const ChatMessage: React.FC<MessageItemProps> = ({ message }) => {
   const messageClass =
-    message.sender === "user" ? "message-user" : "message-system";
+    message.role === "user" ? "message-user" : "message-system";
 
-  const messageTextStyle = `message-text ${message.sender}`;
+  const messageTextStyle = `message-text ${message.role}`;
 
   return (
     <div className={`message-item ${messageClass}`}>
-      <span className={messageTextStyle}>{message.text}</span>
+      <span className={messageTextStyle}>{message.content}</span>
     </div>
   );
 };

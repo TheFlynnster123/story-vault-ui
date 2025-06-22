@@ -1,6 +1,8 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { GrokChatAPI } from "../clients/GrokChatAPI";
 import { useEffect, useState } from "react";
+import { useEncryption } from "./useEncryption";
+import type { EncryptionManager } from "../Managers/EncryptionManager";
 
 export interface UseGrokChatAPIResult {
   grokChatApiClient: GrokChatAPI | null;
@@ -18,11 +20,11 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
     useState<GrokChatAPI | null>(null);
   const [isLoadingClient, setIsLoadingClient] = useState<boolean>(true);
   const [clientError, setClientError] = useState<Error | null>(null);
+  const { encryptionManager } = useEncryption();
 
   useEffect(() => {
     const initializeClient = async () => {
       if (isLoadingAuth) {
-        // Wait for Auth0 to finish loading
         setIsLoadingClient(true);
         return;
       }
@@ -33,8 +35,6 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
         );
         setGrokChatApiClient(null);
         setIsLoadingClient(false);
-        // Optionally set an error or specific state if unauthenticated is an error for the hook's consumer
-        // setClientError(new Error("User not authenticated."));
         return;
       }
 
@@ -49,7 +49,9 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
           setClientError(new Error("Failed to retrieve access token."));
           setGrokChatApiClient(null);
         } else {
-          setGrokChatApiClient(new GrokChatAPI(token));
+          setGrokChatApiClient(
+            new GrokChatAPI(encryptionManager as EncryptionManager, token)
+          );
         }
       } catch (error: any) {
         console.error(
@@ -65,14 +67,13 @@ export function useGrokChatAPI(): UseGrokChatAPIResult {
       }
     };
 
-    initializeClient();
-
-    // Cleanup function or dependency array considerations:
-    // If GrokChatAPI had a cleanup method (e.g., closing a persistent connection),
-    // it could be called here. For the current simple fetch-based API, it's not strictly necessary.
-    // Dependencies: isAuthenticated and getAccessTokenSilently.
-    // getAccessTokenSilently is generally stable from useAuth0.
-  }, [isAuthenticated, getAccessTokenSilently, isLoadingAuth]);
+    if (encryptionManager) initializeClient();
+  }, [
+    isAuthenticated,
+    getAccessTokenSilently,
+    isLoadingAuth,
+    encryptionManager,
+  ]);
 
   return { grokChatApiClient, isLoadingClient, clientError };
 }
