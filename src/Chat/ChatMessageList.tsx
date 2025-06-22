@@ -10,7 +10,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({ pages }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
 
-  useAutoScrolling(pages, messageListRef, messages);
+  useAutoScrolling(messageListRef, messages);
 
   return (
     <div className="message-list" ref={messageListRef}>
@@ -22,27 +22,32 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({ pages }) => {
 };
 
 function useAutoScrolling(
-  pages: ChatPage[],
   messageListRef: React.RefObject<HTMLDivElement | null>,
   messages: Message[]
 ) {
-  const isInitialRender = useRef(true);
+  const isAtBottomRef = useRef(true);
 
   useEffect(() => {
-    if (isInitialRender.current && pages.length > 0) {
-      if (messageListRef.current)
-        messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    const handleScroll = () => {
+      if (messageListRef.current) {
+        const { scrollHeight, clientHeight, scrollTop } =
+          messageListRef.current;
+        const atBottom = scrollHeight - clientHeight <= scrollTop + 1;
+        isAtBottomRef.current = atBottom;
+      }
+    };
 
-      isInitialRender.current = false;
+    const currentMessageList = messageListRef.current;
+    currentMessageList?.addEventListener("scroll", handleScroll);
+
+    return () => {
+      currentMessageList?.removeEventListener("scroll", handleScroll);
+    };
+  }, [messageListRef]);
+
+  useEffect(() => {
+    if (messageListRef.current && isAtBottomRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
-  }, [pages]);
-
-  useEffect(() => {
-    if (!messageListRef.current) return;
-
-    const { scrollHeight, clientHeight, scrollTop } = messageListRef.current;
-    const atBottom = scrollHeight - clientHeight <= scrollTop + 100;
-
-    if (atBottom) messageListRef.current.scrollTop = scrollHeight;
-  }, [messages.length]);
+  }, [messages, messageListRef]);
 }
