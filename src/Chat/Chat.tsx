@@ -1,70 +1,36 @@
-import React, { useState, useCallback } from "react";
-import { useGrokChatAPI } from "../hooks/useGrokChatAPI";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { ChatInput } from "./ChatInput";
-import { ChatMessage, type Message } from "./ChatMessage";
+import { type Message } from "./ChatMessage";
 import "./Chat.css";
-
-interface UseChatLogicReturn {
-  messages: Message[];
-  isSendingMessage: boolean;
-  submitMessage: (messageText: string) => Promise<void>;
-}
-
-const useChatLogic = (): UseChatLogicReturn => {
-  const { grokChatApiClient } = useGrokChatAPI();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false);
-
-  const submitMessage = useCallback(
-    async (userMessageText: string) => {
-      const userMessage: Message = toUserMessage(userMessageText);
-
-      setMessages((prevMessages) => [...prevMessages, userMessage]);
-      setIsSendingMessage(true);
-
-      if (grokChatApiClient === null) return;
-
-      const systemReplyText = await grokChatApiClient.postChatMessage(
-        userMessageText
-      );
-
-      const systemMessage = toSystemMessage(systemReplyText);
-      setMessages((prevMessages) => [...prevMessages, systemMessage]);
-      setIsSendingMessage(false);
-    },
-    [isSendingMessage, grokChatApiClient, setMessages, setIsSendingMessage]
-  );
-
-  return {
-    messages,
-    isSendingMessage,
-    submitMessage,
-  };
-};
-
-interface MessageListProps {
-  messages: Message[];
-}
-const MessageList: React.FC<MessageListProps> = ({ messages }) => (
-  <div className="message-list">
-    {messages.map((msg) => (
-      <ChatMessage key={msg.id} message={msg} />
-    ))}
-  </div>
-);
+import { ChatMessageList } from "./ChatMessageList";
+import { useChat } from "../hooks/useChat";
 
 interface ChatProps {
   chatId: string;
-  toggleMenu: () => any;
+  toggleMenu: () => void; // Changed to void
 }
 
 export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
-  const { messages, isSendingMessage, submitMessage } = useChatLogic();
+  const { pages, isSendingMessage, submitMessage, isLoadingHistory } = useChat({
+    chatId,
+  });
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isSendingMessage) {
+      inputRef.current?.focus();
+    }
+  }, [isSendingMessage]);
+
+  if (isLoadingHistory) {
+    return <div className="chat-container">Loading chat history...</div>;
+  }
 
   return (
     <div className="chat-container" data-chatid={chatId}>
-      <MessageList messages={messages} />
+      <ChatMessageList pages={pages} />
       <ChatInput
+        ref={inputRef}
         onSubmit={submitMessage}
         isSending={isSendingMessage}
         isDisabled={false}
@@ -74,19 +40,3 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     </div>
   );
 };
-
-function toUserMessage(userMessageText: string): Message {
-  return {
-    id: `user-${Date.now()}`,
-    role: "user",
-    content: userMessageText,
-  };
-}
-
-function toSystemMessage(systemReplyText: string): Message {
-  return {
-    id: `system-${Date.now()}`,
-    role: "system",
-    content: systemReplyText,
-  };
-}

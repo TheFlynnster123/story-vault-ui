@@ -1,3 +1,4 @@
+import type { Message } from "../Chat/ChatMessage";
 import Config from "../Config";
 
 export class GrokChatAPI {
@@ -10,12 +11,12 @@ export class GrokChatAPI {
     this.accessToken = accessToken;
   }
 
-  public async postChatMessage(message: string): Promise<string> {
+  public async postChat(message: Message[]): Promise<string> {
     try {
-      const request = buildPostChatMessageRequest(this.accessToken, message);
+      const request = buildPostChatRequest(this.accessToken, message);
 
       const response = await fetch(
-        `${Config.storyVaultAPIURL}/api/PostChatMessage`,
+        `${Config.storyVaultAPIURL}/api/PostChat`,
         request
       );
 
@@ -30,9 +31,9 @@ export class GrokChatAPI {
   }
 }
 
-function buildPostChatMessageRequest(
+function buildPostChatRequest(
   accessToken: string,
-  message: string
+  messages: Message[]
 ): RequestInit | undefined {
   return {
     method: "POST",
@@ -40,9 +41,10 @@ function buildPostChatMessageRequest(
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify(messages),
   };
 }
+
 function invalidResponseError(response: Response): Error {
   console.error(
     "[GrokChatAPI] Response not OK:",
