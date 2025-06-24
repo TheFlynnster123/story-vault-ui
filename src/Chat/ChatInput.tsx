@@ -1,4 +1,5 @@
 import { useState, type FormEvent, forwardRef } from "react";
+import { IoSend } from "react-icons/io5";
 import "./ChatInput.css";
 
 export interface ChatInputProps {
@@ -6,10 +7,9 @@ export interface ChatInputProps {
   isSending: boolean;
   isDisabled: boolean;
   placeholder: string;
-  toggleMenu: () => any;
 }
-export const ChatInput = forwardRef<HTMLInputElement, ChatInputProps>(
-  ({ onSubmit, isSending, isDisabled, placeholder, toggleMenu }, ref) => {
+export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
+  ({ onSubmit, isSending, isDisabled, placeholder }, ref) => {
     const [internalInputValue, setInternalInputValue] = useState<string>("");
 
     const handleFormSubmit = (event: FormEvent) => {
@@ -23,28 +23,22 @@ export const ChatInput = forwardRef<HTMLInputElement, ChatInputProps>(
 
     return (
       <form onSubmit={handleFormSubmit} className="chat-input-form">
-        <button
-          className="chat-menu-button"
-          type="button"
-          onClick={() => toggleMenu()}
-        >
-          Menu
-        </button>
-        <input
+        <textarea
           ref={ref}
-          type="text"
           value={internalInputValue}
           onChange={(e) => setInternalInputValue(e.target.value)}
           placeholder={placeholder}
           disabled={isDisabled || isSending}
           className="chat-input-field"
+          rows={3}
         />
         <button
           type="submit"
           disabled={isDisabled || isSending}
           className="chat-input-button"
+          aria-label={isSending ? "Sending..." : "Send"}
         >
-          {isSending ? "Sending..." : "Send"}
+          <IoSend size={20} className={isSending ? "sending" : ""} />
         </button>
       </form>
     );

@@ -2,7 +2,7 @@ import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 
 export class ChatPageManager {
-  MAX_MESSAGES_PER_PAGE = 3;
+  MAX_MESSAGES_PER_PAGE = 10;
 
   pages: ChatPage[];
   private maxMessagesPerPage: number;

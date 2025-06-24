@@ -1,23 +1,37 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
+import { IoArrowBack } from "react-icons/io5";
 
 interface ChatMessageListProps {
   pages: ChatPage[];
+  toggleMenu: () => void;
 }
 
-export const ChatMessageList: React.FC<ChatMessageListProps> = ({ pages }) => {
+export const ChatMessageList: React.FC<ChatMessageListProps> = ({
+  pages,
+  toggleMenu,
+}) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
 
   useAutoScrolling(messageListRef, messages);
 
   return (
-    <div className="message-list" ref={messageListRef}>
-      {messages.map((msg) => (
-        <ChatMessage key={msg.id} message={msg} />
-      ))}
-    </div>
+    <>
+      <button
+        className="message-list-menu-button"
+        onClick={toggleMenu}
+        aria-label="Back to menu"
+      >
+        <IoArrowBack size={20} />
+      </button>
+      <div className="message-list" ref={messageListRef}>
+        {messages.map((msg) => (
+          <ChatMessage key={msg.id} message={msg} />
+        ))}
+      </div>
+    </>
   );
 };
 
@@ -42,6 +56,34 @@ function useAutoScrolling(
 
     return () => {
       currentMessageList?.removeEventListener("scroll", handleScroll);
+    };
+  }, [messageListRef]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (isAtBottomRef.current && messageListRef.current) {
+        setTimeout(() => {
+          if (messageListRef.current) {
+            messageListRef.current.scrollTop =
+              messageListRef.current.scrollHeight;
+          }
+        }, 100);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isAtBottomRef.current && messageListRef.current) {
+        messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [messageListRef]);
 

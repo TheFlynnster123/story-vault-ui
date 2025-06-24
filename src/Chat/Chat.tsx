@@ -13,7 +13,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const { pages, isSendingMessage, submitMessage, isLoadingHistory } = useChat({
     chatId,
   });
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!isSendingMessage) inputRef.current?.focus();
@@ -24,14 +24,13 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
 
   return (
     <div className="chat-container" data-chatid={chatId}>
-      <ChatMessageList pages={pages} />
+      <ChatMessageList pages={pages} toggleMenu={toggleMenu} />
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
         isSending={isSendingMessage}
         isDisabled={false}
         placeholder={"Type your message here..."}
-        toggleMenu={toggleMenu}
       />
     </div>
   );

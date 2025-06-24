@@ -14,7 +14,8 @@
   padding: 8px 12px;
   border-radius: 10px;
   display: inline-block;
-  max-width: 80%;
+  max-width: 85%;
+  white-space: pre-wrap;
 }
 
 .message-text.user {
