@@ -39,8 +39,8 @@
   padding: 8px;
   border-radius: 50%;
   border: none;
-  background-color: #007bff;
-  color: white;
+  background-color: #0d6efd; /* Brighter blue */
+  color: #ffffff; /* Pure white */
   cursor: pointer;
   width: 36px;
   height: 36px;
@@ -48,30 +48,32 @@
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Add subtle shadow for depth */
 }
 
 .chat-input-button:hover {
-  background-color: #0069d9;
+  background-color: #0b5ed7; /* Slightly darker on hover */
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25); /* Enhanced shadow on hover */
 }
 
-.chat-input-button .sending {
-  opacity: 0.7;
-  animation: pulse 1.5s infinite;
+.chat-input-button svg {
+  filter: brightness(1.2); /* Make icons brighter */
 }
 
-@keyframes pulse {
+.chat-input-button .spinning {
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
   0% {
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 0.4;
+    transform: rotate(0deg);
   }
   100% {
-    opacity: 0.7;
+    transform: rotate(360deg);
   }
 }
 
 .chat-input-button:disabled {
   cursor: not-allowed;
-  opacity: 0.7; /* Example disabled style */
+  opacity: 0.7;
 }

@@ -28,7 +28,6 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         ref={inputRef}
         onSubmit={submitMessage}
         isSending={isSendingMessage}
-        isDisabled={false}
         placeholder={"Type your message here..."}
       />
     </div>
