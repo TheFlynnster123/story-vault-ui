@@ -73,9 +73,6 @@ function ChatMenu() {
     );
   }
 
-  // If a chat is selected and showMenu is false, render the Chat component
-  // The user's version passes toggleMenu to Chat. I'll keep that.
-  // Adding a button here to show the menu again.
   return <Chat chatId={selectedChatId} toggleMenu={toggleMenu} />;
 }
 

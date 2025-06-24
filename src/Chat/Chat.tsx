@@ -13,26 +13,31 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const { pages, isSendingMessage, submitMessage, isLoadingHistory } = useChat({
     chatId,
   });
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!isSendingMessage) inputRef.current?.focus();
   }, [isSendingMessage]);
 
-  if (isLoadingHistory)
-    return <div className="chat-container">Loading chat history...</div>;
+  if (isLoadingHistory) return <LoadingSpinner />;
 
   return (
     <div className="chat-container" data-chatid={chatId}>
-      <ChatMessageList pages={pages} />
+      <ChatMessageList pages={pages} toggleMenu={toggleMenu} />
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
         isSending={isSendingMessage}
-        isDisabled={false}
         placeholder={"Type your message here..."}
-        toggleMenu={toggleMenu}
       />
     </div>
   );
 };
+
+const LoadingSpinner = () => (
+  <div className="chat-container">
+    <div className="loading-spinner-container">
+      <div className="loading-spinner"></div>
+    </div>
+  </div>
+);
