@@ -39,3 +39,34 @@
   background-color: #e9ecef;
   color: black;
 }
+
+/* Styling for quoted text */
+.quoted-text {
+  font-style: italic;
+  color: inherit;
+  display: inline-block;
+}
+
+/* System messages have dark text, so use a darker border */
+.message-text.system .quoted-text {
+  border-left-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Styling for emphasized text */
+.emphasized-text {
+  font-weight: bold;
+  color: inherit;
+}
+
+/* Add a subtle background to emphasized text */
+.message-text.user .emphasized-text {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.message-text.system .emphasized-text {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  padding: 0 3px;
+}
