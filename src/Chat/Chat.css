@@ -102,3 +102,44 @@
     transform: rotate(360deg);
   }
 }
+
+/* Story Note Styles */
+.story-note-container {
+  margin-top: 16px;
+  padding-top: 8px;
+}
+
+.story-note-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.story-note-toggle-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  background-color: #8b5cf6;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.story-note-toggle-icon:hover {
+  background-color: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+  transform: scale(1.1);
+}
+
+.story-note-content {
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #ffffff;
+  white-space: pre-wrap;
+  background-color: #8b5cf6;
+}

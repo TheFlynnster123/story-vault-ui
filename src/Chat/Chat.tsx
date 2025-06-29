@@ -10,8 +10,15 @@ interface ChatProps {
 }
 
 export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
-  const { pages, isSendingMessage, submitMessage, isLoadingHistory } = useChat({
+  const {
+    pages,
+    isSendingMessage,
+    submitMessage,
+    isLoadingHistory,
+    storyNote,
+  } = useChat({
     chatId,
+    useStoryNotes: true,
   });
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -23,7 +30,11 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
 
   return (
     <div className="chat-container" data-chatid={chatId}>
-      <ChatMessageList pages={pages} toggleMenu={toggleMenu} />
+      <ChatMessageList
+        pages={pages}
+        toggleMenu={toggleMenu}
+        storyNote={storyNote}
+      />
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
