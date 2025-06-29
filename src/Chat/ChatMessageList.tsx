@@ -1,12 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
-import {
-  IoArrowBack,
-  IoChevronDown,
-  IoChevronUp,
-  IoBookmark,
-} from "react-icons/io5";
+import { IoArrowBack, IoBookmark } from "react-icons/io5";
 
 interface ChatMessageListProps {
   pages: ChatPage[];
