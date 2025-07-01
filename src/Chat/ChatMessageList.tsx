@@ -1,22 +1,23 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
-import { IoArrowBack, IoBookmark } from "react-icons/io5";
+import { IoArrowBack } from "react-icons/io5";
+import { ChatFlowCollapsible } from "./ChatFlowCollapsible";
+import type { ChatFlowStep } from "../hooks/useChatFlow";
 
 interface ChatMessageListProps {
   pages: ChatPage[];
   toggleMenu: () => void;
-  storyNote: string;
+  chatFlowHistory?: ChatFlowStep[];
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   pages,
   toggleMenu,
-  storyNote,
+  chatFlowHistory = [],
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
-  const [isStoryNoteExpanded, setIsStoryNoteExpanded] = useState(false);
 
   useAutoScrolling(messageListRef, messages);
 
@@ -33,24 +34,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
         {messages.map((msg) => (
           <ChatMessage key={msg.id} message={msg} />
         ))}
-        {storyNote && (
-          <div className="story-note-container">
-            <div className="story-note-header">
-              <button
-                className="story-note-toggle-icon"
-                onClick={() => setIsStoryNoteExpanded(!isStoryNoteExpanded)}
-                aria-label={
-                  isStoryNoteExpanded ? "Hide story note" : "View story note"
-                }
-              >
-                <IoBookmark size={18} />
-              </button>
-            </div>
-            {isStoryNoteExpanded && (
-              <div className="story-note-content">{storyNote}</div>
-            )}
-          </div>
-        )}
+        <ChatFlowCollapsible chatFlowHistory={chatFlowHistory} />
       </div>
     </>
   );

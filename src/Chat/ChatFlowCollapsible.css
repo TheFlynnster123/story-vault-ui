@@ -1,0 +1,56 @@
+.chat-flow-collapsible {
+  margin: 16px 10px;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.chat-flow-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  transition: background-color 0.2s ease;
+}
+
+.chat-flow-toggle:hover {
+  background-color: #f3f4f6;
+}
+
+.chat-flow-history {
+  padding: 16px;
+  background-color: #fff;
+}
+
+.chat-flow-step {
+  margin-bottom: 16px;
+  padding-left: 16px;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.chat-flow-step:last-child {
+  margin-bottom: 0;
+}
+
+.chat-flow-step-header {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.chat-flow-step-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
