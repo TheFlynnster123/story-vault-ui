@@ -15,10 +15,10 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     isSendingMessage,
     submitMessage,
     isLoadingHistory,
-    storyNote,
+    progressStatus,
+    chatFlowHistory,
   } = useChat({
     chatId,
-    useStoryNotes: true,
   });
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -33,8 +33,11 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       <ChatMessageList
         pages={pages}
         toggleMenu={toggleMenu}
-        storyNote={storyNote}
+        chatFlowHistory={chatFlowHistory}
       />
+      {progressStatus && (
+        <div className="progress-status">{progressStatus}</div>
+      )}
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
