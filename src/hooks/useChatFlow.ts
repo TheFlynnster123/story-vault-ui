@@ -142,11 +142,3 @@ function toSystemMessage(systemReplyText: string): Message {
     content: systemReplyText,
   };
 }
-
-function toAssistantMessage(systemReplyText: string): Message {
-  return {
-    id: `assistant-${Date.now()}`,
-    role: "assistant",
-    content: systemReplyText,
-  };
-}
