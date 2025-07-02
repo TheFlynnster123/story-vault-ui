@@ -17,12 +17,16 @@ export class GrokChatAPI {
     this.accessToken = accessToken;
   }
 
-  public async postChat(message: Message[]): Promise<string> {
+  public async postChat(
+    message: Message[],
+    reasoning?: "high" | "low"
+  ): Promise<string> {
     try {
       const request = buildPostChatRequest(
         this.encryptionManger.grokEncryptionKey as string,
         this.accessToken,
-        message
+        message,
+        reasoning
       );
 
       const response = await fetch(
@@ -44,15 +48,22 @@ export class GrokChatAPI {
 function buildPostChatRequest(
   encryptionKey: string,
   accessToken: string,
-  messages: Message[]
+  messages: Message[],
+  reasoning?: "high" | "low"
 ): RequestInit | undefined {
+  const headers: Record<string, string> = {
+    EncryptionKey: encryptionKey,
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  };
+
+  if (reasoning) {
+    headers.Reasoning = reasoning;
+  }
+
   return {
     method: "POST",
-    headers: {
-      EncryptionKey: encryptionKey,
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers,
     body: JSON.stringify(messages),
   };
 }

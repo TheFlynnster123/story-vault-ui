@@ -8,6 +8,8 @@ interface UseChatReturn {
   isLoadingHistory: boolean;
   progressStatus?: string;
   chatFlowHistory?: import("./useChatFlow").ChatFlowStep[];
+  storySummary?: string;
+  userPreferences?: string;
 }
 
 interface UseChatProps {
@@ -23,6 +25,8 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
+    storySummary,
+    userPreferences,
   } = useChatFlow({ chatId });
 
   return {
@@ -32,5 +36,7 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
+    storySummary,
+    userPreferences,
   };
 };
