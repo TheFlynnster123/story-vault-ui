@@ -1,4 +1,5 @@
 import config from "../Config";
+import type { EncryptionManager } from "../Managers/EncryptionManager";
 
 interface SaveNoteRequest {
   chatId: string;
@@ -23,9 +24,11 @@ interface GetNoteResponse {
 export class NoteAPI {
   public accessToken: string;
   public URL: string;
+  public encryptionManager: EncryptionManager;
 
-  constructor(accessToken: string) {
+  constructor(encryptionManager: EncryptionManager, accessToken: string) {
     if (!accessToken) throw new Error("Access token is required");
+    this.encryptionManager = encryptionManager;
     this.URL = config.storyVaultAPIURL;
     this.accessToken = accessToken;
   }
@@ -36,9 +39,17 @@ export class NoteAPI {
     content: string
   ): Promise<boolean> {
     try {
+      const encryptedContent = await this.encryptionManager.encryptString(
+        this.encryptionManager.chatEncryptionKey!,
+        content
+      );
+
       const response = await fetch(
         `${this.URL}/api/SaveNote`,
-        buildSaveNoteRequest({ chatId, noteName, content }, this.accessToken)
+        buildSaveNoteRequest(
+          { chatId, noteName, content: encryptedContent },
+          this.accessToken
+        )
       );
 
       if (response.ok) {
@@ -77,7 +88,11 @@ export class NoteAPI {
 
       if (response.ok) {
         const noteResponse: GetNoteResponse = await response.json();
-        return noteResponse.content;
+        const decryptedContent = await this.encryptionManager.decryptString(
+          this.encryptionManager.chatEncryptionKey!,
+          noteResponse.content
+        );
+        return decryptedContent;
       } else if (response.status === 404) {
         console.error("Note not found:", response.statusText);
         throw new Error(`Note not found: ${chatId}/${noteName}`);
