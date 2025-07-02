@@ -9,12 +9,16 @@ interface ChatMessageListProps {
   pages: ChatPage[];
   toggleMenu: () => void;
   chatFlowHistory?: ChatFlowStep[];
+  storySummary?: string;
+  userPreferences?: string;
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   pages,
   toggleMenu,
   chatFlowHistory = [],
+  storySummary,
+  userPreferences,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
@@ -34,7 +38,11 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
         {messages.map((msg) => (
           <ChatMessage key={msg.id} message={msg} />
         ))}
-        <ChatFlowCollapsible chatFlowHistory={chatFlowHistory} />
+        <ChatFlowCollapsible
+          chatFlowHistory={chatFlowHistory}
+          storySummary={storySummary}
+          userPreferences={userPreferences}
+        />
       </div>
     </>
   );

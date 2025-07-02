@@ -17,6 +17,8 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
+    storySummary,
+    userPreferences,
   } = useChat({
     chatId,
   });
@@ -34,6 +36,8 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         pages={pages}
         toggleMenu={toggleMenu}
         chatFlowHistory={chatFlowHistory}
+        storySummary={storySummary}
+        userPreferences={userPreferences}
       />
       {progressStatus && (
         <div className="progress-status">{progressStatus}</div>

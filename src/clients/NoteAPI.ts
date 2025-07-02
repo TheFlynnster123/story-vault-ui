@@ -79,7 +79,10 @@ export class NoteAPI {
     }
   }
 
-  public async getNote(chatId: string, noteName: string): Promise<string> {
+  public async getNote(
+    chatId: string,
+    noteName: string
+  ): Promise<string | undefined> {
     try {
       const response = await fetch(
         `${this.URL}/api/GetNote`,
@@ -94,8 +97,7 @@ export class NoteAPI {
         );
         return decryptedContent;
       } else if (response.status === 404) {
-        console.error("Note not found:", response.statusText);
-        throw new Error(`Note not found: ${chatId}/${noteName}`);
+        return undefined;
       } else if (response.status === 400) {
         console.error("Invalid input for get note:", response.statusText);
         throw new Error(`Invalid input: ${response.statusText}`);
