@@ -8,6 +8,7 @@ interface ChatFlowCollapsibleProps {
   chatFlowHistory: ChatFlowStep[];
   preResponseNotes: PreResponseNote[];
   postResponseNotes: PostResponseNote[];
+  onDeleteNotes?: () => Promise<void>;
 }
 
 const STEP_COLORS: Record<ChatFlowStep["stepType"], string> = {
@@ -25,8 +26,11 @@ export const ChatFlowCollapsible: React.FC<ChatFlowCollapsibleProps> = ({
   chatFlowHistory,
   preResponseNotes,
   postResponseNotes,
+  onDeleteNotes,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const hasContent =
     (chatFlowHistory && chatFlowHistory.length > 0) ||
@@ -35,19 +39,47 @@ export const ChatFlowCollapsible: React.FC<ChatFlowCollapsibleProps> = ({
     ) ||
     postResponseNotes.some((note) => note.hasContent());
 
+  const hasNotes = postResponseNotes.some((note) => note.hasContent());
+
+  const handleDeleteNotes = async () => {
+    if (!onDeleteNotes) return;
+
+    setIsDeleting(true);
+    try {
+      await onDeleteNotes();
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error("Failed to delete notes:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (!hasContent) {
     return null;
   }
 
   return (
     <div className="chat-flow-collapsible">
-      <button
-        className="chat-flow-toggle"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <span>{isExpanded ? "Hide" : "Show"} Chat Flow & Notes</span>
-        {isExpanded ? <IoChevronUp /> : <IoChevronDown />}
-      </button>
+      <div className="chat-flow-header">
+        <button
+          className="chat-flow-toggle"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <span>{isExpanded ? "Hide" : "Show"} Chat Flow & Notes</span>
+          {isExpanded ? <IoChevronUp /> : <IoChevronDown />}
+        </button>
+        {hasNotes && onDeleteNotes && (
+          <button
+            className="delete-notes-button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting}
+            title="Delete all notes"
+          >
+            🗑️
+          </button>
+        )}
+      </div>
       {isExpanded && (
         <div className="chat-flow-history">
           {/* Display Chat Flow Steps */}
@@ -119,6 +151,37 @@ export const ChatFlowCollapsible: React.FC<ChatFlowCollapsibleProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="delete-confirm-overlay">
+          <div className="delete-confirm-dialog">
+            <h3>Delete Notes</h3>
+            <p>
+              This will permanently delete all saved notes including:
+              <br />
+              • Story Summary
+              <br />• User Preferences
+            </p>
+            <div className="delete-confirm-buttons">
+              <button
+                className="delete-confirm-cancel"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="delete-confirm-delete"
+                onClick={handleDeleteNotes}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

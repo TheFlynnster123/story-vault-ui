@@ -78,28 +78,28 @@
   max-width: 100%;
 }
 
+.message-text.clickable {
+  cursor: pointer;
+}
+
+.message-text.clickable:hover {
+  opacity: 0.8;
+}
+
 .message-delete-buttons {
-  position: absolute;
-  top: 0;
-  right: -60px;
   display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  z-index: 10;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .message-user .message-delete-buttons {
-  right: -60px;
+  justify-content: flex-end;
 }
 
 .message-system .message-delete-buttons {
-  left: -60px;
-  right: auto;
-}
-
-.message-item:hover .message-delete-buttons {
-  opacity: 1;
+  justify-content: flex-start;
 }
 
 .delete-button {

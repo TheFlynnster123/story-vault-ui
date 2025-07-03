@@ -25,7 +25,7 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
-  const [isHovered, setIsHovered] = useState(false);
+  const [showDeleteButtons, setShowDeleteButtons] = useState(false);
 
   const messageClass =
     message.role === "user" ? "message-user" : "message-system";
@@ -84,44 +84,49 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
     }
   };
 
-  const showDeleteButtons = (onDeleteMessage || onDeleteFromHere) && isHovered;
+  const handleMessageClick = () => {
+    if (onDeleteMessage || onDeleteFromHere) {
+      setShowDeleteButtons(!showDeleteButtons);
+    }
+  };
+
+  const hasDeleteFunctions = onDeleteMessage || onDeleteFromHere;
 
   return (
-    <div
-      className={`message-item ${messageClass}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className={`message-item ${messageClass}`}>
       <div className="message-content">
         <span
-          className={messageTextStyle}
+          className={`${messageTextStyle} ${
+            hasDeleteFunctions ? "clickable" : ""
+          }`}
           dangerouslySetInnerHTML={{
             __html: formatMessageContent(message.content),
           }}
+          onClick={handleMessageClick}
         />
-        {showDeleteButtons && (
-          <div className="message-delete-buttons">
-            {onDeleteMessage && (
-              <button
-                className="delete-button delete-single"
-                onClick={() => handleDeleteClick("single")}
-                title="Delete this message"
-              >
-                🗑️
-              </button>
-            )}
-            {onDeleteFromHere && (
-              <button
-                className="delete-button delete-from-here"
-                onClick={() => handleDeleteClick("fromHere")}
-                title="Delete this message and all below"
-              >
-                🗑️↓
-              </button>
-            )}
-          </div>
-        )}
       </div>
+      {showDeleteButtons && hasDeleteFunctions && (
+        <div className="message-delete-buttons">
+          {onDeleteMessage && (
+            <button
+              className="delete-button delete-single"
+              onClick={() => handleDeleteClick("single")}
+              title="Delete this message"
+            >
+              🗑️
+            </button>
+          )}
+          {onDeleteFromHere && (
+            <button
+              className="delete-button delete-from-here"
+              onClick={() => handleDeleteClick("fromHere")}
+              title="Delete this message and all below"
+            >
+              🗑️↓
+            </button>
+          )}
+        </div>
+      )}
 
       {showDeleteConfirm && (
         <div className="delete-confirmation-overlay">

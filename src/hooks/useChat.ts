@@ -17,6 +17,7 @@ interface UseChatReturn {
   chatFlowHistory?: import("./useChatFlow").ChatFlowStep[];
   preResponseNotes: PreResponseNote[];
   postResponseNotes: PostResponseNote[];
+  deleteNotes: () => Promise<void>;
 }
 
 interface UseChatProps {
@@ -37,6 +38,7 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     chatFlowHistory,
     preResponseNotes,
     postResponseNotes,
+    deleteNotes,
   } = useChatFlow({ chatId });
 
   return {
@@ -51,5 +53,6 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     chatFlowHistory,
     preResponseNotes,
     postResponseNotes,
+    deleteNotes,
   };
 };

@@ -34,6 +34,7 @@ interface UseChatFlowReturn {
   chatFlowHistory: ChatFlowStep[];
   preResponseNotes: PreResponseNote[];
   postResponseNotes: PostResponseNote[];
+  deleteNotes: () => Promise<void>;
 }
 
 interface UseChatFlowProps {
@@ -148,6 +149,33 @@ export const useChatFlow = ({
     [grokChatApiClient, postResponseNotes]
   );
 
+  const deleteNotes = useCallback(async () => {
+    if (!noteAPI || !chatId || postResponseNotes.length === 0) {
+      console.error("NoteAPI, chatId, or notes not available for deletion.");
+      return;
+    }
+
+    try {
+      // Delete all post-response notes from storage
+      await Promise.all(
+        postResponseNotes.map((note) =>
+          noteAPI.deleteNote(chatId, note.getNoteName())
+        )
+      );
+
+      // Clear the content of each note instance locally
+      postResponseNotes.forEach((note) => {
+        note.setContent("");
+      });
+
+      // Update the state to trigger a re-render
+      setPostResponseNotes([...postResponseNotes]);
+    } catch (error) {
+      console.error("Failed to delete notes:", error);
+      throw error;
+    }
+  }, [noteAPI, chatId, postResponseNotes]);
+
   const submitMessage = useCallback(
     async (userMessageText: string) => {
       if (!chatId || !grokChatApiClient || !noteAPI) {
@@ -228,6 +256,7 @@ export const useChatFlow = ({
     chatFlowHistory,
     preResponseNotes,
     postResponseNotes,
+    deleteNotes,
   };
 };
 

@@ -22,6 +22,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     chatFlowHistory,
     preResponseNotes,
     postResponseNotes,
+    deleteNotes,
   } = useChat({
     chatId,
   });
@@ -44,6 +45,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         onDeleteMessage={deleteMessage}
         onDeleteFromHere={deleteMessagesFromIndex}
         getDeletePreview={getDeletePreview}
+        onDeleteNotes={deleteNotes}
       />
       {progressStatus && (
         <div className="progress-status">{progressStatus}</div>

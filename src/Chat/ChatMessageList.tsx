@@ -18,6 +18,7 @@ interface ChatMessageListProps {
     messageCount: number;
     pageCount: number;
   };
+  onDeleteNotes?: () => Promise<void>;
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
@@ -29,6 +30,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   onDeleteMessage,
   onDeleteFromHere,
   getDeletePreview,
+  onDeleteNotes,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
@@ -58,6 +60,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
           chatFlowHistory={chatFlowHistory}
           preResponseNotes={preResponseNotes}
           postResponseNotes={postResponseNotes}
+          onDeleteNotes={onDeleteNotes}
         />
       </div>
     </>
