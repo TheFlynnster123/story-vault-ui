@@ -6,6 +6,12 @@ interface UseChatReturn {
   pages: ChatPage[];
   isSendingMessage: boolean;
   submitMessage: (messageText: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+  deleteMessagesFromIndex: (messageId: string) => Promise<void>;
+  getDeletePreview: (messageId: string) => {
+    messageCount: number;
+    pageCount: number;
+  };
   isLoadingHistory: boolean;
   progressStatus?: string;
   chatFlowHistory?: import("./useChatFlow").ChatFlowStep[];
@@ -23,6 +29,9 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     pages,
     isSendingMessage,
     submitMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
@@ -34,6 +43,9 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     pages,
     isSendingMessage,
     submitMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,

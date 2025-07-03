@@ -12,6 +12,12 @@ interface ChatMessageListProps {
   chatFlowHistory?: ChatFlowStep[];
   preResponseNotes: PreResponseNote[];
   postResponseNotes: PostResponseNote[];
+  onDeleteMessage?: (messageId: string) => void;
+  onDeleteFromHere?: (messageId: string) => void;
+  getDeletePreview?: (messageId: string) => {
+    messageCount: number;
+    pageCount: number;
+  };
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
@@ -20,6 +26,9 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   chatFlowHistory = [],
   preResponseNotes,
   postResponseNotes,
+  onDeleteMessage,
+  onDeleteFromHere,
+  getDeletePreview,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
@@ -37,7 +46,13 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
       </button>
       <div className="message-list" ref={messageListRef}>
         {messages.map((msg) => (
-          <ChatMessage key={msg.id} message={msg} />
+          <ChatMessage
+            key={msg.id}
+            message={msg}
+            onDeleteMessage={onDeleteMessage}
+            onDeleteFromHere={onDeleteFromHere}
+            getDeletePreview={getDeletePreview}
+          />
         ))}
         <ChatFlowCollapsible
           chatFlowHistory={chatFlowHistory}

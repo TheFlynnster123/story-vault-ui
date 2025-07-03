@@ -14,6 +14,9 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     pages,
     isSendingMessage,
     submitMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
@@ -38,6 +41,9 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         chatFlowHistory={chatFlowHistory}
         preResponseNotes={preResponseNotes}
         postResponseNotes={postResponseNotes}
+        onDeleteMessage={deleteMessage}
+        onDeleteFromHere={deleteMessagesFromIndex}
+        getDeletePreview={getDeletePreview}
       />
       {progressStatus && (
         <div className="progress-status">{progressStatus}</div>

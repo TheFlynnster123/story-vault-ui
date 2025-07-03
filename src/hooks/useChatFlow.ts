@@ -23,6 +23,12 @@ interface UseChatFlowReturn {
   pages: ChatPage[];
   isSendingMessage: boolean;
   submitMessage: (messageText: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+  deleteMessagesFromIndex: (messageId: string) => Promise<void>;
+  getDeletePreview: (messageId: string) => {
+    messageCount: number;
+    pageCount: number;
+  };
   isLoadingHistory: boolean;
   progressStatus?: string;
   chatFlowHistory: ChatFlowStep[];
@@ -49,7 +55,15 @@ export const useChatFlow = ({
 }: UseChatFlowProps): UseChatFlowReturn => {
   const { grokChatApiClient } = useGrokChatAPI();
 
-  const { pages, addMessage, isLoadingHistory, getMessageList } = useChatPages({
+  const {
+    pages,
+    addMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
+    isLoadingHistory,
+    getMessageList,
+  } = useChatPages({
     chatId,
   });
 
@@ -206,6 +220,9 @@ export const useChatFlow = ({
     pages,
     isSendingMessage,
     submitMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,

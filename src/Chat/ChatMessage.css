@@ -70,3 +70,140 @@
   border-radius: 3px;
   padding: 0 3px;
 }
+
+/* Delete functionality styles */
+.message-content {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.message-delete-buttons {
+  position: absolute;
+  top: 0;
+  right: -60px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.message-user .message-delete-buttons {
+  right: -60px;
+}
+
+.message-system .message-delete-buttons {
+  left: -60px;
+  right: auto;
+}
+
+.message-item:hover .message-delete-buttons {
+  opacity: 1;
+}
+
+.delete-button {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.delete-button:hover {
+  background: #ff4444;
+  color: white;
+  border-color: #cc0000;
+  transform: scale(1.05);
+}
+
+.delete-single {
+  /* Single delete button styles */
+}
+
+.delete-from-here {
+  /* Bulk delete button styles */
+}
+
+/* Confirmation dialog styles */
+.delete-confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.delete-confirmation-dialog {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.delete-confirmation-dialog p {
+  margin: 0 0 20px 0;
+  color: #333;
+  line-height: 1.4;
+}
+
+.delete-confirmation-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.confirm-delete-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.confirm-delete-button:hover {
+  background: #c82333;
+}
+
+.cancel-delete-button {
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.cancel-delete-button:hover {
+  background: #5a6268;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .delete-confirmation-dialog {
+    margin: 20px;
+    width: calc(100% - 40px);
+  }
+
+  .delete-button {
+    padding: 6px 8px;
+    font-size: 14px;
+  }
+}
