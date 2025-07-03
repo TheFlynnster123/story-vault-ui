@@ -1,4 +1,5 @@
 import type { ChatPage } from "../models/ChatPage";
+import type { PreResponseNote, PostResponseNote } from "../models";
 import { useChatFlow } from "./useChatFlow";
 
 interface UseChatReturn {
@@ -8,8 +9,8 @@ interface UseChatReturn {
   isLoadingHistory: boolean;
   progressStatus?: string;
   chatFlowHistory?: import("./useChatFlow").ChatFlowStep[];
-  storySummary?: string;
-  userPreferences?: string;
+  preResponseNotes: PreResponseNote[];
+  postResponseNotes: PostResponseNote[];
 }
 
 interface UseChatProps {
@@ -25,8 +26,8 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
-    storySummary,
-    userPreferences,
+    preResponseNotes,
+    postResponseNotes,
   } = useChatFlow({ chatId });
 
   return {
@@ -36,7 +37,7 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
-    storySummary,
-    userPreferences,
+    preResponseNotes,
+    postResponseNotes,
   };
 };

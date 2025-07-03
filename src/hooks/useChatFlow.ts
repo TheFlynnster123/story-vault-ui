@@ -7,10 +7,9 @@ import {
   type ChatPage,
   type PreResponseNote,
   type PostResponseNote,
-  StorySummaryPreNote,
-  UserPreferencesPreNote,
   StorySummaryNote,
   UserPreferencesNote,
+  PlanningPreResponseNote,
 } from "../models";
 
 export interface ChatFlowStep {
@@ -27,8 +26,8 @@ interface UseChatFlowReturn {
   isLoadingHistory: boolean;
   progressStatus?: string;
   chatFlowHistory: ChatFlowStep[];
-  storySummary: string;
-  userPreferences: string;
+  preResponseNotes: PreResponseNote[];
+  postResponseNotes: PostResponseNote[];
 }
 
 interface UseChatFlowProps {
@@ -36,10 +35,6 @@ interface UseChatFlowProps {
 }
 
 const CHAT_FLOW_TEMPLATES = {
-  PLANNING_NOTES_PROMPT:
-    "Planning Notes - Respond with ONLY the following template filled out. Do not provide a draft message yet:\n" +
-    "Where are we at in the story flow? Should we continue engaging in dialogue, should we expand and let develop the current plot point, does another plot point need introducing?",
-
   RESPONSE_PROMPT:
     "Without a preamble, take into consideration the user's most recent response and our notes, write your response.",
 };
@@ -65,55 +60,39 @@ export const useChatFlow = ({
     undefined
   );
   const [chatFlowHistory, setChatFlowHistory] = useState<ChatFlowStep[]>([]);
-  const [storySummary, setStorySummary] = useState<string>("");
-  const [userPreferences, setUserPreferences] = useState<string>("");
   const [notesLoaded, setNotesLoaded] = useState<boolean>(false);
 
-  // Note class instances
-  const [preResponseNotes, setPreResponseNotes] = useState<PreResponseNote[]>(
-    []
-  );
+  // Note instances
+  const [preResponseNotes] = useState<PreResponseNote[]>([]);
   const [postResponseNotes, setPostResponseNotes] = useState<
     PostResponseNote[]
   >([]);
 
-  // Initialize note instances
+  // Initialize post-response note instances
   useEffect(() => {
     const initializeNotes = async () => {
-      if (!noteAPI || !chatId || notesLoaded) return;
+      if (!noteAPI || !chatId || !grokChatApiClient || notesLoaded) return;
 
       try {
-        // Create pre-response note instances
-        const storySummaryPreNote = new StorySummaryPreNote(noteAPI, chatId);
-        const userPreferencesPreNote = new UserPreferencesPreNote(
-          noteAPI,
-          chatId
-        );
-
         // Create post-response note instances
-        const storySummaryPostNote = new StorySummaryNote(noteAPI, chatId);
+        const storySummaryPostNote = new StorySummaryNote(
+          noteAPI,
+          chatId,
+          grokChatApiClient
+        );
         const userPreferencesPostNote = new UserPreferencesNote(
           noteAPI,
-          chatId
+          chatId,
+          grokChatApiClient
         );
 
-        // Load existing content
+        // Load existing content using the load method
         await Promise.all([
-          storySummaryPreNote.load(),
-          userPreferencesPreNote.load(),
+          storySummaryPostNote.load(),
+          userPreferencesPostNote.load(),
         ]);
 
-        // Set initial content for post-response notes
-        storySummaryPostNote.setContent(storySummaryPreNote.getContent());
-        userPreferencesPostNote.setContent(userPreferencesPreNote.getContent());
-
-        // Update state
-        setPreResponseNotes([storySummaryPreNote, userPreferencesPreNote]);
         setPostResponseNotes([storySummaryPostNote, userPreferencesPostNote]);
-
-        // Keep backward compatibility with existing state
-        setStorySummary(storySummaryPreNote.getContent());
-        setUserPreferences(userPreferencesPreNote.getContent());
         setNotesLoaded(true);
       } catch (error) {
         console.error("Failed to initialize notes:", error);
@@ -122,7 +101,7 @@ export const useChatFlow = ({
     };
 
     initializeNotes();
-  }, [noteAPI, chatId, notesLoaded]);
+  }, [noteAPI, chatId, grokChatApiClient, notesLoaded]);
 
   const addChatFlowStep = useCallback(
     (stepType: ChatFlowStep["stepType"], content: string) => {
@@ -138,75 +117,27 @@ export const useChatFlow = ({
     []
   );
 
-  const generateAndSaveNotes = useCallback(
+  const updatePostResponseNotes = useCallback(
     async (messageList: Message[]) => {
       if (!grokChatApiClient || postResponseNotes.length === 0) return;
 
       try {
-        // Generate and save all post-response notes
         await Promise.all(
-          postResponseNotes.map((note) =>
-            note.generateAndSave(messageList, grokChatApiClient)
-          )
+          postResponseNotes.map((note) => note.generateAndSave(messageList))
         );
 
-        // Update backward compatibility state
-        const summaryNote = postResponseNotes.find(
-          (note) => note.getNoteName() === "story-summary"
-        );
-        const preferencesNote = postResponseNotes.find(
-          (note) => note.getNoteName() === "user-preferences"
-        );
-
-        if (summaryNote) setStorySummary(summaryNote.getContent());
-        if (preferencesNote) setUserPreferences(preferencesNote.getContent());
-
-        // Update pre-response notes with new content for next iteration
-        const updatedPreResponseNotes = preResponseNotes.map((preNote) => {
-          const correspondingPostNote = postResponseNotes.find(
-            (postNote) => postNote.getNoteName() === preNote.getNoteName()
-          );
-          if (correspondingPostNote) {
-            // Create a new instance with updated content
-            if (preNote.getNoteName() === "story-summary") {
-              const newPreNote = new StorySummaryPreNote(noteAPI!, chatId);
-              newPreNote.setContent(correspondingPostNote.getContent());
-              return newPreNote;
-            } else if (preNote.getNoteName() === "user-preferences") {
-              const newPreNote = new UserPreferencesPreNote(noteAPI!, chatId);
-              newPreNote.setContent(correspondingPostNote.getContent());
-              return newPreNote;
-            }
-          }
-          return preNote;
-        });
-
-        setPreResponseNotes(updatedPreResponseNotes);
+        setPostResponseNotes([...postResponseNotes]);
       } catch (error) {
         console.error("Failed to generate and save notes:", error);
       }
     },
-    [grokChatApiClient, postResponseNotes, preResponseNotes, noteAPI, chatId]
-  );
-
-  const appendNotesToChatHistory = useCallback(
-    (messageList: Message[]): Message[] => {
-      let updatedMessageList = messageList;
-
-      // Use note classes to append context
-      for (const note of preResponseNotes) {
-        updatedMessageList = note.appendToContext(updatedMessageList);
-      }
-
-      return updatedMessageList;
-    },
-    [preResponseNotes]
+    [grokChatApiClient, postResponseNotes]
   );
 
   const submitMessage = useCallback(
     async (userMessageText: string) => {
-      if (!chatId || !grokChatApiClient) {
-        console.error("ChatId or Grok API client not available.");
+      if (!chatId || !grokChatApiClient || !noteAPI) {
+        console.error("ChatId, Grok API client, or Note API not available.");
         return;
       }
 
@@ -218,19 +149,22 @@ export const useChatFlow = ({
         await addMessage(toUserMessage(userMessageText));
         let localMessageList = getMessageList();
 
-        // Append notes to chat history before planning
-        localMessageList = appendNotesToChatHistory(localMessageList);
+        // Append post-response notes to chat history using note instances
+        for (const note of postResponseNotes) {
+          if (note.hasContent()) {
+            const contextMessage = note.getContextMessage();
+            if (contextMessage) {
+              localMessageList.push(contextMessage);
+            }
+          }
+        }
 
-        // Step 1: Planning Notes
+        // Step 1: Generate Planning Notes using PlanningPreResponseNote
         setProgressStatus(PROGRESS_MESSAGES.PLANNING_NOTES);
-        const planningNotesPrompt = CHAT_FLOW_TEMPLATES.PLANNING_NOTES_PROMPT;
-        localMessageList.push(toSystemMessage(planningNotesPrompt));
-        const planningNotesResponse = await grokChatApiClient.postChat(
-          localMessageList,
-          "low"
-        );
-        addChatFlowStep("planning_notes", planningNotesResponse);
-        localMessageList.push(toSystemMessage(planningNotesResponse));
+        const planningNote = new PlanningPreResponseNote(grokChatApiClient);
+        await planningNote.generate(localMessageList, true);
+        localMessageList = planningNote.appendToContext(localMessageList);
+        addChatFlowStep("planning_notes", planningNote.getContent());
 
         // Step 2: Write Response
         setProgressStatus(PROGRESS_MESSAGES.RESPONSE_MESSAGE);
@@ -240,15 +174,16 @@ export const useChatFlow = ({
 
         await addMessage(toSystemMessage(response));
 
-        // Clear progress status and allow user to send next message immediately
         setProgressStatus(undefined);
         setIsSendingMessage(false);
 
-        // Asynchronously generate and save notes (don't wait for completion)
+        // Step 3: Genereate post response notes
         const baseMessageList = getMessageList();
-        generateAndSaveNotes(baseMessageList).catch((error) => {
-          console.error("Background note generation failed:", error);
-        });
+        updatePostResponseNotes(baseMessageList)
+          .catch((error) => {
+            console.error("Background note generation failed:", error);
+          })
+          .then(() => {});
       } catch (error) {
         console.error("Error during ChatFlow submission:", error);
         setProgressStatus(undefined);
@@ -258,11 +193,12 @@ export const useChatFlow = ({
     [
       chatId,
       grokChatApiClient,
+      noteAPI,
       addMessage,
       getMessageList,
       addChatFlowStep,
-      appendNotesToChatHistory,
-      generateAndSaveNotes,
+      updatePostResponseNotes,
+      postResponseNotes,
     ]
   );
 
@@ -273,8 +209,8 @@ export const useChatFlow = ({
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
-    storySummary,
-    userPreferences,
+    preResponseNotes,
+    postResponseNotes,
   };
 };
 

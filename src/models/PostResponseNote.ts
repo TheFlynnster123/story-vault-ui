@@ -1,31 +1,26 @@
 import type { Message } from "../Chat/ChatMessage";
 import type { NoteAPI } from "../clients/NoteAPI";
 import type { GrokChatAPI } from "../clients/GrokChatAPI";
+import { ResponseNote } from "./ResponseNote";
 
 /**
  * Abstract base class for notes that are generated and saved AFTER a response is created.
  * These notes are updated based on the conversation flow and stored for future use.
  */
-export abstract class PostResponseNote {
+export abstract class PostResponseNote extends ResponseNote {
   protected noteAPI: NoteAPI;
   protected chatId: string;
-  protected content: string = "";
 
-  constructor(noteAPI: NoteAPI, chatId: string, initialContent: string = "") {
+  constructor(
+    noteAPI: NoteAPI,
+    chatId: string,
+    grokClient: GrokChatAPI,
+    initialContent: string = ""
+  ) {
+    super(grokClient, initialContent);
     this.noteAPI = noteAPI;
     this.chatId = chatId;
-    this.content = initialContent;
   }
-
-  /**
-   * Get the unique identifier for this note type
-   */
-  abstract getNoteName(): string;
-
-  /**
-   * Get the prompt template for generating new content
-   */
-  abstract getGenerationPrompt(): string;
 
   /**
    * Get the prompt template for updating existing content
@@ -33,51 +28,23 @@ export abstract class PostResponseNote {
   abstract getUpdatePrompt(): string;
 
   /**
-   * Get the current content of the note
+   * Load existing note content from storage
    */
-  getContent(): string {
-    return this.content;
-  }
+  async load(): Promise<void> {
+    if (this.loaded) return;
 
-  /**
-   * Set the content of the note
-   */
-  setContent(content: string): void {
-    this.content = content;
-  }
-
-  /**
-   * Check if the note has existing content
-   */
-  hasContent(): boolean {
-    return this.content.trim().length > 0;
-  }
-
-  /**
-   * Generate new note content based on the conversation
-   */
-  async generate(
-    messageList: Message[],
-    grokClient: GrokChatAPI
-  ): Promise<void> {
     try {
-      const prompt = this.hasContent()
-        ? `${this.getUpdatePrompt()}\n\n${this.content}`
-        : this.getGenerationPrompt();
-
-      const promptMessage: Message = {
-        id: `${this.getNoteName()}-prompt-${Date.now()}`,
-        role: "system",
-        content: prompt,
-      };
-
-      const messagesWithPrompt = [...messageList, promptMessage];
-      const newContent = await grokClient.postChat(messagesWithPrompt, "low");
-
-      this.content = newContent;
+      const existingContent = await this.noteAPI.getNote(
+        this.chatId,
+        this.getNoteName()
+      );
+      if (existingContent) {
+        this.content = existingContent;
+      }
+      this.loaded = true;
     } catch (error) {
-      console.error(`Failed to generate ${this.getNoteName()} note:`, error);
-      throw error;
+      console.error(`Failed to load ${this.getNoteName()} note:`, error);
+      this.loaded = true; // Still mark as loaded to prevent retries
     }
   }
 
@@ -100,11 +67,21 @@ export abstract class PostResponseNote {
   /**
    * Generate and save the note in one operation
    */
-  async generateAndSave(
-    messageList: Message[],
-    grokClient: GrokChatAPI
-  ): Promise<void> {
-    await this.generate(messageList, grokClient);
+  async generateAndSave(messageList: Message[]): Promise<void> {
+    await this.generate(messageList);
     await this.save();
+  }
+
+  /**
+   * Create a system message for appending to chat context
+   */
+  getContextMessage(): Message | null {
+    if (!this.hasContent()) return null;
+
+    return {
+      id: `${this.getNoteName()}-context-${Date.now()}`,
+      role: "system",
+      content: `${this.getContextLabel()}:\n${this.content}`,
+    };
   }
 }

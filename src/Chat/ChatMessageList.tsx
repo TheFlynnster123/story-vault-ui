@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
+import type { PreResponseNote, PostResponseNote } from "../models";
 import { IoArrowBack } from "react-icons/io5";
 import { ChatFlowCollapsible } from "./ChatFlowCollapsible";
 import type { ChatFlowStep } from "../hooks/useChatFlow";
@@ -9,16 +10,16 @@ interface ChatMessageListProps {
   pages: ChatPage[];
   toggleMenu: () => void;
   chatFlowHistory?: ChatFlowStep[];
-  storySummary?: string;
-  userPreferences?: string;
+  preResponseNotes: PreResponseNote[];
+  postResponseNotes: PostResponseNote[];
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   pages,
   toggleMenu,
   chatFlowHistory = [],
-  storySummary,
-  userPreferences,
+  preResponseNotes,
+  postResponseNotes,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
@@ -40,8 +41,8 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
         ))}
         <ChatFlowCollapsible
           chatFlowHistory={chatFlowHistory}
-          storySummary={storySummary}
-          userPreferences={userPreferences}
+          preResponseNotes={preResponseNotes}
+          postResponseNotes={postResponseNotes}
         />
       </div>
     </>
