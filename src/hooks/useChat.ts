@@ -1,15 +1,23 @@
 import type { ChatPage } from "../models/ChatPage";
+import type { PreResponseNote, PostResponseNote } from "../models";
 import { useChatFlow } from "./useChatFlow";
 
 interface UseChatReturn {
   pages: ChatPage[];
   isSendingMessage: boolean;
   submitMessage: (messageText: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+  deleteMessagesFromIndex: (messageId: string) => Promise<void>;
+  getDeletePreview: (messageId: string) => {
+    messageCount: number;
+    pageCount: number;
+  };
   isLoadingHistory: boolean;
   progressStatus?: string;
   chatFlowHistory?: import("./useChatFlow").ChatFlowStep[];
-  storySummary?: string;
-  userPreferences?: string;
+  preResponseNotes: PreResponseNote[];
+  postResponseNotes: PostResponseNote[];
+  deleteNotes: () => Promise<void>;
 }
 
 interface UseChatProps {
@@ -22,21 +30,29 @@ export const useChat = ({ chatId }: UseChatProps): UseChatReturn => {
     pages,
     isSendingMessage,
     submitMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
-    storySummary,
-    userPreferences,
+    preResponseNotes,
+    postResponseNotes,
+    deleteNotes,
   } = useChatFlow({ chatId });
 
   return {
     pages,
     isSendingMessage,
     submitMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
-    storySummary,
-    userPreferences,
+    preResponseNotes,
+    postResponseNotes,
+    deleteNotes,
   };
 };

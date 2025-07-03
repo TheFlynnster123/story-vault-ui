@@ -45,9 +45,72 @@ export const useChatPages = ({ chatId }: UseChatPagesProps) => {
     [chatPageManager, savePageToApi, setPages]
   );
 
+  const deleteMessage = useCallback(
+    async (messageId: string) => {
+      if (!chatPageManager) {
+        return;
+      }
+
+      const location = chatPageManager.findMessageLocation(messageId);
+      if (!location) {
+        console.warn(`Message with id ${messageId} not found`);
+        return;
+      }
+
+      chatPageManager.deleteMessage(messageId);
+      const updatedPages = chatPageManager.getPages();
+      setPages([...updatedPages]);
+
+      // Save the affected page
+      const affectedPage = updatedPages[location.pageIndex];
+      if (affectedPage) {
+        await savePageToApi(affectedPage);
+      }
+    },
+    [chatPageManager, savePageToApi, setPages]
+  );
+
+  const deleteMessagesFromIndex = useCallback(
+    async (messageId: string) => {
+      if (!chatPageManager) {
+        return;
+      }
+
+      const location = chatPageManager.findMessageLocation(messageId);
+      if (!location) {
+        console.warn(`Message with id ${messageId} not found`);
+        return;
+      }
+
+      chatPageManager.deleteMessagesFromIndex(messageId);
+      const updatedPages = chatPageManager.getPages();
+      setPages([...updatedPages]);
+
+      // Save all affected pages (from the target page onwards)
+      const affectedPages = updatedPages.slice(location.pageIndex);
+      for (const page of affectedPages) {
+        await savePageToApi(page);
+      }
+    },
+    [chatPageManager, savePageToApi, setPages]
+  );
+
+  const getDeletePreview = useCallback(
+    (messageId: string) => {
+      if (!chatPageManager) {
+        return { messageCount: 0, pageCount: 0 };
+      }
+      return chatPageManager.countMessagesFromIndex(messageId);
+    },
+    [chatPageManager]
+  );
+
   return {
     pages,
     addMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     getMessageList,
   };

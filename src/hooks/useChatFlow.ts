@@ -1,9 +1,16 @@
-import type { ChatPage } from "../models/ChatPage";
 import { useGrokChatAPI } from "./useGrokChatAPI";
 import { useChatPages } from "./useChatPages";
 import type { Message } from "../Chat/ChatMessage";
 import { useCallback, useState, useEffect } from "react";
 import { useNoteAPI } from "./useNoteAPI";
+import {
+  type ChatPage,
+  type PreResponseNote,
+  type PostResponseNote,
+  StorySummaryNote,
+  UserPreferencesNote,
+  PlanningPreResponseNote,
+} from "../models";
 
 export interface ChatFlowStep {
   id: string;
@@ -16,11 +23,18 @@ interface UseChatFlowReturn {
   pages: ChatPage[];
   isSendingMessage: boolean;
   submitMessage: (messageText: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+  deleteMessagesFromIndex: (messageId: string) => Promise<void>;
+  getDeletePreview: (messageId: string) => {
+    messageCount: number;
+    pageCount: number;
+  };
   isLoadingHistory: boolean;
   progressStatus?: string;
   chatFlowHistory: ChatFlowStep[];
-  storySummary: string;
-  userPreferences: string;
+  preResponseNotes: PreResponseNote[];
+  postResponseNotes: PostResponseNote[];
+  deleteNotes: () => Promise<void>;
 }
 
 interface UseChatFlowProps {
@@ -28,24 +42,8 @@ interface UseChatFlowProps {
 }
 
 const CHAT_FLOW_TEMPLATES = {
-  PLANNING_NOTES_PROMPT:
-    "Planning Notes - Respond with ONLY the following template filled out. Do not provide a draft message yet:\n" +
-    "Where are we at in the story flow? Should we continue engaging in dialogue, should we expand and let develop the current plot point, does another plot point need introducing?",
-
   RESPONSE_PROMPT:
     "Without a preamble, take into consideration the user's most recent response and our notes, write your response.",
-
-  SUMMARY_PROMPT:
-    "Generate a bulleted list summarizing the story so far. Keep list items brief but descriptive, and afterwards ensure only a bulleted list is present in the response",
-
-  SUMMARY_UPDATE_PROMPT:
-    "Update this bulleted list summarizing the story so far. Keep list items brief but descriptive. Avoid deleting unique items. Avoid repeating details, and afterwards ensure only a bulleted list is present in the response:",
-
-  USER_PREFERENCE_PROMPT:
-    "Generate a bulleted list analyzing the user's preferences. What story elements is the user engaging with? Do they have any implicit or explicit preferences? Afterwards ensure only a bulleted list is present in the response",
-
-  USER_PREFERENCE_UPDATE_PROMPT:
-    "Update this bulleted list analyzing the user's preferences. What story elements is the user engaging with? Do they have any implicit or explicit preferences? Keep list items brief but descriptive. Avoid deleting unique items. Avoid repeating details, and afterwards ensure only a bulleted list is present in the response:",
 };
 
 const PROGRESS_MESSAGES = {
@@ -58,7 +56,15 @@ export const useChatFlow = ({
 }: UseChatFlowProps): UseChatFlowReturn => {
   const { grokChatApiClient } = useGrokChatAPI();
 
-  const { pages, addMessage, isLoadingHistory, getMessageList } = useChatPages({
+  const {
+    pages,
+    addMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
+    isLoadingHistory,
+    getMessageList,
+  } = useChatPages({
     chatId,
   });
 
@@ -69,32 +75,48 @@ export const useChatFlow = ({
     undefined
   );
   const [chatFlowHistory, setChatFlowHistory] = useState<ChatFlowStep[]>([]);
-  const [storySummary, setStorySummary] = useState<string>("");
-  const [userPreferences, setUserPreferences] = useState<string>("");
   const [notesLoaded, setNotesLoaded] = useState<boolean>(false);
 
-  // Load existing notes on initialization
+  // Note instances
+  const [preResponseNotes] = useState<PreResponseNote[]>([]);
+  const [postResponseNotes, setPostResponseNotes] = useState<
+    PostResponseNote[]
+  >([]);
+
+  // Initialize post-response note instances
   useEffect(() => {
-    const loadExistingNotes = async () => {
-      if (!noteAPI || !chatId || notesLoaded) return;
+    const initializeNotes = async () => {
+      if (!noteAPI || !chatId || !grokChatApiClient || notesLoaded) return;
 
       try {
-        const [summaryNote, preferencesNote] = await Promise.all([
-          noteAPI.getNote(chatId, "story-summary"),
-          noteAPI.getNote(chatId, "user-preferences"),
+        // Create post-response note instances
+        const storySummaryPostNote = new StorySummaryNote(
+          noteAPI,
+          chatId,
+          grokChatApiClient
+        );
+        const userPreferencesPostNote = new UserPreferencesNote(
+          noteAPI,
+          chatId,
+          grokChatApiClient
+        );
+
+        // Load existing content using the load method
+        await Promise.all([
+          storySummaryPostNote.load(),
+          userPreferencesPostNote.load(),
         ]);
 
-        if (summaryNote) setStorySummary(summaryNote);
-        if (preferencesNote) setUserPreferences(preferencesNote);
+        setPostResponseNotes([storySummaryPostNote, userPreferencesPostNote]);
         setNotesLoaded(true);
       } catch (error) {
-        console.error("Failed to load existing notes:", error);
+        console.error("Failed to initialize notes:", error);
         setNotesLoaded(true); // Still mark as loaded to prevent retries
       }
     };
 
-    loadExistingNotes();
-  }, [noteAPI, chatId, notesLoaded]);
+    initializeNotes();
+  }, [noteAPI, chatId, grokChatApiClient, notesLoaded]);
 
   const addChatFlowStep = useCallback(
     (stepType: ChatFlowStep["stepType"], content: string) => {
@@ -110,77 +132,54 @@ export const useChatFlow = ({
     []
   );
 
-  const generateAndSaveNotes = useCallback(
+  const updatePostResponseNotes = useCallback(
     async (messageList: Message[]) => {
-      if (!noteAPI || !chatId || !grokChatApiClient) return;
+      if (!grokChatApiClient || postResponseNotes.length === 0) return;
 
       try {
-        // Generate story summary
-        const summaryPrompt = storySummary
-          ? `${CHAT_FLOW_TEMPLATES.SUMMARY_UPDATE_PROMPT}\n\n${storySummary}`
-          : CHAT_FLOW_TEMPLATES.SUMMARY_PROMPT;
-
-        const summaryMessageList = [
-          ...messageList,
-          toSystemMessage(summaryPrompt),
-        ];
-        const newSummary = await grokChatApiClient.postChat(
-          summaryMessageList,
-          "low"
+        await Promise.all(
+          postResponseNotes.map((note) => note.generateAndSave(messageList))
         );
 
-        // Generate user preferences
-        const preferencesPrompt = userPreferences
-          ? `${CHAT_FLOW_TEMPLATES.USER_PREFERENCE_UPDATE_PROMPT}\n\n${userPreferences}`
-          : CHAT_FLOW_TEMPLATES.USER_PREFERENCE_PROMPT;
-
-        const preferencesMessageList = [
-          ...messageList,
-          toSystemMessage(preferencesPrompt),
-        ];
-        const newPreferences = await grokChatApiClient.postChat(
-          preferencesMessageList,
-          "low"
-        );
-
-        // Save notes to API and update local state
-        await Promise.all([
-          noteAPI.saveNote(chatId, "story-summary", newSummary),
-          noteAPI.saveNote(chatId, "user-preferences", newPreferences),
-        ]);
-
-        setStorySummary(newSummary);
-        setUserPreferences(newPreferences);
+        setPostResponseNotes([...postResponseNotes]);
       } catch (error) {
         console.error("Failed to generate and save notes:", error);
       }
     },
-    [noteAPI, chatId, grokChatApiClient, storySummary, userPreferences]
+    [grokChatApiClient, postResponseNotes]
   );
 
-  const appendNotesToChatHistory = useCallback(
-    (messageList: Message[]): Message[] => {
-      const notesMessages: Message[] = [];
+  const deleteNotes = useCallback(async () => {
+    if (!noteAPI || !chatId || postResponseNotes.length === 0) {
+      console.error("NoteAPI, chatId, or notes not available for deletion.");
+      return;
+    }
 
-      if (storySummary) {
-        notesMessages.push(toSystemMessage(`Story Summary:\n${storySummary}`));
-      }
+    try {
+      // Delete all post-response notes from storage
+      await Promise.all(
+        postResponseNotes.map((note) =>
+          noteAPI.deleteNote(chatId, note.getNoteName())
+        )
+      );
 
-      if (userPreferences) {
-        notesMessages.push(
-          toSystemMessage(`User Preferences:\n${userPreferences}`)
-        );
-      }
+      // Clear the content of each note instance locally
+      postResponseNotes.forEach((note) => {
+        note.setContent("");
+      });
 
-      return [...messageList, ...notesMessages];
-    },
-    [storySummary, userPreferences]
-  );
+      // Update the state to trigger a re-render
+      setPostResponseNotes([...postResponseNotes]);
+    } catch (error) {
+      console.error("Failed to delete notes:", error);
+      throw error;
+    }
+  }, [noteAPI, chatId, postResponseNotes]);
 
   const submitMessage = useCallback(
     async (userMessageText: string) => {
-      if (!chatId || !grokChatApiClient) {
-        console.error("ChatId or Grok API client not available.");
+      if (!chatId || !grokChatApiClient || !noteAPI) {
+        console.error("ChatId, Grok API client, or Note API not available.");
         return;
       }
 
@@ -192,19 +191,22 @@ export const useChatFlow = ({
         await addMessage(toUserMessage(userMessageText));
         let localMessageList = getMessageList();
 
-        // Append notes to chat history before planning
-        localMessageList = appendNotesToChatHistory(localMessageList);
+        // Append post-response notes to chat history using note instances
+        for (const note of postResponseNotes) {
+          if (note.hasContent()) {
+            const contextMessage = note.getContextMessage();
+            if (contextMessage) {
+              localMessageList.push(contextMessage);
+            }
+          }
+        }
 
-        // Step 1: Planning Notes
+        // Step 1: Generate Planning Notes using PlanningPreResponseNote
         setProgressStatus(PROGRESS_MESSAGES.PLANNING_NOTES);
-        const planningNotesPrompt = CHAT_FLOW_TEMPLATES.PLANNING_NOTES_PROMPT;
-        localMessageList.push(toSystemMessage(planningNotesPrompt));
-        const planningNotesResponse = await grokChatApiClient.postChat(
-          localMessageList,
-          "low"
-        );
-        addChatFlowStep("planning_notes", planningNotesResponse);
-        localMessageList.push(toSystemMessage(planningNotesResponse));
+        const planningNote = new PlanningPreResponseNote(grokChatApiClient);
+        await planningNote.generate(localMessageList, true);
+        localMessageList = planningNote.appendToContext(localMessageList);
+        addChatFlowStep("planning_notes", planningNote.getContent());
 
         // Step 2: Write Response
         setProgressStatus(PROGRESS_MESSAGES.RESPONSE_MESSAGE);
@@ -214,15 +216,16 @@ export const useChatFlow = ({
 
         await addMessage(toSystemMessage(response));
 
-        // Clear progress status and allow user to send next message immediately
         setProgressStatus(undefined);
         setIsSendingMessage(false);
 
-        // Asynchronously generate and save notes (don't wait for completion)
+        // Step 3: Genereate post response notes
         const baseMessageList = getMessageList();
-        generateAndSaveNotes(baseMessageList).catch((error) => {
-          console.error("Background note generation failed:", error);
-        });
+        updatePostResponseNotes(baseMessageList)
+          .catch((error) => {
+            console.error("Background note generation failed:", error);
+          })
+          .then(() => {});
       } catch (error) {
         console.error("Error during ChatFlow submission:", error);
         setProgressStatus(undefined);
@@ -232,11 +235,12 @@ export const useChatFlow = ({
     [
       chatId,
       grokChatApiClient,
+      noteAPI,
       addMessage,
       getMessageList,
       addChatFlowStep,
-      appendNotesToChatHistory,
-      generateAndSaveNotes,
+      updatePostResponseNotes,
+      postResponseNotes,
     ]
   );
 
@@ -244,11 +248,15 @@ export const useChatFlow = ({
     pages,
     isSendingMessage,
     submitMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
-    storySummary,
-    userPreferences,
+    preResponseNotes,
+    postResponseNotes,
+    deleteNotes,
   };
 };
 

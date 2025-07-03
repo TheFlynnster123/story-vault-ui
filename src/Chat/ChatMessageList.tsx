@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
+import type { PreResponseNote, PostResponseNote } from "../models";
 import { IoArrowBack } from "react-icons/io5";
 import { ChatFlowCollapsible } from "./ChatFlowCollapsible";
 import type { ChatFlowStep } from "../hooks/useChatFlow";
@@ -9,16 +10,27 @@ interface ChatMessageListProps {
   pages: ChatPage[];
   toggleMenu: () => void;
   chatFlowHistory?: ChatFlowStep[];
-  storySummary?: string;
-  userPreferences?: string;
+  preResponseNotes: PreResponseNote[];
+  postResponseNotes: PostResponseNote[];
+  onDeleteMessage?: (messageId: string) => void;
+  onDeleteFromHere?: (messageId: string) => void;
+  getDeletePreview?: (messageId: string) => {
+    messageCount: number;
+    pageCount: number;
+  };
+  onDeleteNotes?: () => Promise<void>;
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   pages,
   toggleMenu,
   chatFlowHistory = [],
-  storySummary,
-  userPreferences,
+  preResponseNotes,
+  postResponseNotes,
+  onDeleteMessage,
+  onDeleteFromHere,
+  getDeletePreview,
+  onDeleteNotes,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
@@ -36,12 +48,19 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
       </button>
       <div className="message-list" ref={messageListRef}>
         {messages.map((msg) => (
-          <ChatMessage key={msg.id} message={msg} />
+          <ChatMessage
+            key={msg.id}
+            message={msg}
+            onDeleteMessage={onDeleteMessage}
+            onDeleteFromHere={onDeleteFromHere}
+            getDeletePreview={getDeletePreview}
+          />
         ))}
         <ChatFlowCollapsible
           chatFlowHistory={chatFlowHistory}
-          storySummary={storySummary}
-          userPreferences={userPreferences}
+          preResponseNotes={preResponseNotes}
+          postResponseNotes={postResponseNotes}
+          onDeleteNotes={onDeleteNotes}
         />
       </div>
     </>

@@ -14,11 +14,15 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     pages,
     isSendingMessage,
     submitMessage,
+    deleteMessage,
+    deleteMessagesFromIndex,
+    getDeletePreview,
     isLoadingHistory,
     progressStatus,
     chatFlowHistory,
-    storySummary,
-    userPreferences,
+    preResponseNotes,
+    postResponseNotes,
+    deleteNotes,
   } = useChat({
     chatId,
   });
@@ -36,8 +40,12 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         pages={pages}
         toggleMenu={toggleMenu}
         chatFlowHistory={chatFlowHistory}
-        storySummary={storySummary}
-        userPreferences={userPreferences}
+        preResponseNotes={preResponseNotes}
+        postResponseNotes={postResponseNotes}
+        onDeleteMessage={deleteMessage}
+        onDeleteFromHere={deleteMessagesFromIndex}
+        getDeletePreview={getDeletePreview}
+        onDeleteNotes={deleteNotes}
       />
       {progressStatus && (
         <div className="progress-status">{progressStatus}</div>
