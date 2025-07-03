@@ -1,9 +1,17 @@
-import type { ChatPage } from "../models/ChatPage";
 import { useGrokChatAPI } from "./useGrokChatAPI";
 import { useChatPages } from "./useChatPages";
 import type { Message } from "../Chat/ChatMessage";
 import { useCallback, useState, useEffect } from "react";
 import { useNoteAPI } from "./useNoteAPI";
+import {
+  type ChatPage,
+  type PreResponseNote,
+  type PostResponseNote,
+  StorySummaryPreNote,
+  UserPreferencesPreNote,
+  StorySummaryNote,
+  UserPreferencesNote,
+} from "../models";
 
 export interface ChatFlowStep {
   id: string;
@@ -34,18 +42,6 @@ const CHAT_FLOW_TEMPLATES = {
 
   RESPONSE_PROMPT:
     "Without a preamble, take into consideration the user's most recent response and our notes, write your response.",
-
-  SUMMARY_PROMPT:
-    "Generate a bulleted list summarizing the story so far. Keep list items brief but descriptive, and afterwards ensure only a bulleted list is present in the response",
-
-  SUMMARY_UPDATE_PROMPT:
-    "Update this bulleted list summarizing the story so far. Keep list items brief but descriptive. Avoid deleting unique items. Avoid repeating details, and afterwards ensure only a bulleted list is present in the response:",
-
-  USER_PREFERENCE_PROMPT:
-    "Generate a bulleted list analyzing the user's preferences. What story elements is the user engaging with? Do they have any implicit or explicit preferences? Afterwards ensure only a bulleted list is present in the response",
-
-  USER_PREFERENCE_UPDATE_PROMPT:
-    "Update this bulleted list analyzing the user's preferences. What story elements is the user engaging with? Do they have any implicit or explicit preferences? Keep list items brief but descriptive. Avoid deleting unique items. Avoid repeating details, and afterwards ensure only a bulleted list is present in the response:",
 };
 
 const PROGRESS_MESSAGES = {
@@ -73,27 +69,59 @@ export const useChatFlow = ({
   const [userPreferences, setUserPreferences] = useState<string>("");
   const [notesLoaded, setNotesLoaded] = useState<boolean>(false);
 
-  // Load existing notes on initialization
+  // Note class instances
+  const [preResponseNotes, setPreResponseNotes] = useState<PreResponseNote[]>(
+    []
+  );
+  const [postResponseNotes, setPostResponseNotes] = useState<
+    PostResponseNote[]
+  >([]);
+
+  // Initialize note instances
   useEffect(() => {
-    const loadExistingNotes = async () => {
+    const initializeNotes = async () => {
       if (!noteAPI || !chatId || notesLoaded) return;
 
       try {
-        const [summaryNote, preferencesNote] = await Promise.all([
-          noteAPI.getNote(chatId, "story-summary"),
-          noteAPI.getNote(chatId, "user-preferences"),
+        // Create pre-response note instances
+        const storySummaryPreNote = new StorySummaryPreNote(noteAPI, chatId);
+        const userPreferencesPreNote = new UserPreferencesPreNote(
+          noteAPI,
+          chatId
+        );
+
+        // Create post-response note instances
+        const storySummaryPostNote = new StorySummaryNote(noteAPI, chatId);
+        const userPreferencesPostNote = new UserPreferencesNote(
+          noteAPI,
+          chatId
+        );
+
+        // Load existing content
+        await Promise.all([
+          storySummaryPreNote.load(),
+          userPreferencesPreNote.load(),
         ]);
 
-        if (summaryNote) setStorySummary(summaryNote);
-        if (preferencesNote) setUserPreferences(preferencesNote);
+        // Set initial content for post-response notes
+        storySummaryPostNote.setContent(storySummaryPreNote.getContent());
+        userPreferencesPostNote.setContent(userPreferencesPreNote.getContent());
+
+        // Update state
+        setPreResponseNotes([storySummaryPreNote, userPreferencesPreNote]);
+        setPostResponseNotes([storySummaryPostNote, userPreferencesPostNote]);
+
+        // Keep backward compatibility with existing state
+        setStorySummary(storySummaryPreNote.getContent());
+        setUserPreferences(userPreferencesPreNote.getContent());
         setNotesLoaded(true);
       } catch (error) {
-        console.error("Failed to load existing notes:", error);
+        console.error("Failed to initialize notes:", error);
         setNotesLoaded(true); // Still mark as loaded to prevent retries
       }
     };
 
-    loadExistingNotes();
+    initializeNotes();
   }, [noteAPI, chatId, notesLoaded]);
 
   const addChatFlowStep = useCallback(
@@ -112,69 +140,67 @@ export const useChatFlow = ({
 
   const generateAndSaveNotes = useCallback(
     async (messageList: Message[]) => {
-      if (!noteAPI || !chatId || !grokChatApiClient) return;
+      if (!grokChatApiClient || postResponseNotes.length === 0) return;
 
       try {
-        // Generate story summary
-        const summaryPrompt = storySummary
-          ? `${CHAT_FLOW_TEMPLATES.SUMMARY_UPDATE_PROMPT}\n\n${storySummary}`
-          : CHAT_FLOW_TEMPLATES.SUMMARY_PROMPT;
-
-        const summaryMessageList = [
-          ...messageList,
-          toSystemMessage(summaryPrompt),
-        ];
-        const newSummary = await grokChatApiClient.postChat(
-          summaryMessageList,
-          "low"
+        // Generate and save all post-response notes
+        await Promise.all(
+          postResponseNotes.map((note) =>
+            note.generateAndSave(messageList, grokChatApiClient)
+          )
         );
 
-        // Generate user preferences
-        const preferencesPrompt = userPreferences
-          ? `${CHAT_FLOW_TEMPLATES.USER_PREFERENCE_UPDATE_PROMPT}\n\n${userPreferences}`
-          : CHAT_FLOW_TEMPLATES.USER_PREFERENCE_PROMPT;
-
-        const preferencesMessageList = [
-          ...messageList,
-          toSystemMessage(preferencesPrompt),
-        ];
-        const newPreferences = await grokChatApiClient.postChat(
-          preferencesMessageList,
-          "low"
+        // Update backward compatibility state
+        const summaryNote = postResponseNotes.find(
+          (note) => note.getNoteName() === "story-summary"
+        );
+        const preferencesNote = postResponseNotes.find(
+          (note) => note.getNoteName() === "user-preferences"
         );
 
-        // Save notes to API and update local state
-        await Promise.all([
-          noteAPI.saveNote(chatId, "story-summary", newSummary),
-          noteAPI.saveNote(chatId, "user-preferences", newPreferences),
-        ]);
+        if (summaryNote) setStorySummary(summaryNote.getContent());
+        if (preferencesNote) setUserPreferences(preferencesNote.getContent());
 
-        setStorySummary(newSummary);
-        setUserPreferences(newPreferences);
+        // Update pre-response notes with new content for next iteration
+        const updatedPreResponseNotes = preResponseNotes.map((preNote) => {
+          const correspondingPostNote = postResponseNotes.find(
+            (postNote) => postNote.getNoteName() === preNote.getNoteName()
+          );
+          if (correspondingPostNote) {
+            // Create a new instance with updated content
+            if (preNote.getNoteName() === "story-summary") {
+              const newPreNote = new StorySummaryPreNote(noteAPI!, chatId);
+              newPreNote.setContent(correspondingPostNote.getContent());
+              return newPreNote;
+            } else if (preNote.getNoteName() === "user-preferences") {
+              const newPreNote = new UserPreferencesPreNote(noteAPI!, chatId);
+              newPreNote.setContent(correspondingPostNote.getContent());
+              return newPreNote;
+            }
+          }
+          return preNote;
+        });
+
+        setPreResponseNotes(updatedPreResponseNotes);
       } catch (error) {
         console.error("Failed to generate and save notes:", error);
       }
     },
-    [noteAPI, chatId, grokChatApiClient, storySummary, userPreferences]
+    [grokChatApiClient, postResponseNotes, preResponseNotes, noteAPI, chatId]
   );
 
   const appendNotesToChatHistory = useCallback(
     (messageList: Message[]): Message[] => {
-      const notesMessages: Message[] = [];
+      let updatedMessageList = messageList;
 
-      if (storySummary) {
-        notesMessages.push(toSystemMessage(`Story Summary:\n${storySummary}`));
+      // Use note classes to append context
+      for (const note of preResponseNotes) {
+        updatedMessageList = note.appendToContext(updatedMessageList);
       }
 
-      if (userPreferences) {
-        notesMessages.push(
-          toSystemMessage(`User Preferences:\n${userPreferences}`)
-        );
-      }
-
-      return [...messageList, ...notesMessages];
+      return updatedMessageList;
     },
-    [storySummary, userPreferences]
+    [preResponseNotes]
   );
 
   const submitMessage = useCallback(
