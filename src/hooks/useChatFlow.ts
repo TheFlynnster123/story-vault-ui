@@ -149,6 +149,36 @@ export const useChatFlow = ({
     [grokChatApiClient, postResponseNotes]
   );
 
+  const appendNotesToContext = useCallback(
+    (messageList: Message[], notes: PostResponseNote[]): Message[] => {
+      // Get all note context messages that have content
+      const noteContextMessages: Message[] = [];
+      for (const note of notes) {
+        if (note.hasContent()) {
+          const contextMessage = note.getContextMessage();
+          if (contextMessage) {
+            noteContextMessages.push(contextMessage);
+          }
+        }
+      }
+
+      // If no notes to add, return original list
+      if (noteContextMessages.length === 0) {
+        return messageList;
+      }
+
+      // Calculate insertion point: 7 messages from the end
+      const insertionIndex = Math.max(0, messageList.length - 7);
+
+      // Create new array with notes inserted at the calculated position
+      const result = [...messageList];
+      result.splice(insertionIndex, 0, ...noteContextMessages);
+
+      return result;
+    },
+    []
+  );
+
   const deleteNotes = useCallback(async () => {
     if (!noteAPI || !chatId || postResponseNotes.length === 0) {
       console.error("NoteAPI, chatId, or notes not available for deletion.");
@@ -192,14 +222,10 @@ export const useChatFlow = ({
         let localMessageList = getMessageList();
 
         // Append post-response notes to chat history using note instances
-        for (const note of postResponseNotes) {
-          if (note.hasContent()) {
-            const contextMessage = note.getContextMessage();
-            if (contextMessage) {
-              localMessageList.push(contextMessage);
-            }
-          }
-        }
+        localMessageList = appendNotesToContext(
+          localMessageList,
+          postResponseNotes
+        );
 
         // Step 1: Generate Planning Notes using PlanningPreResponseNote
         setProgressStatus(PROGRESS_MESSAGES.PLANNING_NOTES);
@@ -241,6 +267,7 @@ export const useChatFlow = ({
       addChatFlowStep,
       updatePostResponseNotes,
       postResponseNotes,
+      appendNotesToContext,
     ]
   );
 
