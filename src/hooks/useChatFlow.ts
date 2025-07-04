@@ -11,6 +11,12 @@ import {
   UserPreferencesNote,
   PlanningPreResponseNote,
 } from "../models";
+import { toUserMessage, toSystemMessage } from "../utils/messageUtils";
+import {
+  CHAT_FLOW_TEMPLATES,
+  PROGRESS_MESSAGES,
+  CHAT_FLOW_CONFIG,
+} from "../constants/chatFlow";
 
 export interface ChatFlowStep {
   id: string;
@@ -40,16 +46,6 @@ interface UseChatFlowReturn {
 interface UseChatFlowProps {
   chatId: string;
 }
-
-const CHAT_FLOW_TEMPLATES = {
-  RESPONSE_PROMPT:
-    "Without a preamble, take into consideration the user's most recent response and our notes, write your response.",
-};
-
-const PROGRESS_MESSAGES = {
-  PLANNING_NOTES: "Planning response...",
-  RESPONSE_MESSAGE: "Writing response...",
-};
 
 export const useChatFlow = ({
   chatId,
@@ -167,8 +163,11 @@ export const useChatFlow = ({
         return messageList;
       }
 
-      // Calculate insertion point: 7 messages from the end
-      const insertionIndex = Math.max(0, messageList.length - 7);
+      // Calculate insertion point: configurable offset from the end
+      const insertionIndex = Math.max(
+        0,
+        messageList.length - CHAT_FLOW_CONFIG.NOTE_INSERTION_OFFSET
+      );
 
       // Create new array with notes inserted at the calculated position
       const result = [...messageList];
@@ -286,19 +285,3 @@ export const useChatFlow = ({
     deleteNotes,
   };
 };
-
-function toUserMessage(userMessageText: string): Message {
-  return {
-    id: `user-${Date.now()}`,
-    role: "user",
-    content: userMessageText,
-  };
-}
-
-function toSystemMessage(systemReplyText: string): Message {
-  return {
-    id: `system-${Date.now()}`,
-    role: "system",
-    content: systemReplyText,
-  };
-}

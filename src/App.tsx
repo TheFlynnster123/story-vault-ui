@@ -5,21 +5,15 @@ import { useGrokKey } from "./hooks/useGrokKey";
 import { GrokKeyInput } from "./GrokKeyInput";
 import React from "react";
 import ChatMenu from "./Chat/ChatMenu";
+import { LoadingSpinner } from "./components/common/LoadingSpinner";
 
 const AuthenticatedContent: React.FC = ({}) => {
   const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
 
   if (hasValidGrokKey === undefined) {
     return (
-      <div
-        style={{
-          width: "100%",
-          margin: "auto",
-          alignContent: "center",
-          height: "100vh",
-        }}
-      >
-        Loading Grok Key status...
+      <div className="app-loading-container">
+        <LoadingSpinner message="Loading Grok Key status..." />
       </div>
     );
   }
@@ -43,14 +37,7 @@ function LoginBarrier() {
       {isAuthenticated ? (
         <AuthenticatedContent />
       ) : (
-        <div
-          style={{
-            width: "100%",
-            margin: "auto",
-            alignContent: "center",
-            height: "100vh",
-          }}
-        >
+        <div className="app-login-container">
           <button onClick={() => loginWithRedirect()}>Log in</button>
         </div>
       )}

@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from "react";
 import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
-import { useChat } from "../hooks/useChat";
+import { useChatFlow } from "../hooks/useChatFlow";
+import { ChatLoadingSpinner } from "../components/common/LoadingSpinner";
 
 interface ChatProps {
   chatId: string;
@@ -23,7 +24,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     preResponseNotes,
     postResponseNotes,
     deleteNotes,
-  } = useChat({
+  } = useChatFlow({
     chatId,
   });
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -32,7 +33,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     if (!isSendingMessage) inputRef.current?.focus();
   }, [isSendingMessage]);
 
-  if (isLoadingHistory) return <LoadingSpinner />;
+  if (isLoadingHistory) return <ChatLoadingSpinner />;
 
   return (
     <div className="chat-container" data-chatid={chatId}>
@@ -59,11 +60,3 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     </div>
   );
 };
-
-const LoadingSpinner = () => (
-  <div className="chat-container">
-    <div className="loading-spinner-container">
-      <div className="loading-spinner"></div>
-    </div>
-  </div>
-);
