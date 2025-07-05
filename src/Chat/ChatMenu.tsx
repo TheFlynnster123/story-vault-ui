@@ -3,8 +3,10 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { v4 as uuidv4 } from "uuid";
 import { Chat } from "./Chat";
+import { ChatSettingsManager } from "./ChatSettingsManager";
 import "./ChatMenu.css";
 import { useEncryption } from "../hooks/useEncryption";
+import { useChatSettings } from "../hooks/useChatSettings";
 import type { EncryptionManager } from "../Managers/EncryptionManager";
 
 function ChatMenu() {
@@ -13,6 +15,7 @@ function ChatMenu() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<boolean>(true);
   const { encryptionManager } = useEncryption();
+  const { chatSettings, loadChatSettings, getChatTitle } = useChatSettings();
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -24,24 +27,31 @@ function ChatMenu() {
         );
         const fetchedChatIds = await chatHistoryAPI.getChats();
         setChatIds(fetchedChatIds);
+
+        // Load settings for all chats
+        await Promise.all(
+          fetchedChatIds.map((chatId) => loadChatSettings(chatId))
+        );
       } catch (error) {
         console.error("Failed to fetch chats or get access token:", error);
       }
     };
 
     if (encryptionManager) fetchChats();
-  }, [getAccessTokenSilently, encryptionManager]);
+  }, [getAccessTokenSilently, encryptionManager, loadChatSettings]);
 
   const handleSelectChat = (id: string) => {
     setSelectedChatId(id);
     setShowMenu(false);
   };
 
-  const handleCreateChat = () => {
-    const newChatId = uuidv4();
+  const handleChatCreated = (newChatId: string) => {
+    setChatIds((prev) => [...prev, newChatId]);
     setSelectedChatId(newChatId);
     setShowMenu(false);
   };
+
+  const generateChatId = () => uuidv4();
 
   const toggleMenu = () => {
     setShowMenu((prevShowMenu) => !prevShowMenu);
@@ -49,27 +59,44 @@ function ChatMenu() {
 
   if (!selectedChatId || showMenu) {
     return (
-      <div className="chat-menu-container">
-        <h2>Chats</h2>
-        <div className="chat-menu-list">
-          {chatIds.map((id) => (
-            <div
-              key={id}
-              className="chat-menu-item"
-              onClick={() => handleSelectChat(id)}
-            >
-              {id}
-            </div>
-          ))}
-          <div
-            key="create"
-            className="chat-menu-create-item"
-            onClick={handleCreateChat}
-          >
-            Create New Chat
+      <>
+        <div className="chat-menu-container">
+          <h2>Chats</h2>
+          <ChatSettingsManager
+            onChatCreated={handleChatCreated}
+            generateChatId={generateChatId}
+          />
+          <div className="chat-menu-list">
+            {chatIds.map((id) => {
+              const currentChatSettings = chatSettings[id];
+              const hasBackgroundImage =
+                currentChatSettings?.backgroundPhotoBase64;
+
+              return (
+                <div
+                  key={id}
+                  className={`chat-menu-item ${
+                    hasBackgroundImage ? "chat-menu-item-with-image" : ""
+                  }`}
+                  onClick={() => handleSelectChat(id)}
+                  style={
+                    hasBackgroundImage
+                      ? {
+                          backgroundImage: `url(${currentChatSettings.backgroundPhotoBase64})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          backgroundRepeat: "no-repeat",
+                        }
+                      : {}
+                  }
+                >
+                  <div className="chat-menu-item-title">{getChatTitle(id)}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
+      </>
     );
   }
 

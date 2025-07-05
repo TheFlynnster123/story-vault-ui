@@ -1,7 +1,6 @@
 .chat-input-form {
   display: flex;
   padding: 10px;
-  border-top: 1px solid #eee; /* Optional: a very light top border for separation */
   position: relative;
   z-index: 10; /* Ensure input stays above other elements */
   background-color: inherit; /* Match parent background */
@@ -13,9 +12,7 @@
   .chat-input-form {
     position: sticky;
     bottom: 0;
-    /* Prevent the keyboard from pushing it up */
     transform: translateZ(0);
-    /* Ensure it stays in place */
     will-change: transform;
   }
 }
@@ -33,6 +30,7 @@
   resize: none; /* Prevent user resizing */
   font-family: inherit; /* Maintain consistent font */
   line-height: 1.5; /* Comfortable line spacing */
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5); /* Example values */
 }
 
 .chat-input-button {
