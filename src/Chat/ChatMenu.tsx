@@ -15,7 +15,7 @@ function ChatMenu() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<boolean>(true);
   const { encryptionManager } = useEncryption();
-  const { loadChatSettings, getChatTitle } = useChatSettings();
+  const { chatSettings, loadChatSettings, getChatTitle } = useChatSettings();
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -62,20 +62,38 @@ function ChatMenu() {
       <>
         <div className="chat-menu-container">
           <h2>Chats</h2>
+          <ChatSettingsManager
+            onChatCreated={handleChatCreated}
+            generateChatId={generateChatId}
+          />
           <div className="chat-menu-list">
-            {chatIds.map((id) => (
-              <div
-                key={id}
-                className="chat-menu-item"
-                onClick={() => handleSelectChat(id)}
-              >
-                {getChatTitle(id)}
-              </div>
-            ))}
-            <ChatSettingsManager
-              onChatCreated={handleChatCreated}
-              generateChatId={generateChatId}
-            />
+            {chatIds.map((id) => {
+              const currentChatSettings = chatSettings[id];
+              const hasBackgroundImage =
+                currentChatSettings?.backgroundPhotoBase64;
+
+              return (
+                <div
+                  key={id}
+                  className={`chat-menu-item ${
+                    hasBackgroundImage ? "chat-menu-item-with-image" : ""
+                  }`}
+                  onClick={() => handleSelectChat(id)}
+                  style={
+                    hasBackgroundImage
+                      ? {
+                          backgroundImage: `url(${currentChatSettings.backgroundPhotoBase64})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          backgroundRepeat: "no-repeat",
+                        }
+                      : {}
+                  }
+                >
+                  <div className="chat-menu-item-title">{getChatTitle(id)}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </>
