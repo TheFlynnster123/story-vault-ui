@@ -10,6 +10,7 @@ import {
   StorySummaryNote,
   UserPreferencesNote,
   PlanningPreResponseNote,
+  ChatSettingsNote,
 } from "../models";
 import { toUserMessage, toSystemMessage } from "../utils/messageUtils";
 import {
@@ -113,6 +114,42 @@ export const useChatFlow = ({
 
     initializeNotes();
   }, [noteAPI, chatId, grokChatApiClient, notesLoaded]);
+
+  // Check for chat settings and add context as first message if needed
+  useEffect(() => {
+    const addContextMessage = async () => {
+      if (!noteAPI || !chatId || !notesLoaded || isLoadingHistory) return;
+
+      const messageList = getMessageList();
+
+      // Only add context if no messages exist
+      if (messageList.length > 0) return;
+
+      try {
+        // Load chat settings
+        const chatSettingsNote = new ChatSettingsNote(chatId, noteAPI);
+        await chatSettingsNote.load();
+
+        const context = chatSettingsNote.getContext();
+        if (context.trim()) {
+          // Add context as the first system message
+          const contextMessage = toSystemMessage(`Story Context: ${context}`);
+          await addMessage(contextMessage);
+        }
+      } catch (error) {
+        console.error("Failed to load chat settings or add context:", error);
+      }
+    };
+
+    addContextMessage();
+  }, [
+    noteAPI,
+    chatId,
+    notesLoaded,
+    isLoadingHistory,
+    getMessageList,
+    addMessage,
+  ]);
 
   const addChatFlowStep = useCallback(
     (stepType: ChatFlowStep["stepType"], content: string) => {

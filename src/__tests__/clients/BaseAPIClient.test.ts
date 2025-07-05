@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BaseAPIClient } from "../../clients/BaseAPIClient";
 import { EncryptionManager } from "../../Managers/EncryptionManager";
 
+// Mock the config
+vi.mock("../../Config", () => ({
+  default: {
+    storyVaultAPIURL: "https://story-vault-api.azurewebsites.net",
+  },
+}));
+
 // Create a concrete implementation for testing
 class TestAPIClient extends BaseAPIClient {
   constructor(encryptionManager: EncryptionManager, accessToken: string) {
