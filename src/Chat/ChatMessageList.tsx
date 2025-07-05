@@ -2,13 +2,11 @@ import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 import type { PreResponseNote, PostResponseNote } from "../models";
-import { IoArrowBack } from "react-icons/io5";
 import { ChatFlowCollapsible } from "./ChatFlowCollapsible";
 import type { ChatFlowStep } from "../hooks/useChatFlow";
 
 interface ChatMessageListProps {
   pages: ChatPage[];
-  toggleMenu: () => void;
   chatFlowHistory?: ChatFlowStep[];
   preResponseNotes: PreResponseNote[];
   postResponseNotes: PostResponseNote[];
@@ -23,7 +21,6 @@ interface ChatMessageListProps {
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   pages,
-  toggleMenu,
   chatFlowHistory = [],
   preResponseNotes,
   postResponseNotes,
@@ -38,32 +35,23 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   useAutoScrolling(messageListRef, messages);
 
   return (
-    <>
-      <button
-        className="message-list-menu-button"
-        onClick={toggleMenu}
-        aria-label="Back to menu"
-      >
-        <IoArrowBack size={20} />
-      </button>
-      <div className="message-list" ref={messageListRef}>
-        {messages.map((msg) => (
-          <ChatMessage
-            key={msg.id}
-            message={msg}
-            onDeleteMessage={onDeleteMessage}
-            onDeleteFromHere={onDeleteFromHere}
-            getDeletePreview={getDeletePreview}
-          />
-        ))}
-        <ChatFlowCollapsible
-          chatFlowHistory={chatFlowHistory}
-          preResponseNotes={preResponseNotes}
-          postResponseNotes={postResponseNotes}
-          onDeleteNotes={onDeleteNotes}
+    <div className="message-list" ref={messageListRef}>
+      {messages.map((msg) => (
+        <ChatMessage
+          key={msg.id}
+          message={msg}
+          onDeleteMessage={onDeleteMessage}
+          onDeleteFromHere={onDeleteFromHere}
+          getDeletePreview={getDeletePreview}
         />
-      </div>
-    </>
+      ))}
+      <ChatFlowCollapsible
+        chatFlowHistory={chatFlowHistory}
+        preResponseNotes={preResponseNotes}
+        postResponseNotes={postResponseNotes}
+        onDeleteNotes={onDeleteNotes}
+      />
+    </div>
   );
 };
 

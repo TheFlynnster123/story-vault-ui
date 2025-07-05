@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
+import { ChatControls } from "./ChatControls";
 import { useChatFlow } from "../hooks/useChatFlow";
 import { useChatSettings } from "../hooks/useChatSettings";
 import { ChatLoadingSpinner } from "../components/common/LoadingSpinner";
@@ -28,7 +29,8 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   } = useChatFlow({
     chatId,
   });
-  const { chatSettings, loadChatSettings } = useChatSettings();
+  const { chatSettings, loadChatSettings, updateChatSettings } =
+    useChatSettings();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -38,6 +40,10 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   useEffect(() => {
     loadChatSettings(chatId);
   }, [chatId, loadChatSettings]);
+
+  const handleSettingsUpdated = (updatedSettings: any) => {
+    updateChatSettings(chatId, updatedSettings);
+  };
 
   if (isLoadingHistory) return <ChatLoadingSpinner />;
 
@@ -61,9 +67,14 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       data-chatid={chatId}
       style={backgroundStyle}
     >
+      <ChatControls
+        chatId={chatId}
+        toggleMenu={toggleMenu}
+        onSettingsUpdated={handleSettingsUpdated}
+        currentChatSettings={currentChatSettings}
+      />
       <ChatMessageList
         pages={pages}
-        toggleMenu={toggleMenu}
         chatFlowHistory={chatFlowHistory}
         preResponseNotes={preResponseNotes}
         postResponseNotes={postResponseNotes}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { ChatSettings } from "../models/ChatSettingsNote";
 import "./ChatSettingsDialog.css";
 
@@ -6,12 +6,14 @@ interface ChatSettingsDialogProps {
   isOpen: boolean;
   onCancel: () => void;
   onCreate: (settings: ChatSettings) => void;
+  initialValues?: Partial<ChatSettings>;
 }
 
 export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
   isOpen,
   onCancel,
   onCreate,
+  initialValues,
 }) => {
   const [chatTitle, setChatTitle] = useState("");
   const [context, setContext] = useState("");
@@ -22,6 +24,16 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
     chatTitle?: string;
     context?: string;
   }>({});
+
+  // Auto-fill form with initial values when dialog opens
+  useEffect(() => {
+    if (isOpen && initialValues) {
+      setChatTitle(initialValues.chatTitle || "");
+      setContext(initialValues.context || "");
+      setBackgroundPhotoBase64(initialValues.backgroundPhotoBase64);
+      setErrors({});
+    }
+  }, [isOpen, initialValues]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -102,7 +114,7 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
     <div className="chat-settings-overlay" onKeyDown={handleKeyDown}>
       <div className="chat-settings-dialog">
         <div className="chat-settings-header">
-          <h2>Create New Chat</h2>
+          <h2>{initialValues ? "Edit Chat Settings" : "Create New Chat"}</h2>
           <button className="chat-settings-close" onClick={handleCancel}>
             ×
           </button>
@@ -171,7 +183,7 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
                     htmlFor="background-photo"
                     className="photo-upload-label"
                   >
-                    <span>Choose Image</span>
+                    <div>Choose Image</div>
                     <small>Max 5MB, JPG/PNG/GIF</small>
                   </label>
                 </div>
@@ -185,7 +197,7 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
             Cancel
           </button>
           <button className="chat-settings-create" onClick={handleCreate}>
-            Create Chat
+            {initialValues ? "Save Changes" : "Create Chat"}
           </button>
         </div>
       </div>

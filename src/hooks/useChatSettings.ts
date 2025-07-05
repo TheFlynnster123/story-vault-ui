@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useNoteAPI } from "./useNoteAPI";
 import {
   ChatSettingsNote,
@@ -13,6 +13,7 @@ interface UseChatSettingsReturn {
   chatSettings: ChatSettingsMap;
   loadChatSettings: (chatId: string) => Promise<ChatSettings | null>;
   createChatSettings: (chatId: string, settings: ChatSettings) => Promise<void>;
+  updateChatSettings: (chatId: string, settings: ChatSettings) => void;
   getChatTitle: (chatId: string) => string;
   isLoading: boolean;
 }
@@ -92,6 +93,16 @@ export const useChatSettings = (): UseChatSettingsReturn => {
     [noteAPI]
   );
 
+  const updateChatSettings = useCallback(
+    (chatId: string, settings: ChatSettings): void => {
+      setChatSettings((prev) => ({
+        ...prev,
+        [chatId]: settings,
+      }));
+    },
+    []
+  );
+
   const getChatTitle = useCallback(
     (chatId: string): string => {
       const settings = chatSettings[chatId];
@@ -107,6 +118,7 @@ export const useChatSettings = (): UseChatSettingsReturn => {
     chatSettings,
     loadChatSettings,
     createChatSettings,
+    updateChatSettings,
     getChatTitle,
     isLoading,
   };
