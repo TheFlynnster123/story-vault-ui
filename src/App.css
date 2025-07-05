@@ -38,3 +38,28 @@
 .read-the-docs {
   color: #888;
 }
+
+.app-loading-container,
+.app-login-container {
+  width: 100%;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.app-login-container button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.app-login-container button:hover {
+  background-color: #0056b3;
+}
