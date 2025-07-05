@@ -15,10 +15,41 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
 }) => {
   const [chatTitle, setChatTitle] = useState("");
   const [context, setContext] = useState("");
+  const [backgroundPhotoBase64, setBackgroundPhotoBase64] = useState<
+    string | undefined
+  >(undefined);
   const [errors, setErrors] = useState<{
     chatTitle?: string;
     context?: string;
   }>({});
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file type
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file");
+        return;
+      }
+
+      // Check file size (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size must be less than 5MB");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64String = event.target?.result as string;
+        setBackgroundPhotoBase64(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setBackgroundPhotoBase64(undefined);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: { chatTitle?: string; context?: string } = {};
@@ -40,10 +71,12 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
       onCreate({
         chatTitle: chatTitle.trim(),
         context: context.trim(),
+        backgroundPhotoBase64,
       });
       // Reset form
       setChatTitle("");
       setContext("");
+      setBackgroundPhotoBase64(undefined);
       setErrors({});
     }
   };
@@ -52,6 +85,7 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
     // Reset form
     setChatTitle("");
     setContext("");
+    setBackgroundPhotoBase64(undefined);
     setErrors({});
     onCancel();
   };
@@ -104,6 +138,45 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
             {errors.context && (
               <span className="error-message">{errors.context}</span>
             )}
+          </div>
+
+          <div className="chat-settings-field">
+            <label htmlFor="background-photo">Background Photo</label>
+            <div className="photo-upload-container">
+              {backgroundPhotoBase64 ? (
+                <div className="photo-preview">
+                  <img
+                    src={backgroundPhotoBase64}
+                    alt="Background preview"
+                    className="photo-preview-image"
+                  />
+                  <button
+                    type="button"
+                    className="photo-remove-button"
+                    onClick={removePhoto}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="photo-upload-area">
+                  <input
+                    id="background-photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="photo-upload-input"
+                  />
+                  <label
+                    htmlFor="background-photo"
+                    className="photo-upload-label"
+                  >
+                    <span>Choose Image</span>
+                    <small>Max 5MB, JPG/PNG/GIF</small>
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

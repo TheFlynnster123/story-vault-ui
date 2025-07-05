@@ -4,6 +4,7 @@ import type { NoteAPI } from "../clients/NoteAPI";
 export interface ChatSettings {
   chatTitle: string;
   context: string;
+  backgroundPhotoBase64?: string;
 }
 
 export class ChatSettingsNote extends Note {
@@ -67,6 +68,22 @@ export class ChatSettingsNote extends Note {
   setContext(context: string): void {
     const settings = this.getSettings();
     settings.context = context;
+    this.setSettings(settings);
+  }
+
+  /**
+   * Get the background photo base64
+   */
+  getBackgroundPhotoBase64(): string | undefined {
+    return this.getSettings().backgroundPhotoBase64;
+  }
+
+  /**
+   * Set the background photo base64
+   */
+  setBackgroundPhotoBase64(photoBase64: string | undefined): void {
+    const settings = this.getSettings();
+    settings.backgroundPhotoBase64 = photoBase64;
     this.setSettings(settings);
   }
 

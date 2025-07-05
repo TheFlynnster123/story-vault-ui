@@ -22,6 +22,7 @@ describe("useChatSettings", () => {
     save: vi.fn(),
     getChatTitle: vi.fn(),
     getContext: vi.fn(),
+    getBackgroundPhotoBase64: vi.fn(),
   };
 
   beforeEach(() => {
@@ -30,6 +31,7 @@ describe("useChatSettings", () => {
     mockChatSettingsNote.save.mockResolvedValue(undefined);
     mockChatSettingsNote.getChatTitle.mockReturnValue("");
     mockChatSettingsNote.getContext.mockReturnValue("");
+    mockChatSettingsNote.getBackgroundPhotoBase64.mockReturnValue(undefined);
     (useNoteAPI as any).mockReturnValue(mockNoteAPI);
     (ChatSettingsNote as any).mockImplementation(() => mockChatSettingsNote);
   });
@@ -49,6 +51,7 @@ describe("useChatSettings", () => {
       expect(settings).toEqual({
         chatTitle: "Test Story",
         context: "Test context",
+        backgroundPhotoBase64: undefined,
       });
       expect(mockChatSettingsNote.load).toHaveBeenCalled();
     });
@@ -106,6 +109,7 @@ describe("useChatSettings", () => {
       const testSettings = {
         chatTitle: "New Story",
         context: "New context",
+        backgroundPhotoBase64: undefined,
       };
 
       await act(async () => {
@@ -128,6 +132,7 @@ describe("useChatSettings", () => {
       const testSettings = {
         chatTitle: "New Story",
         context: "New context",
+        backgroundPhotoBase64: undefined,
       };
 
       await act(async () => {
@@ -145,6 +150,7 @@ describe("useChatSettings", () => {
       const testSettings = {
         chatTitle: "New Story",
         context: "New context",
+        backgroundPhotoBase64: undefined,
       };
 
       await act(async () => {

@@ -136,6 +136,7 @@ describe("ChatSettingsDialog", () => {
         expect(mockOnCreate).toHaveBeenCalledWith({
           chatTitle: "My Epic Story",
           context: "A fantasy adventure in a magical realm",
+          backgroundPhotoBase64: undefined,
         });
       });
     });
@@ -156,6 +157,7 @@ describe("ChatSettingsDialog", () => {
         expect(mockOnCreate).toHaveBeenCalledWith({
           chatTitle: "My Story",
           context: "My Context",
+          backgroundPhotoBase64: undefined,
         });
       });
     });
@@ -269,6 +271,7 @@ describe("ChatSettingsDialog", () => {
         expect(mockOnCreate).toHaveBeenCalledWith({
           chatTitle: "Valid Title",
           context: "Valid Context",
+          backgroundPhotoBase64: undefined,
         });
       });
 

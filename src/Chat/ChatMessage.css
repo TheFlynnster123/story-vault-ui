@@ -27,6 +27,7 @@
   border-radius: 10px;
   display: inline-block;
   max-width: 85%;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5); /* Example values */
   white-space: pre-wrap;
 }
 
@@ -36,8 +37,8 @@
 }
 
 .message-text.system {
-  background-color: #e9ecef;
-  color: black;
+  background-color: rgb(0, 2, 126);
+  color: whute;
 }
 
 /* Styling for quoted text */

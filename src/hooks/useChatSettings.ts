@@ -39,6 +39,7 @@ export const useChatSettings = (): UseChatSettingsReturn => {
         const settings: ChatSettings = {
           chatTitle: chatSettingsNote.getChatTitle(),
           context: chatSettingsNote.getContext(),
+          backgroundPhotoBase64: chatSettingsNote.getBackgroundPhotoBase64(),
         };
 
         setChatSettings((prev) => ({

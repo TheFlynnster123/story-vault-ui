@@ -3,6 +3,7 @@ import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { useChatFlow } from "../hooks/useChatFlow";
+import { useChatSettings } from "../hooks/useChatSettings";
 import { ChatLoadingSpinner } from "../components/common/LoadingSpinner";
 
 interface ChatProps {
@@ -27,16 +28,39 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   } = useChatFlow({
     chatId,
   });
+  const { chatSettings, loadChatSettings } = useChatSettings();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!isSendingMessage) inputRef.current?.focus();
   }, [isSendingMessage]);
 
+  useEffect(() => {
+    loadChatSettings(chatId);
+  }, [chatId, loadChatSettings]);
+
   if (isLoadingHistory) return <ChatLoadingSpinner />;
 
+  const currentChatSettings = chatSettings[chatId];
+  const backgroundStyle: React.CSSProperties = {
+    backgroundColor: currentChatSettings?.backgroundPhotoBase64
+      ? "transparent"
+      : "black",
+    backgroundImage: currentChatSettings?.backgroundPhotoBase64
+      ? `url(${currentChatSettings.backgroundPhotoBase64})`
+      : "none",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    backgroundAttachment: "fixed",
+  };
+
   return (
-    <div className="chat-container" data-chatid={chatId}>
+    <div
+      className="chat-container"
+      data-chatid={chatId}
+      style={backgroundStyle}
+    >
       <ChatMessageList
         pages={pages}
         toggleMenu={toggleMenu}
