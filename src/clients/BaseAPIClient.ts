@@ -1,3 +1,4 @@
+import config from "../Config";
 import type { EncryptionManager } from "../Managers/EncryptionManager";
 
 export abstract class BaseAPIClient {
@@ -12,7 +13,7 @@ export abstract class BaseAPIClient {
   ) {
     this.encryptionManager = encryptionManager;
     this.accessToken = accessToken;
-    this.baseUrl = baseUrl || "https://story-vault-api.azurewebsites.net";
+    this.baseUrl = baseUrl ?? config.storyVaultAPIURL;
   }
 
   protected buildHeaders(): HeadersInit {
