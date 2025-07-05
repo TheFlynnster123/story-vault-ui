@@ -2,6 +2,10 @@ import type { Message } from "../Chat/ChatMessage";
 import type { EncryptionManager } from "../Managers/EncryptionManager";
 import { BaseAPIClient } from "./BaseAPIClient";
 
+interface PostChatRequest {
+  messages: Message[];
+}
+
 export class GrokChatAPI extends BaseAPIClient {
   constructor(encryptionManager: EncryptionManager, accessToken: string) {
     if (!accessToken)
@@ -25,11 +29,15 @@ export class GrokChatAPI extends BaseAPIClient {
       headers.Reasoning = reasoning;
     }
 
+    const requestBody: PostChatRequest = {
+      messages: messages,
+    };
+
     const response = await this.makeRequest<{ reply: string }>(
       `/api/PostChat`,
       {
         method: "POST",
-        body: JSON.stringify(messages),
+        body: JSON.stringify(requestBody),
         headers,
       }
     );

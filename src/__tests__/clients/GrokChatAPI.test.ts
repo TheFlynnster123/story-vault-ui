@@ -67,7 +67,7 @@ describe("GrokChatAPI", () => {
 
       expect(result).toBe("Test response");
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://story-vault-api.azurewebsites.net/api/PostChat",
+        "https://test-api.com/api/PostChat",
         {
           method: "POST",
           headers: {
@@ -75,7 +75,7 @@ describe("GrokChatAPI", () => {
             "Content-Type": "application/json",
             Authorization: "Bearer test-access-token",
           },
-          body: JSON.stringify(mockMessages),
+          body: JSON.stringify({ messages: mockMessages }),
         }
       );
     });
@@ -91,7 +91,7 @@ describe("GrokChatAPI", () => {
       await grokChatAPI.postChat(mockMessages, "high");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://story-vault-api.azurewebsites.net/api/PostChat",
+        "https://test-api.com/api/PostChat",
         {
           method: "POST",
           headers: {
@@ -100,7 +100,7 @@ describe("GrokChatAPI", () => {
             Authorization: "Bearer test-access-token",
             Reasoning: "high",
           },
-          body: JSON.stringify(mockMessages),
+          body: JSON.stringify({ messages: mockMessages }),
         }
       );
     });
@@ -176,7 +176,7 @@ describe("GrokChatAPI", () => {
       await grokChatAPI.postChat([]);
 
       const callArgs = (global.fetch as any).mock.calls[0][1];
-      expect(callArgs.body).toBe("[]");
+      expect(callArgs.body).toBe(JSON.stringify({ messages: [] }));
     });
 
     it("should handle missing encryption key", async () => {
