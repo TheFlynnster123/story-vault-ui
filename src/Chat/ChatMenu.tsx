@@ -4,6 +4,8 @@ import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { v4 as uuidv4 } from "uuid";
 import { Chat } from "./Chat";
 import { ChatSettingsManager } from "./ChatSettingsManager";
+import { SystemSettingsDialog } from "../SystemSettings";
+import { RiSettings3Fill } from "react-icons/ri";
 import "./ChatMenu.css";
 import { useEncryption } from "../hooks/useEncryption";
 import { useChatSettings } from "../hooks/useChatSettings";
@@ -14,6 +16,7 @@ function ChatMenu() {
   const [chatIds, setChatIds] = useState<string[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<boolean>(true);
+  const [showSystemSettings, setShowSystemSettings] = useState<boolean>(false);
   const { encryptionManager } = useEncryption();
   const { chatSettings, loadChatSettings, getChatTitle } = useChatSettings();
 
@@ -61,7 +64,17 @@ function ChatMenu() {
     return (
       <>
         <div className="chat-menu-container">
-          <h2>Chats</h2>
+          <div className="chat-menu-header">
+            <h2>Chats</h2>
+            <button
+              className="system-settings-button"
+              onClick={() => setShowSystemSettings(true)}
+              aria-label="Open system settings"
+              title="System Settings"
+            >
+              <RiSettings3Fill />
+            </button>
+          </div>
           <ChatSettingsManager
             onChatCreated={handleChatCreated}
             generateChatId={generateChatId}
@@ -96,6 +109,10 @@ function ChatMenu() {
             })}
           </div>
         </div>
+        <SystemSettingsDialog
+          isOpen={showSystemSettings}
+          onClose={() => setShowSystemSettings(false)}
+        />
       </>
     );
   }

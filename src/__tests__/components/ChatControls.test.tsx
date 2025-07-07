@@ -63,14 +63,14 @@ describe("ChatControls", () => {
   it("renders menu and settings buttons", () => {
     render(<ChatControls {...defaultProps} />);
 
-    expect(screen.getByTitle("Toggle Menu")).toBeInTheDocument();
+    expect(screen.getByTitle("Back to Menu")).toBeInTheDocument();
     expect(screen.getByTitle("Chat Settings")).toBeInTheDocument();
   });
 
   it("calls toggleMenu when menu button is clicked", () => {
     render(<ChatControls {...defaultProps} />);
 
-    fireEvent.click(screen.getByTitle("Toggle Menu"));
+    fireEvent.click(screen.getByTitle("Back to Menu"));
     expect(mockToggleMenu).toHaveBeenCalledTimes(1);
   });
 
@@ -178,7 +178,7 @@ describe("ChatControls", () => {
   it("has correct button styling classes", () => {
     render(<ChatControls {...defaultProps} />);
 
-    const menuButton = screen.getByTitle("Toggle Menu");
+    const menuButton = screen.getByTitle("Back to Menu");
     const settingsButton = screen.getByTitle("Chat Settings");
 
     expect(menuButton).toHaveClass("chat-controls-button", "menu-button");

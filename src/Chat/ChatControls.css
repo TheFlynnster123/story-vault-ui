@@ -42,6 +42,11 @@
   font-size: 16px;
 }
 
+.settings-button svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .chat-controls {
@@ -58,5 +63,10 @@
 
   .settings-button {
     font-size: 14px;
+  }
+
+  .settings-button svg {
+    width: 18px;
+    height: 18px;
   }
 }

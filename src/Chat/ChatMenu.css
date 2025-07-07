@@ -12,12 +12,50 @@
   bottom: 0;
 }
 
-.chat-menu-container h2 {
-  margin-top: 0;
+.chat-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
   margin-bottom: 15px;
+}
+
+.chat-menu-container h2 {
+  margin: 0;
   font-size: 1.4em;
   color: white;
   text-align: center;
+  flex: 1;
+}
+
+.system-settings-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+}
+
+.system-settings-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: rotate(90deg);
+}
+
+.system-settings-button:active {
+  transform: rotate(90deg) scale(0.95);
+}
+
+.system-settings-button svg {
+  width: 20px;
+  height: 20px;
 }
 
 .chat-menu-list {

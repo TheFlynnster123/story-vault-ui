@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChatSettingsDialog } from "./ChatSettingsDialog";
 import { useChatSettings } from "../hooks/useChatSettings";
+import { RiChatSettingsLine } from "react-icons/ri";
 import type { ChatSettings } from "../models/ChatSettingsNote";
 import "./ChatControls.css";
 
@@ -39,9 +40,9 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
       <button
         className="chat-controls-button menu-button"
         onClick={toggleMenu}
-        title="Toggle Menu"
+        title="Back to Menu"
       >
-        ☰
+        ←
       </button>
 
       <button
@@ -49,7 +50,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         onClick={() => setIsSettingsDialogOpen(true)}
         title="Chat Settings"
       >
-        ⚙️
+        <RiChatSettingsLine />
       </button>
 
       <ChatSettingsDialog
