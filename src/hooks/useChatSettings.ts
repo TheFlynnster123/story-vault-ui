@@ -26,9 +26,19 @@ export const useChatSettings = (): UseChatSettingsReturn => {
     async (chatId: string): Promise<ChatSettings | null> => {
       if (!noteAPI || !chatId) return null;
 
-      // Return cached settings if already loaded
-      if (chatSettings[chatId] !== undefined) {
-        return chatSettings[chatId];
+      const getCurrentSettings = () => {
+        let currentSettings: ChatSettingsMap = {};
+        setChatSettings((prev) => {
+          currentSettings = prev;
+          return prev;
+        });
+        return currentSettings;
+      };
+
+      const currentSettings = getCurrentSettings();
+
+      if (currentSettings[chatId] !== undefined) {
+        return currentSettings[chatId];
       }
 
       try {
@@ -50,7 +60,6 @@ export const useChatSettings = (): UseChatSettingsReturn => {
         return settings;
       } catch (error) {
         console.error(`Failed to load chat settings for ${chatId}:`, error);
-        // Mark as null to indicate no settings exist
         setChatSettings((prev) => ({
           ...prev,
           [chatId]: null,
@@ -60,7 +69,7 @@ export const useChatSettings = (): UseChatSettingsReturn => {
         setIsLoading(false);
       }
     },
-    [noteAPI, chatSettings]
+    [noteAPI]
   );
 
   const createChatSettings = useCallback(
