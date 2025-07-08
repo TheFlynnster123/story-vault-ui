@@ -6,7 +6,7 @@ import { useEncryption } from "./useEncryption";
 export const useNoteAPI = (): NoteAPI | undefined => {
   const { getAccessTokenSilently } = useAuth0();
   const { encryptionManager } = useEncryption();
-  const [noteAPI, setStoryVaultAPI] = useState<NoteAPI | undefined>(undefined);
+  const [noteAPI, setNoteAPI] = useState<NoteAPI | undefined>(undefined);
 
   useEffect(() => {
     const fetchAccessToken = async () => {
@@ -14,11 +14,11 @@ export const useNoteAPI = (): NoteAPI | undefined => {
         const accessToken = await getAccessTokenSilently();
         if (encryptionManager != undefined) {
           const api = new NoteAPI(encryptionManager, accessToken);
-          setStoryVaultAPI(api);
+          setNoteAPI(api);
         }
       } catch (error) {
         console.error("Failed to get access token:", error);
-        setStoryVaultAPI(undefined);
+        setNoteAPI(undefined);
       }
     };
 

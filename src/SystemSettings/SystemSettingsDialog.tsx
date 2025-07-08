@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { GrokKeyManager } from "./GrokKeyManager";
+import { CivitaiKeyManager } from "./CivitaiKeyManager";
 import "./SystemSettingsDialog.css";
 
 interface SystemSettingsDialogProps {
@@ -58,6 +59,11 @@ export const SystemSettingsDialog: React.FC<SystemSettingsDialogProps> = ({
           <div className="system-settings-section">
             <h3>Grok API Configuration</h3>
             <GrokKeyManager />
+          </div>
+
+          <div className="system-settings-section">
+            <h3>Civitai API Configuration</h3>
+            <CivitaiKeyManager />
           </div>
         </div>
       </div>

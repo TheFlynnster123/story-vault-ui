@@ -11,6 +11,13 @@ vi.mock("../../SystemSettings/GrokKeyManager", () => ({
   ),
 }));
 
+// Mock the CivitaiKeyManager component
+vi.mock("../../SystemSettings/CivitaiKeyManager", () => ({
+  CivitaiKeyManager: () => (
+    <div data-testid="civitai-key-manager">CivitaiKeyManager</div>
+  ),
+}));
+
 describe("SystemSettingsDialog", () => {
   const mockOnClose = vi.fn();
 
@@ -177,8 +184,10 @@ describe("SystemSettingsDialog", () => {
       const mainHeading = screen.getByRole("heading", { level: 2 });
       expect(mainHeading).toHaveTextContent("System Settings");
 
-      const sectionHeading = screen.getByRole("heading", { level: 3 });
-      expect(sectionHeading).toHaveTextContent("Grok API Configuration");
+      const sectionHeadings = screen.getAllByRole("heading", { level: 3 });
+      expect(sectionHeadings).toHaveLength(2);
+      expect(sectionHeadings[0]).toHaveTextContent("Grok API Configuration");
+      expect(sectionHeadings[1]).toHaveTextContent("Civitai API Configuration");
     });
   });
 });

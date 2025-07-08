@@ -9,16 +9,20 @@ export const useEncryption = () => {
 
   useEffect(() => {
     const getManager = async () => {
-      if (isAuthenticated) {
-        const claims = await getIdTokenClaims();
-        const encryptionGuid =
-          claims?.["https://story-vault-api.com/encryption_guid"];
+      try {
+        if (isAuthenticated) {
+          const claims = await getIdTokenClaims();
+          const encryptionGuid =
+            claims?.["https://story-vault-api.com/encryption_guid"];
 
-        if (encryptionGuid) {
-          const manager = new EncryptionManager(encryptionGuid);
-          await manager.initialize();
-          setEncryptionManager(manager);
+          if (encryptionGuid) {
+            const manager = new EncryptionManager(encryptionGuid);
+            await manager.initialize();
+            setEncryptionManager(manager);
+          }
         }
+      } catch (error) {
+        console.error("Failed to initialize encryption manager:", error);
       }
     };
 

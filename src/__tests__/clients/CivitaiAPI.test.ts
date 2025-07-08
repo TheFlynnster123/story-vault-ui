@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GrokKeyAPI, type IGrokKeyAPI } from "../../clients/StoryVaultAPI";
+import { CivitaiAPI, type ICivitaiAPI } from "../../clients/CivitaiAPI";
 
 // Mock Config
 vi.mock("../../Config", () => ({
@@ -11,48 +11,49 @@ vi.mock("../../Config", () => ({
 // Mock fetch
 global.fetch = vi.fn();
 
-describe("GrokKeyAPI", () => {
-  let grokKeyAPI: GrokKeyAPI;
+describe("CivitaiAPI", () => {
+  let civitaiAPI: CivitaiAPI;
   const mockAccessToken = "test-access-token";
 
   beforeEach(() => {
     vi.resetAllMocks();
-    grokKeyAPI = new GrokKeyAPI(mockAccessToken);
+    civitaiAPI = new CivitaiAPI(mockAccessToken);
   });
 
   describe("constructor", () => {
     it("should initialize with valid parameters", () => {
-      expect(grokKeyAPI).toBeInstanceOf(GrokKeyAPI);
-      expect(grokKeyAPI.AccessToken).toBe(mockAccessToken);
-      expect(grokKeyAPI.URL).toBe("https://test-api.com");
+      expect(civitaiAPI).toBeInstanceOf(CivitaiAPI);
+      expect(civitaiAPI.AccessToken).toBe(mockAccessToken);
+      expect(civitaiAPI.URL).toBe("https://test-api.com");
     });
 
-    it("should implement IGrokKeyAPI interface", () => {
-      const api: IGrokKeyAPI = grokKeyAPI;
+    it("should implement ICivitaiAPI interface", () => {
+      const api: ICivitaiAPI = civitaiAPI;
       expect(api).toBeDefined();
-      expect(typeof api.hasValidGrokKey).toBe("function");
+      expect(typeof api.hasValidCivitaiKey).toBe("function");
+      expect(typeof api.saveCivitaiKey).toBe("function");
     });
 
     it("should throw error when access token is missing", () => {
       expect(() => {
-        new GrokKeyAPI("");
+        new CivitaiAPI("");
       }).toThrow("Access token is required");
     });
 
     it("should throw error when access token is null", () => {
       expect(() => {
-        new GrokKeyAPI(null as any);
+        new CivitaiAPI(null as any);
       }).toThrow("Access token is required");
     });
 
     it("should throw error when access token is undefined", () => {
       expect(() => {
-        new GrokKeyAPI(undefined as any);
+        new CivitaiAPI(undefined as any);
       }).toThrow("Access token is required");
     });
   });
 
-  describe("hasValidGrokKey", () => {
+  describe("hasValidCivitaiKey", () => {
     it("should return true when response status is 200", async () => {
       const mockResponse = {
         status: 200,
@@ -60,11 +61,11 @@ describe("GrokKeyAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      const result = await grokKeyAPI.hasValidGrokKey();
+      const result = await civitaiAPI.hasValidCivitaiKey();
 
       expect(result).toBe(true);
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://test-api.com/api/hasValidGrokKey",
+        "https://test-api.com/api/HasValidCivitaiKey",
         {
           method: "GET",
           headers: {
@@ -82,11 +83,11 @@ describe("GrokKeyAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      const result = await grokKeyAPI.hasValidGrokKey();
+      const result = await civitaiAPI.hasValidCivitaiKey();
 
       expect(result).toBe(false);
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://test-api.com/api/hasValidGrokKey",
+        "https://test-api.com/api/HasValidCivitaiKey",
         {
           method: "GET",
           headers: {
@@ -104,7 +105,7 @@ describe("GrokKeyAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(civitaiAPI.hasValidCivitaiKey()).rejects.toThrow(
         "Unexpected response status: 500"
       );
     });
@@ -116,7 +117,7 @@ describe("GrokKeyAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(civitaiAPI.hasValidCivitaiKey()).rejects.toThrow(
         "Unexpected response status: 401"
       );
     });
@@ -128,7 +129,7 @@ describe("GrokKeyAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(civitaiAPI.hasValidCivitaiKey()).rejects.toThrow(
         "Unexpected response status: 403"
       );
     });
@@ -137,7 +138,7 @@ describe("GrokKeyAPI", () => {
       const networkError = new Error("Network error");
       (global.fetch as any).mockRejectedValue(networkError);
 
-      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(civitaiAPI.hasValidCivitaiKey()).rejects.toThrow(
         "Network error"
       );
     });
@@ -146,14 +147,14 @@ describe("GrokKeyAPI", () => {
       const timeoutError = new Error("Request timeout");
       (global.fetch as any).mockRejectedValue(timeoutError);
 
-      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(civitaiAPI.hasValidCivitaiKey()).rejects.toThrow(
         "Request timeout"
       );
     });
   });
 
-  describe("saveGrokKey", () => {
-    it("should successfully save Grok key when response status is 201", async () => {
+  describe("saveCivitaiKey", () => {
+    it("should successfully save Civitai key when response status is 201", async () => {
       const mockResponse = {
         status: 201,
       };
@@ -161,18 +162,18 @@ describe("GrokKeyAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        grokKeyAPI.saveGrokKey("encrypted-grok-key")
+        civitaiAPI.saveCivitaiKey("encrypted-civitai-key")
       ).resolves.toBeUndefined();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://test-api.com/api/saveGrokKey",
+        "https://test-api.com/api/SaveCivitaiKey",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: "Bearer test-access-token",
           },
-          body: JSON.stringify({ grokKey: "encrypted-grok-key" }),
+          body: JSON.stringify({ civitaiKey: "encrypted-civitai-key" }),
         }
       );
     });
@@ -185,8 +186,8 @@ describe("GrokKeyAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        grokKeyAPI.saveGrokKey("encrypted-grok-key")
-      ).rejects.toThrow("Failed to save Grok key: 400");
+        civitaiAPI.saveCivitaiKey("encrypted-civitai-key")
+      ).rejects.toThrow("Failed to save Civitai key: 400");
     });
 
     it("should throw error for 401 Unauthorized", async () => {
@@ -197,8 +198,8 @@ describe("GrokKeyAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        grokKeyAPI.saveGrokKey("encrypted-grok-key")
-      ).rejects.toThrow("Failed to save Grok key: 401");
+        civitaiAPI.saveCivitaiKey("encrypted-civitai-key")
+      ).rejects.toThrow("Failed to save Civitai key: 401");
     });
 
     it("should throw error for 403 Forbidden", async () => {
@@ -209,8 +210,8 @@ describe("GrokKeyAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        grokKeyAPI.saveGrokKey("encrypted-grok-key")
-      ).rejects.toThrow("Failed to save Grok key: 403");
+        civitaiAPI.saveCivitaiKey("encrypted-civitai-key")
+      ).rejects.toThrow("Failed to save Civitai key: 403");
     });
 
     it("should throw error for 500 Internal Server Error", async () => {
@@ -221,8 +222,8 @@ describe("GrokKeyAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        grokKeyAPI.saveGrokKey("encrypted-grok-key")
-      ).rejects.toThrow("Failed to save Grok key: 500");
+        civitaiAPI.saveCivitaiKey("encrypted-civitai-key")
+      ).rejects.toThrow("Failed to save Civitai key: 500");
     });
 
     it("should handle network errors", async () => {
@@ -230,33 +231,33 @@ describe("GrokKeyAPI", () => {
       (global.fetch as any).mockRejectedValue(networkError);
 
       await expect(
-        grokKeyAPI.saveGrokKey("encrypted-grok-key")
+        civitaiAPI.saveCivitaiKey("encrypted-civitai-key")
       ).rejects.toThrow("Network error");
     });
 
-    it("should handle empty Grok key", async () => {
+    it("should handle empty Civitai key", async () => {
       const mockResponse = {
         status: 201,
       };
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(grokKeyAPI.saveGrokKey("")).resolves.toBeUndefined();
+      await expect(civitaiAPI.saveCivitaiKey("")).resolves.toBeUndefined();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://test-api.com/api/saveGrokKey",
+        "https://test-api.com/api/SaveCivitaiKey",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: "Bearer test-access-token",
           },
-          body: JSON.stringify({ grokKey: "" }),
+          body: JSON.stringify({ civitaiKey: "" }),
         }
       );
     });
 
-    it("should handle special characters in Grok key", async () => {
+    it("should handle special characters in Civitai key", async () => {
       const mockResponse = {
         status: 201,
       };
@@ -264,22 +265,24 @@ describe("GrokKeyAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       const specialKey = "encrypted-key-with-special-chars!@#$%^&*()";
-      await expect(grokKeyAPI.saveGrokKey(specialKey)).resolves.toBeUndefined();
+      await expect(
+        civitaiAPI.saveCivitaiKey(specialKey)
+      ).resolves.toBeUndefined();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://test-api.com/api/saveGrokKey",
+        "https://test-api.com/api/SaveCivitaiKey",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: "Bearer test-access-token",
           },
-          body: JSON.stringify({ grokKey: specialKey }),
+          body: JSON.stringify({ civitaiKey: specialKey }),
         }
       );
     });
 
-    it("should handle very long Grok key", async () => {
+    it("should handle very long Civitai key", async () => {
       const mockResponse = {
         status: 201,
       };
@@ -287,28 +290,28 @@ describe("GrokKeyAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       const longKey = "a".repeat(1000);
-      await expect(grokKeyAPI.saveGrokKey(longKey)).resolves.toBeUndefined();
+      await expect(civitaiAPI.saveCivitaiKey(longKey)).resolves.toBeUndefined();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://test-api.com/api/saveGrokKey",
+        "https://test-api.com/api/SaveCivitaiKey",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: "Bearer test-access-token",
           },
-          body: JSON.stringify({ grokKey: longKey }),
+          body: JSON.stringify({ civitaiKey: longKey }),
         }
       );
     });
   });
 
   describe("request building", () => {
-    it("should build correct headers for hasValidGrokKey", async () => {
+    it("should build correct headers for hasValidCivitaiKey", async () => {
       const mockResponse = { status: 200 };
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await grokKeyAPI.hasValidGrokKey();
+      await civitaiAPI.hasValidCivitaiKey();
 
       const callArgs = (global.fetch as any).mock.calls[0];
       expect(callArgs[1].headers["Content-Type"]).toBe("application/json");
@@ -318,11 +321,11 @@ describe("GrokKeyAPI", () => {
       expect(callArgs[1].method).toBe("GET");
     });
 
-    it("should build correct headers for saveGrokKey", async () => {
+    it("should build correct headers for saveCivitaiKey", async () => {
       const mockResponse = { status: 201 };
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await grokKeyAPI.saveGrokKey("test-key");
+      await civitaiAPI.saveCivitaiKey("test-key");
 
       const callArgs = (global.fetch as any).mock.calls[0];
       expect(callArgs[1].headers["Content-Type"]).toBe("application/json");
@@ -330,27 +333,27 @@ describe("GrokKeyAPI", () => {
         "Bearer test-access-token"
       );
       expect(callArgs[1].method).toBe("POST");
-      expect(callArgs[1].body).toBe(JSON.stringify({ grokKey: "test-key" }));
+      expect(callArgs[1].body).toBe(JSON.stringify({ civitaiKey: "test-key" }));
     });
 
     it("should use correct URLs", async () => {
       const mockResponse = { status: 200 };
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await grokKeyAPI.hasValidGrokKey();
+      await civitaiAPI.hasValidCivitaiKey();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://test-api.com/api/hasValidGrokKey",
+        "https://test-api.com/api/HasValidCivitaiKey",
         expect.any(Object)
       );
 
       const mockResponse2 = { status: 201 };
       (global.fetch as any).mockResolvedValue(mockResponse2);
 
-      await grokKeyAPI.saveGrokKey("test-key");
+      await civitaiAPI.saveCivitaiKey("test-key");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://test-api.com/api/saveGrokKey",
+        "https://test-api.com/api/SaveCivitaiKey",
         expect.any(Object)
       );
     });
@@ -360,7 +363,7 @@ describe("GrokKeyAPI", () => {
     it("should handle null response from fetch", async () => {
       (global.fetch as any).mockResolvedValue(null);
 
-      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow();
+      await expect(civitaiAPI.hasValidCivitaiKey()).rejects.toThrow();
     });
 
     it("should handle undefined response status", async () => {
@@ -370,7 +373,7 @@ describe("GrokKeyAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow();
+      await expect(civitaiAPI.hasValidCivitaiKey()).rejects.toThrow();
     });
 
     it("should handle response with no status property", async () => {
@@ -378,7 +381,7 @@ describe("GrokKeyAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow();
+      await expect(civitaiAPI.hasValidCivitaiKey()).rejects.toThrow();
     });
   });
 });

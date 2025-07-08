@@ -1,10 +1,11 @@
 import Config from "../Config";
 
-export interface IGrokKeyAPI {
-  hasValidGrokKey(): Promise<boolean>;
+export interface ICivitaiAPI {
+  hasValidCivitaiKey(): Promise<boolean>;
+  saveCivitaiKey(encryptedCivitaiKey: string): Promise<void>;
 }
 
-export class GrokKeyAPI implements IGrokKeyAPI {
+export class CivitaiAPI implements ICivitaiAPI {
   URL: string = "";
 
   AccessToken: string = "";
@@ -15,8 +16,8 @@ export class GrokKeyAPI implements IGrokKeyAPI {
     this.AccessToken = accessToken;
   }
 
-  async hasValidGrokKey(): Promise<boolean> {
-    const response = await fetch(`${this.URL}/api/hasValidGrokKey`, {
+  async hasValidCivitaiKey(): Promise<boolean> {
+    const response = await fetch(`${this.URL}/api/HasValidCivitaiKey`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -33,18 +34,18 @@ export class GrokKeyAPI implements IGrokKeyAPI {
     throw new Error(`Unexpected response status: ${response.status}`);
   }
 
-  async saveGrokKey(encryptedGrokKey: string): Promise<void> {
-    const response = await fetch(`${this.URL}/api/saveGrokKey`, {
+  async saveCivitaiKey(encryptedCivitaiKey: string): Promise<void> {
+    const response = await fetch(`${this.URL}/api/SaveCivitaiKey`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.AccessToken}`,
       },
-      body: JSON.stringify({ grokKey: encryptedGrokKey }),
+      body: JSON.stringify({ civitaiKey: encryptedCivitaiKey }),
     });
 
     if (response.status != 201) {
-      throw new Error(`Failed to save Grok key: ${response.status}`);
+      throw new Error(`Failed to save Civitai key: ${response.status}`);
     }
   }
 }

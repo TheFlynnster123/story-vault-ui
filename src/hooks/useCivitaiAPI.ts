@@ -1,25 +1,25 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { GrokKeyAPI } from "../clients/StoryVaultAPI";
+import { CivitaiAPI } from "../clients/CivitaiAPI";
 import { useEffect, useState } from "react";
 
-export const useStoryVaultAPI = (): GrokKeyAPI | null => {
+export const useCivitaiAPI = (): CivitaiAPI | null => {
   const { getAccessTokenSilently } = useAuth0();
-  const [storyVaultAPI, setStoryVaultAPI] = useState<GrokKeyAPI | null>(null);
+  const [civitaiAPI, setCivitaiAPI] = useState<CivitaiAPI | null>(null);
 
   useEffect(() => {
     const fetchAccessToken = async () => {
       try {
         const accessToken = await getAccessTokenSilently();
-        const api = new GrokKeyAPI(accessToken);
-        setStoryVaultAPI(api);
+        const api = new CivitaiAPI(accessToken);
+        setCivitaiAPI(api);
       } catch (error) {
         console.error("Failed to get access token:", error);
-        setStoryVaultAPI(null);
+        setCivitaiAPI(null);
       }
     };
 
     fetchAccessToken();
   }, [getAccessTokenSilently]);
 
-  return storyVaultAPI;
+  return civitaiAPI;
 };
