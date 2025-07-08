@@ -14,7 +14,6 @@ interface UseChatSettingsReturn {
   loadChatSettings: (chatId: string) => Promise<ChatSettings | null>;
   createChatSettings: (chatId: string, settings: ChatSettings) => Promise<void>;
   updateChatSettings: (chatId: string, settings: ChatSettings) => void;
-  getChatTitle: (chatId: string) => string;
   isLoading: boolean;
 }
 
@@ -103,23 +102,11 @@ export const useChatSettings = (): UseChatSettingsReturn => {
     []
   );
 
-  const getChatTitle = useCallback(
-    (chatId: string): string => {
-      const settings = chatSettings[chatId];
-      if (settings?.chatTitle) {
-        return settings.chatTitle;
-      }
-      return chatId; // Fallback to chatId if no title
-    },
-    [chatSettings]
-  );
-
   return {
     chatSettings,
     loadChatSettings,
     createChatSettings,
     updateChatSettings,
-    getChatTitle,
     isLoading,
   };
 };

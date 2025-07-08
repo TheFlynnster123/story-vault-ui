@@ -4,7 +4,7 @@ import config from "./Config";
 import { useGrokKey } from "./hooks/useGrokKey";
 import { GrokKeyInput } from "./GrokKeyInput";
 import React from "react";
-import ChatMenu from "./Chat/ChatMenu";
+import ChatMenu from "./Chat/Menu/ChatMenu";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
 
 const AuthenticatedContent: React.FC = ({}) => {

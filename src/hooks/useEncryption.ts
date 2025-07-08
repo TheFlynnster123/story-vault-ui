@@ -4,6 +4,7 @@ import { EncryptionManager } from "../Managers/EncryptionManager";
 
 export const useEncryption = () => {
   const { isAuthenticated, getIdTokenClaims } = useAuth0();
+
   const [encryptionManager, setEncryptionManager] =
     useState<EncryptionManager>();
 
