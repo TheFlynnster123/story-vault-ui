@@ -1,18 +1,23 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useChatSettings } from "../../hooks/useChatSettings";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChatHistoryApi } from "../../hooks/useChatHistoryAPI";
+import { useBlobAPI } from "../../hooks/useBlobAPI";
+import {
+  GetChatSettings,
+  getChatSettingsQueryKey,
+} from "../../hooks/queries/useChatSettingsQuery";
+import type { ChatSettings } from "../../models";
 
 export const useChats = () => {
   const chatHistoryAPI = useChatHistoryApi();
+  const blobAPI = useBlobAPI();
   const queryClient = useQueryClient();
 
-  // Query for fetching chat IDs
   const {
     data: chatIds = [],
     isLoading: isLoadingChats,
     error: chatError,
   } = useQuery({
-    queryKey: ["chats"],
+    queryKey: ["chat-ids"],
     queryFn: async () => {
       if (!chatHistoryAPI) {
         throw new Error("ChatHistoryAPI not available");
@@ -22,14 +27,27 @@ export const useChats = () => {
     enabled: !!chatHistoryAPI,
   });
 
-  const {
-    chatSettings,
-    isLoading: isLoadingSettings,
-    error: settingsError,
-  } = useChatSettings(chatIds);
+  const chatSettingsResults = useQueries({
+    queries: chatIds.map((chatId) => ({
+      queryKey: getChatSettingsQueryKey(chatId),
+      queryFn: async () => await GetChatSettings(chatId, blobAPI!),
+      enabled: !!blobAPI,
+    })),
+  });
+
+  const chatSettings = Object.fromEntries(
+    chatIds.map((chatId, index) => [chatId, chatSettingsResults[index].data])
+  );
+
+  const isLoadingSettings = chatSettingsResults.some(
+    (result) => result.isLoading
+  );
+  const settingsError = chatSettingsResults.find(
+    (result) => result.error
+  )?.error;
 
   const refreshChats = () => {
-    queryClient.invalidateQueries({ queryKey: ["chats"] });
+    queryClient.invalidateQueries({ queryKey: ["chat-ids"] });
   };
 
   return {

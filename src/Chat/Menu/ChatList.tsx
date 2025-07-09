@@ -2,7 +2,7 @@ import type { ChatSettings } from "../../models";
 import { ChatListItem } from "./ChatListItem";
 
 interface ChatSettingsMap {
-  [chatId: string]: ChatSettings | null;
+  [chatId: string]: ChatSettings | undefined;
 }
 
 interface IChatListProps {

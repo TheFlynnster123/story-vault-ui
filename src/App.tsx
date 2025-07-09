@@ -5,8 +5,7 @@ import config from "./Config";
 import { useGrokKey } from "./hooks/useGrokKey";
 import { GrokKeyInput } from "./GrokKeyInput";
 import React from "react";
-import ChatMenu from "./Chat/Menu/ChatMenu";
-import { LoadingSpinner } from "./components/common/LoadingSpinner";
+import ChatMenuV2 from "./Chat/Menu/ChatMenuV2";
 
 const queryClient = new QueryClient();
 
@@ -15,16 +14,14 @@ const AuthenticatedContent: React.FC = ({}) => {
 
   if (hasValidGrokKey === undefined) {
     return (
-      <div className="app-loading-container">
-        <LoadingSpinner message="Loading Grok Key status..." />
-      </div>
+      <div className="app-loading-container">Loading Grok Key status...</div>
     );
   }
 
   if (hasValidGrokKey) {
     return (
       <>
-        <ChatMenu />
+        <ChatMenuV2 />
       </>
     );
   }

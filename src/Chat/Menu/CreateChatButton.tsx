@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { ChatSettingsDialog } from "../ChatSettingsDialog";
-import { useChatSettings } from "../../hooks/useChatSettings";
 import type { ChatSettings } from "../../models/ChatSettings";
 import { v4 as uuidv4 } from "uuid";
+import { useUpdateChatSettingsMutation } from "../../hooks/queries/useChatSettingsQuery";
 
 interface ICreateChatButtonProps {
   onChatCreated: (chatId: string) => void;
@@ -14,13 +14,16 @@ export const CreateChatButton: React.FC<ICreateChatButtonProps> = ({
   const [showChatSettingsDialog, setShowChatSettingsDialog] =
     useState<boolean>(false);
 
-  const { createChatSettings } = useChatSettings();
+  const updateChatSettingsMutation = useUpdateChatSettingsMutation();
 
   const handleSettingsCreate = async (settings: ChatSettings) => {
     try {
       const newChatId = uuidv4();
 
-      await createChatSettings(newChatId, settings);
+      await updateChatSettingsMutation.mutateAsync({
+        chatId: newChatId,
+        settings,
+      });
 
       setShowChatSettingsDialog(false);
 

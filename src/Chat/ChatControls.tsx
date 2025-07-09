@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { ChatSettingsDialog } from "./ChatSettingsDialog";
-import { useChatSettings } from "../hooks/useChatSettings";
-import { RiChatSettingsLine } from "react-icons/ri";
+import { RiArrowGoBackLine, RiChatSettingsLine } from "react-icons/ri";
 import type { ChatSettings } from "../models/ChatSettings";
+import { useCreateChatSettingsMutation } from "../hooks/queries/useChatSettingsQuery";
 import "./ChatControls.css";
+import { BsArrowLeft } from "react-icons/bs";
 
 interface ChatControlsProps {
   chatId: string;
@@ -19,7 +20,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   currentChatSettings,
 }) => {
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
-  const { createChatSettings } = useChatSettings();
+  const createChatSettingsMutation = useCreateChatSettingsMutation();
 
   const handleSettingsSubmit = async (settings: {
     chatTitle: string;
@@ -27,11 +28,11 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
     backgroundPhotoBase64?: string;
   }) => {
     try {
-      await createChatSettings(chatId, settings);
+      await createChatSettingsMutation.mutateAsync({ chatId, settings });
       setIsSettingsDialogOpen(false);
       onSettingsUpdated(settings);
     } catch (error) {
-      console.error("Failed to update chat settings:", error);
+      console.error("Failed to create chat settings:", error);
     }
   };
 
@@ -42,7 +43,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         onClick={toggleMenu}
         title="Back to Menu"
       >
-        ←
+        <RiArrowGoBackLine />
       </button>
 
       <button

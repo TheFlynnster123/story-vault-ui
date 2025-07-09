@@ -4,8 +4,10 @@ import "./Chat.css";
 import { ChatMessageListV2 } from "./ChatMessageListV2";
 import { ChatControls } from "./ChatControls";
 import { useChatFlowV2 } from "../hooks/useChatFlowV2";
-import { useChatSettings } from "../hooks/useChatSettings";
-import { ChatLoadingSpinner } from "../components/common/LoadingSpinner";
+import {
+  useChatSettingsQuery,
+  useUpdateChatSettingsMutation,
+} from "../hooks/queries/useChatSettingsQuery";
 
 interface ChatV2Props {
   chatId: string;
@@ -31,25 +33,18 @@ export const ChatV2: React.FC<ChatV2Props> = ({ chatId, toggleMenu }) => {
     chatId,
   });
 
-  const { chatSettings, loadChatSettings, updateChatSettings } =
-    useChatSettings();
+  const currentChatSettings = useChatSettingsQuery(chatId);
+  const updateChatSettingsMutation = useUpdateChatSettingsMutation();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!isSendingMessage) inputRef.current?.focus();
   }, [isSendingMessage]);
 
-  useEffect(() => {
-    loadChatSettings(chatId);
-  }, [chatId, loadChatSettings]);
-
   const handleSettingsUpdated = (updatedSettings: any) => {
-    updateChatSettings(chatId, updatedSettings);
+    updateChatSettingsMutation.mutate({ chatId, settings: updatedSettings });
   };
 
-  if (isLoadingHistory) return <ChatLoadingSpinner />;
-
-  const currentChatSettings = chatSettings[chatId];
   const backgroundStyle: React.CSSProperties = {
     backgroundColor: currentChatSettings?.backgroundPhotoBase64
       ? "transparent"
