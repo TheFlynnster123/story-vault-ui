@@ -1,121 +1,70 @@
-import { useState, useCallback } from "react";
-import { useNoteAPI } from "./useNoteAPI";
-import {
-  ChatSettingsNote,
-  type ChatSettings,
-} from "../models/ChatSettingsNote";
+import { useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useBlobAPI } from "./useBlobAPI";
+import { ChatSettingsManager } from "../Managers/ChatSettingsManager";
+import type { ChatSettings } from "../models/ChatSettings";
 
-interface ChatSettingsMap {
-  [chatId: string]: ChatSettings | null;
-}
+export const useChatSettings = (chatIds: string[]) => {
+  const blobAPI = useBlobAPI();
+  const queryClient = useQueryClient();
 
-interface UseChatSettingsReturn {
-  chatSettings: ChatSettingsMap;
-  loadChatSettings: (chatId: string) => Promise<ChatSettings | null>;
-  createChatSettings: (chatId: string, settings: ChatSettings) => Promise<void>;
-  updateChatSettings: (chatId: string, settings: ChatSettings) => void;
-  isLoading: boolean;
-}
+  const results = useQueries({
+    queries: chatIds.map((chatId) => ({
+      queryKey: ["chatSettings", chatId],
+      queryFn: async () => {
+        if (!blobAPI) return null;
+        const manager = new ChatSettingsManager(blobAPI);
+        return manager.get(chatId);
+      },
+      enabled: !!blobAPI && !!chatId,
+    })),
+  });
 
-export const useChatSettings = (): UseChatSettingsReturn => {
-  const [chatSettings, setChatSettings] = useState<ChatSettingsMap>({});
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const noteAPI = useNoteAPI();
-
-  const loadChatSettings = useCallback(
-    async (chatId: string): Promise<ChatSettings | null> => {
-      if (!noteAPI || !chatId) return null;
-
-      const getCurrentSettings = () => {
-        let currentSettings: ChatSettingsMap = {};
-        setChatSettings((prev) => {
-          currentSettings = prev;
-          return prev;
-        });
-        return currentSettings;
-      };
-
-      const currentSettings = getCurrentSettings();
-
-      if (currentSettings[chatId] !== undefined) {
-        return currentSettings[chatId];
-      }
-
-      try {
-        setIsLoading(true);
-        const chatSettingsNote = new ChatSettingsNote(chatId, noteAPI);
-        await chatSettingsNote.load();
-
-        const settings: ChatSettings = {
-          chatTitle: chatSettingsNote.getChatTitle(),
-          context: chatSettingsNote.getContext(),
-          backgroundPhotoBase64: chatSettingsNote.getBackgroundPhotoBase64(),
-        };
-
-        setChatSettings((prev) => ({
-          ...prev,
-          [chatId]: settings,
-        }));
-
-        return settings;
-      } catch (error) {
-        console.error(`Failed to load chat settings for ${chatId}:`, error);
-        setChatSettings((prev) => ({
-          ...prev,
-          [chatId]: null,
-        }));
-        return null;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [noteAPI]
+  const chatSettings = new Map<string, ChatSettings | null>(
+    chatIds.map((chatId, index) => [chatId, results[index].data ?? null])
   );
 
-  const createChatSettings = useCallback(
-    async (chatId: string, settings: ChatSettings): Promise<void> => {
-      if (!noteAPI || !chatId) {
-        throw new Error("NoteAPI or chatId not available");
-      }
+  const isLoading = results.some((result) => result.isLoading);
+  const error = results.find((result) => result.error)?.error;
 
-      try {
-        setIsLoading(true);
-        const chatSettingsNote = new ChatSettingsNote(
-          chatId,
-          noteAPI,
-          settings
-        );
-        await chatSettingsNote.save();
-
-        setChatSettings((prev) => ({
-          ...prev,
-          [chatId]: settings,
-        }));
-      } catch (error) {
-        console.error(`Failed to create chat settings for ${chatId}:`, error);
-        throw error;
-      } finally {
-        setIsLoading(false);
-      }
+  const createMutation = useMutation({
+    mutationFn: async ({
+      chatId,
+      settings,
+    }: {
+      chatId: string;
+      settings: ChatSettings;
+    }) => {
+      if (!blobAPI) throw new Error("BlobAPI not available");
+      const manager = new ChatSettingsManager(blobAPI);
+      await manager.create(chatId, settings);
     },
-    [noteAPI]
-  );
-
-  const updateChatSettings = useCallback(
-    (chatId: string, settings: ChatSettings): void => {
-      setChatSettings((prev) => ({
-        ...prev,
-        [chatId]: settings,
-      }));
+    onSuccess: (_, { chatId }) => {
+      queryClient.invalidateQueries({ queryKey: ["chatSettings", chatId] });
     },
-    []
-  );
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      chatId,
+      settings,
+    }: {
+      chatId: string;
+      settings: ChatSettings;
+    }) => {
+      if (!blobAPI) throw new Error("BlobAPI not available");
+      const manager = new ChatSettingsManager(blobAPI);
+      await manager.update(chatId, settings);
+    },
+    onSuccess: (_, { chatId }) => {
+      queryClient.invalidateQueries({ queryKey: ["chatSettings", chatId] });
+    },
+  });
 
   return {
     chatSettings,
-    loadChatSettings,
-    createChatSettings,
-    updateChatSettings,
     isLoading,
+    error,
+    createChatSettings: createMutation.mutateAsync,
+    updateChatSettings: updateMutation.mutateAsync,
   };
 };

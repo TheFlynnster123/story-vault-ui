@@ -1,5 +1,5 @@
 import type { Message } from "../Chat/ChatMessage";
-import type { NoteAPI } from "../clients/NoteAPI";
+import type { BlobAPI } from "../clients/BlobAPI";
 import type { GrokChatAPI } from "../clients/GrokChatAPI";
 import { ResponseNote } from "./ResponseNote";
 
@@ -8,17 +8,17 @@ import { ResponseNote } from "./ResponseNote";
  * These notes are updated based on the conversation flow and stored for future use.
  */
 export abstract class PostResponseNote extends ResponseNote {
-  protected noteAPI: NoteAPI;
+  protected blobAPI: BlobAPI;
   protected chatId: string;
 
   constructor(
-    noteAPI: NoteAPI,
+    blobAPI: BlobAPI,
     chatId: string,
     grokClient: GrokChatAPI,
     initialContent: string = ""
   ) {
     super(grokClient, initialContent);
-    this.noteAPI = noteAPI;
+    this.blobAPI = blobAPI;
     this.chatId = chatId;
   }
 
@@ -34,7 +34,7 @@ export abstract class PostResponseNote extends ResponseNote {
     if (this.loaded) return;
 
     try {
-      const existingContent = await this.noteAPI.getNote(
+      const existingContent = await this.blobAPI.getNote(
         this.chatId,
         this.getNoteName()
       );
@@ -53,7 +53,7 @@ export abstract class PostResponseNote extends ResponseNote {
    */
   async save(): Promise<void> {
     try {
-      await this.noteAPI.saveNote(
+      await this.blobAPI.saveNote(
         this.chatId,
         this.getNoteName(),
         this.content

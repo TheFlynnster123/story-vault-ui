@@ -1,11 +1,12 @@
 import { PreResponseNote } from "./PreResponseNote";
 import type { GrokChatAPI } from "../clients/GrokChatAPI";
+import { CHAT_FLOW_V2_TEMPLATES } from "../constants/chatFlowV2";
 
 /**
  * PreResponseNote implementation for planning notes.
  * Generates planning content before creating the final response.
  */
-export class PlanningPreResponseNote extends PreResponseNote {
+export class PlanningNote extends PreResponseNote {
   constructor(grokClient: GrokChatAPI) {
     super(grokClient);
   }
@@ -19,9 +20,6 @@ export class PlanningPreResponseNote extends PreResponseNote {
   }
 
   getGenerationPrompt(): string {
-    return (
-      "Planning Notes - Respond with ONLY the following template filled out. Do not provide a draft message yet:\n" +
-      "Where are we at in the story flow? Should we continue engaging in dialogue, should we expand and let develop the current plot point, does another plot point need introducing?"
-    );
+    return CHAT_FLOW_V2_TEMPLATES.PLANNING_PROMPT;
   }
 }

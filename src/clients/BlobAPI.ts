@@ -1,27 +1,27 @@
 import config from "../Config";
 import type { EncryptionManager } from "../Managers/EncryptionManager";
 
-interface SaveNoteRequest {
+interface SaveBlobRequest {
   chatId: string;
-  noteName: string;
+  blobName: string;
   content: string;
 }
 
-interface GetNoteRequest {
+interface GetBlobRequest {
   chatId: string;
-  noteName: string;
+  blobName: string;
 }
 
-interface DeleteNoteRequest {
+interface DeleteBlobRequest {
   chatId: string;
-  noteName: string;
+  blobName: string;
 }
 
-interface GetNoteResponse {
+interface GetBlobResponse {
   content: string;
 }
 
-export class NoteAPI {
+export class BlobAPI {
   public accessToken: string;
   public URL: string;
   public encryptionManager: EncryptionManager;
@@ -33,9 +33,9 @@ export class NoteAPI {
     this.accessToken = accessToken;
   }
 
-  public async saveNote(
+  public async saveBlob(
     chatId: string,
-    noteName: string,
+    blobName: string,
     content: string
   ): Promise<boolean> {
     try {
@@ -45,9 +45,9 @@ export class NoteAPI {
       );
 
       const response = await fetch(
-        `${this.URL}/api/SaveNote`,
-        buildSaveNoteRequest(
-          { chatId, noteName, content: encryptedContent },
+        `${this.URL}/api/SaveBlob`,
+        buildSaveBlobRequest(
+          { chatId, blobName, content: encryptedContent },
           this.accessToken
         )
       );
@@ -55,109 +55,109 @@ export class NoteAPI {
       if (response.ok) {
         return true;
       } else if (response.status === 400) {
-        console.error("Invalid input for save note:", response.statusText);
+        console.error("Invalid input for save blob:", response.statusText);
         throw new Error(`Invalid input: ${response.statusText}`);
       } else if (response.status === 401) {
         console.error(
-          "Unauthorized access for save note:",
+          "Unauthorized access for save blob:",
           response.statusText
         );
         throw new Error(`Unauthorized: ${response.statusText}`);
       } else if (response.status === 500) {
-        console.error("Server error for save note:", response.statusText);
+        console.error("Server error for save blob:", response.statusText);
         throw new Error(`Server error: ${response.statusText}`);
       } else {
-        console.error("Failed to save note:", response.statusText);
-        throw new Error(`Error saving note: ${response.statusText}`);
+        console.error("Failed to save blob:", response.statusText);
+        throw new Error(`Error saving blob: ${response.statusText}`);
       }
     } catch (error) {
-      console.error("Failed to save note:", error);
+      console.error("Failed to save blob:", error);
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error("Unknown error occurred while saving note");
+      throw new Error("Unknown error occurred while saving blob");
     }
   }
 
-  public async getNote(
+  public async getBlob(
     chatId: string,
-    noteName: string
+    blobName: string
   ): Promise<string | undefined> {
     try {
       const response = await fetch(
-        `${this.URL}/api/GetNote`,
-        buildGetNoteRequest({ chatId, noteName }, this.accessToken)
+        `${this.URL}/api/GetBlob`,
+        buildGetBlobRequest({ chatId, blobName }, this.accessToken)
       );
 
       if (response.ok) {
-        const noteResponse: GetNoteResponse = await response.json();
+        const blobResponse: GetBlobResponse = await response.json();
         const decryptedContent = await this.encryptionManager.decryptString(
           this.encryptionManager.chatEncryptionKey!,
-          noteResponse.content
+          blobResponse.content
         );
         return decryptedContent;
       } else if (response.status === 404) {
         return undefined;
       } else if (response.status === 400) {
-        console.error("Invalid input for get note:", response.statusText);
+        console.error("Invalid input for get blob:", response.statusText);
         throw new Error(`Invalid input: ${response.statusText}`);
       } else if (response.status === 401) {
-        console.error("Unauthorized access for get note:", response.statusText);
+        console.error("Unauthorized access for get blob:", response.statusText);
         throw new Error(`Unauthorized: ${response.statusText}`);
       } else if (response.status === 500) {
-        console.error("Server error for get note:", response.statusText);
+        console.error("Server error for get blob:", response.statusText);
         throw new Error(`Server error: ${response.statusText}`);
       } else {
-        console.error("Failed to get note:", response.statusText);
-        throw new Error(`Error fetching note: ${response.statusText}`);
+        console.error("Failed to get blob:", response.statusText);
+        throw new Error(`Error fetching blob: ${response.statusText}`);
       }
     } catch (error) {
-      console.error("Failed to get note:", error);
+      console.error("Failed to get blob:", error);
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error("Unknown error occurred while fetching note");
+      throw new Error("Unknown error occurred while fetching blob");
     }
   }
 
-  public async deleteNote(chatId: string, noteName: string): Promise<boolean> {
+  public async deleteBlob(chatId: string, blobName: string): Promise<boolean> {
     try {
       const response = await fetch(
-        `${this.URL}/api/DeleteNote`,
-        buildDeleteNoteRequest({ chatId, noteName }, this.accessToken)
+        `${this.URL}/api/DeleteBlob`,
+        buildDeleteBlobRequest({ chatId, blobName }, this.accessToken)
       );
 
       if (response.ok) {
         return true;
       } else if (response.status === 400) {
-        console.error("Invalid input for delete note:", response.statusText);
+        console.error("Invalid input for delete blob:", response.statusText);
         throw new Error(`Invalid input: ${response.statusText}`);
       } else if (response.status === 401) {
         console.error(
-          "Unauthorized access for delete note:",
+          "Unauthorized access for delete blob:",
           response.statusText
         );
         throw new Error(`Unauthorized: ${response.statusText}`);
       } else if (response.status === 500) {
-        console.error("Server error for delete note:", response.statusText);
+        console.error("Server error for delete blob:", response.statusText);
         throw new Error(`Server error: ${response.statusText}`);
       } else {
-        console.error("Failed to delete note:", response.statusText);
-        throw new Error(`Error deleting note: ${response.statusText}`);
+        console.error("Failed to delete blob:", response.statusText);
+        throw new Error(`Error deleting blob: ${response.statusText}`);
       }
     } catch (error) {
-      console.error("Failed to delete note:", error);
+      console.error("Failed to delete blob:", error);
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error("Unknown error occurred while deleting note");
+      throw new Error("Unknown error occurred while deleting blob");
     }
   }
 }
 
 // Helper functions for building requests
-function buildSaveNoteRequest(
-  request: SaveNoteRequest,
+function buildSaveBlobRequest(
+  request: SaveBlobRequest,
   accessToken: string
 ): RequestInit {
   return {
@@ -170,8 +170,8 @@ function buildSaveNoteRequest(
   };
 }
 
-function buildGetNoteRequest(
-  request: GetNoteRequest,
+function buildGetBlobRequest(
+  request: GetBlobRequest,
   accessToken: string
 ): RequestInit {
   return {
@@ -184,8 +184,8 @@ function buildGetNoteRequest(
   };
 }
 
-function buildDeleteNoteRequest(
-  request: DeleteNoteRequest,
+function buildDeleteBlobRequest(
+  request: DeleteBlobRequest,
   accessToken: string
 ): RequestInit {
   return {

@@ -77,7 +77,7 @@ This document outlines the code reuse, refactoring, minification, and testing im
 - **Lazy loading** can be easily implemented for:
   - Auth0 provider
   - Chat components
-  - Note models
+  - Blob models
 
 ## 🧪 Testing Infrastructure
 

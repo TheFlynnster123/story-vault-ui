@@ -4,12 +4,12 @@ import { CreateChatButton } from "./CreateChatButton";
 import "./ChatMenu.css";
 import { ChatList } from "./ChatList";
 import { SystemSettingsButton } from "./SystemSettingsButton";
-import { useChatsInfo } from "./useChatsInfo";
+import { useChats } from "./useChats";
 
 function ChatMenu() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<boolean>(true);
-  const { chatIds, chatSettings, refreshChats } = useChatsInfo();
+  const { chatIds, chatSettings, refreshChats } = useChats();
 
   const handleSelectChat = (id: string) => {
     setSelectedChatId(id);

@@ -1,23 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useChatSettings } from "../../hooks/useChatSettings";
-import { useNoteAPI } from "../../hooks/useNoteAPI";
-import { ChatSettingsNote } from "../../models/ChatSettingsNote";
+import { useBlobAPI } from "../../hooks/useBlobAPI";
+import { ChatSettingsBlob } from "../../models/ChatSettingsBlob";
 
-// Mock the useNoteAPI hook
-vi.mock("../../hooks/useNoteAPI");
+// Mock the useBlobAPI hook
+vi.mock("../../hooks/useBlobAPI");
 
-// Mock the ChatSettingsNote class
-vi.mock("../../models/ChatSettingsNote");
+// Mock the ChatSettingsBlob class
+vi.mock("../../models/ChatSettingsBlob");
 
 describe("useChatSettings", () => {
-  const mockNoteAPI = {
-    saveNote: vi.fn(),
-    getNote: vi.fn(),
-    deleteNote: vi.fn(),
+  const mockBlobAPI = {
+    saveBlob: vi.fn(),
+    getBlob: vi.fn(),
+    deleteBlob: vi.fn(),
   };
 
-  const mockChatSettingsNote = {
+  const mockChatSettingsBlob = {
     load: vi.fn(),
     save: vi.fn(),
     getChatTitle: vi.fn(),
@@ -27,19 +27,19 @@ describe("useChatSettings", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockChatSettingsNote.load.mockResolvedValue(undefined);
-    mockChatSettingsNote.save.mockResolvedValue(undefined);
-    mockChatSettingsNote.getChatTitle.mockReturnValue("");
-    mockChatSettingsNote.getContext.mockReturnValue("");
-    mockChatSettingsNote.getBackgroundPhotoBase64.mockReturnValue(undefined);
-    (useNoteAPI as any).mockReturnValue(mockNoteAPI);
-    (ChatSettingsNote as any).mockImplementation(() => mockChatSettingsNote);
+    mockChatSettingsBlob.load.mockResolvedValue(undefined);
+    mockChatSettingsBlob.save.mockResolvedValue(undefined);
+    mockChatSettingsBlob.getChatTitle.mockReturnValue("");
+    mockChatSettingsBlob.getContext.mockReturnValue("");
+    mockChatSettingsBlob.getBackgroundPhotoBase64.mockReturnValue(undefined);
+    (useBlobAPI as any).mockReturnValue(mockBlobAPI);
+    (ChatSettingsBlob as any).mockImplementation(() => mockChatSettingsBlob);
   });
 
   describe("loadChatSettings", () => {
     it("should load and cache chat settings", async () => {
-      mockChatSettingsNote.getChatTitle.mockReturnValue("Test Story");
-      mockChatSettingsNote.getContext.mockReturnValue("Test context");
+      mockChatSettingsBlob.getChatTitle.mockReturnValue("Test Story");
+      mockChatSettingsBlob.getContext.mockReturnValue("Test context");
 
       const { result } = renderHook(() => useChatSettings());
 
@@ -53,12 +53,12 @@ describe("useChatSettings", () => {
         context: "Test context",
         backgroundPhotoBase64: undefined,
       });
-      expect(mockChatSettingsNote.load).toHaveBeenCalled();
+      expect(mockChatSettingsBlob.load).toHaveBeenCalled();
     });
 
     it("should return cached settings on subsequent calls", async () => {
-      mockChatSettingsNote.getChatTitle.mockReturnValue("Test Story");
-      mockChatSettingsNote.getContext.mockReturnValue("Test context");
+      mockChatSettingsBlob.getChatTitle.mockReturnValue("Test Story");
+      mockChatSettingsBlob.getContext.mockReturnValue("Test context");
 
       const { result } = renderHook(() => useChatSettings());
 
@@ -72,11 +72,11 @@ describe("useChatSettings", () => {
         await result.current.loadChatSettings("test-chat-id");
       });
 
-      expect(mockChatSettingsNote.load).toHaveBeenCalledTimes(1);
+      expect(mockChatSettingsBlob.load).toHaveBeenCalledTimes(1);
     });
 
     it("should handle loading errors gracefully", async () => {
-      mockChatSettingsNote.load.mockRejectedValue(new Error("Load failed"));
+      mockChatSettingsBlob.load.mockRejectedValue(new Error("Load failed"));
 
       const { result } = renderHook(() => useChatSettings());
 
@@ -88,8 +88,8 @@ describe("useChatSettings", () => {
       expect(settings).toBeNull();
     });
 
-    it("should return null when noteAPI is not available", async () => {
-      (useNoteAPI as any).mockReturnValue(null);
+    it("should return null when blobAPI is not available", async () => {
+      (useBlobAPI as any).mockReturnValue(null);
 
       const { result } = renderHook(() => useChatSettings());
 
@@ -116,16 +116,16 @@ describe("useChatSettings", () => {
         await result.current.createChatSettings("test-chat-id", testSettings);
       });
 
-      expect(ChatSettingsNote).toHaveBeenCalledWith(
+      expect(ChatSettingsBlob).toHaveBeenCalledWith(
         "test-chat-id",
-        mockNoteAPI,
+        mockBlobAPI,
         testSettings
       );
-      expect(mockChatSettingsNote.save).toHaveBeenCalled();
+      expect(mockChatSettingsBlob.save).toHaveBeenCalled();
     });
 
-    it("should throw error when noteAPI is not available", async () => {
-      (useNoteAPI as any).mockReturnValue(null);
+    it("should throw error when blobAPI is not available", async () => {
+      (useBlobAPI as any).mockReturnValue(null);
 
       const { result } = renderHook(() => useChatSettings());
 
@@ -138,12 +138,12 @@ describe("useChatSettings", () => {
       await act(async () => {
         await expect(
           result.current.createChatSettings("test-chat-id", testSettings)
-        ).rejects.toThrow("NoteAPI or chatId not available");
+        ).rejects.toThrow("BlobAPI or chatId not available");
       });
     });
 
     it("should handle save errors", async () => {
-      mockChatSettingsNote.save.mockRejectedValue(new Error("Save failed"));
+      mockChatSettingsBlob.save.mockRejectedValue(new Error("Save failed"));
 
       const { result } = renderHook(() => useChatSettings());
 
@@ -165,9 +165,9 @@ describe("useChatSettings", () => {
     it("should return chat title when settings exist", async () => {
       // Reset mocks to ensure clean state
       vi.clearAllMocks();
-      mockChatSettingsNote.load.mockResolvedValue(undefined);
-      mockChatSettingsNote.getChatTitle.mockReturnValue("Test Story");
-      mockChatSettingsNote.getContext.mockReturnValue("Test context");
+      mockChatSettingsBlob.load.mockResolvedValue(undefined);
+      mockChatSettingsBlob.getChatTitle.mockReturnValue("Test Story");
+      mockChatSettingsBlob.getContext.mockReturnValue("Test context");
 
       const { result } = renderHook(() => useChatSettings());
 
@@ -188,8 +188,8 @@ describe("useChatSettings", () => {
     });
 
     it("should return chatId when settings have no title", async () => {
-      mockChatSettingsNote.getChatTitle.mockReturnValue("");
-      mockChatSettingsNote.getContext.mockReturnValue("Test context");
+      mockChatSettingsBlob.getChatTitle.mockReturnValue("");
+      mockChatSettingsBlob.getContext.mockReturnValue("Test context");
 
       const { result } = renderHook(() => useChatSettings());
 
@@ -209,7 +209,7 @@ describe("useChatSettings", () => {
       const loadPromise = new Promise<void>((resolve) => {
         resolveLoad = resolve;
       });
-      mockChatSettingsNote.load.mockReturnValue(loadPromise);
+      mockChatSettingsBlob.load.mockReturnValue(loadPromise);
 
       const { result } = renderHook(() => useChatSettings());
 

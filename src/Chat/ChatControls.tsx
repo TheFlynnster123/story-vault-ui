@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ChatSettingsDialog } from "./ChatSettingsDialog";
 import { useChatSettings } from "../hooks/useChatSettings";
 import { RiChatSettingsLine } from "react-icons/ri";
-import type { ChatSettings } from "../models/ChatSettingsNote";
+import type { ChatSettings } from "../models/ChatSettings";
 import "./ChatControls.css";
 
 interface ChatControlsProps {

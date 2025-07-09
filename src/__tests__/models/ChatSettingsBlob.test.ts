@@ -1,26 +1,26 @@
 import {
-  ChatSettingsNote,
+  ChatSettingsBlob,
   type ChatSettings,
-} from "../../models/ChatSettingsNote";
-import { NoteAPI } from "../../clients/NoteAPI";
+} from "../../models/ChatSettingsBlob";
+import { BlobAPI } from "../../clients/BlobAPI";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
-// Mock the NoteAPI
-vi.mock("../../clients/NoteAPI");
-const MockedNoteAPI = NoteAPI as any;
+// Mock the BlobAPI
+vi.mock("../../clients/BlobAPI");
+const MockedBlobAPI = BlobAPI as any;
 
-describe("ChatSettingsNote", () => {
-  let mockNoteAPI: any;
-  let chatSettingsNote: ChatSettingsNote;
+describe("ChatSettingsBlob", () => {
+  let mockBlobAPI: any;
+  let chatSettingsBlob: ChatSettingsBlob;
   const testChatId = "test-chat-id";
 
   beforeEach(() => {
-    mockNoteAPI = {
-      saveNote: vi.fn(),
-      getNote: vi.fn(),
-      deleteNote: vi.fn(),
+    mockBlobAPI = {
+      saveBlob: vi.fn(),
+      getBlob: vi.fn(),
+      deleteBlob: vi.fn(),
     };
-    chatSettingsNote = new ChatSettingsNote(testChatId, mockNoteAPI);
+    chatSettingsBlob = new ChatSettingsBlob(testChatId, mockBlobAPI);
   });
 
   afterEach(() => {
@@ -29,9 +29,9 @@ describe("ChatSettingsNote", () => {
 
   describe("constructor", () => {
     it("should create instance with empty settings by default", () => {
-      expect(chatSettingsNote.chatId).toBe(testChatId);
-      expect(chatSettingsNote.noteName).toBe("chat-settings");
-      expect(chatSettingsNote.getSettings()).toEqual({
+      expect(chatSettingsBlob.chatId).toBe(testChatId);
+      expect(chatSettingsBlob.blobName).toBe("chat-settings");
+      expect(chatSettingsBlob.getSettings()).toEqual({
         chatTitle: "",
         context: "",
       });
@@ -42,19 +42,19 @@ describe("ChatSettingsNote", () => {
         chatTitle: "Test Story",
         context: "Test context",
       };
-      const noteWithSettings = new ChatSettingsNote(
+      const blobWithSettings = new ChatSettingsBlob(
         testChatId,
-        mockNoteAPI,
+        mockBlobAPI,
         settings
       );
 
-      expect(noteWithSettings.getSettings()).toEqual(settings);
+      expect(blobWithSettings.getSettings()).toEqual(settings);
     });
   });
 
   describe("getSettings", () => {
     it("should return empty settings when content is empty", () => {
-      const settings = chatSettingsNote.getSettings();
+      const settings = chatSettingsBlob.getSettings();
       expect(settings).toEqual({
         chatTitle: "",
         context: "",
@@ -66,19 +66,19 @@ describe("ChatSettingsNote", () => {
         chatTitle: "My Story",
         context: "A fantasy adventure",
       };
-      chatSettingsNote.content = JSON.stringify(testSettings);
+      chatSettingsBlob.content = JSON.stringify(testSettings);
 
-      const settings = chatSettingsNote.getSettings();
+      const settings = chatSettingsBlob.getSettings();
       expect(settings).toEqual(testSettings);
     });
 
     it("should return empty settings when JSON parsing fails", () => {
-      chatSettingsNote.content = "invalid json";
+      chatSettingsBlob.content = "invalid json";
       const consoleSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
-      const settings = chatSettingsNote.getSettings();
+      const settings = chatSettingsBlob.getSettings();
       expect(settings).toEqual({
         chatTitle: "",
         context: "",
@@ -99,10 +99,10 @@ describe("ChatSettingsNote", () => {
         context: "New context",
       };
 
-      chatSettingsNote.setSettings(testSettings);
+      chatSettingsBlob.setSettings(testSettings);
 
-      expect(chatSettingsNote.content).toBe(JSON.stringify(testSettings));
-      expect(chatSettingsNote.getSettings()).toEqual(testSettings);
+      expect(chatSettingsBlob.content).toBe(JSON.stringify(testSettings));
+      expect(chatSettingsBlob.getSettings()).toEqual(testSettings);
     });
   });
 
@@ -112,9 +112,9 @@ describe("ChatSettingsNote", () => {
         chatTitle: "Epic Tale",
         context: "Context here",
       };
-      chatSettingsNote.setSettings(testSettings);
+      chatSettingsBlob.setSettings(testSettings);
 
-      expect(chatSettingsNote.getChatTitle()).toBe("Epic Tale");
+      expect(chatSettingsBlob.getChatTitle()).toBe("Epic Tale");
     });
   });
 
@@ -124,9 +124,9 @@ describe("ChatSettingsNote", () => {
         chatTitle: "Title here",
         context: "Amazing context",
       };
-      chatSettingsNote.setSettings(testSettings);
+      chatSettingsBlob.setSettings(testSettings);
 
-      expect(chatSettingsNote.getContext()).toBe("Amazing context");
+      expect(chatSettingsBlob.getContext()).toBe("Amazing context");
     });
   });
 
@@ -136,11 +136,11 @@ describe("ChatSettingsNote", () => {
         chatTitle: "Old Title",
         context: "Existing context",
       };
-      chatSettingsNote.setSettings(initialSettings);
+      chatSettingsBlob.setSettings(initialSettings);
 
-      chatSettingsNote.setChatTitle("New Title");
+      chatSettingsBlob.setChatTitle("New Title");
 
-      const updatedSettings = chatSettingsNote.getSettings();
+      const updatedSettings = chatSettingsBlob.getSettings();
       expect(updatedSettings.chatTitle).toBe("New Title");
       expect(updatedSettings.context).toBe("Existing context");
     });
@@ -152,11 +152,11 @@ describe("ChatSettingsNote", () => {
         chatTitle: "Existing title",
         context: "Old context",
       };
-      chatSettingsNote.setSettings(initialSettings);
+      chatSettingsBlob.setSettings(initialSettings);
 
-      chatSettingsNote.setContext("New context");
+      chatSettingsBlob.setContext("New context");
 
-      const updatedSettings = chatSettingsNote.getSettings();
+      const updatedSettings = chatSettingsBlob.getSettings();
       expect(updatedSettings.chatTitle).toBe("Existing title");
       expect(updatedSettings.context).toBe("New context");
     });
@@ -164,106 +164,106 @@ describe("ChatSettingsNote", () => {
 
   describe("hasSettings", () => {
     it("should return false when both title and context are empty", () => {
-      expect(chatSettingsNote.hasSettings()).toBe(false);
+      expect(chatSettingsBlob.hasSettings()).toBe(false);
     });
 
     it("should return true when story title is provided", () => {
-      chatSettingsNote.setChatTitle("Some title");
-      expect(chatSettingsNote.hasSettings()).toBe(true);
+      chatSettingsBlob.setChatTitle("Some title");
+      expect(chatSettingsBlob.hasSettings()).toBe(true);
     });
 
     it("should return true when context is provided", () => {
-      chatSettingsNote.setContext("Some context");
-      expect(chatSettingsNote.hasSettings()).toBe(true);
+      chatSettingsBlob.setContext("Some context");
+      expect(chatSettingsBlob.hasSettings()).toBe(true);
     });
 
     it("should return false when only whitespace is provided", () => {
-      chatSettingsNote.setChatTitle("   ");
-      chatSettingsNote.setContext("   ");
-      expect(chatSettingsNote.hasSettings()).toBe(false);
+      chatSettingsBlob.setChatTitle("   ");
+      chatSettingsBlob.setContext("   ");
+      expect(chatSettingsBlob.hasSettings()).toBe(false);
     });
   });
 
   describe("save", () => {
-    it("should call noteAPI.saveNote with correct parameters", async () => {
+    it("should call blobAPI.saveBlob with correct parameters", async () => {
       const testSettings: ChatSettings = {
         chatTitle: "Test Title",
         context: "Test Context",
       };
-      chatSettingsNote.setSettings(testSettings);
-      mockNoteAPI.saveNote.mockResolvedValue(true);
+      chatSettingsBlob.setSettings(testSettings);
+      mockBlobAPI.saveBlob.mockResolvedValue(true);
 
-      await chatSettingsNote.save();
+      await chatSettingsBlob.save();
 
-      expect(mockNoteAPI.saveNote).toHaveBeenCalledWith(
+      expect(mockBlobAPI.saveBlob).toHaveBeenCalledWith(
         testChatId,
         "chat-settings",
         JSON.stringify(testSettings)
       );
     });
 
-    it("should propagate errors from noteAPI", async () => {
+    it("should propagate errors from blobAPI", async () => {
       const error = new Error("Save failed");
-      mockNoteAPI.saveNote.mockRejectedValue(error);
+      mockBlobAPI.saveBlob.mockRejectedValue(error);
 
-      await expect(chatSettingsNote.save()).rejects.toThrow("Save failed");
+      await expect(chatSettingsBlob.save()).rejects.toThrow("Save failed");
     });
   });
 
   describe("load", () => {
-    it("should load content from noteAPI", async () => {
+    it("should load content from blobAPI", async () => {
       const testSettings: ChatSettings = {
         chatTitle: "Loaded Title",
         context: "Loaded Context",
       };
       const serializedSettings = JSON.stringify(testSettings);
-      mockNoteAPI.getNote.mockResolvedValue(serializedSettings);
+      mockBlobAPI.getBlob.mockResolvedValue(serializedSettings);
 
-      await chatSettingsNote.load();
+      await chatSettingsBlob.load();
 
-      expect(mockNoteAPI.getNote).toHaveBeenCalledWith(
+      expect(mockBlobAPI.getBlob).toHaveBeenCalledWith(
         testChatId,
         "chat-settings"
       );
-      expect(chatSettingsNote.content).toBe(serializedSettings);
-      expect(chatSettingsNote.getSettings()).toEqual(testSettings);
+      expect(chatSettingsBlob.content).toBe(serializedSettings);
+      expect(chatSettingsBlob.getSettings()).toEqual(testSettings);
     });
 
     it("should handle when no content is returned", async () => {
-      mockNoteAPI.getNote.mockResolvedValue(undefined);
+      mockBlobAPI.getBlob.mockResolvedValue(undefined);
 
-      await chatSettingsNote.load();
+      await chatSettingsBlob.load();
 
-      expect(chatSettingsNote.content).toBe("");
+      expect(chatSettingsBlob.content).toBe("");
     });
 
-    it("should propagate errors from noteAPI", async () => {
+    it("should propagate errors from blobAPI", async () => {
       const error = new Error("Load failed");
-      mockNoteAPI.getNote.mockRejectedValue(error);
+      mockBlobAPI.getBlob.mockRejectedValue(error);
 
-      await expect(chatSettingsNote.load()).rejects.toThrow("Load failed");
+      await expect(chatSettingsBlob.load()).rejects.toThrow("Load failed");
     });
   });
 
   describe("delete", () => {
-    it("should call noteAPI.deleteNote and clear content", async () => {
-      chatSettingsNote.setChatTitle("Some title");
-      mockNoteAPI.deleteNote.mockResolvedValue(true);
+    it("should call blobAPI.deleteBlob and clear content", async () => {
+      chatSettingsBlob.setChatTitle("Some title");
+      mockBlobAPI.deleteBlob.mockResolvedValue(true);
 
-      await chatSettingsNote.delete();
+      await chatSettingsBlob.delete();
 
-      expect(mockNoteAPI.deleteNote).toHaveBeenCalledWith(
+      expect(mockBlobAPI.deleteBlob).toHaveBeenCalledWith(
         testChatId,
         "chat-settings"
       );
-      expect(chatSettingsNote.content).toBe("");
+      expect(chatSettingsBlob.content).toBe("");
     });
 
-    it("should propagate errors from noteAPI", async () => {
+    it("should propagate errors from blobAPI", async () => {
       const error = new Error("Delete failed");
-      mockNoteAPI.deleteNote.mockRejectedValue(error);
+      mockBlobAPI.deleteBlob.mockRejectedValue(error);
 
-      await expect(chatSettingsNote.delete()).rejects.toThrow("Delete failed");
+      await expect(chatSettingsBlob.delete()).rejects.toThrow("Delete failed");
     });
   });
 });

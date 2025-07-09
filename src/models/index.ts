@@ -4,13 +4,13 @@ export { PreResponseNote } from "./PreResponseNote";
 export { PostResponseNote } from "./PostResponseNote";
 
 // Concrete implementations
-export { PlanningPreResponseNote } from "./PlanningPreResponseNote";
-export { StorySummaryNote } from "./StorySummaryNote";
-export { UserPreferencesNote } from "./UserPreferencesNote";
+export { PlanningNote } from "./PlanningNote";
+export { RefinementNote } from "./RefinementNote";
+export { AnalysisNote } from "./AnalysisNote";
 
 // Simple note implementations
-export { Note } from "./Note";
-export { ChatSettingsNote, type ChatSettings } from "./ChatSettingsNote";
+export { Blob } from "./Blob";
+export type { ChatSettings } from "./ChatSettings";
 
 // Existing models
 export type { ChatPage } from "./ChatPage";

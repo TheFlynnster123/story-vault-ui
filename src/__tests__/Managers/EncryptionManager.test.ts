@@ -33,7 +33,7 @@ describe("EncryptionManager", () => {
     });
   });
 
-  // Note: Full crypto testing would require a more complex setup with proper Web Crypto API mocking
+  // Blob: Full crypto testing would require a more complex setup with proper Web Crypto API mocking
   // or integration tests. For now, we focus on basic structure and error handling.
   describe("error handling", () => {
     it("should handle initialization in environments without crypto", async () => {

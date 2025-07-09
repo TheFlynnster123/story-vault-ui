@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ChatSettingsDialog } from "../ChatSettingsDialog";
 import { useChatSettings } from "../../hooks/useChatSettings";
-import type { ChatSettings } from "../../models/ChatSettingsNote";
+import type { ChatSettings } from "../../models/ChatSettings";
 import { v4 as uuidv4 } from "uuid";
 
 interface ICreateChatButtonProps {

@@ -1,5 +1,5 @@
 import { PostResponseNote } from "./PostResponseNote";
-import type { NoteAPI } from "../clients/NoteAPI";
+import type { BlobAPI } from "../clients/BlobAPI";
 import type { GrokChatAPI } from "../clients/GrokChatAPI";
 
 /**
@@ -8,12 +8,12 @@ import type { GrokChatAPI } from "../clients/GrokChatAPI";
  */
 export class UserPreferencesNote extends PostResponseNote {
   constructor(
-    noteAPI: NoteAPI,
+    blobAPI: BlobAPI,
     chatId: string,
     grokClient: GrokChatAPI,
     initialContent: string = ""
   ) {
-    super(noteAPI, chatId, grokClient, initialContent);
+    super(blobAPI, chatId, grokClient, initialContent);
   }
 
   getNoteName(): string {

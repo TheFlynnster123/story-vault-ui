@@ -2,15 +2,11 @@ import { useGrokChatAPI } from "./useGrokChatAPI";
 import { useChatPages } from "./useChatPages";
 import type { Message } from "../Chat/ChatMessage";
 import { useCallback, useState, useEffect } from "react";
-import { useNoteAPI } from "./useNoteAPI";
 import {
   type ChatPage,
   type PreResponseNote,
   type PostResponseNote,
-  StorySummaryNote,
-  UserPreferencesNote,
-  PlanningPreResponseNote,
-  ChatSettingsNote,
+  PlanningNote,
 } from "../models";
 import { toUserMessage, toSystemMessage } from "../utils/messageUtils";
 import {
@@ -18,6 +14,11 @@ import {
   PROGRESS_MESSAGES,
   CHAT_FLOW_CONFIG,
 } from "../constants/chatFlow";
+import { useBlobAPI } from "./useBlobAPI";
+import { StorySummaryNote } from "../models/StorySummaryNote";
+import { UserPreferencesNote } from "../models/UserPreferencesNote";
+import { useChatSettings } from "./useChatSettings";
+import { useChatSettingsQuery } from "./queries/useChatSettingsQuery";
 
 export interface ChatFlowStep {
   id: string;
@@ -65,7 +66,8 @@ export const useChatFlow = ({
     chatId,
   });
 
-  const noteAPI = useNoteAPI();
+  const blobAPI = useBlobAPI();
+  const chatSettings = useChatSettingsQuery(chatId);
 
   const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false);
   const [progressStatus, setProgressStatus] = useState<string | undefined>(
@@ -74,7 +76,7 @@ export const useChatFlow = ({
   const [chatFlowHistory, setChatFlowHistory] = useState<ChatFlowStep[]>([]);
   const [notesLoaded, setNotesLoaded] = useState<boolean>(false);
 
-  // Note instances
+  // Blob instances
   const [preResponseNotes] = useState<PreResponseNote[]>([]);
   const [postResponseNotes, setPostResponseNotes] = useState<
     PostResponseNote[]
@@ -83,22 +85,21 @@ export const useChatFlow = ({
   // Initialize post-response note instances
   useEffect(() => {
     const initializeNotes = async () => {
-      if (!noteAPI || !chatId || !grokChatApiClient || notesLoaded) return;
+      if (!blobAPI || !chatId || !grokChatApiClient || notesLoaded) return;
 
       try {
         // Create post-response note instances
         const storySummaryPostNote = new StorySummaryNote(
-          noteAPI,
+          blobAPI,
           chatId,
           grokChatApiClient
         );
         const userPreferencesPostNote = new UserPreferencesNote(
-          noteAPI,
+          blobAPI,
           chatId,
           grokChatApiClient
         );
 
-        // Load existing content using the load method
         await Promise.all([
           storySummaryPostNote.load(),
           userPreferencesPostNote.load(),
@@ -113,43 +114,28 @@ export const useChatFlow = ({
     };
 
     initializeNotes();
-  }, [noteAPI, chatId, grokChatApiClient, notesLoaded]);
+  }, [blobAPI, chatId, grokChatApiClient, notesLoaded]);
 
   // Check for chat settings and add context as first message if needed
   useEffect(() => {
     const addContextMessage = async () => {
-      if (!noteAPI || !chatId || !notesLoaded || isLoadingHistory) return;
-
-      const messageList = getMessageList();
-
-      // Only add context if no messages exist
-      if (messageList.length > 0) return;
-
-      try {
-        // Load chat settings
-        const chatSettingsNote = new ChatSettingsNote(chatId, noteAPI);
-        await chatSettingsNote.load();
-
-        const context = chatSettingsNote.getContext();
-        if (context.trim()) {
-          // Add context as the first system message
-          const contextMessage = toSystemMessage(`Story Context: ${context}`);
-          await addMessage(contextMessage);
-        }
-      } catch (error) {
-        console.error("Failed to load chat settings or add context:", error);
+      if (
+        !chatSettings ||
+        !chatSettings.context ||
+        isLoadingHistory ||
+        pages.length > 0
+      ) {
+        return;
       }
+
+      const contextMessage = toSystemMessage(
+        `Story Context: ${chatSettings.context}`
+      );
+      await addMessage(contextMessage);
     };
 
     addContextMessage();
-  }, [
-    noteAPI,
-    chatId,
-    notesLoaded,
-    isLoadingHistory,
-    getMessageList,
-    addMessage,
-  ]);
+  }, [chatSettings, isLoadingHistory, pages, addMessage]);
 
   const addChatFlowStep = useCallback(
     (stepType: ChatFlowStep["stepType"], content: string) => {
@@ -216,8 +202,8 @@ export const useChatFlow = ({
   );
 
   const deleteNotes = useCallback(async () => {
-    if (!noteAPI || !chatId || postResponseNotes.length === 0) {
-      console.error("NoteAPI, chatId, or notes not available for deletion.");
+    if (!blobAPI || !chatId || postResponseNotes.length === 0) {
+      console.error("BlobAPI, chatId, or notes not available for deletion.");
       return;
     }
 
@@ -225,7 +211,7 @@ export const useChatFlow = ({
       // Delete all post-response notes from storage
       await Promise.all(
         postResponseNotes.map((note) =>
-          noteAPI.deleteNote(chatId, note.getNoteName())
+          blobAPI.deleteBlob(chatId, note.getNoteName())
         )
       );
 
@@ -240,12 +226,12 @@ export const useChatFlow = ({
       console.error("Failed to delete notes:", error);
       throw error;
     }
-  }, [noteAPI, chatId, postResponseNotes]);
+  }, [blobAPI, chatId, postResponseNotes]);
 
   const submitMessage = useCallback(
     async (userMessageText: string) => {
-      if (!chatId || !grokChatApiClient || !noteAPI) {
-        console.error("ChatId, Grok API client, or Note API not available.");
+      if (!chatId || !grokChatApiClient || !blobAPI) {
+        console.error("ChatId, Grok API client, or Blob API not available.");
         return;
       }
 
@@ -265,7 +251,7 @@ export const useChatFlow = ({
 
         // Step 1: Generate Planning Notes using PlanningPreResponseNote
         setProgressStatus(PROGRESS_MESSAGES.PLANNING_NOTES);
-        const planningNote = new PlanningPreResponseNote(grokChatApiClient);
+        const planningNote = new PlanningNote(grokChatApiClient);
         await planningNote.generate(localMessageList, true);
         localMessageList = planningNote.appendToContext(localMessageList);
         addChatFlowStep("planning_notes", planningNote.getContent());
@@ -297,7 +283,7 @@ export const useChatFlow = ({
     [
       chatId,
       grokChatApiClient,
-      noteAPI,
+      blobAPI,
       addMessage,
       getMessageList,
       addChatFlowStep,

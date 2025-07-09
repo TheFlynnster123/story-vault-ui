@@ -1,18 +1,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChatSettings } from "../../hooks/useChatSettings";
 import { useChatHistoryApi } from "../../hooks/useChatHistoryAPI";
-import { useEffect } from "react";
 
-export const useChatsInfo = () => {
+export const useChats = () => {
   const chatHistoryAPI = useChatHistoryApi();
-  const { chatSettings, loadChatSettings } = useChatSettings();
   const queryClient = useQueryClient();
 
   // Query for fetching chat IDs
   const {
     data: chatIds = [],
-    isLoading,
-    error,
+    isLoading: isLoadingChats,
+    error: chatError,
   } = useQuery({
     queryKey: ["chats"],
     queryFn: async () => {
@@ -24,16 +22,11 @@ export const useChatsInfo = () => {
     enabled: !!chatHistoryAPI,
   });
 
-  // Load chat settings when chat IDs change
-  useEffect(() => {
-    if (chatIds.length > 0) {
-      Promise.all(chatIds.map((chatId) => loadChatSettings(chatId))).catch(
-        (error) => {
-          console.error("Failed to load chat settings:", error);
-        }
-      );
-    }
-  }, [chatIds]); // Removed loadChatSettings to prevent infinite re-renders
+  const {
+    chatSettings,
+    isLoading: isLoadingSettings,
+    error: settingsError,
+  } = useChatSettings(chatIds);
 
   const refreshChats = () => {
     queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -43,7 +36,7 @@ export const useChatsInfo = () => {
     chatIds,
     chatSettings,
     refreshChats,
-    isLoading,
-    error,
+    isLoading: isLoadingChats || isLoadingSettings,
+    error: chatError || settingsError,
   };
 };
