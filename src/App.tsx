@@ -5,7 +5,7 @@ import config from "./Config";
 import { useGrokKey } from "./hooks/useGrokKey";
 import { GrokKeyInput } from "./GrokKeyInput";
 import React from "react";
-import ChatMenuV2 from "./Chat/Menu/ChatMenuV2";
+import ChatMenu from "./Chat/Menu/ChatMenu";
 
 const queryClient = new QueryClient();
 
@@ -21,7 +21,7 @@ const AuthenticatedContent: React.FC = ({}) => {
   if (hasValidGrokKey) {
     return (
       <>
-        <ChatMenuV2 />
+        <ChatMenu />
       </>
     );
   }

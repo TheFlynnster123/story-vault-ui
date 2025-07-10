@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { ChatV2 } from "../ChatV2";
+import { Chat } from "../Chat";
 import { CreateChatButton } from "./CreateChatButton";
 import "./ChatMenu.css";
 import { ChatList } from "./ChatList";
 import { SystemSettingsButton } from "./SystemSettingsButton";
 import { useChats } from "./useChats";
 
-function ChatMenuV2() {
+function ChatMenu() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<boolean>(true);
-  const [useV2ChatFlow, setUseV2ChatFlow] = useState<boolean>(false);
   const { chatIds, chatSettings, refreshChats } = useChats();
 
   const handleSelectChat = (id: string) => {
@@ -28,7 +27,7 @@ function ChatMenuV2() {
   };
 
   if (selectedChatId && !showMenu) {
-    return <ChatV2 chatId={selectedChatId} toggleMenu={toggleMenu} />;
+    return <Chat chatId={selectedChatId} toggleMenu={toggleMenu} />;
   }
 
   return (
@@ -51,4 +50,4 @@ function ChatMenuV2() {
   );
 }
 
-export default ChatMenuV2;
+export default ChatMenu;

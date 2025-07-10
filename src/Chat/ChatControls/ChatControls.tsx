@@ -1,10 +1,14 @@
 import React, { useState } from "react";
 import { ChatSettingsDialog } from "./ChatSettingsDialog";
-import { RiArrowGoBackLine, RiChatSettingsLine } from "react-icons/ri";
-import type { ChatSettings } from "../models/ChatSettings";
-import { useCreateChatSettingsMutation } from "../hooks/queries/useChatSettingsQuery";
+import {
+  RiArrowGoBackLine,
+  RiChatSettingsLine,
+  RiFileList2Line,
+} from "react-icons/ri";
+import type { ChatSettings } from "../../models/ChatSettings";
+import { useCreateChatSettingsMutation } from "../../hooks/queries/useChatSettingsQuery";
 import "./ChatControls.css";
-import { BsArrowLeft } from "react-icons/bs";
+import { StoryNotesDialog } from "./StoryNotesDialog";
 
 interface ChatControlsProps {
   chatId: string;
@@ -20,6 +24,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   currentChatSettings,
 }) => {
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+  const [isStoryNotesDialogOpen, setIsStoryNotesDialogOpen] = useState(false);
   const createChatSettingsMutation = useCreateChatSettingsMutation();
 
   const handleSettingsSubmit = async (settings: {
@@ -54,11 +59,24 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         <RiChatSettingsLine />
       </button>
 
+      <button
+        className="chat-controls-button story-notes-button"
+        onClick={() => setIsStoryNotesDialogOpen(true)}
+        title="Story Notes"
+      >
+        <RiFileList2Line />
+      </button>
+
       <ChatSettingsDialog
         isOpen={isSettingsDialogOpen}
         onCreate={handleSettingsSubmit}
         onCancel={() => setIsSettingsDialogOpen(false)}
         initialValues={currentChatSettings || undefined}
+      />
+
+      <StoryNotesDialog
+        isOpen={isStoryNotesDialogOpen}
+        onCancel={() => setIsStoryNotesDialogOpen(false)}
       />
     </div>
   );

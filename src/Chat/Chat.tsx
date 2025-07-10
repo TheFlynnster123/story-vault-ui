@@ -1,20 +1,20 @@
 import React, { useEffect, useRef } from "react";
 import { ChatInput } from "./ChatInput";
 import "./Chat.css";
-import { ChatMessageListV2 } from "./ChatMessageListV2";
-import { ChatControls } from "./ChatControls";
-import { useChatFlowV2 } from "../hooks/useChatFlowV2";
+import { ChatMessageList } from "./ChatMessageList";
+import { ChatControls } from "./ChatControls/ChatControls";
+import { useChatFlow } from "../hooks/useChatFlow";
 import {
   useChatSettingsQuery,
   useUpdateChatSettingsMutation,
 } from "../hooks/queries/useChatSettingsQuery";
 
-interface ChatV2Props {
+interface ChatProps {
   chatId: string;
   toggleMenu: () => void;
 }
 
-export const ChatV2: React.FC<ChatV2Props> = ({ chatId, toggleMenu }) => {
+export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const {
     pages,
     isSendingMessage,
@@ -23,13 +23,7 @@ export const ChatV2: React.FC<ChatV2Props> = ({ chatId, toggleMenu }) => {
     deleteMessagesFromIndex,
     getDeletePreview,
     isLoadingHistory,
-    progressStatus,
-    chatFlowHistory,
-    currentState,
-    error,
-    deleteNotes,
-    reset,
-  } = useChatFlowV2({
+  } = useChatFlow({
     chatId,
   });
 
@@ -71,52 +65,18 @@ export const ChatV2: React.FC<ChatV2Props> = ({ chatId, toggleMenu }) => {
         currentChatSettings={currentChatSettings}
       />
 
-      {/* Display error if present */}
-      {error && (
-        <div
-          className="error-status"
-          style={{ color: "red", padding: "10px", textAlign: "center" }}
-        >
-          Error: {error}
-          <button onClick={reset} style={{ marginLeft: "10px" }}>
-            Reset
-          </button>
-        </div>
-      )}
-
-      {/* Display current state for debugging */}
-      {currentState !== "idle" && currentState !== "complete" && (
-        <div
-          className="state-indicator"
-          style={{
-            padding: "5px",
-            textAlign: "center",
-            fontSize: "12px",
-            opacity: 0.7,
-          }}
-        >
-          State: {currentState}
-        </div>
-      )}
-
-      <ChatMessageListV2
+      <ChatMessageList
         pages={pages}
-        chatFlowHistory={chatFlowHistory}
         onDeleteMessage={deleteMessage}
         onDeleteFromHere={deleteMessagesFromIndex}
         getDeletePreview={getDeletePreview}
-        onDeleteNotes={deleteNotes}
       />
-
-      {progressStatus && (
-        <div className="progress-status">{progressStatus}</div>
-      )}
 
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
         isSending={isSendingMessage}
-        placeholder={"Type your message here... (ChatFlow v2)"}
+        placeholder={"Type your message here..."}
       />
     </div>
   );

@@ -1,28 +1,22 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
-import { ChatFlowCollapsibleV2 } from "./ChatFlowCollapsibleV2";
-import type { ChatFlowV2Step } from "../constants/chatFlowV2";
 
-interface ChatMessageListV2Props {
+interface ChatMessageListProps {
   pages: ChatPage[];
-  chatFlowHistory?: ChatFlowV2Step[];
   onDeleteMessage?: (messageId: string) => void;
   onDeleteFromHere?: (messageId: string) => void;
   getDeletePreview?: (messageId: string) => {
     messageCount: number;
     pageCount: number;
   };
-  onDeleteNotes?: () => Promise<void>;
 }
 
-export const ChatMessageListV2: React.FC<ChatMessageListV2Props> = ({
+export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   pages,
-  chatFlowHistory = [],
   onDeleteMessage,
   onDeleteFromHere,
   getDeletePreview,
-  onDeleteNotes,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
@@ -40,10 +34,6 @@ export const ChatMessageListV2: React.FC<ChatMessageListV2Props> = ({
           getDeletePreview={getDeletePreview}
         />
       ))}
-      <ChatFlowCollapsibleV2
-        chatFlowHistory={chatFlowHistory}
-        onDeleteNotes={onDeleteNotes}
-      />
     </div>
   );
 };

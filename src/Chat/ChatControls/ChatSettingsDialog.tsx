@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import type { ChatSettings } from "../models/ChatSettings";
+import type { ChatSettings } from "../../models/ChatSettings";
 import "./ChatSettingsDialog.css";
 
 interface ChatSettingsDialogProps {

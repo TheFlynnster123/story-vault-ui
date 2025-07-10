@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChatSettingsDialog } from "../ChatSettingsDialog";
+import { ChatSettingsDialog } from "../ChatControls/ChatSettingsDialog";
 import type { ChatSettings } from "../../models/ChatSettings";
 import { v4 as uuidv4 } from "uuid";
 import { useUpdateChatSettingsMutation } from "../../hooks/queries/useChatSettingsQuery";
