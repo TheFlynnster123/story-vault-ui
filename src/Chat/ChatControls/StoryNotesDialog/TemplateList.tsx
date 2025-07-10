@@ -6,7 +6,7 @@ interface TemplateListProps {
   templates: PlanningNoteTemplate[];
   onTemplateChange: (
     id: string,
-    field: "name" | "requestTemplate",
+    field: "name" | "requestPrompt",
     value: string
   ) => void;
   onRemoveTemplate: (id: string) => void;

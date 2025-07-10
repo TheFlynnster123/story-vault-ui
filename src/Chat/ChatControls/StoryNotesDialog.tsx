@@ -61,7 +61,7 @@ export const StoryNotesDialog: React.FC<StoryNotesDialogProps> = ({
 
   const handleTemplateChange = (
     id: string,
-    field: "name" | "requestTemplate",
+    field: "name" | "requestPrompt",
     value: string
   ) => {
     setEditingTemplates(

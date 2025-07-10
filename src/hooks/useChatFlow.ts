@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useGrokChatAPI } from "./useGrokChatAPI";
-import { useChatPages } from "./useChatPages";
 import { useBlobAPI } from "./useBlobAPI";
+import { useChatHistoryApi } from "./useChatHistoryAPI";
 import { useChatFlowStore } from "../stores/chatFlowStore";
 import type { ChatPage } from "../models";
 import { toSystemMessage } from "../utils/messageUtils";
@@ -9,6 +9,8 @@ import { useChatSettingsQuery } from "./queries/useChatSettingsQuery";
 
 interface UseChatFlowReturn {
   pages: ChatPage[];
+  isGeneratingPlanningNotes: boolean;
+  isGeneratingResponse: boolean;
   isSendingMessage: boolean;
   submitMessage: (messageText: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
@@ -30,43 +32,38 @@ export const useChatFlow = ({
 }: UseChatFlowProps): UseChatFlowReturn => {
   const { grokChatApiClient } = useGrokChatAPI();
   const blobAPI = useBlobAPI();
+  const chatHistoryAPI = useChatHistoryApi();
 
   const chatSettings = useChatSettingsQuery(chatId);
 
+  // Zustand store - now the single source of truth
   const {
     pages,
+    messages,
+    isLoadingHistory,
+    isGeneratingPlanningNotes,
+    isGeneratingResponse,
+    initialize,
     addMessage,
     deleteMessage,
     deleteMessagesFromIndex,
     getDeletePreview,
-    isLoadingHistory,
-    getMessageList,
-  } = useChatPages({
-    chatId,
-  });
-
-  // Zustand store
-  const {
-    isSendingMessage,
-    initialize,
-    submitMessage: storeSubmitMessage,
+    startMessageFlow,
     reset,
   } = useChatFlowStore();
 
   // Initialize the store when dependencies are available
   useEffect(() => {
-    if (grokChatApiClient && blobAPI && chatId) {
-      initialize(grokChatApiClient, blobAPI, chatId);
+    if (grokChatApiClient && blobAPI && chatHistoryAPI && chatId) {
+      initialize(chatId, grokChatApiClient, blobAPI, chatHistoryAPI);
     }
-  }, [grokChatApiClient, blobAPI, chatId, initialize]);
+  }, [grokChatApiClient, blobAPI, chatHistoryAPI, chatId, initialize]);
 
   useEffect(() => {
     const addContextMessage = async () => {
       if (!blobAPI || !chatId || isLoadingHistory) return;
 
-      const messageList = getMessageList();
-
-      if (messageList.length > 0 && chatSettings && chatSettings.context.trim())
+      if (messages.length > 0 && chatSettings && chatSettings.context.trim())
         return;
 
       try {
@@ -81,7 +78,14 @@ export const useChatFlow = ({
     };
 
     addContextMessage();
-  }, [chatSettings, isLoadingHistory, getMessageList, addMessage]);
+  }, [
+    chatSettings,
+    isLoadingHistory,
+    messages.length,
+    addMessage,
+    blobAPI,
+    chatId,
+  ]);
 
   const submitMessage = async (userMessageText: string): Promise<void> => {
     if (!grokChatApiClient || !blobAPI) {
@@ -89,12 +93,14 @@ export const useChatFlow = ({
       return;
     }
 
-    await storeSubmitMessage(userMessageText, addMessage, getMessageList);
+    startMessageFlow(userMessageText);
   };
 
   return {
     pages,
-    isSendingMessage,
+    isGeneratingPlanningNotes,
+    isGeneratingResponse,
+    isSendingMessage: isGeneratingPlanningNotes || isGeneratingResponse,
     submitMessage,
     deleteMessage,
     deleteMessagesFromIndex,

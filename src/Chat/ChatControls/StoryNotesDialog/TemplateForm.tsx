@@ -5,7 +5,7 @@ interface TemplateFormProps {
   template: PlanningNoteTemplate;
   onTemplateChange: (
     id: string,
-    field: "name" | "requestTemplate",
+    field: "name" | "requestPrompt",
     value: string
   ) => void;
   onRemoveTemplate: (id: string) => void;
@@ -44,7 +44,7 @@ export const TemplateForm: React.FC<TemplateFormProps> = ({
           id={`template-request-${template.id}`}
           value={template.requestPrompt}
           onChange={(e) =>
-            onTemplateChange(template.id, "requestTemplate", e.target.value)
+            onTemplateChange(template.id, "requestPrompt", e.target.value)
           }
           rows={4}
           placeholder="Enter the request template..."

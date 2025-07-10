@@ -1,123 +1,272 @@
 import { create } from "zustand";
 import type { Message } from "../Chat/ChatMessage";
+import type { ChatPage } from "../models/ChatPage";
 import type { GrokChatAPI } from "../clients/GrokChatAPI";
 import type { BlobAPI } from "../clients/BlobAPI";
-import { toUserMessage, toSystemMessage } from "../utils/messageUtils";
-import { GetPlanningNotesTemplate } from "../hooks/queries/usePlanningNotesTemplateQuery";
+import type { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
+import { ChatPageManager } from "../Managers/ChatPageManager";
+import type { FlowStep, ChatFlowContext } from "./chatFlow/ChatFlowStates";
+import { ChatFlowStateMachine } from "./chatFlow/ChatFlowStateMachine";
 
 interface ChatFlowStore {
-  // State
-  isSendingMessage: boolean;
+  // Message state (replaces useChatPages)
+  messages: Message[];
+  pages: ChatPage[];
+  isLoadingHistory: boolean;
+
+  // Flow state machine
+  flowStep: FlowStep;
+  planningNotesContext: Message | null;
 
   // Dependencies
+  chatId: string | null;
   grokClient?: GrokChatAPI;
   blobAPI?: BlobAPI;
-  chatId?: string;
+  chatHistoryAPI?: ChatHistoryAPI;
 
-  // Actions
+  // Internal managers
+  chatPageManager?: ChatPageManager;
+  stateMachine?: ChatFlowStateMachine;
+
+  // Computed state (for backwards compatibility)
+  isGeneratingPlanningNotes: boolean;
+  isGeneratingResponse: boolean;
+
+  // Actions - One-stop shop
   initialize: (
+    chatId: string,
     grokClient: GrokChatAPI,
     blobAPI: BlobAPI,
-    chatId: string
-  ) => void;
-  submitMessage: (
-    userMessageText: string,
-    addMessage: (message: Message) => Promise<void>,
-    getMessageList: () => Message[]
+    chatHistoryAPI: ChatHistoryAPI
   ) => Promise<void>;
+  addMessage: (message: Message) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+  deleteMessagesFromIndex: (messageId: string) => Promise<void>;
+  getDeletePreview: (messageId: string) => {
+    messageCount: number;
+    pageCount: number;
+  };
+  startMessageFlow: (userMessageText: string) => void;
   reset: () => void;
 }
 
 export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
-  // State
-  isSendingMessage: false,
+  // Message state
+  messages: [],
+  pages: [],
+  isLoadingHistory: false,
+
+  // Flow state
+  flowStep: "idle",
+  planningNotesContext: null,
 
   // Dependencies
+  chatId: null,
   grokClient: undefined,
   blobAPI: undefined,
-  chatId: undefined,
+  chatHistoryAPI: undefined,
+  chatPageManager: undefined,
 
-  // Actions
-  initialize: (grokClient: GrokChatAPI, blobAPI: BlobAPI, chatId: string) => {
-    set({
-      grokClient,
-      blobAPI,
-      chatId,
-    });
+  // Computed state (for backwards compatibility)
+  get isGeneratingPlanningNotes() {
+    return get().flowStep === "generating-planning-notes";
+  },
+  get isGeneratingResponse() {
+    return get().flowStep === "generating-response";
   },
 
-  submitMessage: async (
-    userMessageText: string,
-    addMessage: (message: Message) => Promise<void>,
-    getMessageList: () => Message[]
+  // Actions
+  initialize: async (
+    chatId: string,
+    grokClient: GrokChatAPI,
+    blobAPI: BlobAPI,
+    chatHistoryAPI: ChatHistoryAPI
   ) => {
-    const { grokClient, blobAPI } = get();
+    set({
+      chatId,
+      grokClient,
+      blobAPI,
+      chatHistoryAPI,
+      isLoadingHistory: true,
+    });
+
+    try {
+      // Load chat history
+      const fetchedPages = await chatHistoryAPI.getChatHistory(chatId);
+      const chatPageManager = new ChatPageManager(chatId, fetchedPages);
+      const messages = chatPageManager.getMessageList();
+
+      set({
+        pages: fetchedPages,
+        messages,
+        chatPageManager,
+        isLoadingHistory: false,
+      });
+    } catch (error) {
+      console.error("Failed to load chat history:", error);
+      const chatPageManager = new ChatPageManager(chatId, []);
+      set({
+        pages: [],
+        messages: [],
+        chatPageManager,
+        isLoadingHistory: false,
+      });
+    }
+  },
+
+  addMessage: async (message: Message) => {
+    const { chatPageManager, chatHistoryAPI } = get();
+
+    if (!chatPageManager || !chatHistoryAPI) {
+      console.error("ChatFlow not properly initialized");
+      return;
+    }
+
+    // Add message to page manager
+    chatPageManager.addMessage(message);
+    const updatedPages = chatPageManager.getPages();
+    const updatedMessages = chatPageManager.getMessageList();
+
+    set({
+      pages: [...updatedPages],
+      messages: [...updatedMessages],
+    });
+
+    // Save the last page to API
+    const lastPage = updatedPages[updatedPages.length - 1];
+    if (lastPage) {
+      try {
+        await chatHistoryAPI.saveChatPage(lastPage);
+      } catch (error) {
+        console.error("Failed to save page:", lastPage.pageId, error);
+      }
+    }
+  },
+
+  deleteMessage: async (messageId: string) => {
+    const { chatPageManager, chatHistoryAPI } = get();
+
+    if (!chatPageManager || !chatHistoryAPI) {
+      console.error("ChatFlow not properly initialized");
+      return;
+    }
+
+    const location = chatPageManager.findMessageLocation(messageId);
+    if (!location) {
+      console.warn(`Message with id ${messageId} not found`);
+      return;
+    }
+
+    chatPageManager.deleteMessage(messageId);
+    const updatedPages = chatPageManager.getPages();
+    const updatedMessages = chatPageManager.getMessageList();
+
+    set({
+      pages: [...updatedPages],
+      messages: [...updatedMessages],
+    });
+
+    // Save the affected page
+    const affectedPage = updatedPages[location.pageIndex];
+    if (affectedPage) {
+      try {
+        await chatHistoryAPI.saveChatPage(affectedPage);
+      } catch (error) {
+        console.error("Failed to save page:", affectedPage.pageId, error);
+      }
+    }
+  },
+
+  deleteMessagesFromIndex: async (messageId: string) => {
+    const { chatPageManager, chatHistoryAPI } = get();
+
+    if (!chatPageManager || !chatHistoryAPI) {
+      console.error("ChatFlow not properly initialized");
+      return;
+    }
+
+    const location = chatPageManager.findMessageLocation(messageId);
+    if (!location) {
+      console.warn(`Message with id ${messageId} not found`);
+      return;
+    }
+
+    chatPageManager.deleteMessagesFromIndex(messageId);
+    const updatedPages = chatPageManager.getPages();
+    const updatedMessages = chatPageManager.getMessageList();
+
+    set({
+      pages: [...updatedPages],
+      messages: [...updatedMessages],
+    });
+
+    // Save all affected pages
+    const affectedPages = updatedPages.slice(location.pageIndex);
+    for (const page of affectedPages) {
+      try {
+        await chatHistoryAPI.saveChatPage(page);
+      } catch (error) {
+        console.error("Failed to save page:", page.pageId, error);
+      }
+    }
+  },
+
+  getDeletePreview: (messageId: string) => {
+    const { chatPageManager } = get();
+    if (!chatPageManager) {
+      return { messageCount: 0, pageCount: 0 };
+    }
+    return chatPageManager.countMessagesFromIndex(messageId);
+  },
+
+  startMessageFlow: (userMessageText: string) => {
+    const { grokClient, blobAPI, stateMachine } = get();
 
     if (!grokClient || !blobAPI) {
       console.error("ChatFlow not properly initialized");
       return;
     }
 
-    set({ isSendingMessage: true });
+    // Initialize state machine if not already done
+    if (!stateMachine) {
+      const context: ChatFlowContext = {
+        messages: get().messages,
+        grokClient,
+        blobAPI,
+        addMessage: get().addMessage,
+      };
 
-    // Add user message to the history
-    await addMessage(toUserMessage(userMessageText));
-    const messageList = getMessageList();
+      const newStateMachine = new ChatFlowStateMachine(
+        context,
+        (step: FlowStep, data?: any) => {
+          set({
+            flowStep: step,
+            planningNotesContext:
+              data?.planningNotesContext || get().planningNotesContext,
+          });
+        }
+      );
 
-    // Get planning note templates
-    const planningNoteTemplates = await GetPlanningNotesTemplate(blobAPI);
-
-    // Generate planning notes
-    const planningNotes: string[] = [];
-    for (const template of planningNoteTemplates) {
-      const consolidatedMessageList = GetConsolidatedMessageList(messageList);
-
-      const planningNoteMessages = [
-        consolidatedMessageList,
-        toSystemMessage(template.name + "\r\n" + template.requestPrompt),
-      ];
-
-      const planningNote = await grokClient.postChat(planningNoteMessages);
-
-      planningNotes.push(planningNote);
+      set({ stateMachine: newStateMachine });
+      newStateMachine.startMessageFlow(userMessageText);
+    } else {
+      stateMachine.startMessageFlow(userMessageText);
     }
-
-    // Combine planning notes into a single context message
-    const planningNotesContext = planningNotes.join("\n\n---\n\n");
-    const contextMessage = toSystemMessage(planningNotesContext);
-
-    // Generate the final response
-    const messagePrompt = toSystemMessage(
-      "Without preamble, take into consideration the notes above and respond to the user's most recent message."
-    );
-    const messagesForFinalResponse = [
-      ...messageList,
-      contextMessage,
-      messagePrompt,
-    ];
-    const finalResponse = await grokClient.postChat(messagesForFinalResponse);
-
-    // Add the final response to the history
-    await addMessage(toSystemMessage(finalResponse));
-
-    set({ isSendingMessage: false });
   },
 
   reset: () => {
     set({
+      messages: [],
+      pages: [],
+      isLoadingHistory: false,
+      flowStep: "idle",
+      planningNotesContext: null,
+      chatId: null,
       grokClient: undefined,
       blobAPI: undefined,
-      chatId: undefined,
+      chatHistoryAPI: undefined,
+      chatPageManager: undefined,
+      stateMachine: undefined,
     });
   },
 }));
-
-const GetConsolidatedMessageList = (messageList: Message[]): Message => {
-  return toSystemMessage(
-    messageList
-      .map((message) => {
-        return `${message.role}: ${message.content}`;
-      })
-      .join("\n")
-  );
-};
