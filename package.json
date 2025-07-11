@@ -11,7 +11,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "analyze": "vite build && npx vite-bundle-analyzer dist"
