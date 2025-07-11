@@ -18,6 +18,9 @@
   width: 90%;
   max-width: 600px;
   color: white;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
 }
 
 .chat-flow-header {
@@ -37,16 +40,7 @@
   cursor: pointer;
 }
 
-.notes-container {
-  background-color: rgba(0, 0, 0, 0.5);
-  padding: 10px;
-  border-radius: 5px;
-  margin-top: 10px;
-  max-height: 400px;
+.chat-flow-content {
   overflow-y: auto;
-}
-
-.notes-container pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  padding-right: 10px;
 }

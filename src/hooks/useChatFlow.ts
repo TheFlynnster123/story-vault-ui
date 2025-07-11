@@ -54,37 +54,28 @@ export const useChatFlow = ({
 
   // Initialize the store when dependencies are available
   useEffect(() => {
-    if (grokChatApiClient && blobAPI && chatHistoryAPI && chatId) {
-      initialize(chatId, grokChatApiClient, blobAPI, chatHistoryAPI);
+    if (
+      grokChatApiClient &&
+      blobAPI &&
+      chatHistoryAPI &&
+      chatId &&
+      chatSettings
+    ) {
+      initialize(
+        chatId,
+        grokChatApiClient,
+        blobAPI,
+        chatHistoryAPI,
+        chatSettings.context
+      );
     }
-  }, [grokChatApiClient, blobAPI, chatHistoryAPI, chatId, initialize]);
-
-  useEffect(() => {
-    const addContextMessage = async () => {
-      if (!blobAPI || !chatId || isLoadingHistory) return;
-
-      if (messages.length > 0 && chatSettings && chatSettings.context.trim())
-        return;
-
-      try {
-        const contextMessage = toSystemMessage(
-          `Story Context: ${chatSettings!.context}`
-        );
-
-        await addMessage(contextMessage);
-      } catch (error) {
-        console.error("Failed to load chat settings or add context:", error);
-      }
-    };
-
-    addContextMessage();
   }, [
-    chatSettings,
-    isLoadingHistory,
-    messages.length,
-    addMessage,
+    grokChatApiClient,
     blobAPI,
+    chatHistoryAPI,
     chatId,
+    initialize,
+    chatSettings,
   ]);
 
   const submitMessage = async (userMessageText: string): Promise<void> => {

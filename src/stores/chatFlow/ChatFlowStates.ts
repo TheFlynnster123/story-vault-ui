@@ -1,4 +1,5 @@
 import type { Message } from "../../Chat/ChatMessage";
+import type { Note } from "../../models/Note";
 import type { GrokChatAPI } from "../../clients/GrokChatAPI";
 import type { BlobAPI } from "../../clients/BlobAPI";
 import { toUserMessage, toSystemMessage } from "../../utils/messageUtils";
@@ -52,7 +53,7 @@ export class GeneratingPlanningNotesState extends ChatFlowState {
       );
 
       // Generate planning notes
-      const planningNotes: string[] = [];
+      const allNotes: Note[] = [];
       for (const template of planningNoteTemplates) {
         const consolidatedMessageList = this.getConsolidatedMessageList(
           context.messages
@@ -63,16 +64,21 @@ export class GeneratingPlanningNotesState extends ChatFlowState {
           toSystemMessage(template.name + "\r\n" + template.requestPrompt),
         ];
 
-        const planningNote = await context.grokClient.postChat(
+        const planningNoteContent = await context.grokClient.postChat(
           planningNoteMessages
         );
-        planningNotes.push(planningNote);
+
+        allNotes.push({
+          template: template,
+          content: planningNoteContent,
+        });
       }
 
       // Combine planning notes into a single context message
-      const planningNotesContext = planningNotes.join("\n\n---\n\n");
+      const planningNotesContext = allNotes
+        .map((note) => `Template: ${note.template.name}\n\n${note.content}`)
+        .join("\n\n---\n\n");
       const planningNotesContextMessage = toSystemMessage(planningNotesContext);
-      const allNotes = planningNotes.map((note) => toSystemMessage(note));
 
       return {
         nextStep: "generating-response",
@@ -100,9 +106,9 @@ export class GeneratingPlanningNotesState extends ChatFlowState {
 
 export class GeneratingResponseState extends ChatFlowState {
   private planningNotesContext: Message;
-  private allNotes: Message[];
+  private allNotes: Note[];
 
-  constructor(planningNotesContext: Message, allNotes: Message[]) {
+  constructor(planningNotesContext: Message, allNotes: Note[]) {
     super();
     this.planningNotesContext = planningNotesContext;
     this.allNotes = allNotes;

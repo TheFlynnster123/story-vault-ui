@@ -1,5 +1,6 @@
 import React from "react";
 import { useChatFlowStore } from "../stores/chatFlowStore";
+import { NoteItem } from "./ChatFlow/NoteItem";
 import "./ChatFlowDialog.css";
 
 interface ChatFlowDialogProps {
@@ -30,7 +31,7 @@ export const ChatFlowDialog: React.FC<ChatFlowDialogProps> = ({
           {allNotes && allNotes.length > 0 && (
             <div className="notes-container">
               {allNotes.map((note, index) => (
-                <pre key={index}>{note.content}</pre>
+                <NoteItem key={index} note={note} />
               ))}
             </div>
           )}

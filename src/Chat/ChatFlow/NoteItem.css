@@ -1,0 +1,40 @@
+.note-item-card {
+  border-radius: 8px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid #444;
+}
+
+.note-item-header {
+  padding: 8px 12px;
+  background-color: #333;
+}
+
+.note-item-header h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #eee;
+}
+
+.note-item-content {
+  padding: 12px;
+  background-color: #2c2c2c;
+}
+
+.note-item-content p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.note-item-card:nth-child(even) {
+  background-color: #282828;
+}
+
+.note-item-card:nth-child(even) .note-item-header {
+  background-color: #2e2e2e;
+}
+
+.note-item-card:nth-child(even) .note-item-content {
+  background-color: #242424;
+}

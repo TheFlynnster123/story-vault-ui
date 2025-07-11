@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import type { Message } from "../Chat/ChatMessage";
+import type { Note } from "../models/Note";
 import type { ChatPage } from "../models/ChatPage";
 import type { GrokChatAPI } from "../clients/GrokChatAPI";
 import type { BlobAPI } from "../clients/BlobAPI";
 import type { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatPageManager } from "../Managers/ChatPageManager";
+import { toSystemMessage } from "../utils/messageUtils";
 import type { FlowStep, ChatFlowContext } from "./chatFlow/ChatFlowStates";
 import { ChatFlowStateMachine } from "./chatFlow/ChatFlowStateMachine";
 
@@ -17,7 +19,7 @@ interface ChatFlowStore {
   // Flow state machine
   flowStep: FlowStep;
   planningNotesContext: Message | null;
-  allNotes: Message[];
+  allNotes: Note[];
 
   // Dependencies
   chatId: string | null;
@@ -38,7 +40,8 @@ interface ChatFlowStore {
     chatId: string,
     grokClient: GrokChatAPI,
     blobAPI: BlobAPI,
-    chatHistoryAPI: ChatHistoryAPI
+    chatHistoryAPI: ChatHistoryAPI,
+    context: string
   ) => Promise<void>;
   addMessage: (message: Message) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
@@ -70,19 +73,16 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
   chatPageManager: undefined,
 
   // Computed state (for backwards compatibility)
-  get isGeneratingPlanningNotes() {
-    return get().flowStep === "generating-planning-notes";
-  },
-  get isGeneratingResponse() {
-    return get().flowStep === "generating-response";
-  },
+  isGeneratingPlanningNotes: false,
+  isGeneratingResponse: false,
 
   // Actions
   initialize: async (
     chatId: string,
     grokClient: GrokChatAPI,
     blobAPI: BlobAPI,
-    chatHistoryAPI: ChatHistoryAPI
+    chatHistoryAPI: ChatHistoryAPI,
+    context: string
   ) => {
     set({
       chatId,
@@ -104,6 +104,11 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
         chatPageManager,
         isLoadingHistory: false,
       });
+
+      if (messages.length === 0 && context.trim()) {
+        const contextMessage = toSystemMessage(`Story Context: ${context}`);
+        await get().addMessage(contextMessage);
+      }
     } catch (error) {
       console.error("Failed to load chat history:", error);
       const chatPageManager = new ChatPageManager(chatId, []);
