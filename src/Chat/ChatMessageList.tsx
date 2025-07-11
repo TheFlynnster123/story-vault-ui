@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
+import { ChatFlowDialog } from "./ChatFlowDialog";
 
 interface ChatMessageListProps {
   pages: ChatPage[];

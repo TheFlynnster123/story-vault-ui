@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ChatSettingsDialog } from "./ChatSettingsDialog";
 import {
   RiArrowGoBackLine,
+  RiBubbleChartLine,
   RiChatSettingsLine,
   RiFileList2Line,
 } from "react-icons/ri";
@@ -15,6 +16,7 @@ interface ChatControlsProps {
   toggleMenu: () => void;
   onSettingsUpdated: (updatedSettings: ChatSettings) => void;
   currentChatSettings?: ChatSettings | null;
+  toggleChatFlowDialog: () => void;
 }
 
 export const ChatControls: React.FC<ChatControlsProps> = ({
@@ -22,6 +24,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   toggleMenu,
   onSettingsUpdated,
   currentChatSettings,
+  toggleChatFlowDialog,
 }) => {
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isStoryNotesDialogOpen, setIsStoryNotesDialogOpen] = useState(false);
@@ -65,6 +68,14 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         title="Story Notes"
       >
         <RiFileList2Line />
+      </button>
+
+      <button
+        className="chat-controls-button chat-flow-dialog-button"
+        onClick={toggleChatFlowDialog}
+        title="Chat Flow"
+      >
+        <RiBubbleChartLine />
       </button>
 
       <ChatSettingsDialog

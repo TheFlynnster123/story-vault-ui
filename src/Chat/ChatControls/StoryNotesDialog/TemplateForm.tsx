@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
+import { RiArrowDownSLine, RiArrowUpSLine, RiCloseLine } from "react-icons/ri";
 import type { PlanningNoteTemplate } from "../../../models";
+import "./TemplateForm.css";
 
 interface TemplateFormProps {
   template: PlanningNoteTemplate;
@@ -16,40 +18,53 @@ export const TemplateForm: React.FC<TemplateFormProps> = ({
   onTemplateChange,
   onRemoveTemplate,
 }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
   return (
-    <div className="story-notes-template-item">
-      <button
-        className="story-notes-delete-icon"
-        onClick={() => onRemoveTemplate(template.id)}
-      >
-        ×
-      </button>
-      <div className="chat-settings-field">
-        <label htmlFor={`template-name-${template.id}`}>Name</label>
+    <div className="template-form-container">
+      <div className="template-form-header">
         <input
-          id={`template-name-${template.id}`}
           type="text"
           value={template.name}
           onChange={(e) =>
             onTemplateChange(template.id, "name", e.target.value)
           }
-          placeholder="Template Name"
+          placeholder="Add a title for your template..."
+          className="template-form-title-input"
+          onClick={(e) => e.stopPropagation()}
         />
+        <button
+          className="template-form-collapse-button"
+          onClick={toggleCollapse}
+        >
+          {isCollapsed ? <RiArrowDownSLine /> : <RiArrowUpSLine />}
+        </button>
       </div>
-      <div className="chat-settings-field">
-        <label htmlFor={`template-request-${template.id}`}>
-          Request Template
-        </label>
-        <textarea
-          id={`template-request-${template.id}`}
-          value={template.requestPrompt}
-          onChange={(e) =>
-            onTemplateChange(template.id, "requestPrompt", e.target.value)
-          }
-          rows={4}
-          placeholder="Enter the request template..."
-        />
-      </div>
+      {!isCollapsed && (
+        <div className="template-form-body">
+          <button
+            className="template-form-delete-button"
+            onClick={() => onRemoveTemplate(template.id)}
+          >
+            <RiCloseLine />
+          </button>
+          <div className="template-form-field">
+            <textarea
+              id={`template-request-${template.id}`}
+              value={template.requestPrompt}
+              onChange={(e) =>
+                onTemplateChange(template.id, "requestPrompt", e.target.value)
+              }
+              rows={4}
+              placeholder="Enter the request template..."
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

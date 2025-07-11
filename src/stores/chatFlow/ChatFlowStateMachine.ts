@@ -70,7 +70,10 @@ export class ChatFlowStateMachine {
             "GeneratingResponseState requires planningNotesContext"
           );
         }
-        return new GeneratingResponseState(data.planningNotesContext);
+        return new GeneratingResponseState(
+          data.planningNotesContext,
+          data.allNotes
+        );
 
       case "complete":
         return new CompleteState();

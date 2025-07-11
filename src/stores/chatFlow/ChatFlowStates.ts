@@ -72,10 +72,14 @@ export class GeneratingPlanningNotesState extends ChatFlowState {
       // Combine planning notes into a single context message
       const planningNotesContext = planningNotes.join("\n\n---\n\n");
       const planningNotesContextMessage = toSystemMessage(planningNotesContext);
+      const allNotes = planningNotes.map((note) => toSystemMessage(note));
 
       return {
         nextStep: "generating-response",
-        data: { planningNotesContext: planningNotesContextMessage },
+        data: {
+          planningNotesContext: planningNotesContextMessage,
+          allNotes,
+        },
       };
     } catch (error) {
       console.error("Error generating planning notes:", error);
@@ -96,10 +100,12 @@ export class GeneratingPlanningNotesState extends ChatFlowState {
 
 export class GeneratingResponseState extends ChatFlowState {
   private planningNotesContext: Message;
+  private allNotes: Message[];
 
-  constructor(planningNotesContext: Message) {
+  constructor(planningNotesContext: Message, allNotes: Message[]) {
     super();
     this.planningNotesContext = planningNotesContext;
+    this.allNotes = allNotes;
   }
 
   async execute(context: ChatFlowContext): Promise<StateTransition> {
@@ -121,7 +127,10 @@ export class GeneratingResponseState extends ChatFlowState {
       // Add the final response to the history
       await context.addMessage(toSystemMessage(finalResponse));
 
-      return { nextStep: "complete" };
+      return {
+        nextStep: "complete",
+        data: { allNotes: this.allNotes },
+      };
     } catch (error) {
       console.error("Error generating system response:", error);
       return { nextStep: "idle" };

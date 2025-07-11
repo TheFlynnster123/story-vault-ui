@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
+import { ChatFlowDialog } from "./ChatFlowDialog";
 import { useChatFlow } from "../hooks/useChatFlow";
 import {
   useChatSettingsQuery,
@@ -30,6 +31,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const currentChatSettings = useChatSettingsQuery(chatId);
   const updateChatSettingsMutation = useUpdateChatSettingsMutation();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isChatFlowDialogOpen, setIsChatFlowDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isSendingMessage) inputRef.current?.focus();
@@ -63,6 +65,9 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         toggleMenu={toggleMenu}
         onSettingsUpdated={handleSettingsUpdated}
         currentChatSettings={currentChatSettings}
+        toggleChatFlowDialog={() =>
+          setIsChatFlowDialogOpen(!isChatFlowDialogOpen)
+        }
       />
 
       <ChatMessageList
@@ -77,6 +82,10 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         onSubmit={submitMessage}
         isSending={isSendingMessage}
         placeholder={"Type your message here..."}
+      />
+      <ChatFlowDialog
+        isOpen={isChatFlowDialogOpen}
+        onCancel={() => setIsChatFlowDialogOpen(false)}
       />
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { RiAddLine } from "react-icons/ri";
 import "./ChatSettingsDialog.css";
 import "./StoryNotesDialog/StoryNotesDialog.css";
 import type { PlanningNoteTemplate } from "../../models";
@@ -90,7 +91,7 @@ export const StoryNotesDialog: React.FC<StoryNotesDialogProps> = ({
             className="story-notes-add-button"
             onClick={handleAddTemplate}
           >
-            Add New Template
+            <RiAddLine scale={4} />
           </button>
         </div>
         <StoryNotesDialogActions onCancel={onCancel} onSave={handleSave} />

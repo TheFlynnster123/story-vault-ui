@@ -1,6 +1,7 @@
 import React from "react";
 import type { PlanningNoteTemplate } from "../../../models";
 import { TemplateForm } from "./TemplateForm";
+import "./TemplateList.css";
 
 interface TemplateListProps {
   templates: PlanningNoteTemplate[];
@@ -18,15 +19,16 @@ export const TemplateList: React.FC<TemplateListProps> = ({
   onRemoveTemplate,
 }) => {
   return (
-    <div className="story-notes-template-list">
+    <ul className="story-notes-template-list">
       {templates.map((template) => (
-        <TemplateForm
-          key={template.id}
-          template={template}
-          onTemplateChange={onTemplateChange}
-          onRemoveTemplate={onRemoveTemplate}
-        />
+        <li key={template.id} className="story-notes-template-list-item">
+          <TemplateForm
+            template={template}
+            onTemplateChange={onTemplateChange}
+            onRemoveTemplate={onRemoveTemplate}
+          />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 };

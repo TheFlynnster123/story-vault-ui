@@ -17,6 +17,7 @@ interface ChatFlowStore {
   // Flow state machine
   flowStep: FlowStep;
   planningNotesContext: Message | null;
+  allNotes: Message[];
 
   // Dependencies
   chatId: string | null;
@@ -59,6 +60,7 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
   // Flow state
   flowStep: "idle",
   planningNotesContext: null,
+  allNotes: [],
 
   // Dependencies
   chatId: null,
@@ -243,6 +245,7 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
             flowStep: step,
             planningNotesContext:
               data?.planningNotesContext || get().planningNotesContext,
+            allNotes: data?.allNotes || get().allNotes,
           });
         }
       );
