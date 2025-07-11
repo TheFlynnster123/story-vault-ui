@@ -77,6 +77,17 @@
   font-weight: 700;
   text-transform: uppercase;
   margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.step-timestamp {
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: none;
+  opacity: 0.6;
+  margin-left: 8px;
 }
 
 .chat-flow-step-content {

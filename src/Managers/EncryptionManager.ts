@@ -1,6 +1,7 @@
 export class EncryptionManager {
   grokEncryptionKey?: string;
   chatEncryptionKey?: string;
+  civitaiEncryptionKey?: string;
   private encryptionGuid: string;
 
   constructor(encryptionGuid: string) {
@@ -10,6 +11,7 @@ export class EncryptionManager {
   async initialize() {
     this.grokEncryptionKey = await this.deriveKey("grok");
     this.chatEncryptionKey = await this.deriveKey("chat");
+    this.civitaiEncryptionKey = await this.deriveKey("civitai");
   }
 
   private async deriveKey(salt: string) {

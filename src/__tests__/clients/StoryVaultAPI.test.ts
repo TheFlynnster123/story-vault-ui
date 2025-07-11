@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  StoryVaultAPI,
-  type IStoryVaultAPI,
-} from "../../clients/StoryVaultAPI";
+import { GrokKeyAPI, type IGrokKeyAPI } from "../../clients/StoryVaultAPI";
 
 // Mock Config
 vi.mock("../../Config", () => ({
@@ -14,43 +11,43 @@ vi.mock("../../Config", () => ({
 // Mock fetch
 global.fetch = vi.fn();
 
-describe("StoryVaultAPI", () => {
-  let storyVaultAPI: StoryVaultAPI;
+describe("GrokKeyAPI", () => {
+  let grokKeyAPI: GrokKeyAPI;
   const mockAccessToken = "test-access-token";
 
   beforeEach(() => {
     vi.resetAllMocks();
-    storyVaultAPI = new StoryVaultAPI(mockAccessToken);
+    grokKeyAPI = new GrokKeyAPI(mockAccessToken);
   });
 
   describe("constructor", () => {
     it("should initialize with valid parameters", () => {
-      expect(storyVaultAPI).toBeInstanceOf(StoryVaultAPI);
-      expect(storyVaultAPI.AccessToken).toBe(mockAccessToken);
-      expect(storyVaultAPI.URL).toBe("https://test-api.com");
+      expect(grokKeyAPI).toBeInstanceOf(GrokKeyAPI);
+      expect(grokKeyAPI.AccessToken).toBe(mockAccessToken);
+      expect(grokKeyAPI.URL).toBe("https://test-api.com");
     });
 
-    it("should implement IStoryVaultAPI interface", () => {
-      const api: IStoryVaultAPI = storyVaultAPI;
+    it("should implement IGrokKeyAPI interface", () => {
+      const api: IGrokKeyAPI = grokKeyAPI;
       expect(api).toBeDefined();
       expect(typeof api.hasValidGrokKey).toBe("function");
     });
 
     it("should throw error when access token is missing", () => {
       expect(() => {
-        new StoryVaultAPI("");
+        new GrokKeyAPI("");
       }).toThrow("Access token is required");
     });
 
     it("should throw error when access token is null", () => {
       expect(() => {
-        new StoryVaultAPI(null as any);
+        new GrokKeyAPI(null as any);
       }).toThrow("Access token is required");
     });
 
     it("should throw error when access token is undefined", () => {
       expect(() => {
-        new StoryVaultAPI(undefined as any);
+        new GrokKeyAPI(undefined as any);
       }).toThrow("Access token is required");
     });
   });
@@ -63,7 +60,7 @@ describe("StoryVaultAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      const result = await storyVaultAPI.hasValidGrokKey();
+      const result = await grokKeyAPI.hasValidGrokKey();
 
       expect(result).toBe(true);
       expect(global.fetch).toHaveBeenCalledWith(
@@ -85,7 +82,7 @@ describe("StoryVaultAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      const result = await storyVaultAPI.hasValidGrokKey();
+      const result = await grokKeyAPI.hasValidGrokKey();
 
       expect(result).toBe(false);
       expect(global.fetch).toHaveBeenCalledWith(
@@ -107,7 +104,7 @@ describe("StoryVaultAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(storyVaultAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
         "Unexpected response status: 500"
       );
     });
@@ -119,7 +116,7 @@ describe("StoryVaultAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(storyVaultAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
         "Unexpected response status: 401"
       );
     });
@@ -131,7 +128,7 @@ describe("StoryVaultAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(storyVaultAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
         "Unexpected response status: 403"
       );
     });
@@ -140,7 +137,7 @@ describe("StoryVaultAPI", () => {
       const networkError = new Error("Network error");
       (global.fetch as any).mockRejectedValue(networkError);
 
-      await expect(storyVaultAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
         "Network error"
       );
     });
@@ -149,7 +146,7 @@ describe("StoryVaultAPI", () => {
       const timeoutError = new Error("Request timeout");
       (global.fetch as any).mockRejectedValue(timeoutError);
 
-      await expect(storyVaultAPI.hasValidGrokKey()).rejects.toThrow(
+      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow(
         "Request timeout"
       );
     });
@@ -164,7 +161,7 @@ describe("StoryVaultAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        storyVaultAPI.saveGrokKey("encrypted-grok-key")
+        grokKeyAPI.saveGrokKey("encrypted-grok-key")
       ).resolves.toBeUndefined();
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -188,7 +185,7 @@ describe("StoryVaultAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        storyVaultAPI.saveGrokKey("encrypted-grok-key")
+        grokKeyAPI.saveGrokKey("encrypted-grok-key")
       ).rejects.toThrow("Failed to save Grok key: 400");
     });
 
@@ -200,7 +197,7 @@ describe("StoryVaultAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        storyVaultAPI.saveGrokKey("encrypted-grok-key")
+        grokKeyAPI.saveGrokKey("encrypted-grok-key")
       ).rejects.toThrow("Failed to save Grok key: 401");
     });
 
@@ -212,7 +209,7 @@ describe("StoryVaultAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        storyVaultAPI.saveGrokKey("encrypted-grok-key")
+        grokKeyAPI.saveGrokKey("encrypted-grok-key")
       ).rejects.toThrow("Failed to save Grok key: 403");
     });
 
@@ -224,7 +221,7 @@ describe("StoryVaultAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       await expect(
-        storyVaultAPI.saveGrokKey("encrypted-grok-key")
+        grokKeyAPI.saveGrokKey("encrypted-grok-key")
       ).rejects.toThrow("Failed to save Grok key: 500");
     });
 
@@ -233,7 +230,7 @@ describe("StoryVaultAPI", () => {
       (global.fetch as any).mockRejectedValue(networkError);
 
       await expect(
-        storyVaultAPI.saveGrokKey("encrypted-grok-key")
+        grokKeyAPI.saveGrokKey("encrypted-grok-key")
       ).rejects.toThrow("Network error");
     });
 
@@ -244,7 +241,7 @@ describe("StoryVaultAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(storyVaultAPI.saveGrokKey("")).resolves.toBeUndefined();
+      await expect(grokKeyAPI.saveGrokKey("")).resolves.toBeUndefined();
 
       expect(global.fetch).toHaveBeenCalledWith(
         "https://test-api.com/api/saveGrokKey",
@@ -267,9 +264,7 @@ describe("StoryVaultAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       const specialKey = "encrypted-key-with-special-chars!@#$%^&*()";
-      await expect(
-        storyVaultAPI.saveGrokKey(specialKey)
-      ).resolves.toBeUndefined();
+      await expect(grokKeyAPI.saveGrokKey(specialKey)).resolves.toBeUndefined();
 
       expect(global.fetch).toHaveBeenCalledWith(
         "https://test-api.com/api/saveGrokKey",
@@ -292,7 +287,7 @@ describe("StoryVaultAPI", () => {
       (global.fetch as any).mockResolvedValue(mockResponse);
 
       const longKey = "a".repeat(1000);
-      await expect(storyVaultAPI.saveGrokKey(longKey)).resolves.toBeUndefined();
+      await expect(grokKeyAPI.saveGrokKey(longKey)).resolves.toBeUndefined();
 
       expect(global.fetch).toHaveBeenCalledWith(
         "https://test-api.com/api/saveGrokKey",
@@ -313,7 +308,7 @@ describe("StoryVaultAPI", () => {
       const mockResponse = { status: 200 };
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await storyVaultAPI.hasValidGrokKey();
+      await grokKeyAPI.hasValidGrokKey();
 
       const callArgs = (global.fetch as any).mock.calls[0];
       expect(callArgs[1].headers["Content-Type"]).toBe("application/json");
@@ -327,7 +322,7 @@ describe("StoryVaultAPI", () => {
       const mockResponse = { status: 201 };
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await storyVaultAPI.saveGrokKey("test-key");
+      await grokKeyAPI.saveGrokKey("test-key");
 
       const callArgs = (global.fetch as any).mock.calls[0];
       expect(callArgs[1].headers["Content-Type"]).toBe("application/json");
@@ -342,7 +337,7 @@ describe("StoryVaultAPI", () => {
       const mockResponse = { status: 200 };
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await storyVaultAPI.hasValidGrokKey();
+      await grokKeyAPI.hasValidGrokKey();
 
       expect(global.fetch).toHaveBeenCalledWith(
         "https://test-api.com/api/hasValidGrokKey",
@@ -352,7 +347,7 @@ describe("StoryVaultAPI", () => {
       const mockResponse2 = { status: 201 };
       (global.fetch as any).mockResolvedValue(mockResponse2);
 
-      await storyVaultAPI.saveGrokKey("test-key");
+      await grokKeyAPI.saveGrokKey("test-key");
 
       expect(global.fetch).toHaveBeenCalledWith(
         "https://test-api.com/api/saveGrokKey",
@@ -365,7 +360,7 @@ describe("StoryVaultAPI", () => {
     it("should handle null response from fetch", async () => {
       (global.fetch as any).mockResolvedValue(null);
 
-      await expect(storyVaultAPI.hasValidGrokKey()).rejects.toThrow();
+      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow();
     });
 
     it("should handle undefined response status", async () => {
@@ -375,7 +370,7 @@ describe("StoryVaultAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(storyVaultAPI.hasValidGrokKey()).rejects.toThrow();
+      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow();
     });
 
     it("should handle response with no status property", async () => {
@@ -383,7 +378,7 @@ describe("StoryVaultAPI", () => {
 
       (global.fetch as any).mockResolvedValue(mockResponse);
 
-      await expect(storyVaultAPI.hasValidGrokKey()).rejects.toThrow();
+      await expect(grokKeyAPI.hasValidGrokKey()).rejects.toThrow();
     });
   });
 });

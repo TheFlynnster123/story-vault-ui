@@ -1,0 +1,11 @@
+.story-notes-template-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-left: 0;
+  list-style: none;
+  margin: 0;
+}
+
+.story-notes-template-list-item {
+  padding: 0;
+}

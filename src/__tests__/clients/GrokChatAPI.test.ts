@@ -32,7 +32,7 @@ describe("GrokChatAPI", () => {
   describe("constructor", () => {
     it("should initialize with valid parameters", () => {
       expect(grokChatAPI).toBeInstanceOf(GrokChatAPI);
-      // Note: encryptionManager and accessToken are now protected properties from BaseAPIClient
+      // Blob: encryptionManager and accessToken are now protected properties from BaseAPIClient
       expect(grokChatAPI).toBeDefined();
     });
 

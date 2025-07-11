@@ -1,10 +1,10 @@
 import Config from "../Config";
 
-export interface IStoryVaultAPI {
+export interface IGrokKeyAPI {
   hasValidGrokKey(): Promise<boolean>;
 }
 
-export class StoryVaultAPI implements IStoryVaultAPI {
+export class GrokKeyAPI implements IGrokKeyAPI {
   URL: string = "";
 
   AccessToken: string = "";
