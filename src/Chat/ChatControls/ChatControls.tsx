@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { ChatSettingsDialog } from "./ChatSettingsDialog";
 import {
   RiArrowGoBackLine,
   RiBubbleChartLine,
@@ -9,7 +8,8 @@ import {
 import type { ChatSettings } from "../../models/ChatSettings";
 import { useCreateChatSettingsMutation } from "../../hooks/queries/useChatSettingsQuery";
 import "./ChatControls.css";
-import { StoryNotesDialog } from "./StoryNotesDialog";
+import { ChatSettingsDialog } from "./ChatSettingsDialog/ChatSettingsDialog";
+import { StoryNotesDialog } from "./StoryNotesDialog/StoryNotesDialog";
 
 interface ChatControlsProps {
   chatId: string;

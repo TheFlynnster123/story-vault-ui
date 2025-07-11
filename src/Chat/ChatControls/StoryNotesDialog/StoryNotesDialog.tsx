@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { RiAddLine } from "react-icons/ri";
-import "./ChatSettingsDialog.css";
-import "./StoryNotesDialog/StoryNotesDialog.css";
+import "./StoryNotesDialog.css";
 import type { PlanningNoteTemplate } from "../../../models";
 import {
   usePlanningNotesTemplateQuery,
