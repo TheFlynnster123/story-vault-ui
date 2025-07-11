@@ -2,17 +2,17 @@ import React, { useState, useEffect } from "react";
 import { RiAddLine } from "react-icons/ri";
 import "./ChatSettingsDialog.css";
 import "./StoryNotesDialog/StoryNotesDialog.css";
-import type { PlanningNoteTemplate } from "../../models";
+import type { PlanningNoteTemplate } from "../../../models";
 import {
   usePlanningNotesTemplateQuery,
   useUpdatePlanningNotesTemplateMutation,
-} from "../../hooks/queries/usePlanningNotesTemplateQuery";
-import { ConfirmModal } from "../../components/ConfirmModal";
+} from "../../../hooks/queries/usePlanningNotesTemplateQuery";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 import {
   StoryNotesDialogHeader,
   TemplateList,
   StoryNotesDialogActions,
-} from "./StoryNotesDialog/index";
+} from "./index";
 
 interface StoryNotesDialogProps {
   isOpen: boolean;
