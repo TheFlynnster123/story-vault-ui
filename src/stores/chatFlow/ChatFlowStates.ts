@@ -28,7 +28,8 @@ export abstract class ChatFlowState {
 }
 
 export class IdleState extends ChatFlowState {
-  async execute(context: ChatFlowContext): Promise<StateTransition> {
+  async execute(_: ChatFlowContext): Promise<StateTransition> {
+    // Removed unused parameter
     // Idle state - waiting for user input
     return { nextStep: "idle" };
   }
@@ -145,7 +146,7 @@ export class GeneratingResponseState extends ChatFlowState {
 }
 
 export class CompleteState extends ChatFlowState {
-  async execute(context: ChatFlowContext): Promise<StateTransition> {
+  async execute(_: ChatFlowContext): Promise<StateTransition> {
     // Flow complete - transition back to idle after a brief moment
     setTimeout(() => {
       // This will be handled by the state machine

@@ -5,7 +5,6 @@ import {
   GetChatSettings,
   getChatSettingsQueryKey,
 } from "../../hooks/queries/useChatSettingsQuery";
-import type { ChatSettings } from "../../models";
 
 export const useChats = () => {
   const chatHistoryAPI = useChatHistoryApi();

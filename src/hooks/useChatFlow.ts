@@ -4,7 +4,6 @@ import { useBlobAPI } from "./useBlobAPI";
 import { useChatHistoryApi } from "./useChatHistoryAPI";
 import { useChatFlowStore } from "../stores/chatFlowStore";
 import type { ChatPage } from "../models";
-import { toSystemMessage } from "../utils/messageUtils";
 import { useChatSettingsQuery } from "./queries/useChatSettingsQuery";
 
 interface UseChatFlowReturn {
@@ -39,12 +38,10 @@ export const useChatFlow = ({
   // Zustand store - now the single source of truth
   const {
     pages,
-    messages,
     isLoadingHistory,
     isGeneratingPlanningNotes,
     isGeneratingResponse,
     initialize,
-    addMessage,
     deleteMessage,
     deleteMessagesFromIndex,
     getDeletePreview,

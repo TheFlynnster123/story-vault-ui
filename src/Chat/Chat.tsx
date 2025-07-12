@@ -23,7 +23,6 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     deleteMessage,
     deleteMessagesFromIndex,
     getDeletePreview,
-    isLoadingHistory,
   } = useChatFlow({
     chatId,
   });
