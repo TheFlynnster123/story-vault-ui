@@ -27,3 +27,9 @@ dist-ssr
 # SSL certificates
 ssl/
 *.pem
+
+# Azurite development files
+__azurite_db_blob__.json
+__azurite_db_blob_extent__.json
+__blobstorage__/
+__queuestorage__/
