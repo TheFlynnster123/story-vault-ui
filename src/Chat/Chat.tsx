@@ -5,10 +5,7 @@ import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
 import { ChatFlowDialog } from "./ChatFlowDialog";
 import { useChatFlow } from "../hooks/useChatFlow";
-import {
-  useChatSettings,
-  useSaveChatSettingsMutation,
-} from "../hooks/queries/useChatSettings";
+import { useChatSettings } from "../hooks/queries/useChatSettings";
 
 interface ChatProps {
   chatId: string;

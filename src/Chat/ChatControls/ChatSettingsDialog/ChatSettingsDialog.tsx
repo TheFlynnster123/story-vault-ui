@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { ChatSettings } from "../../../models/ChatSettings";
-import {
-  useChatSettings,
-  type UseChatSettingsResult,
-} from "../../../hooks/queries/useChatSettings";
+import { useChatSettings } from "../../../hooks/queries/useChatSettings";
 import "./ChatSettingsDialog.css";
 
 interface ChatSettingsDialogProps {

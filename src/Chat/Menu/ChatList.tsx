@@ -1,4 +1,3 @@
-import type { ChatSettings } from "../../models";
 import { ChatListItem } from "./ChatListItem";
 
 interface IChatListProps {

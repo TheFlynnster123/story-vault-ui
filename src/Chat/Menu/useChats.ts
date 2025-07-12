@@ -1,10 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChatHistoryApi } from "../../hooks/useChatHistoryAPI";
-import { useBlobAPI } from "../../hooks/useBlobAPI";
 
 export const useChats = () => {
   const chatHistoryAPI = useChatHistoryApi();
-  const blobAPI = useBlobAPI();
   const queryClient = useQueryClient();
 
   const {
