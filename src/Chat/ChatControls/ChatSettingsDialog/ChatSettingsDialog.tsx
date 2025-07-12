@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from "react";
 import type { ChatSettings } from "../../../models/ChatSettings";
+import {
+  useChatSettings,
+  type UseChatSettingsResult,
+} from "../../../hooks/queries/useChatSettings";
 import "./ChatSettingsDialog.css";
 
 interface ChatSettingsDialogProps {
+  chatId?: string;
   isOpen: boolean;
   onCancel: () => void;
-  onCreate: (settings: ChatSettings) => void;
-  initialValues?: Partial<ChatSettings>;
+  onSubmit: (settings: ChatSettings) => void;
 }
 
 export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
+  chatId,
   isOpen,
   onCancel,
-  onCreate,
-  initialValues,
+  onSubmit,
 }) => {
+  const newChatGuid = useNewChatGuid();
+
+  const { chatSettings, saveChatSettings } = useChatSettings(
+    chatId ?? newChatGuid
+  );
+
   const [chatTitle, setChatTitle] = useState("");
   const [context, setContext] = useState("");
   const [backgroundPhotoBase64, setBackgroundPhotoBase64] = useState<
@@ -25,15 +35,13 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
     context?: string;
   }>({});
 
-  // Auto-fill form with initial values when dialog opens
   useEffect(() => {
-    if (isOpen && initialValues) {
-      setChatTitle(initialValues.chatTitle || "");
-      setContext(initialValues.context || "");
-      setBackgroundPhotoBase64(initialValues.backgroundPhotoBase64);
-      setErrors({});
+    if (isOpen && chatSettings) {
+      setChatTitle(chatSettings.chatTitle || "");
+      setContext(chatSettings.context || "");
+      setBackgroundPhotoBase64(chatSettings.backgroundPhotoBase64);
     }
-  }, [isOpen, initialValues]);
+  }, [isOpen, chatSettings]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -78,14 +86,16 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleCreate = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      onCreate({
+      const settingsToSave: ChatSettings = {
         chatTitle: chatTitle.trim(),
         context: context.trim(),
         backgroundPhotoBase64,
-      });
-      // Reset form
+      };
+      await saveChatSettings(settingsToSave);
+      onSubmit(settingsToSave);
+
       setChatTitle("");
       setContext("");
       setBackgroundPhotoBase64(undefined);
@@ -94,7 +104,6 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
   };
 
   const handleCancel = () => {
-    // Reset form
     setChatTitle("");
     setContext("");
     setBackgroundPhotoBase64(undefined);
@@ -114,7 +123,7 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
     <div className="chat-settings-overlay" onKeyDown={handleKeyDown}>
       <div className="chat-settings-dialog">
         <div className="chat-settings-header">
-          <h2>{initialValues ? "Edit Chat Settings" : "Create New Chat"}</h2>
+          <h2>{chatId ? "Edit Chat Settings" : "Create New Chat"}</h2>
           <button className="chat-settings-close" onClick={handleCancel}>
             ×
           </button>
@@ -196,11 +205,16 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
           <button className="chat-settings-cancel" onClick={handleCancel}>
             Cancel
           </button>
-          <button className="chat-settings-create" onClick={handleCreate}>
-            {initialValues ? "Save Changes" : "Create Chat"}
+          <button className="chat-settings-create" onClick={handleSubmit}>
+            {chatId ? "Save Changes" : "Create Chat"}
           </button>
         </div>
       </div>
     </div>
   );
+};
+
+export const useNewChatGuid = () => {
+  const [guid] = React.useState(() => crypto.randomUUID());
+  return guid;
 };

@@ -6,7 +6,6 @@ import type { GrokChatAPI } from "../clients/GrokChatAPI";
 import type { BlobAPI } from "../clients/BlobAPI";
 import type { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatPageManager } from "../Managers/ChatPageManager";
-import { toSystemMessage } from "../utils/messageUtils";
 import type { FlowStep, ChatFlowContext } from "./chatFlow/ChatFlowStates";
 import { ChatFlowStateMachine } from "./chatFlow/ChatFlowStateMachine";
 
@@ -40,8 +39,7 @@ interface ChatFlowStore {
     chatId: string,
     grokClient: GrokChatAPI,
     blobAPI: BlobAPI,
-    chatHistoryAPI: ChatHistoryAPI,
-    context: string
+    chatHistoryAPI: ChatHistoryAPI
   ) => Promise<void>;
   addMessage: (message: Message) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
@@ -50,7 +48,8 @@ interface ChatFlowStore {
     messageCount: number;
     pageCount: number;
   };
-  startMessageFlow: (userMessageText: string) => void;
+  GetOrDefaultStateMachine: () => ChatFlowStateMachine | null;
+  submitMessage: (userMessageText: string) => void;
   reset: () => void;
 }
 
@@ -81,8 +80,7 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
     chatId: string,
     grokClient: GrokChatAPI,
     blobAPI: BlobAPI,
-    chatHistoryAPI: ChatHistoryAPI,
-    context: string
+    chatHistoryAPI: ChatHistoryAPI
   ) => {
     set({
       chatId,
@@ -93,7 +91,7 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
     });
 
     try {
-      // Load chat history
+      console.log("yo");
       const fetchedPages = await chatHistoryAPI.getChatHistory(chatId);
       const chatPageManager = new ChatPageManager(chatId, fetchedPages);
       const messages = chatPageManager.getMessageList();
@@ -104,11 +102,6 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
         chatPageManager,
         isLoadingHistory: false,
       });
-
-      if (messages.length === 0 && context.trim()) {
-        const contextMessage = toSystemMessage(`Story Context: ${context}`);
-        await get().addMessage(contextMessage);
-      }
     } catch (error) {
       console.error("Failed to load chat history:", error);
       const chatPageManager = new ChatPageManager(chatId, []);
@@ -226,17 +219,17 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
     return chatPageManager.countMessagesFromIndex(messageId);
   },
 
-  startMessageFlow: (userMessageText: string) => {
+  GetOrDefaultStateMachine: () => {
     const { grokClient, blobAPI, stateMachine } = get();
 
     if (!grokClient || !blobAPI) {
       console.error("ChatFlow not properly initialized");
-      return;
+      return null;
     }
 
-    // Initialize state machine if not already done
     if (!stateMachine) {
       const context: ChatFlowContext = {
+        chatId: get().chatId ?? "",
         messages: get().messages,
         grokClient,
         blobAPI,
@@ -256,10 +249,15 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
       );
 
       set({ stateMachine: newStateMachine });
-      newStateMachine.startMessageFlow(userMessageText);
-    } else {
-      stateMachine.startMessageFlow(userMessageText);
+      return newStateMachine;
     }
+
+    return stateMachine;
+  },
+
+  submitMessage: (userMessageText: string) => {
+    const stateMachine = get().GetOrDefaultStateMachine();
+    stateMachine?.startMessageFlow(userMessageText);
   },
 
   reset: () => {

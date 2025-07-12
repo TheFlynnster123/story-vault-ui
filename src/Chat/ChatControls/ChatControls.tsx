@@ -5,8 +5,6 @@ import {
   RiChatSettingsLine,
   RiFileList2Line,
 } from "react-icons/ri";
-import type { ChatSettings } from "../../models/ChatSettings";
-import { useCreateChatSettingsMutation } from "../../hooks/queries/useChatSettingsQuery";
 import "./ChatControls.css";
 import { ChatSettingsDialog } from "./ChatSettingsDialog/ChatSettingsDialog";
 import { StoryNotesDialog } from "./StoryNotesDialog/StoryNotesDialog";
@@ -14,35 +12,16 @@ import { StoryNotesDialog } from "./StoryNotesDialog/StoryNotesDialog";
 interface ChatControlsProps {
   chatId: string;
   toggleMenu: () => void;
-  onSettingsUpdated: (updatedSettings: ChatSettings) => void;
-  currentChatSettings?: ChatSettings | null;
   toggleChatFlowDialog: () => void;
 }
 
 export const ChatControls: React.FC<ChatControlsProps> = ({
   chatId,
   toggleMenu,
-  onSettingsUpdated,
-  currentChatSettings,
   toggleChatFlowDialog,
 }) => {
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isStoryNotesDialogOpen, setIsStoryNotesDialogOpen] = useState(false);
-  const createChatSettingsMutation = useCreateChatSettingsMutation();
-
-  const handleSettingsSubmit = async (settings: {
-    chatTitle: string;
-    context: string;
-    backgroundPhotoBase64?: string;
-  }) => {
-    try {
-      await createChatSettingsMutation.mutateAsync({ chatId, settings });
-      setIsSettingsDialogOpen(false);
-      onSettingsUpdated(settings);
-    } catch (error) {
-      console.error("Failed to create chat settings:", error);
-    }
-  };
 
   return (
     <div className="chat-controls">
@@ -79,13 +58,14 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
       </button>
 
       <ChatSettingsDialog
+        chatId={chatId}
         isOpen={isSettingsDialogOpen}
-        onCreate={handleSettingsSubmit}
+        onSubmit={() => setIsSettingsDialogOpen(false)}
         onCancel={() => setIsSettingsDialogOpen(false)}
-        initialValues={currentChatSettings || undefined}
       />
 
       <StoryNotesDialog
+        chatId={chatId}
         isOpen={isStoryNotesDialogOpen}
         onCancel={() => setIsStoryNotesDialogOpen(false)}
       />

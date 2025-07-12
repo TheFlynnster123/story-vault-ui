@@ -1,35 +1,39 @@
+import { useChatSettings } from "../../hooks/queries/useChatSettings";
 import type { ChatSettings } from "../../models";
-
-interface ChatSettingsMap {
-  [chatId: string]: ChatSettings | undefined;
-}
 
 interface IChatListItemProps {
   chatId: string;
-  chatSettings: ChatSettingsMap;
   onClick: () => any;
 }
 
-export const ChatListItem = ({
-  chatId,
-  chatSettings,
-  onClick,
-}: IChatListItemProps) => {
-  const currentChatSettings = chatSettings[chatId];
-  const hasBackgroundImage = currentChatSettings?.backgroundPhotoBase64;
-  const title = currentChatSettings?.chatTitle ?? chatId;
+export const ChatListItem = ({ chatId, onClick }: IChatListItemProps) => {
+  const { chatSettings, isLoading } = useChatSettings(chatId);
+  const hasBackgroundImage = chatSettings?.backgroundPhotoBase64;
+  const title = chatSettings?.chatTitle ?? chatId;
+
+  if (isLoading) {
+    return (
+      <div key={chatId} className="chat-menu-item">
+        <div className="chat-menu-item-title">Loading...</div>
+      </div>
+    );
+  }
+
+  if (hasBackgroundImage) {
+    return (
+      <div
+        key={chatId}
+        className="chat-menu-item chat-menu-item-with-image"
+        onClick={() => onClick()}
+        style={getBackgroundImageStyles(chatSettings)}
+      >
+        <div className="chat-menu-item-title">{title}</div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      key={chatId}
-      className={`chat-menu-item ${
-        hasBackgroundImage ? "chat-menu-item-with-image" : ""
-      }`}
-      onClick={() => onClick()}
-      style={
-        hasBackgroundImage ? getBackgroundImageStyles(currentChatSettings) : {}
-      }
-    >
+    <div key={chatId} className="chat-menu-item" onClick={() => onClick()}>
       <div className="chat-menu-item-title">{title}</div>
     </div>
   );

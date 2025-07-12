@@ -6,9 +6,9 @@ import { ChatControls } from "./ChatControls/ChatControls";
 import { ChatFlowDialog } from "./ChatFlowDialog";
 import { useChatFlow } from "../hooks/useChatFlow";
 import {
-  useChatSettingsQuery,
-  useUpdateChatSettingsMutation,
-} from "../hooks/queries/useChatSettingsQuery";
+  useChatSettings,
+  useSaveChatSettingsMutation,
+} from "../hooks/queries/useChatSettings";
 
 interface ChatProps {
   chatId: string;
@@ -27,8 +27,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     chatId,
   });
 
-  const currentChatSettings = useChatSettingsQuery(chatId);
-  const updateChatSettingsMutation = useUpdateChatSettingsMutation();
+  const { chatSettings } = useChatSettings(chatId);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [isChatFlowDialogOpen, setIsChatFlowDialogOpen] = useState(false);
 
@@ -36,16 +35,12 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     if (!isSendingMessage) inputRef.current?.focus();
   }, [isSendingMessage]);
 
-  const handleSettingsUpdated = (updatedSettings: any) => {
-    updateChatSettingsMutation.mutate({ chatId, settings: updatedSettings });
-  };
-
   const backgroundStyle: React.CSSProperties = {
-    backgroundColor: currentChatSettings?.backgroundPhotoBase64
+    backgroundColor: chatSettings?.backgroundPhotoBase64
       ? "transparent"
       : "black",
-    backgroundImage: currentChatSettings?.backgroundPhotoBase64
-      ? `url(${currentChatSettings.backgroundPhotoBase64})`
+    backgroundImage: chatSettings?.backgroundPhotoBase64
+      ? `url(${chatSettings.backgroundPhotoBase64})`
       : "none",
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -62,8 +57,6 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       <ChatControls
         chatId={chatId}
         toggleMenu={toggleMenu}
-        onSettingsUpdated={handleSettingsUpdated}
-        currentChatSettings={currentChatSettings}
         toggleChatFlowDialog={() =>
           setIsChatFlowDialogOpen(!isChatFlowDialogOpen)
         }

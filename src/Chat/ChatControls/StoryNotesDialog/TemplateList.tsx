@@ -1,10 +1,10 @@
 import React from "react";
-import type { PlanningNoteTemplate } from "../../../models";
+import type { PlanningNotesTemplates } from "../../../models";
 import { TemplateForm } from "./TemplateForm";
 import "./TemplateList.css";
 
 interface TemplateListProps {
-  templates: PlanningNoteTemplate[];
+  templates: PlanningNotesTemplates[];
   onTemplateChange: (
     id: string,
     field: "name" | "requestPrompt",

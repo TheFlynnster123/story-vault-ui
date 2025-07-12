@@ -157,6 +157,9 @@ const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
 
   useEffect(() => {
+    console.log(chatId);
+    console.log(chatHistoryApi);
+
     if (!chatId || !chatHistoryApi) {
       setIsLoadingHistory(false);
       setPages([]);

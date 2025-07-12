@@ -4,14 +4,14 @@ import { useBlobAPI } from "./useBlobAPI";
 import { useChatHistoryApi } from "./useChatHistoryAPI";
 import { useChatFlowStore } from "../stores/chatFlowStore";
 import type { ChatPage } from "../models";
-import { useChatSettingsQuery } from "./queries/useChatSettingsQuery";
+import { useChatSettings } from "./queries/useChatSettings";
 
 interface UseChatFlowReturn {
   pages: ChatPage[];
   isGeneratingPlanningNotes: boolean;
   isGeneratingResponse: boolean;
   isSendingMessage: boolean;
-  submitMessage: (messageText: string) => Promise<void>;
+  submitMessage: (messageText: string) => void;
   deleteMessage: (messageId: string) => Promise<void>;
   deleteMessagesFromIndex: (messageId: string) => Promise<void>;
   getDeletePreview: (messageId: string) => {
@@ -33,9 +33,8 @@ export const useChatFlow = ({
   const blobAPI = useBlobAPI();
   const chatHistoryAPI = useChatHistoryApi();
 
-  const chatSettings = useChatSettingsQuery(chatId);
+  const { chatSettings } = useChatSettings(chatId);
 
-  // Zustand store - now the single source of truth
   const {
     pages,
     isLoadingHistory,
@@ -45,11 +44,10 @@ export const useChatFlow = ({
     deleteMessage,
     deleteMessagesFromIndex,
     getDeletePreview,
-    startMessageFlow,
+    submitMessage,
     reset,
   } = useChatFlowStore();
 
-  // Initialize the store when dependencies are available
   useEffect(() => {
     if (
       grokChatApiClient &&
@@ -58,13 +56,7 @@ export const useChatFlow = ({
       chatId &&
       chatSettings
     ) {
-      initialize(
-        chatId,
-        grokChatApiClient,
-        blobAPI,
-        chatHistoryAPI,
-        chatSettings.context
-      );
+      initialize(chatId, grokChatApiClient, blobAPI, chatHistoryAPI);
     }
   }, [
     grokChatApiClient,
@@ -74,15 +66,6 @@ export const useChatFlow = ({
     initialize,
     chatSettings,
   ]);
-
-  const submitMessage = async (userMessageText: string): Promise<void> => {
-    if (!grokChatApiClient || !blobAPI) {
-      console.error("Grok API client or Blob API not available.");
-      return;
-    }
-
-    startMessageFlow(userMessageText);
-  };
 
   return {
     pages,

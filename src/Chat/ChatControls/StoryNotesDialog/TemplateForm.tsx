@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { RiArrowDownSLine, RiArrowUpSLine, RiCloseLine } from "react-icons/ri";
-import type { PlanningNoteTemplate } from "../../../models";
+import type { PlanningNotesTemplates } from "../../../models";
 import "./TemplateForm.css";
 
 interface TemplateFormProps {
-  template: PlanningNoteTemplate;
+  template: PlanningNotesTemplates;
   onTemplateChange: (
     id: string,
     field: "name" | "requestPrompt",

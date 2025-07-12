@@ -52,24 +52,8 @@ export class BlobAPI {
         )
       );
 
-      if (response.ok) {
-        return true;
-      } else if (response.status === 400) {
-        console.error("Invalid input for save blob:", response.statusText);
-        throw new Error(`Invalid input: ${response.statusText}`);
-      } else if (response.status === 401) {
-        console.error(
-          "Unauthorized access for save blob:",
-          response.statusText
-        );
-        throw new Error(`Unauthorized: ${response.statusText}`);
-      } else if (response.status === 500) {
-        console.error("Server error for save blob:", response.statusText);
-        throw new Error(`Server error: ${response.statusText}`);
-      } else {
-        console.error("Failed to save blob:", response.statusText);
-        throw new Error(`Error saving blob: ${response.statusText}`);
-      }
+      validateResponse(response, "save blob");
+      return true;
     } catch (error) {
       console.error("Failed to save blob:", error);
       if (error instanceof Error) {
@@ -89,28 +73,13 @@ export class BlobAPI {
         buildGetBlobRequest({ chatId, blobName }, this.accessToken)
       );
 
-      if (response.ok) {
-        const blobResponse: GetBlobResponse = await response.json();
-        const decryptedContent = await this.encryptionManager.decryptString(
-          this.encryptionManager.chatEncryptionKey!,
-          blobResponse.content
-        );
-        return decryptedContent;
-      } else if (response.status === 404) {
-        return undefined;
-      } else if (response.status === 400) {
-        console.error("Invalid input for get blob:", response.statusText);
-        throw new Error(`Invalid input: ${response.statusText}`);
-      } else if (response.status === 401) {
-        console.error("Unauthorized access for get blob:", response.statusText);
-        throw new Error(`Unauthorized: ${response.statusText}`);
-      } else if (response.status === 500) {
-        console.error("Server error for get blob:", response.statusText);
-        throw new Error(`Server error: ${response.statusText}`);
-      } else {
-        console.error("Failed to get blob:", response.statusText);
-        throw new Error(`Error fetching blob: ${response.statusText}`);
-      }
+      validateGetBlobResponse(response);
+      const blobResponse: GetBlobResponse = await response.json();
+      const decryptedContent = await this.encryptionManager.decryptString(
+        this.encryptionManager.chatEncryptionKey!,
+        blobResponse.content
+      );
+      return decryptedContent;
     } catch (error) {
       console.error("Failed to get blob:", error);
       if (error instanceof Error) {
@@ -127,24 +96,8 @@ export class BlobAPI {
         buildDeleteBlobRequest({ chatId, blobName }, this.accessToken)
       );
 
-      if (response.ok) {
-        return true;
-      } else if (response.status === 400) {
-        console.error("Invalid input for delete blob:", response.statusText);
-        throw new Error(`Invalid input: ${response.statusText}`);
-      } else if (response.status === 401) {
-        console.error(
-          "Unauthorized access for delete blob:",
-          response.statusText
-        );
-        throw new Error(`Unauthorized: ${response.statusText}`);
-      } else if (response.status === 500) {
-        console.error("Server error for delete blob:", response.statusText);
-        throw new Error(`Server error: ${response.statusText}`);
-      } else {
-        console.error("Failed to delete blob:", response.statusText);
-        throw new Error(`Error deleting blob: ${response.statusText}`);
-      }
+      validateResponse(response, "delete blob");
+      return true;
     } catch (error) {
       console.error("Failed to delete blob:", error);
       if (error instanceof Error) {
@@ -155,7 +108,34 @@ export class BlobAPI {
   }
 }
 
-// Helper functions for building requests
+function validateResponse(response: Response, context: string) {
+  if (response.ok) return;
+
+  if (response.status === 400) {
+    console.error(`Invalid input for ${context}:`, response.statusText);
+    throw new Error(`Invalid input: ${response.statusText}`);
+  }
+  if (response.status === 401) {
+    console.error(`Unauthorized access for ${context}:`, response.statusText);
+    throw new Error(`Unauthorized: ${response.statusText}`);
+  }
+  if (response.status === 500) {
+    console.error(`Server error for ${context}:`, response.statusText);
+    throw new Error(`Server error: ${response.statusText}`);
+  }
+
+  console.error(`Failed to ${context}:`, response.statusText);
+  throw new Error(`Error performing ${context}: ${response.statusText}`);
+}
+
+function validateGetBlobResponse(response: Response) {
+  if (response.ok) return;
+
+  if (response.status === 404) throw new Error("Blob not found!");
+
+  validateResponse(response, "get blob");
+}
+
 function buildSaveBlobRequest(
   request: SaveBlobRequest,
   accessToken: string

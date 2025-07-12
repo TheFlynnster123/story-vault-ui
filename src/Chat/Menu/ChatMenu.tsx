@@ -9,7 +9,7 @@ import { useChats } from "./useChats";
 function ChatMenu() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<boolean>(true);
-  const { chatIds, chatSettings, refreshChats } = useChats();
+  const { chatIds, refreshChats } = useChats();
 
   const handleSelectChat = (id: string) => {
     setSelectedChatId(id);
@@ -40,11 +40,7 @@ function ChatMenu() {
           </div>
         </div>
         <CreateChatButton onChatCreated={handleChatCreated} />
-        <ChatList
-          chatIds={chatIds}
-          chatSettings={chatSettings}
-          handleSelectChat={handleSelectChat}
-        />
+        <ChatList chatIds={chatIds} handleSelectChat={handleSelectChat} />
       </div>
     </>
   );

@@ -3,7 +3,7 @@ import type { Note } from "../../models/Note";
 import type { GrokChatAPI } from "../../clients/GrokChatAPI";
 import type { BlobAPI } from "../../clients/BlobAPI";
 import { toUserMessage, toSystemMessage } from "../../utils/messageUtils";
-import { GetPlanningNotesTemplate } from "../../hooks/queries/usePlanningNotesTemplateQuery";
+import { GetPlanningNotesTemplates } from "../../hooks/queries/usePlanningNotesTemplateQuery";
 
 export type FlowStep =
   | "idle"
@@ -12,6 +12,7 @@ export type FlowStep =
   | "complete";
 
 export interface ChatFlowContext {
+  chatId: string;
   messages: Message[];
   grokClient: GrokChatAPI;
   blobAPI: BlobAPI;
@@ -49,7 +50,8 @@ export class GeneratingPlanningNotesState extends ChatFlowState {
       await context.addMessage(toUserMessage(this.userMessageText));
 
       // Get planning note templates
-      const planningNoteTemplates = await GetPlanningNotesTemplate(
+      const planningNoteTemplates = await GetPlanningNotesTemplates(
+        context.chatId,
         context.blobAPI
       );
 

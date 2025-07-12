@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { RiAddLine } from "react-icons/ri";
 import "./StoryNotesDialog.css";
-import type { PlanningNoteTemplate } from "../../../models";
+import type { PlanningNotesTemplates } from "../../../models";
 import {
-  usePlanningNotesTemplateQuery,
+  usePlanningNotesTemplates,
   useUpdatePlanningNotesTemplateMutation,
 } from "../../../hooks/queries/usePlanningNotesTemplateQuery";
 import { ConfirmModal } from "../../../components/ConfirmModal";
@@ -14,25 +14,28 @@ import {
 } from "./index";
 
 interface StoryNotesDialogProps {
+  chatId: string;
   isOpen: boolean;
   onCancel: () => void;
 }
 
 export const StoryNotesDialog: React.FC<StoryNotesDialogProps> = ({
+  chatId,
   isOpen,
   onCancel,
 }) => {
-  const templates = usePlanningNotesTemplateQuery();
-  const updateTemplatesMutation = useUpdatePlanningNotesTemplateMutation();
+  const templates = usePlanningNotesTemplates(chatId);
+  const updateTemplatesMutation =
+    useUpdatePlanningNotesTemplateMutation(chatId);
   const [editingTemplates, setEditingTemplates] = useState<
-    PlanningNoteTemplate[]
+    PlanningNotesTemplates[]
   >([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      // Deep copy to prevent mutation of the cached data
+      if (!templates || templates.length == 0) return;
       setEditingTemplates(JSON.parse(JSON.stringify(templates)));
     }
   }, [isOpen, templates]);
