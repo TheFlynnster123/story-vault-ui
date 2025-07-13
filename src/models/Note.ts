@@ -1,6 +1,10 @@
-import type { PlanningNoteTemplate } from "./PlanningNoteTemplate";
-
 export interface Note {
-  template: PlanningNoteTemplate;
+  id: string;
+  type: NoteType;
+  name: string;
+  requestPrompt: string;
+  updatePrompt?: string;
   content: string;
 }
+
+type NoteType = "planning" | "refinement" | "analysis";

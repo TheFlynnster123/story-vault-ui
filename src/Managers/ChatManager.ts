@@ -1,7 +1,7 @@
 import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 
-export class ChatPageManager {
+export class ChatManager {
   MAX_MESSAGES_PER_PAGE = 10;
 
   pages: ChatPage[];
@@ -56,18 +56,16 @@ export class ChatPageManager {
     return this.pages;
   }
 
-  public deleteMessagesFromIndex(messageId: string): ChatPage[] {
+  public deleteMessagesAfterIndex(messageId: string): ChatPage[] {
     const globalIndex = this.getGlobalMessageIndex(messageId);
     if (globalIndex === -1) {
       console.warn(`Message with id ${messageId} not found`);
       return this.pages;
     }
 
-    // Find which page contains this message
     const location = this.findMessageLocation(messageId);
-    if (!location) {
-      return this.pages;
-    }
+
+    if (!location) return this.pages;
 
     const { pageIndex, messageIndex } = location;
 
@@ -75,9 +73,8 @@ export class ChatPageManager {
     this.pages[pageIndex].messages.splice(messageIndex);
 
     // Clear all messages from subsequent pages
-    for (let i = pageIndex + 1; i < this.pages.length; i++) {
+    for (let i = pageIndex + 1; i < this.pages.length; i++)
       this.pages[i].messages = [];
-    }
 
     return this.pages;
   }
@@ -90,9 +87,8 @@ export class ChatPageManager {
       const messageIndex = page.messages.findIndex(
         (msg) => msg.id === messageId
       );
-      if (messageIndex !== -1) {
-        return { pageIndex, messageIndex };
-      }
+
+      if (messageIndex !== -1) return { pageIndex, messageIndex };
     }
     return null;
   }
@@ -116,24 +112,18 @@ export class ChatPageManager {
     pageCount: number;
   } {
     const location = this.findMessageLocation(messageId);
-    if (!location) {
-      return { messageCount: 0, pageCount: 0 };
-    }
+    if (!location) return { messageCount: 0, pageCount: 0 };
 
     const { pageIndex, messageIndex } = location;
     let messageCount = 0;
     let pageCount = 0;
 
-    // Count messages from the target message to the end of its page
     messageCount += this.pages[pageIndex].messages.length - messageIndex;
     pageCount = 1;
 
-    // Count all messages in subsequent pages
     for (let i = pageIndex + 1; i < this.pages.length; i++) {
       messageCount += this.pages[i].messages.length;
-      if (this.pages[i].messages.length > 0) {
-        pageCount++;
-      }
+      if (this.pages[i].messages.length > 0) pageCount++;
     }
 
     return { messageCount, pageCount };

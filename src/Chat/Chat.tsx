@@ -4,8 +4,8 @@ import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
 import { ChatFlowDialog } from "./ChatFlowDialog";
-import { useChatFlow } from "../hooks/useChatFlow";
 import { useChatSettings } from "../hooks/queries/useChatSettings";
+import { useChat } from "../hooks/useChatPages";
 
 interface ChatProps {
   chatId: string;
@@ -15,12 +15,12 @@ interface ChatProps {
 export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const {
     pages,
-    isSendingMessage,
-    submitMessage,
     deleteMessage,
     deleteMessagesFromIndex,
     getDeletePreview,
-  } = useChatFlow({
+    submitMessage,
+    isLoadingHistory,
+  } = useChat({
     chatId,
   });
 
@@ -29,8 +29,8 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const [isChatFlowDialogOpen, setIsChatFlowDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!isSendingMessage) inputRef.current?.focus();
-  }, [isSendingMessage]);
+    if (!isLoadingHistory) inputRef.current?.focus();
+  }, [isLoadingHistory]);
 
   const backgroundStyle: React.CSSProperties = {
     backgroundColor: chatSettings?.backgroundPhotoBase64
@@ -69,10 +69,11 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
-        isSending={isSendingMessage}
+        isSending={isLoadingHistory}
         placeholder={"Type your message here..."}
       />
       <ChatFlowDialog
+        chatId={chatId}
         isOpen={isChatFlowDialogOpen}
         onCancel={() => setIsChatFlowDialogOpen(false)}
       />

@@ -2,11 +2,27 @@ import { useCallback, useEffect, useState } from "react";
 import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
-import { ChatPageManager } from "../Managers/ChatPageManager";
+import { ChatManager } from "../Managers/ChatManager";
+import { toSystemMessage, toUserMessage } from "../utils/messageUtils";
+import { useChatFlow } from "./useChatFlow";
 
-export const useChatPages = ({ chatId }: UseChatPagesProps) => {
-  const { chatPageManager, pages, setPages, isLoadingHistory } =
-    useChatPageManager({ chatId });
+export const useChat = ({ chatId }: UseChatProps) => {
+  const { chatPageManager, pages, setPages, isLoadingHistory } = useChatManager(
+    { chatId }
+  );
+
+  const { generateResponse } = useChatFlow({
+    chatId,
+    chatManager: chatPageManager,
+  });
+
+  const submitMessage = async (userMessage: string) => {
+    await addMessage(toUserMessage(userMessage));
+
+    const responseMessage = await generateResponse();
+
+    await addMessage(toSystemMessage(responseMessage));
+  };
 
   const savePageToApi = useCallback(async (pageToSave: ChatPage) => {
     try {
@@ -75,7 +91,7 @@ export const useChatPages = ({ chatId }: UseChatPagesProps) => {
         return;
       }
 
-      chatPageManager.deleteMessagesFromIndex(messageId);
+      chatPageManager.deleteMessagesAfterIndex(messageId);
       const updatedPages = chatPageManager.getPages();
       setPages([...updatedPages]);
 
@@ -101,6 +117,7 @@ export const useChatPages = ({ chatId }: UseChatPagesProps) => {
   return {
     pages,
     addMessage,
+    submitMessage,
     deleteMessage,
     deleteMessagesFromIndex,
     getDeletePreview,
@@ -109,13 +126,12 @@ export const useChatPages = ({ chatId }: UseChatPagesProps) => {
   };
 };
 
-interface UseChatPageManagerProps {
+interface UseChatManagerProps {
   chatId: string | null;
 }
 
-const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
-  const [chatPageManager, setChatPageManager] =
-    useState<ChatPageManager | null>(null);
+const useChatManager = ({ chatId }: UseChatManagerProps) => {
+  const [chatPageManager, setChatManager] = useState<ChatManager | null>(null);
   const [pages, setPages] = useState<ChatPage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
 
@@ -123,7 +139,7 @@ const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
     if (!chatId) {
       setIsLoadingHistory(false);
       setPages([]);
-      setChatPageManager(null);
+      setChatManager(null);
       return;
     }
 
@@ -135,8 +151,8 @@ const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
       } catch (error) {
         console.error("Failed to load chat history:", error);
       } finally {
-        const manager = new ChatPageManager(chatId, fetchedPages);
-        setChatPageManager(manager);
+        const manager = new ChatManager(chatId, fetchedPages);
+        setChatManager(manager);
         setPages(manager.getPages());
         setIsLoadingHistory(false);
       }
@@ -148,6 +164,6 @@ const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
   return { chatPageManager, pages, setPages, isLoadingHistory };
 };
 
-interface UseChatPagesProps {
+interface UseChatProps {
   chatId: string;
 }
