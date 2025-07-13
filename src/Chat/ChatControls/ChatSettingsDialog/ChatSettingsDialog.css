@@ -16,15 +16,13 @@
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
 }
 
 .chat-settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-left: 1rem;
+  padding-inline: 1rem;
   border-bottom: 1px solid #e5e5e5;
 }
 

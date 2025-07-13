@@ -7,26 +7,26 @@ interface ChatFlowDialogProps {
   chatId: string;
   isOpen: boolean;
   onCancel: () => void;
+  onOpen: () => void;
+  status: string | undefined;
 }
 
 export const ChatFlowDialog: React.FC<ChatFlowDialogProps> = ({
+  status,
   chatId,
   isOpen,
   onCancel,
+  onOpen,
 }) => {
   const { notes } = useNotes(chatId);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="chat-flow-overlay">
-      <div className="chat-flow-dialog">
-        <div className="chat-flow-header">
-          <h2>Chat Flow</h2>
-          <button className="chat-flow-close" onClick={onCancel}>
-            ×
-          </button>
-        </div>
+    <div
+      onClick={isOpen ? onCancel : onOpen}
+      className={`chat-flow-container ${isOpen ? "expanded" : ""}`}
+    >
+      <div className="chat-flow-header">{status || "Ready"}</div>
+      {isOpen && (
         <div className="chat-flow-content">
           {notes && notes.length > 0 && (
             <div className="notes-container">
@@ -36,7 +36,7 @@ export const ChatFlowDialog: React.FC<ChatFlowDialogProps> = ({
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

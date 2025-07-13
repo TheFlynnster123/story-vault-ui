@@ -20,6 +20,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     getDeletePreview,
     submitMessage,
     isLoadingHistory,
+    status,
   } = useChat({
     chatId,
   });
@@ -66,16 +67,18 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         getDeletePreview={getDeletePreview}
       />
 
+      <ChatFlowDialog
+        status={status}
+        chatId={chatId}
+        isOpen={isChatFlowDialogOpen}
+        onCancel={() => setIsChatFlowDialogOpen(false)}
+        onOpen={() => setIsChatFlowDialogOpen(true)}
+      />
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
         isSending={isLoadingHistory}
         placeholder={"Type your message here..."}
-      />
-      <ChatFlowDialog
-        chatId={chatId}
-        isOpen={isChatFlowDialogOpen}
-        onCancel={() => setIsChatFlowDialogOpen(false)}
       />
     </div>
   );
