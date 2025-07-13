@@ -208,5 +208,5 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
     return refinedMessage;
   };
 
-  return { generateResponse, status };
+  return { generateResponse, status, isLoading };
 };
