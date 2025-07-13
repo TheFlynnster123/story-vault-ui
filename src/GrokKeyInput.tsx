@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useStoryVaultAPI } from "./hooks/useStoryVaultAPI";
-import { useEncryption } from "./hooks/useEncryption";
+import { EncryptionManager } from "./Managers/EncryptionManager";
+import { GrokKeyAPI } from "./clients/GrokKeyAPI";
 
 interface IGrokKeyInput {
   onGrokKeyUpdated: () => void;
@@ -8,21 +8,18 @@ interface IGrokKeyInput {
 
 export const GrokKeyInput: React.FC<IGrokKeyInput> = ({ onGrokKeyUpdated }) => {
   const [grokKey, setGrokKey] = useState<string>("");
-  const { encryptionManager } = useEncryption();
-  const storyVaultAPI = useStoryVaultAPI();
 
   const saveGrokKey = async () => {
-    if (!encryptionManager) {
-      throw new Error("EncryptionManager not available for Grok Key save!");
-    }
-
     try {
+      const encryptionManager = new EncryptionManager();
+      await encryptionManager.ensureKeysInitialized();
+
       const encryptedKey = await encryptionManager.encryptString(
         encryptionManager.grokEncryptionKey as string,
         grokKey
       );
 
-      await storyVaultAPI?.saveGrokKey(encryptedKey);
+      await new GrokKeyAPI().saveGrokKey(encryptedKey);
 
       onGrokKeyUpdated();
     } catch (error) {
@@ -41,11 +38,7 @@ export const GrokKeyInput: React.FC<IGrokKeyInput> = ({ onGrokKeyUpdated }) => {
         onChange={(e) => setGrokKey(e.target.value)}
         placeholder="Enter Grok Key"
       />
-      {storyVaultAPI ? (
-        <button onClick={saveGrokKey}>Submit</button>
-      ) : (
-        <button disabled={true}>Submit</button>
-      )}
+      <button onClick={saveGrokKey}>Submit</button>
     </>
   );
 };

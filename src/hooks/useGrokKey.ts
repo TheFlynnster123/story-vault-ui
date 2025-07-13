@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
-import { useStoryVaultAPI } from "./useStoryVaultAPI";
+import { GrokKeyAPI } from "../clients/GrokKeyAPI";
 
 export const useGrokKey = () => {
-  const storyVaultAPI = useStoryVaultAPI();
   const [hasValidGrokKey, setHasValidGrokKey] = useState<boolean | undefined>(
     undefined // Initialize as undefined to represent loading state
   );
 
   const refreshGrokKeyStatus = async () => {
-    if (storyVaultAPI) {
-      const isValid = await storyVaultAPI.hasValidGrokKey();
-      setHasValidGrokKey(isValid);
-    }
+    const isValid = await new GrokKeyAPI().hasValidGrokKey();
+    setHasValidGrokKey(isValid);
   };
 
   useEffect(() => {
@@ -20,7 +17,7 @@ export const useGrokKey = () => {
     };
 
     checkGrokKey();
-  }, [storyVaultAPI]);
+  }, []);
 
   return { hasValidGrokKey, refreshGrokKeyStatus };
 };

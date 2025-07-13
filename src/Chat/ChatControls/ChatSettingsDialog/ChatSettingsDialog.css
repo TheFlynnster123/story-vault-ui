@@ -1,0 +1,301 @@
+.chat-settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.chat-settings-dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+}
+
+.chat-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 1rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.chat-settings-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.chat-settings-close:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.chat-settings-content {
+  padding: 24px;
+}
+
+.chat-settings-field {
+  margin-bottom: 20px;
+}
+
+.chat-settings-field:last-child {
+  margin-bottom: 0;
+}
+
+.chat-settings-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.chat-settings-field input,
+.chat-settings-field textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e5e5;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.chat-settings-field input:focus,
+.chat-settings-field textarea:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.chat-settings-field input.error,
+.chat-settings-field textarea.error {
+  border-color: #dc3545;
+}
+
+.chat-settings-field textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.error-message {
+  display: block;
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.chat-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.chat-settings-cancel,
+.chat-settings-create {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.chat-settings-cancel {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.chat-settings-cancel:hover {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.chat-settings-create {
+  background-color: #007bff;
+  color: white;
+}
+
+.chat-settings-create:hover {
+  background-color: #0056b3;
+}
+
+.chat-settings-create:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Photo upload styles */
+.photo-upload-container {
+  margin-top: 8px;
+}
+
+.photo-upload-area {
+  position: relative;
+  border: 2px dashed #e5e5e5;
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.photo-upload-area:hover {
+  border-color: #007bff;
+}
+
+.photo-upload-input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.photo-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #666;
+}
+
+.photo-upload-label div {
+  font-weight: 500;
+  color: #007bff;
+}
+
+.photo-upload-label small {
+  font-size: 12px;
+  color: #999;
+}
+
+.photo-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.photo-preview-image {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.photo-remove-button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.photo-remove-button:hover {
+  background-color: #c82333;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .chat-settings-dialog {
+    background: #2d2d2d;
+    color: #e5e5e5;
+  }
+
+  .chat-settings-header {
+    border-bottom-color: #444;
+  }
+
+  .chat-settings-header h2 {
+    color: #e5e5e5;
+  }
+
+  .chat-settings-close {
+    color: #ccc;
+  }
+
+  .chat-settings-close:hover {
+    background-color: #404040;
+    color: #e5e5e5;
+  }
+
+  .chat-settings-field label {
+    color: #e5e5e5;
+  }
+
+  .chat-settings-field input,
+  .chat-settings-field textarea {
+    background-color: #404040;
+    border-color: #555;
+    color: #e5e5e5;
+  }
+
+  .chat-settings-field input:focus,
+  .chat-settings-field textarea:focus {
+    border-color: #007bff;
+  }
+
+  .chat-settings-actions {
+    border-top-color: #444;
+  }
+
+  .chat-settings-cancel {
+    background-color: #404040;
+    color: #ccc;
+    border-color: #555;
+  }
+
+  .chat-settings-cancel:hover {
+    background-color: #4a4a4a;
+    color: #e5e5e5;
+  }
+
+  /* Photo upload dark mode */
+  .photo-upload-area {
+    border-color: #555;
+  }
+
+  .photo-upload-area:hover {
+    border-color: #007bff;
+  }
+
+  .photo-upload-label {
+    color: #ccc;
+  }
+
+  .photo-upload-label small {
+    color: #999;
+  }
+}

@@ -1,11 +1,11 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
-import { ChatControls } from "./ChatControls";
+import { ChatControls } from "./ChatControls/ChatControls";
+import { ChatFlowDialog } from "./ChatFlowDialog";
 import { useChatFlow } from "../hooks/useChatFlow";
-import { useChatSettings } from "../hooks/useChatSettings";
-import { ChatLoadingSpinner } from "../components/common/LoadingSpinner";
+import { useChatSettings } from "../hooks/queries/useChatSettings";
 
 interface ChatProps {
   chatId: string;
@@ -20,40 +20,24 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     deleteMessage,
     deleteMessagesFromIndex,
     getDeletePreview,
-    isLoadingHistory,
-    progressStatus,
-    chatFlowHistory,
-    preResponseNotes,
-    postResponseNotes,
-    deleteNotes,
   } = useChatFlow({
     chatId,
   });
-  const { chatSettings, loadChatSettings, updateChatSettings } =
-    useChatSettings();
+
+  const { chatSettings } = useChatSettings(chatId);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isChatFlowDialogOpen, setIsChatFlowDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isSendingMessage) inputRef.current?.focus();
   }, [isSendingMessage]);
 
-  useEffect(() => {
-    loadChatSettings(chatId);
-  }, [chatId, loadChatSettings]);
-
-  const handleSettingsUpdated = (updatedSettings: any) => {
-    updateChatSettings(chatId, updatedSettings);
-  };
-
-  if (isLoadingHistory) return <ChatLoadingSpinner />;
-
-  const currentChatSettings = chatSettings[chatId];
   const backgroundStyle: React.CSSProperties = {
-    backgroundColor: currentChatSettings?.backgroundPhotoBase64
+    backgroundColor: chatSettings?.backgroundPhotoBase64
       ? "transparent"
       : "black",
-    backgroundImage: currentChatSettings?.backgroundPhotoBase64
-      ? `url(${currentChatSettings.backgroundPhotoBase64})`
+    backgroundImage: chatSettings?.backgroundPhotoBase64
+      ? `url(${chatSettings.backgroundPhotoBase64})`
       : "none",
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -70,27 +54,27 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       <ChatControls
         chatId={chatId}
         toggleMenu={toggleMenu}
-        onSettingsUpdated={handleSettingsUpdated}
-        currentChatSettings={currentChatSettings}
+        toggleChatFlowDialog={() =>
+          setIsChatFlowDialogOpen(!isChatFlowDialogOpen)
+        }
       />
+
       <ChatMessageList
         pages={pages}
-        chatFlowHistory={chatFlowHistory}
-        preResponseNotes={preResponseNotes}
-        postResponseNotes={postResponseNotes}
         onDeleteMessage={deleteMessage}
         onDeleteFromHere={deleteMessagesFromIndex}
         getDeletePreview={getDeletePreview}
-        onDeleteNotes={deleteNotes}
       />
-      {progressStatus && (
-        <div className="progress-status">{progressStatus}</div>
-      )}
+
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
         isSending={isSendingMessage}
         placeholder={"Type your message here..."}
+      />
+      <ChatFlowDialog
+        isOpen={isChatFlowDialogOpen}
+        onCancel={() => setIsChatFlowDialogOpen(false)}
       />
     </div>
   );

@@ -3,25 +3,18 @@ import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatPageManager } from "../Managers/ChatPageManager";
-import { useAuth0 } from "@auth0/auth0-react";
-import { useEncryption } from "./useEncryption";
-import type { EncryptionManager } from "../Managers/EncryptionManager";
 
 export const useChatPages = ({ chatId }: UseChatPagesProps) => {
-  const { chatPageManager, pages, setPages, isLoadingHistory, chatHistoryApi } =
+  const { chatPageManager, pages, setPages, isLoadingHistory } =
     useChatPageManager({ chatId });
 
-  const savePageToApi = useCallback(
-    async (pageToSave: ChatPage) => {
-      if (!chatHistoryApi) return;
-      try {
-        await chatHistoryApi.saveChatPage(pageToSave);
-      } catch (error) {
-        console.error("Failed to save page:", pageToSave.pageId, error);
-      }
-    },
-    [chatHistoryApi]
-  );
+  const savePageToApi = useCallback(async (pageToSave: ChatPage) => {
+    try {
+      await new ChatHistoryAPI().saveChatPage(pageToSave);
+    } catch (error) {
+      console.error("Failed to save page:", pageToSave.pageId, error);
+    }
+  }, []);
 
   const getMessageList = useCallback(() => {
     return chatPageManager?.getMessageList() || [];
@@ -116,48 +109,18 @@ export const useChatPages = ({ chatId }: UseChatPagesProps) => {
   };
 };
 
-const useChatHistoryApi = () => {
-  const { getAccessTokenSilently } = useAuth0();
-  const { encryptionManager } = useEncryption();
-  const [chatHistoryApi, setChatHistoryApi] = useState<ChatHistoryAPI | null>(
-    null
-  );
-
-  useEffect(() => {
-    const initializeApi = async () => {
-      try {
-        const accessToken = await getAccessTokenSilently();
-        setChatHistoryApi(
-          new ChatHistoryAPI(
-            encryptionManager as EncryptionManager,
-            accessToken
-          )
-        );
-      } catch (error) {
-        console.error("Failed to initialize ChatHistoryAPI:", error);
-        setChatHistoryApi(null);
-      }
-    };
-
-    if (encryptionManager) initializeApi();
-  }, [getAccessTokenSilently, encryptionManager]);
-
-  return chatHistoryApi;
-};
-
 interface UseChatPageManagerProps {
   chatId: string | null;
 }
 
 const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
-  const chatHistoryApi = useChatHistoryApi();
   const [chatPageManager, setChatPageManager] =
     useState<ChatPageManager | null>(null);
   const [pages, setPages] = useState<ChatPage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!chatId || !chatHistoryApi) {
+    if (!chatId) {
       setIsLoadingHistory(false);
       setPages([]);
       setChatPageManager(null);
@@ -168,7 +131,7 @@ const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
       setIsLoadingHistory(true);
       let fetchedPages: ChatPage[] = [];
       try {
-        fetchedPages = await chatHistoryApi.getChatHistory(chatId);
+        fetchedPages = await new ChatHistoryAPI().getChatHistory(chatId);
       } catch (error) {
         console.error("Failed to load chat history:", error);
       } finally {
@@ -180,9 +143,9 @@ const useChatPageManager = ({ chatId }: UseChatPageManagerProps) => {
     };
 
     loadHistory();
-  }, [chatId, chatHistoryApi]);
+  }, [chatId]);
 
-  return { chatPageManager, pages, setPages, isLoadingHistory, chatHistoryApi };
+  return { chatPageManager, pages, setPages, isLoadingHistory };
 };
 
 interface UseChatPagesProps {

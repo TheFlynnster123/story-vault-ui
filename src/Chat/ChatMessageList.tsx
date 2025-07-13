@@ -1,33 +1,22 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
-import type { PreResponseNote, PostResponseNote } from "../models";
-import { ChatFlowCollapsible } from "./ChatFlowCollapsible";
-import type { ChatFlowStep } from "../hooks/useChatFlow";
 
 interface ChatMessageListProps {
   pages: ChatPage[];
-  chatFlowHistory?: ChatFlowStep[];
-  preResponseNotes: PreResponseNote[];
-  postResponseNotes: PostResponseNote[];
   onDeleteMessage?: (messageId: string) => void;
   onDeleteFromHere?: (messageId: string) => void;
   getDeletePreview?: (messageId: string) => {
     messageCount: number;
     pageCount: number;
   };
-  onDeleteNotes?: () => Promise<void>;
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   pages,
-  chatFlowHistory = [],
-  preResponseNotes,
-  postResponseNotes,
   onDeleteMessage,
   onDeleteFromHere,
   getDeletePreview,
-  onDeleteNotes,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const messages = pages.flatMap((page) => page.messages);
@@ -45,12 +34,6 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
           getDeletePreview={getDeletePreview}
         />
       ))}
-      <ChatFlowCollapsible
-        chatFlowHistory={chatFlowHistory}
-        preResponseNotes={preResponseNotes}
-        postResponseNotes={postResponseNotes}
-        onDeleteNotes={onDeleteNotes}
-      />
     </div>
   );
 };

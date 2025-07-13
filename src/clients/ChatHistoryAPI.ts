@@ -1,23 +1,28 @@
 import config from "../Config";
-import type { EncryptionManager } from "../Managers/EncryptionManager";
+import { EncryptionManager } from "../Managers/EncryptionManager";
 import type { ChatPage } from "../models/ChatPage";
+import { AuthAPI } from "./AuthAPI";
 
 export class ChatHistoryAPI {
-  public accessToken: string;
   public URL: string;
   public encryptionManager: EncryptionManager;
 
-  constructor(encryptionManager: EncryptionManager, accessToken: string) {
-    this.encryptionManager = encryptionManager;
+  authAPI: AuthAPI;
+
+  constructor() {
     this.URL = config.storyVaultAPIURL;
-    this.accessToken = accessToken;
+
+    this.authAPI = new AuthAPI();
+    this.encryptionManager = new EncryptionManager();
   }
 
   public async saveChatPage(chatPage: ChatPage): Promise<boolean> {
+    var accessToken = await this.authAPI.getAccessToken();
+
     const encryptedPage = await this.EncryptPage(chatPage);
     var response = await fetch(
       `${this.URL}/api/SaveChatPage`,
-      buildSaveChatPageRequest(encryptedPage, this.accessToken)
+      buildSaveChatPageRequest(encryptedPage, accessToken)
     );
 
     if (response.ok) {
@@ -29,14 +34,18 @@ export class ChatHistoryAPI {
   }
 
   public async getChatHistory(chatId: string): Promise<ChatPage[]> {
+    var accessToken = await this.authAPI.getAccessToken();
+
     var response = await fetch(
       `${this.URL}/api/GetChatHistory`,
-      buildGetChatHistoryRequest(chatId, this.accessToken)
+      buildGetChatHistoryRequest(chatId, accessToken)
     );
 
     if (response.ok) {
       const pages = await response.json();
-      return Promise.all(pages.map((p: ChatPage) => this.DecryptPage(p)));
+      return Promise.all(
+        pages.map(async (p: ChatPage) => await this.DecryptPage(p))
+      );
     } else {
       console.error("Failed to get chat history:", response.statusText);
       throw new Error(`Error fetching chat history: ${response.statusText}`);
@@ -44,14 +53,16 @@ export class ChatHistoryAPI {
   }
 
   public async getChatPage(chatId: string, pageId: string): Promise<ChatPage> {
+    var accessToken = await this.authAPI.getAccessToken();
+
     var response = await fetch(
       `${this.URL}/api/GetChatPage`,
-      buildGetChatPageRequest(chatId, pageId, this.accessToken)
+      buildGetChatPageRequest(chatId, pageId, accessToken)
     );
 
     if (response.ok) {
       const page = await response.json();
-      return this.DecryptPage(page);
+      return await this.DecryptPage(page);
     } else {
       console.error("Failed to get chat page:", response.statusText);
       throw new Error(`Error fetching chat page: ${response.statusText}`);
@@ -59,11 +70,13 @@ export class ChatHistoryAPI {
   }
 
   public async getChats(): Promise<string[]> {
+    var accessToken = await this.authAPI.getAccessToken();
+
     var response = await fetch(`${this.URL}/api/GetChats`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
@@ -76,6 +89,9 @@ export class ChatHistoryAPI {
   }
 
   private async EncryptPage(chatPage: ChatPage): Promise<ChatPage> {
+    // Ensure keys are initialized once before processing all messages
+    await this.encryptionManager.ensureKeysInitialized();
+
     const encryptedMessages = await Promise.all(
       chatPage.messages.map(async (message) => {
         const encryptedContent = await this.encryptionManager.encryptString(
@@ -90,8 +106,12 @@ export class ChatHistoryAPI {
   }
 
   private async DecryptPage(chatPage: ChatPage): Promise<ChatPage> {
+    await this.encryptionManager.ensureKeysInitialized();
+
     const decryptedMessages = await Promise.all(
       chatPage.messages.map(async (message) => {
+        console.log("unencrypting page!");
+
         const decryptedContent = await this.encryptionManager.decryptString(
           this.encryptionManager.chatEncryptionKey!,
           message.content

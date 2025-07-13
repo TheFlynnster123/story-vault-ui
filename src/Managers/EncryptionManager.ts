@@ -1,15 +1,29 @@
+import { AuthAPI } from "../clients/AuthAPI";
+
 export class EncryptionManager {
   grokEncryptionKey?: string;
   chatEncryptionKey?: string;
-  private encryptionGuid: string;
+  civitaiEncryptionKey?: string;
+  encryptionGuid?: string;
 
-  constructor(encryptionGuid: string) {
-    this.encryptionGuid = encryptionGuid;
+  authAPI: AuthAPI;
+
+  constructor() {
+    this.authAPI = new AuthAPI();
   }
 
-  async initialize() {
+  public async ensureKeysInitialized() {
+    if (!this.encryptionGuid) {
+      this.encryptionGuid = await this.authAPI.getEncryptionGuid();
+    } else {
+    }
+    await this.initializeDerivedKeys();
+  }
+
+  async initializeDerivedKeys() {
     this.grokEncryptionKey = await this.deriveKey("grok");
     this.chatEncryptionKey = await this.deriveKey("chat");
+    this.civitaiEncryptionKey = await this.deriveKey("civitai");
   }
 
   private async deriveKey(salt: string) {
@@ -41,6 +55,8 @@ export class EncryptionManager {
   }
 
   async encryptString(keyHex: string, data: string) {
+    await this.ensureKeysInitialized();
+
     const keyBuffer = new Uint8Array(
       keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
     );
@@ -72,6 +88,7 @@ export class EncryptionManager {
   }
 
   async decryptString(keyHex: string, data: string) {
+    console.log(keyHex);
     const keyBuffer = new Uint8Array(
       keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
     );
