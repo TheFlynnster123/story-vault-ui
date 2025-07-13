@@ -25,62 +25,137 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
     };
   }
 
-  const processNotes = async (
-    noteType: Note[],
-    chatMessages: Message[],
+  const getNotesByType = (type: Note["type"]) =>
+    notes.filter((n) => n.type === type);
+
+  const getPreviousAnalysisContents = (analysisNotes: Note[]) =>
+    analysisNotes.map((n) => toSystemMessage(n.content));
+
+  const processSingleNote = async (
+    note: Note,
+    baseMessages: Message[],
+    previousAnalysis: Message[],
     api: GrokChatAPI
   ) => {
-    for (const note of noteType) {
-      const promptMessages = [
-        ...chatMessages,
-        toSystemMessage(note.requestPrompt),
-      ];
-      const noteResponse = await api.postChat(promptMessages);
-      note.content = noteResponse;
+    const promptMessages = [
+      ...baseMessages,
+      ...previousAnalysis,
+      toSystemMessage(note.requestPrompt || ""),
+    ];
+    const response = await api.postChat(promptMessages);
+    return { note, response };
+  };
 
-      chatMessages.push(toSystemMessage(noteResponse));
+  const processNotesInParallel = async (
+    typeNotes: Note[],
+    baseMessages: Message[],
+    previousAnalysis: Message[],
+    api: GrokChatAPI
+  ) => {
+    const promises = typeNotes.map((note) =>
+      processSingleNote(note, baseMessages, previousAnalysis, api)
+    );
+    const results = await Promise.all(promises);
+    const newMessages: Message[] = [];
+    results.forEach(({ note, response }) => {
+      note.content = response;
+      newMessages.push(toSystemMessage(response));
+    });
+    await saveNotes(notes);
+    return newMessages;
+  };
 
-      await saveNotes(notes);
-    }
+  const generateDraft = async (
+    chatMessages: Message[],
+    planningContents: Message[],
+    previousAnalysis: Message[],
+    api: GrokChatAPI
+  ) => {
+    const promptMessages = [
+      ...chatMessages,
+      ...previousAnalysis,
+      ...planningContents,
+      toSystemMessage(DRAFT_RESPONSE_PROMPT),
+    ];
+    return await api.postChat(promptMessages);
+  };
+
+  const generateFinal = async (
+    chatMessages: Message[],
+    refinementContents: Message[],
+    previousAnalysis: Message[],
+    api: GrokChatAPI
+  ) => {
+    const promptMessages = [
+      ...chatMessages,
+      ...previousAnalysis,
+      ...refinementContents,
+      toSystemMessage(REFINEMENT_RESPONSE_PROMPT),
+    ];
+    return await api.postChat(promptMessages);
   };
 
   const generateResponse = async () => {
     const api = new GrokChatAPI();
     let chatMessages = [...chatManager.getMessageList()];
 
-    const planningNotes = notes.filter((n) => n.type === "planning");
-    const refinementNotes = notes.filter((n) => n.type === "refinement");
-    const analysisNotes = notes.filter((n) => n.type === "analysis");
+    const planningNotes = getNotesByType("planning");
+    const refinementNotes = getNotesByType("refinement");
+    const analysisNotes = getNotesByType("analysis");
+    const previousAnalysis = getPreviousAnalysisContents(analysisNotes);
 
-    await processNotes(planningNotes, chatMessages, api);
-
+    // Process planning
+    const planningNewMessages = await processNotesInParallel(
+      planningNotes,
+      chatMessages,
+      previousAnalysis,
+      api
+    );
+    chatMessages = [...chatMessages, ...planningNewMessages];
     const planningContents = planningNotes.map((n) =>
       toSystemMessage(n.content)
     );
-    const draftPromptMessages = [
-      ...chatMessages,
-      ...planningContents,
-      toSystemMessage(DRAFT_RESPONSE_PROMPT),
-    ];
-    const draftResponse = await api.postChat(draftPromptMessages);
-    chatMessages.push(toSystemMessage(draftResponse));
 
-    await processNotes(refinementNotes, chatMessages, api);
+    let draftResponse = "";
+    if (refinementNotes.length > 0) {
+      draftResponse = await generateDraft(
+        chatMessages,
+        planningContents,
+        previousAnalysis,
+        api
+      );
+      chatMessages.push(toSystemMessage(draftResponse));
+    }
 
+    // Process refinement
+    const refinementNewMessages = await processNotesInParallel(
+      refinementNotes,
+      chatMessages,
+      previousAnalysis,
+      api
+    );
+    chatMessages = [...chatMessages, ...refinementNewMessages];
     const refinementContents = refinementNotes.map((n) =>
       toSystemMessage(n.content)
     );
 
-    const finalPromptMessages = [
-      ...chatMessages,
-      ...refinementContents,
-      toSystemMessage(REFINEMENT_RESPONSE_PROMPT),
-    ];
-
-    const finalResponse = await api.postChat(finalPromptMessages);
+    // Generate final
+    const finalResponse = await generateFinal(
+      chatMessages,
+      refinementContents,
+      previousAnalysis,
+      api
+    );
     chatMessages.push(toSystemMessage(finalResponse));
 
-    await processNotes(analysisNotes, chatMessages, api);
+    // Process analysis
+    const analysisNewMessages = await processNotesInParallel(
+      analysisNotes,
+      chatMessages,
+      [], // No previous analysis for analysis itself?
+      api
+    );
+    chatMessages = [...chatMessages, ...analysisNewMessages];
 
     await saveNotes(notes);
 
