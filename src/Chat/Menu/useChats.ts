@@ -1,8 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useChatHistoryApi } from "../../hooks/useChatHistoryAPI";
+import { ChatHistoryAPI } from "../../clients/ChatHistoryAPI";
 
 export const useChats = () => {
-  const chatHistoryAPI = useChatHistoryApi();
   const queryClient = useQueryClient();
 
   const {
@@ -12,12 +11,8 @@ export const useChats = () => {
   } = useQuery({
     queryKey: ["chat-ids"],
     queryFn: async () => {
-      if (!chatHistoryAPI) {
-        throw new Error("ChatHistoryAPI not available");
-      }
-      return await chatHistoryAPI.getChats();
+      return await new ChatHistoryAPI().getChats();
     },
-    enabled: !!chatHistoryAPI,
   });
 
   const refreshChats = () => {

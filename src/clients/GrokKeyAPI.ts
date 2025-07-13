@@ -1,4 +1,5 @@
-import Config from "../Config";
+import config from "../Config";
+import { AuthAPI } from "./AuthAPI";
 
 export interface IGrokKeyAPI {
   hasValidGrokKey(): Promise<boolean>;
@@ -7,20 +8,22 @@ export interface IGrokKeyAPI {
 export class GrokKeyAPI implements IGrokKeyAPI {
   URL: string = "";
 
-  AccessToken: string = "";
+  authAPI: AuthAPI;
 
-  constructor(accessToken: string) {
-    if (!accessToken) throw new Error("Access token is required");
-    this.URL = Config.storyVaultAPIURL;
-    this.AccessToken = accessToken;
+  constructor() {
+    this.URL = config.storyVaultAPIURL;
+
+    this.authAPI = new AuthAPI();
   }
 
   async hasValidGrokKey(): Promise<boolean> {
+    const accesstoken = await this.authAPI.getAccessToken();
+
     const response = await fetch(`${this.URL}/api/hasValidGrokKey`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.AccessToken}`,
+        Authorization: `Bearer ${accesstoken}`,
       },
     });
 
@@ -34,11 +37,13 @@ export class GrokKeyAPI implements IGrokKeyAPI {
   }
 
   async saveGrokKey(encryptedGrokKey: string): Promise<void> {
+    const accesstoken = await this.authAPI.getAccessToken();
+
     const response = await fetch(`${this.URL}/api/saveGrokKey`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.AccessToken}`,
+        Authorization: `Bearer ${accesstoken}`,
       },
       body: JSON.stringify({ grokKey: encryptedGrokKey }),
     });

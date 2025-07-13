@@ -1,13 +1,11 @@
 import React, { useState } from "react";
 import { useGrokKey } from "../hooks/useGrokKey";
-import { useStoryVaultAPI } from "../hooks/useStoryVaultAPI";
-import { useEncryption } from "../hooks/useEncryption";
 import "./GrokKeyManager.css";
+import { EncryptionManager } from "../Managers/EncryptionManager";
+import { GrokKeyAPI } from "../clients/GrokKeyAPI";
 
 export const GrokKeyManager: React.FC = () => {
   const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
-  const { encryptionManager } = useEncryption();
-  const storyVaultAPI = useStoryVaultAPI();
 
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [grokKey, setGrokKey] = useState("");
@@ -37,32 +35,19 @@ export const GrokKeyManager: React.FC = () => {
       return;
     }
 
-    if (!encryptionManager) {
-      setUpdateMessage({
-        type: "error",
-        text: "Encryption manager not available",
-      });
-      return;
-    }
-
-    if (!storyVaultAPI) {
-      setUpdateMessage({
-        type: "error",
-        text: "API not available",
-      });
-      return;
-    }
-
     setIsUpdating(true);
     setUpdateMessage(null);
 
     try {
+      const encryptionManager = new EncryptionManager();
+      await encryptionManager.ensureKeysInitialized();
+
       const encryptedKey = await encryptionManager.encryptString(
         encryptionManager.grokEncryptionKey as string,
         grokKey
       );
 
-      await storyVaultAPI.saveGrokKey(encryptedKey);
+      await new GrokKeyAPI().saveGrokKey(encryptedKey);
 
       // Refresh the key status
       await refreshGrokKeyStatus();

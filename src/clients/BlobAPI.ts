@@ -1,5 +1,6 @@
 import config from "../Config";
-import type { EncryptionManager } from "../Managers/EncryptionManager";
+import { EncryptionManager } from "../Managers/EncryptionManager";
+import { AuthAPI } from "./AuthAPI";
 
 interface SaveBlobRequest {
   chatId: string;
@@ -22,15 +23,19 @@ interface GetBlobResponse {
 }
 
 export class BlobAPI {
-  public accessToken: string;
   public URL: string;
   public encryptionManager: EncryptionManager;
+  private authAPI: AuthAPI;
+  private initPromise: Promise<void> | null = null;
 
-  constructor(encryptionManager: EncryptionManager, accessToken: string) {
-    if (!accessToken) throw new Error("Access token is required");
-    this.encryptionManager = encryptionManager;
+  constructor() {
     this.URL = config.storyVaultAPIURL;
-    this.accessToken = accessToken;
+    this.authAPI = new AuthAPI();
+    this.encryptionManager = new EncryptionManager();
+  }
+
+  private async getAccessToken(): Promise<string> {
+    return await this.authAPI.getAccessToken();
   }
 
   public async saveBlob(
@@ -39,16 +44,19 @@ export class BlobAPI {
     content: string
   ): Promise<boolean> {
     try {
-      const encryptedContent = await this.encryptionManager.encryptString(
-        this.encryptionManager.chatEncryptionKey!,
+      await this.encryptionManager.ensureKeysInitialized();
+
+      const encryptedContent = await this.encryptionManager!.encryptString(
+        this.encryptionManager!.chatEncryptionKey!,
         content
       );
 
+      const accessToken = await this.getAccessToken();
       const response = await fetch(
         `${this.URL}/api/SaveBlob`,
         buildSaveBlobRequest(
           { chatId, blobName, content: encryptedContent },
-          this.accessToken
+          accessToken
         )
       );
 
@@ -68,15 +76,18 @@ export class BlobAPI {
     blobName: string
   ): Promise<string | undefined> {
     try {
+      await this.encryptionManager.ensureKeysInitialized();
+
+      const accessToken = await this.getAccessToken();
       const response = await fetch(
         `${this.URL}/api/GetBlob`,
-        buildGetBlobRequest({ chatId, blobName }, this.accessToken)
+        buildGetBlobRequest({ chatId, blobName }, accessToken)
       );
 
       validateGetBlobResponse(response);
       const blobResponse: GetBlobResponse = await response.json();
-      const decryptedContent = await this.encryptionManager.decryptString(
-        this.encryptionManager.chatEncryptionKey!,
+      const decryptedContent = await this.encryptionManager!.decryptString(
+        this.encryptionManager!.chatEncryptionKey!,
         blobResponse.content
       );
       return decryptedContent;
@@ -91,9 +102,12 @@ export class BlobAPI {
 
   public async deleteBlob(chatId: string, blobName: string): Promise<boolean> {
     try {
+      await this.encryptionManager.ensureKeysInitialized();
+
+      const accessToken = await this.getAccessToken();
       const response = await fetch(
         `${this.URL}/api/DeleteBlob`,
-        buildDeleteBlobRequest({ chatId, blobName }, this.accessToken)
+        buildDeleteBlobRequest({ chatId, blobName }, accessToken)
       );
 
       validateResponse(response, "delete blob");

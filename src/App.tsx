@@ -6,6 +6,7 @@ import { useGrokKey } from "./hooks/useGrokKey";
 import { GrokKeyInput } from "./GrokKeyInput";
 import React from "react";
 import ChatMenu from "./Chat/Menu/ChatMenu";
+import { useAuth0Setup } from "./hooks/useAuth0Setup";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const AuthenticatedContent: React.FC = ({}) => {
 
 function LoginBarrier() {
   const { isAuthenticated, loginWithRedirect } = useAuth0();
+  useAuth0Setup(); // Set up global Auth0 context
 
   return (
     <div>

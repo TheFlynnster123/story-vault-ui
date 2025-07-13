@@ -1,13 +1,11 @@
 import React, { useState } from "react";
 import { useCivitaiKey } from "../hooks/useCivitaiKey";
-import { useCivitaiAPI } from "../hooks/useCivitaiAPI";
-import { useEncryption } from "../hooks/useEncryption";
 import "./CivitaiKeyManager.css";
+import { EncryptionManager } from "../Managers/EncryptionManager";
+import { CivitKeyAPI } from "../clients/CivitKeyAPI";
 
 export const CivitaiKeyManager: React.FC = () => {
   const { hasValidCivitaiKey, refreshCivitaiKeyStatus } = useCivitaiKey();
-  const { encryptionManager } = useEncryption();
-  const civitaiAPI = useCivitaiAPI();
 
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [civitaiKey, setCivitaiKey] = useState("");
@@ -37,34 +35,20 @@ export const CivitaiKeyManager: React.FC = () => {
       return;
     }
 
-    if (!encryptionManager) {
-      setUpdateMessage({
-        type: "error",
-        text: "Encryption manager not available",
-      });
-      return;
-    }
-
-    if (!civitaiAPI) {
-      setUpdateMessage({
-        type: "error",
-        text: "API not available",
-      });
-      return;
-    }
-
     setIsUpdating(true);
     setUpdateMessage(null);
 
     try {
+      const encryptionManager = new EncryptionManager();
+      await encryptionManager.ensureKeysInitialized();
+
       const encryptedKey = await encryptionManager.encryptString(
         encryptionManager.civitaiEncryptionKey as string,
         civitaiKey
       );
 
-      await civitaiAPI.saveCivitaiKey(encryptedKey);
+      await new CivitKeyAPI().saveCivitaiKey(encryptedKey);
 
-      // Refresh the key status
       await refreshCivitaiKeyStatus();
 
       setUpdateMessage({

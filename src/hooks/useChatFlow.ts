@@ -1,7 +1,4 @@
 import { useEffect } from "react";
-import { useGrokChatAPI } from "./useGrokChatAPI";
-import { useBlobAPI } from "./useBlobAPI";
-import { useChatHistoryApi } from "./useChatHistoryAPI";
 import { useChatFlowStore } from "../stores/chatFlowStore";
 import type { ChatPage } from "../models";
 import { useChatSettings } from "./queries/useChatSettings";
@@ -29,10 +26,6 @@ interface UseChatFlowProps {
 export const useChatFlow = ({
   chatId,
 }: UseChatFlowProps): UseChatFlowReturn => {
-  const { grokChatApiClient } = useGrokChatAPI();
-  const blobAPI = useBlobAPI();
-  const chatHistoryAPI = useChatHistoryApi();
-
   const { chatSettings } = useChatSettings(chatId);
 
   const {
@@ -49,23 +42,10 @@ export const useChatFlow = ({
   } = useChatFlowStore();
 
   useEffect(() => {
-    if (
-      grokChatApiClient &&
-      blobAPI &&
-      chatHistoryAPI &&
-      chatId &&
-      chatSettings
-    ) {
-      initialize(chatId, grokChatApiClient, blobAPI, chatHistoryAPI);
+    if (chatId) {
+      initialize(chatId);
     }
-  }, [
-    grokChatApiClient,
-    blobAPI,
-    chatHistoryAPI,
-    chatId,
-    initialize,
-    chatSettings,
-  ]);
+  }, [chatId, initialize, chatSettings]);
 
   return {
     pages,

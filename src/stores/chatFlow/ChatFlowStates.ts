@@ -1,9 +1,8 @@
 import type { Message } from "../../Chat/ChatMessage";
 import type { Note } from "../../models/Note";
-import type { GrokChatAPI } from "../../clients/GrokChatAPI";
-import type { BlobAPI } from "../../clients/BlobAPI";
 import { toUserMessage, toSystemMessage } from "../../utils/messageUtils";
 import { GetPlanningNotesTemplates } from "../../hooks/queries/usePlanningNotesTemplateQuery";
+import { GrokChatAPI } from "../../clients/GrokChatAPI";
 
 export type FlowStep =
   | "idle"
@@ -14,8 +13,6 @@ export type FlowStep =
 export interface ChatFlowContext {
   chatId: string;
   messages: Message[];
-  grokClient: GrokChatAPI;
-  blobAPI: BlobAPI;
   addMessage: (message: Message) => Promise<void>;
 }
 
@@ -51,8 +48,7 @@ export class GeneratingPlanningNotesState extends ChatFlowState {
 
       // Get planning note templates
       const planningNoteTemplates = await GetPlanningNotesTemplates(
-        context.chatId,
-        context.blobAPI
+        context.chatId
       );
 
       // Generate planning notes
@@ -67,7 +63,7 @@ export class GeneratingPlanningNotesState extends ChatFlowState {
           toSystemMessage(template.name + "\r\n" + template.requestPrompt),
         ];
 
-        const planningNoteContent = await context.grokClient.postChat(
+        const planningNoteContent = await new GrokChatAPI().postChat(
           planningNoteMessages
         );
 
@@ -129,7 +125,7 @@ export class GeneratingResponseState extends ChatFlowState {
         messagePrompt,
       ];
 
-      const finalResponse = await context.grokClient.postChat(
+      const finalResponse = await new GrokChatAPI().postChat(
         messagesForFinalResponse
       );
 

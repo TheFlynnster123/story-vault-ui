@@ -1,26 +1,30 @@
 import type { Message } from "../Chat/ChatMessage";
-import type { EncryptionManager } from "../Managers/EncryptionManager";
-import { BaseAPIClient } from "./BaseAPIClient";
+import config from "../Config";
+import { EncryptionManager } from "../Managers/EncryptionManager";
+import { AuthAPI } from "./AuthAPI";
 
 interface PostChatRequest {
   messages: Message[];
 }
 
-export class GrokChatAPI extends BaseAPIClient {
-  constructor(encryptionManager: EncryptionManager, accessToken: string) {
-    if (!accessToken)
-      throw new Error("Access token is required for GrokChatAPI.");
+export class GrokChatAPI {
+  authAPI: AuthAPI;
+  encryptionManager: EncryptionManager;
+  API_URL: string;
 
-    if (!encryptionManager)
-      throw new Error("EncryptionManager not found in grok chat api!");
+  constructor() {
+    this.API_URL = config.storyVaultAPIURL;
 
-    super(encryptionManager, accessToken);
+    this.authAPI = new AuthAPI();
+    this.encryptionManager = new EncryptionManager();
   }
 
   public async postChat(
     messages: Message[],
     reasoning?: "high" | "low"
   ): Promise<string> {
+    await this.encryptionManager.ensureKeysInitialized();
+
     const headers: Record<string, string> = {
       EncryptionKey: this.encryptionManager.grokEncryptionKey as string,
     };
@@ -43,5 +47,53 @@ export class GrokChatAPI extends BaseAPIClient {
     );
 
     return response.reply;
+  }
+
+  buildHeaders(accessToken: string): HeadersInit {
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    };
+  }
+
+  async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.API_URL}${endpoint}`;
+    const accessToken = await this.authAPI.getAccessToken();
+
+    const headers = this.buildHeaders(accessToken);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...headers,
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        throw this.createResponseError(response);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw this.createFetchError(error);
+    }
+  }
+
+  createResponseError(response: Response): Error {
+    return new Error(
+      `API request failed: ${response.status} ${response.statusText}`
+    );
+  }
+
+  createFetchError(error: any): Error {
+    return new Error(`Network error: ${error?.message || "Unknown error"}`);
   }
 }

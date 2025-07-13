@@ -1,27 +1,30 @@
 import Config from "../Config";
+import { AuthAPI } from "./AuthAPI";
 
 export interface ICivitaiAPI {
   hasValidCivitaiKey(): Promise<boolean>;
   saveCivitaiKey(encryptedCivitaiKey: string): Promise<void>;
 }
 
-export class CivitaiAPI implements ICivitaiAPI {
+export class CivitKeyAPI implements ICivitaiAPI {
   URL: string = "";
 
-  AccessToken: string = "";
+  authAPI: AuthAPI;
 
-  constructor(accessToken: string) {
-    if (!accessToken) throw new Error("Access token is required");
+  constructor() {
     this.URL = Config.storyVaultAPIURL;
-    this.AccessToken = accessToken;
+
+    this.authAPI = new AuthAPI();
   }
 
   async hasValidCivitaiKey(): Promise<boolean> {
+    const accessToken = await this.authAPI.getAccessToken();
+
     const response = await fetch(`${this.URL}/api/HasValidCivitaiKey`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.AccessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
@@ -35,11 +38,13 @@ export class CivitaiAPI implements ICivitaiAPI {
   }
 
   async saveCivitaiKey(encryptedCivitaiKey: string): Promise<void> {
+    const accessToken = await this.authAPI.getAccessToken();
+
     const response = await fetch(`${this.URL}/api/SaveCivitaiKey`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.AccessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ civitaiKey: encryptedCivitaiKey }),
     });

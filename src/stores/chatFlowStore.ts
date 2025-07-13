@@ -2,9 +2,7 @@ import { create } from "zustand";
 import type { Message } from "../Chat/ChatMessage";
 import type { Note } from "../models/Note";
 import type { ChatPage } from "../models/ChatPage";
-import type { GrokChatAPI } from "../clients/GrokChatAPI";
-import type { BlobAPI } from "../clients/BlobAPI";
-import type { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
+import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatPageManager } from "../Managers/ChatPageManager";
 import type { FlowStep, ChatFlowContext } from "./chatFlow/ChatFlowStates";
 import { ChatFlowStateMachine } from "./chatFlow/ChatFlowStateMachine";
@@ -22,9 +20,6 @@ interface ChatFlowStore {
 
   // Dependencies
   chatId: string | null;
-  grokClient?: GrokChatAPI;
-  blobAPI?: BlobAPI;
-  chatHistoryAPI?: ChatHistoryAPI;
 
   // Internal managers
   chatPageManager?: ChatPageManager;
@@ -35,12 +30,7 @@ interface ChatFlowStore {
   isGeneratingResponse: boolean;
 
   // Actions - One-stop shop
-  initialize: (
-    chatId: string,
-    grokClient: GrokChatAPI,
-    blobAPI: BlobAPI,
-    chatHistoryAPI: ChatHistoryAPI
-  ) => Promise<void>;
+  initialize: (chatId: string) => Promise<void>;
   addMessage: (message: Message) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
   deleteMessagesFromIndex: (messageId: string) => Promise<void>;
@@ -66,9 +56,6 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
 
   // Dependencies
   chatId: null,
-  grokClient: undefined,
-  blobAPI: undefined,
-  chatHistoryAPI: undefined,
   chatPageManager: undefined,
 
   // Computed state (for backwards compatibility)
@@ -76,23 +63,14 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
   isGeneratingResponse: false,
 
   // Actions
-  initialize: async (
-    chatId: string,
-    grokClient: GrokChatAPI,
-    blobAPI: BlobAPI,
-    chatHistoryAPI: ChatHistoryAPI
-  ) => {
+  initialize: async (chatId: string) => {
     set({
       chatId,
-      grokClient,
-      blobAPI,
-      chatHistoryAPI,
       isLoadingHistory: true,
     });
 
     try {
-      console.log("yo");
-      const fetchedPages = await chatHistoryAPI.getChatHistory(chatId);
+      const fetchedPages = await new ChatHistoryAPI().getChatHistory(chatId);
       const chatPageManager = new ChatPageManager(chatId, fetchedPages);
       const messages = chatPageManager.getMessageList();
 
@@ -115,9 +93,9 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
   },
 
   addMessage: async (message: Message) => {
-    const { chatPageManager, chatHistoryAPI } = get();
+    const { chatPageManager } = get();
 
-    if (!chatPageManager || !chatHistoryAPI) {
+    if (!chatPageManager) {
       console.error("ChatFlow not properly initialized");
       return;
     }
@@ -136,7 +114,7 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
     const lastPage = updatedPages[updatedPages.length - 1];
     if (lastPage) {
       try {
-        await chatHistoryAPI.saveChatPage(lastPage);
+        await new ChatHistoryAPI().saveChatPage(lastPage);
       } catch (error) {
         console.error("Failed to save page:", lastPage.pageId, error);
       }
@@ -144,9 +122,9 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
   },
 
   deleteMessage: async (messageId: string) => {
-    const { chatPageManager, chatHistoryAPI } = get();
+    const { chatPageManager } = get();
 
-    if (!chatPageManager || !chatHistoryAPI) {
+    if (!chatPageManager) {
       console.error("ChatFlow not properly initialized");
       return;
     }
@@ -170,7 +148,7 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
     const affectedPage = updatedPages[location.pageIndex];
     if (affectedPage) {
       try {
-        await chatHistoryAPI.saveChatPage(affectedPage);
+        await new ChatHistoryAPI().saveChatPage(affectedPage);
       } catch (error) {
         console.error("Failed to save page:", affectedPage.pageId, error);
       }
@@ -178,9 +156,9 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
   },
 
   deleteMessagesFromIndex: async (messageId: string) => {
-    const { chatPageManager, chatHistoryAPI } = get();
+    const { chatPageManager } = get();
 
-    if (!chatPageManager || !chatHistoryAPI) {
+    if (!chatPageManager) {
       console.error("ChatFlow not properly initialized");
       return;
     }
@@ -204,7 +182,7 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
     const affectedPages = updatedPages.slice(location.pageIndex);
     for (const page of affectedPages) {
       try {
-        await chatHistoryAPI.saveChatPage(page);
+        await new ChatHistoryAPI().saveChatPage(page);
       } catch (error) {
         console.error("Failed to save page:", page.pageId, error);
       }
@@ -220,19 +198,12 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
   },
 
   GetOrDefaultStateMachine: () => {
-    const { grokClient, blobAPI, stateMachine } = get();
-
-    if (!grokClient || !blobAPI) {
-      console.error("ChatFlow not properly initialized");
-      return null;
-    }
+    const { stateMachine } = get();
 
     if (!stateMachine) {
       const context: ChatFlowContext = {
         chatId: get().chatId ?? "",
         messages: get().messages,
-        grokClient,
-        blobAPI,
         addMessage: get().addMessage,
       };
 
@@ -268,9 +239,6 @@ export const useChatFlowStore = create<ChatFlowStore>((set, get) => ({
       flowStep: "idle",
       planningNotesContext: null,
       chatId: null,
-      grokClient: undefined,
-      blobAPI: undefined,
-      chatHistoryAPI: undefined,
       chatPageManager: undefined,
       stateMachine: undefined,
     });

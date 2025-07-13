@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useBlobAPI } from "../useBlobAPI";
-import type { BlobAPI } from "../../clients/BlobAPI";
+import { BlobAPI } from "../../clients/BlobAPI";
 import type { ChatSettings } from "../../models";
 
 const getQueryKey = (chatId: string) => ["chat-settings", chatId];
@@ -12,13 +11,15 @@ export interface UseChatSettingsResult {
 }
 
 export const useChatSettings = (chatId: string): UseChatSettingsResult => {
-  const blobAPI = useBlobAPI();
   const saveChatSettingsMutation = useSaveChatSettingsMutation();
 
   const { data: chatSettings, isLoading } = useQuery({
     queryKey: getQueryKey(chatId),
-    queryFn: async () => await GetChatSettings(chatId, blobAPI as BlobAPI),
-    enabled: !!blobAPI && !!chatId,
+    queryFn: async () => await GetChatSettings(chatId),
+    enabled: !!chatId,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   return {
@@ -33,10 +34,9 @@ export const useChatSettings = (chatId: string): UseChatSettingsResult => {
 };
 
 export const GetChatSettings = async (
-  chatId: string,
-  blobAPI: BlobAPI
+  chatId: string
 ): Promise<ChatSettings | undefined> => {
-  const blobContent = await blobAPI.getBlob(chatId, "chat-settings");
+  const blobContent = await new BlobAPI().getBlob(chatId, "chat-settings");
   if (!blobContent) return undefined;
 
   try {
@@ -53,7 +53,6 @@ interface SaveChatSettingsRequest {
 }
 
 export const useSaveChatSettingsMutation = () => {
-  const blobAPI = useBlobAPI();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -61,13 +60,12 @@ export const useSaveChatSettingsMutation = () => {
       chatId,
       chatSettings: settings,
     }: SaveChatSettingsRequest) => {
-      if (!blobAPI) throw new Error("BlobAPI not available");
       const content = JSON.stringify(settings);
-      await blobAPI.saveBlob(chatId, "chat-settings", content);
+      await new BlobAPI().saveBlob(chatId, "chat-settings", content);
     },
     onSuccess: (_, { chatId }) => {
       queryClient.invalidateQueries({
-        queryKey: getQueryKey(chatId),
+        queryKey: ["chat-settings", chatId],
       });
     },
   });
