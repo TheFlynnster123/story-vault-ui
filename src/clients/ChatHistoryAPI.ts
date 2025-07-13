@@ -88,8 +88,23 @@ export class ChatHistoryAPI {
     }
   }
 
+  public async deleteChat(chatId: string): Promise<boolean> {
+    var accessToken = await this.authAPI.getAccessToken();
+
+    var response = await fetch(
+      `${this.URL}/api/DeleteChat`,
+      buildDeleteChatRequest(chatId, accessToken)
+    );
+
+    if (response.ok) {
+      return true;
+    } else {
+      console.error("Failed to delete chat:", response.statusText);
+      return false;
+    }
+  }
+
   private async EncryptPage(chatPage: ChatPage): Promise<ChatPage> {
-    // Ensure keys are initialized once before processing all messages
     await this.encryptionManager.ensureKeysInitialized();
 
     const encryptedMessages = await Promise.all(
@@ -154,6 +169,20 @@ function buildSaveChatPageRequest(
 }
 
 function buildGetChatHistoryRequest(
+  chatId: string,
+  accessToken: string
+): RequestInit | undefined {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ chatId }),
+  };
+}
+
+function buildDeleteChatRequest(
   chatId: string,
   accessToken: string
 ): RequestInit | undefined {

@@ -62,6 +62,10 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         isOpen={isSettingsDialogOpen}
         onSubmit={() => setIsSettingsDialogOpen(false)}
         onCancel={() => setIsSettingsDialogOpen(false)}
+        onDeleteSuccess={() => {
+          setIsSettingsDialogOpen(false);
+          toggleMenu();
+        }}
       />
 
       <StoryNotesDialog
