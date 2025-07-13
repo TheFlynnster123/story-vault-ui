@@ -11,7 +11,7 @@ export const useChat = ({ chatId }: UseChatProps) => {
     { chatId }
   );
 
-  const { generateResponse } = useChatFlow({
+  const { generateResponse, status } = useChatFlow({
     chatId,
     chatManager: chatPageManager,
   });
@@ -115,6 +115,7 @@ export const useChat = ({ chatId }: UseChatProps) => {
   );
 
   return {
+    status,
     pages,
     addMessage,
     submitMessage,

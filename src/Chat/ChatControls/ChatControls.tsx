@@ -49,14 +49,6 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         <RiFileList2Line />
       </button>
 
-      <button
-        className="chat-controls-button chat-flow-dialog-button"
-        onClick={toggleChatFlowDialog}
-        title="Chat Flow"
-      >
-        <RiBubbleChartLine />
-      </button>
-
       <ChatSettingsDialog
         chatId={chatId}
         isOpen={isSettingsDialogOpen}

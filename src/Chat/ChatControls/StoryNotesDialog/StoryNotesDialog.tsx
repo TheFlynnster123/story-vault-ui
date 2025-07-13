@@ -78,7 +78,7 @@ export const StoryNotesDialog: React.FC<StoryNotesDialogProps> = ({
           <StoryNotesDialogHeader onCancel={onCancel} />
           <div
             className="chat-settings-content"
-            style={{ overflowY: "auto", maxHeight: "60vh" }}
+            style={{ overflowY: "auto", maxHeight: "70vh" }}
           >
             <NoteSection
               title="Planning Notes"
