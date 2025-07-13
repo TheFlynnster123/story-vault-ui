@@ -26,7 +26,6 @@ export class BlobAPI {
   public URL: string;
   public encryptionManager: EncryptionManager;
   private authAPI: AuthAPI;
-  private initPromise: Promise<void> | null = null;
 
   constructor() {
     this.URL = config.storyVaultAPIURL;
