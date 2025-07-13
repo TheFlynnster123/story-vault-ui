@@ -19,11 +19,7 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
   onSubmit,
   onDeleteSuccess,
 }) => {
-  const newChatGuid = useNewChatGuid();
-
-  const { chatSettings, saveChatSettings } = useChatSettings(
-    chatId ?? newChatGuid
-  );
+  const { chatSettings, saveChatSettings } = useChatSettings(chatId ?? "");
 
   const [chatTitle, setChatTitle] = useState("");
   const [context, setContext] = useState("");
@@ -93,7 +89,12 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
         context: context.trim(),
         backgroundPhotoBase64,
       };
-      await saveChatSettings(settingsToSave);
+
+      // Only save settings for existing chats, not new ones
+      if (chatId) {
+        await saveChatSettings(settingsToSave);
+      }
+
       onSubmit(settingsToSave);
 
       setChatTitle("");
@@ -220,9 +221,4 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
       </div>
     </div>
   );
-};
-
-export const useNewChatGuid = () => {
-  const [guid] = React.useState(() => crypto.randomUUID());
-  return guid;
 };
