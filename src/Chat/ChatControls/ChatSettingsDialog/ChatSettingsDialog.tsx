@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import type { ChatSettings } from "../../../models/ChatSettings";
 import { useChatSettings } from "../../../hooks/queries/useChatSettings";
 import "./ChatSettingsDialog.css";
+import { ChatDeleteControl } from "./ChatDeleteControl";
 
 interface ChatSettingsDialogProps {
   chatId?: string;
   isOpen: boolean;
   onCancel: () => void;
   onSubmit: (settings: ChatSettings) => void;
+  onDeleteSuccess?: () => void;
 }
 
 export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
@@ -15,12 +17,9 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
   isOpen,
   onCancel,
   onSubmit,
+  onDeleteSuccess,
 }) => {
-  const newChatGuid = useNewChatGuid();
-
-  const { chatSettings, saveChatSettings } = useChatSettings(
-    chatId ?? newChatGuid
-  );
+  const { chatSettings, saveChatSettings } = useChatSettings(chatId ?? "");
 
   const [chatTitle, setChatTitle] = useState("");
   const [context, setContext] = useState("");
@@ -90,7 +89,12 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
         context: context.trim(),
         backgroundPhotoBase64,
       };
-      await saveChatSettings(settingsToSave);
+
+      // Only save settings for existing chats, not new ones
+      if (chatId) {
+        await saveChatSettings(settingsToSave);
+      }
+
       onSubmit(settingsToSave);
 
       setChatTitle("");
@@ -199,19 +203,22 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
         </div>
 
         <div className="chat-settings-actions">
-          <button className="chat-settings-cancel" onClick={handleCancel}>
-            Cancel
-          </button>
-          <button className="chat-settings-create" onClick={handleSubmit}>
-            {chatId ? "Save Changes" : "Create Chat"}
-          </button>
+          {chatId && onDeleteSuccess && (
+            <ChatDeleteControl
+              chatId={chatId}
+              onDeleteSuccess={onDeleteSuccess}
+            />
+          )}
+          <div className="chat-settings-primary-actions">
+            <button className="chat-settings-cancel" onClick={handleCancel}>
+              Cancel
+            </button>
+            <button className="chat-settings-create" onClick={handleSubmit}>
+              {chatId ? "Save Changes" : "Create Chat"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export const useNewChatGuid = () => {
-  const [guid] = React.useState(() => crypto.randomUUID());
-  return guid;
 };

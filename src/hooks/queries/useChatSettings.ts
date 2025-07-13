@@ -17,6 +17,7 @@ export const useChatSettings = (chatId: string): UseChatSettingsResult => {
     queryKey: getQueryKey(chatId),
     queryFn: async () => await GetChatSettings(chatId),
     enabled: !!chatId,
+    retry: false,
     refetchOnReconnect: false,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

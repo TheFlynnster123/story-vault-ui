@@ -1,19 +1,20 @@
 import React from "react";
-import { useChatFlowStore } from "../stores/chatFlowStore";
 import { NoteItem } from "./ChatFlow/NoteItem";
 import "./ChatFlowDialog.css";
+import { useNotes } from "../hooks/useNotes";
 
 interface ChatFlowDialogProps {
+  chatId: string;
   isOpen: boolean;
   onCancel: () => void;
 }
 
 export const ChatFlowDialog: React.FC<ChatFlowDialogProps> = ({
+  chatId,
   isOpen,
   onCancel,
 }) => {
-  const { isGeneratingPlanningNotes, isGeneratingResponse, allNotes } =
-    useChatFlowStore();
+  const { notes } = useNotes(chatId);
 
   if (!isOpen) return null;
 
@@ -27,15 +28,13 @@ export const ChatFlowDialog: React.FC<ChatFlowDialogProps> = ({
           </button>
         </div>
         <div className="chat-flow-content">
-          {isGeneratingPlanningNotes && <p>Generating planning notes...</p>}
-          {allNotes && allNotes.length > 0 && (
+          {notes && notes.length > 0 && (
             <div className="notes-container">
-              {allNotes.map((note, index) => (
+              {notes.map((note, index) => (
                 <NoteItem key={index} note={note} />
               ))}
             </div>
           )}
-          {isGeneratingResponse && <p>Generating response...</p>}
         </div>
       </div>
     </div>

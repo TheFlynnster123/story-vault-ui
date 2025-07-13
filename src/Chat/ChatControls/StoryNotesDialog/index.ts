@@ -1,4 +1,4 @@
 export * from "./StoryNotesDialogHeader";
-export * from "./TemplateForm";
-export * from "./TemplateList";
+export * from "./NoteForm";
+export * from "./NoteList";
 export * from "./StoryNotesDialogActions";

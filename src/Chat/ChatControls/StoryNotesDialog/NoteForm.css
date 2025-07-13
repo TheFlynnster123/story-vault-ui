@@ -1,10 +1,10 @@
-.template-form-container {
+.note-form-container {
   border-radius: 8px;
   background-color: #2c2c2c;
   overflow: hidden;
 }
 
-.template-form-header {
+.note-form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -12,7 +12,7 @@
   background-color: #333;
 }
 
-.template-form-title-input {
+.note-form-title-input {
   background: none;
   border: none;
   color: #eee;
@@ -22,12 +22,12 @@
   width: 100%;
 }
 
-.template-form-title-input:focus {
+.note-form-title-input:focus {
   outline: none;
   border-bottom: 1px solid #007acc;
 }
 
-.template-form-collapse-button {
+.note-form-collapse-button {
   background: none;
   border: none;
   color: #aaa;
@@ -38,11 +38,11 @@
   justify-content: center;
 }
 
-.template-form-body {
+.note-form-body {
   position: relative;
 }
 
-.template-form-delete-button {
+.note-form-delete-button {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -58,18 +58,18 @@
   justify-content: center;
 }
 
-.template-form-delete-button:hover {
+.note-form-delete-button:hover {
   color: #fff;
 }
 
-.template-form-field label {
+.note-form-field label {
   display: block;
   color: #ccc;
   font-size: 14px;
 }
 
-.template-form-field input,
-.template-form-field textarea {
+.note-form-field input,
+.note-form-field textarea {
   width: 100%;
   padding: 8px;
   border-radius: 4px;
@@ -79,12 +79,12 @@
   box-sizing: border-box;
 }
 
-.template-form-field textarea {
+.note-form-field textarea {
   resize: vertical;
 }
 
-.template-form-field input:focus,
-.template-form-field textarea:focus {
+.note-form-field input:focus,
+.note-form-field textarea:focus {
   outline: none;
   border-color: #007acc;
   box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.5);

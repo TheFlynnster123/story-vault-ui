@@ -1,4 +1,4 @@
-.story-notes-template-list {
+.story-notes-note-list {
   max-height: 400px;
   overflow-y: auto;
   padding-left: 0;
@@ -6,6 +6,6 @@
   margin: 0;
 }
 
-.story-notes-template-list-item {
+.story-notes-note-list-item {
   padding: 0;
 }
