@@ -1,4 +1,4 @@
-import type { Message, MessageItemProps } from "./ChatMessage";
+import type { MessageItemProps } from "./ChatMessage";
 import "./ChatMessage.css";
 import "./CivitJobMessage.css";
 import { useState } from "react";
