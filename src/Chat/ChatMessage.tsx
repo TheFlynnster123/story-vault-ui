@@ -8,6 +8,7 @@ import "./ChatMessage.css";
 import { useState } from "react";
 
 export interface MessageItemProps {
+  chatId: string;
   message: Message;
   onDeleteMessage?: (messageId: string) => void;
   onDeleteFromHere?: (messageId: string) => void;

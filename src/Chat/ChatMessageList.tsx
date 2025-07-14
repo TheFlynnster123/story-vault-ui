@@ -4,6 +4,7 @@ import { CivitJobMessage } from "./CivitJobMessage";
 import type { ChatPage } from "../models/ChatPage";
 
 interface ChatMessageListProps {
+  chatId: string;
   pages: ChatPage[];
   onDeleteMessage?: (messageId: string) => void;
   onDeleteFromHere?: (messageId: string) => void;
@@ -14,6 +15,7 @@ interface ChatMessageListProps {
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
+  chatId,
   pages,
   onDeleteMessage,
   onDeleteFromHere,
@@ -27,8 +29,9 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   return (
     <div className="message-list" ref={messageListRef}>
       {messages.map((msg) =>
-        msg.role === "story-photo" ? (
+        msg.role === "civit-job" ? (
           <CivitJobMessage
+            chatId={chatId}
             key={msg.id}
             message={msg}
             onDeleteMessage={onDeleteMessage}
@@ -37,6 +40,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
           />
         ) : (
           <ChatMessage
+            chatId={chatId}
             key={msg.id}
             message={msg}
             onDeleteMessage={onDeleteMessage}
