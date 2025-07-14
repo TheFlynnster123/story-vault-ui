@@ -19,8 +19,9 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     deleteMessagesFromIndex,
     getDeletePreview,
     submitMessage,
-    isLoadingHistory,
+    isLoading,
     status,
+    generateImage,
   } = useChat({
     chatId,
   });
@@ -30,8 +31,8 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const [isChatFlowDialogOpen, setIsChatFlowDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!isLoadingHistory) inputRef.current?.focus();
-  }, [isLoadingHistory]);
+    if (!isLoading) inputRef.current?.focus();
+  }, [isLoading]);
 
   const backgroundStyle: React.CSSProperties = {
     backgroundColor: chatSettings?.backgroundPhotoBase64
@@ -61,6 +62,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       />
 
       <ChatMessageList
+        chatId={chatId}
         pages={pages}
         onDeleteMessage={deleteMessage}
         onDeleteFromHere={deleteMessagesFromIndex}
@@ -77,7 +79,8 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
-        isSending={isLoadingHistory}
+        onGenerateImage={generateImage}
+        isLoading={isLoading}
         placeholder={"Type your message here..."}
       />
     </div>

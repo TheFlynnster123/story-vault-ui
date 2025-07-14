@@ -33,7 +33,9 @@ export class ChatManager {
   }
 
   public getMessageList(): Message[] {
-    return this.pages.flatMap((page) => page.messages);
+    return this.pages
+      .flatMap((page) => page.messages)
+      .filter((msg) => msg.role !== "civit-job");
   }
 
   public getPages(): ChatPage[] {

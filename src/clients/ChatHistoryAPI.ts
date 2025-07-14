@@ -125,8 +125,6 @@ export class ChatHistoryAPI {
 
     const decryptedMessages = await Promise.all(
       chatPage.messages.map(async (message) => {
-        console.log("unencrypting page!");
-
         const decryptedContent = await this.encryptionManager.decryptString(
           this.encryptionManager.chatEncryptionKey!,
           message.content

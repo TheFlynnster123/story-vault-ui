@@ -5,6 +5,7 @@ import type { Message } from "../Chat/ChatMessage";
 import { toSystemMessage } from "../utils/messageUtils";
 import { useNotes } from "./useNotes";
 import type { Note } from "../models/Note";
+import { useSystemSettings } from "./queries/useSystemSettings";
 
 const DRAFT_RESPONSE_PROMPT: string =
   "Consider the above notes, and draft a response to the conversation. Provide your response directly without a preamble.";
@@ -21,6 +22,7 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
   const { notes, saveNotes } = useNotes(chatId);
   const [status, setStatus] = useState<string>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { systemSettings } = useSystemSettings();
 
   if (!chatManager) {
     return {
@@ -32,11 +34,7 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
   const getNotesByType = (type: Note["type"]) =>
     notes.filter((n) => n.type === type);
 
-  const processSingleNote = async (
-    note: Note,
-    baseMessages: Message[],
-    api: GrokChatAPI
-  ) => {
+  const processSingleNote = async (note: Note, baseMessages: Message[]) => {
     const promptMessages = [
       ...baseMessages,
       toSystemMessage(
@@ -47,17 +45,18 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
           note.requestPrompt
       ),
     ];
-    const response = await api.postChat(promptMessages);
+    const response = await new GrokChatAPI(systemSettings).postChat(
+      promptMessages
+    );
     return { note, response };
   };
 
   const processNotesInParallel = async (
     typeNotes: Note[],
-    baseMessages: Message[],
-    api: GrokChatAPI
+    baseMessages: Message[]
   ): Promise<void> => {
     const promises = typeNotes.map((note) =>
-      processSingleNote(note, baseMessages, api)
+      processSingleNote(note, baseMessages)
     );
     const results = await Promise.all(promises);
     results.forEach(({ note, response }) => {
@@ -68,40 +67,36 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
 
   const processPhase = async (
     typeNotes: Note[],
-    chatMessages: Message[],
-    api: GrokChatAPI
+    chatMessages: Message[]
   ): Promise<Note[]> => {
-    await processNotesInParallel(typeNotes, chatMessages, api);
+    await processNotesInParallel(typeNotes, chatMessages);
     return typeNotes;
   };
 
   const generateAuxiliaryResponse = async (
     chatMessages: Message[],
     additionalContents: Message[],
-    prompt: string,
-    api: GrokChatAPI
+    prompt: string
   ) => {
     const promptMessages = [
       ...chatMessages,
       ...additionalContents,
       toSystemMessage(prompt),
     ];
-    return await api.postChat(promptMessages);
+    return await new GrokChatAPI(systemSettings).postChat(promptMessages);
   };
 
   const generatePlanningNotes = async (
-    chatMessages: Message[],
-    api: GrokChatAPI
+    chatMessages: Message[]
   ): Promise<Note[]> => {
     setStatus("Planning response...");
     const typeNotes = getNotesByType("planning");
-    return await processPhase(typeNotes, chatMessages, api);
+    return await processPhase(typeNotes, chatMessages);
   };
 
   const generateDraftMessage = async (
     chatMessages: Message[],
-    planningNotes: Note[],
-    api: GrokChatAPI
+    planningNotes: Note[]
   ): Promise<string> => {
     setStatus("Drafting response...");
     const refinementNotes = getNotesByType("refinement");
@@ -114,26 +109,23 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
     return await generateAuxiliaryResponse(
       chatMessages,
       planningContents,
-      DRAFT_RESPONSE_PROMPT,
-      api
+      DRAFT_RESPONSE_PROMPT
     );
   };
 
   const generateRefinementNotes = async (
-    chatMessages: Message[],
-    api: GrokChatAPI
+    chatMessages: Message[]
   ): Promise<Note[]> => {
     setStatus("Generating refinement notes...");
     const typeNotes = getNotesByType("refinement");
-    var result = await processPhase(typeNotes, chatMessages, api);
+    var result = await processPhase(typeNotes, chatMessages);
     setStatus("Refinement notes generated...");
     return result;
   };
 
   const generateRefinedMessage = async (
     chatMessages: Message[],
-    refinementNotes: Note[],
-    api: GrokChatAPI
+    refinementNotes: Note[]
   ): Promise<string> => {
     setStatus("Generating refined message...");
     const refinementContents = refinementNotes.map((n) =>
@@ -142,19 +134,17 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
     return await generateAuxiliaryResponse(
       chatMessages,
       refinementContents,
-      REFINEMENT_RESPONSE_PROMPT,
-      api
+      REFINEMENT_RESPONSE_PROMPT
     );
   };
 
   const generateAnalysisNotes = async (
-    chatMessages: Message[],
-    api: GrokChatAPI
+    chatMessages: Message[]
   ): Promise<Note[]> => {
     setStatus("Generating post-response analysis notes...");
     const typeNotes = getNotesByType("analysis");
 
-    var result = await processPhase(typeNotes, chatMessages, api);
+    var result = await processPhase(typeNotes, chatMessages);
     setStatus("Finished");
     return result;
   };
@@ -176,7 +166,6 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
 
   const generateResponse = async () => {
     setIsLoading(true);
-    const api = new GrokChatAPI();
     const chatMessages = chatManager.getMessageList();
 
     const analysisNotes = getNotesByType("analysis");
@@ -184,25 +173,24 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
 
     await clearExistingNoteContent();
 
-    const planningNotes = await generatePlanningNotes(chatMessages, api);
+    const planningNotes = await generatePlanningNotes(chatMessages);
     chatMessages.push(...notesToSystemMessages(planningNotes));
 
-    const draft = await generateDraftMessage(chatMessages, planningNotes, api);
+    const draft = await generateDraftMessage(chatMessages, planningNotes);
     if (draft) chatMessages.push(toSystemMessage(draft));
 
-    const refinementNotes = await generateRefinementNotes(chatMessages, api);
+    const refinementNotes = await generateRefinementNotes(chatMessages);
     chatMessages.push(...notesToSystemMessages(refinementNotes));
 
     const refinedMessage = await generateRefinedMessage(
       chatMessages,
-      refinementNotes,
-      api
+      refinementNotes
     );
 
     chatMessages.push(toSystemMessage(refinedMessage));
     setIsLoading(false);
 
-    generateAnalysisNotes(chatMessages, api);
+    generateAnalysisNotes(chatMessages);
 
     setStatus("Finished");
     return refinedMessage;

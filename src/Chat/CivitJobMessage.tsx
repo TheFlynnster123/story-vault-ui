@@ -1,24 +1,11 @@
-export interface Message {
-  id: string;
-  role: "user" | "system" | "assistant" | "civit-job" | "story-photo";
-  content: string;
-}
-
+import type { MessageItemProps } from "./ChatMessage";
 import "./ChatMessage.css";
+import "./CivitJobMessage.css";
 import { useState } from "react";
+import { useCivitJob } from "../hooks/useCivitJob";
 
-export interface MessageItemProps {
-  chatId: string;
-  message: Message;
-  onDeleteMessage?: (messageId: string) => void;
-  onDeleteFromHere?: (messageId: string) => void;
-  getDeletePreview?: (messageId: string) => {
-    messageCount: number;
-    pageCount: number;
-  };
-}
-
-export const ChatMessage: React.FC<MessageItemProps> = ({
+export const CivitJobMessage: React.FC<MessageItemProps> = ({
+  chatId,
   message,
   onDeleteMessage,
   onDeleteFromHere,
@@ -28,33 +15,16 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
 
-  const messageClass =
-    message.role === "user" ? "message-user" : "message-system";
+  let jobId: string;
+  try {
+    const contentJson = JSON.parse(message.content);
+    jobId = contentJson.jobId;
+  } catch (error) {
+    console.error("Failed to parse jobId from message content:", error);
+    jobId = "";
+  }
 
-  const messageTextStyle = `message-text ${message.role}`;
-
-  // Format message content to handle quotes and asterisks
-  const formatMessageContent = (content: string) => {
-    // First, escape any HTML to prevent XSS
-    const escaped = content
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    // Replace text in quotes with styled spans
-    let formatted = escaped.replace(
-      /"([^"]+)"/g,
-      '<span class="quoted-text">"$1"</span>'
-    );
-
-    // Replace text in asterisks with styled spans
-    formatted = formatted.replace(
-      /\*([^*]+)\*/g,
-      '<span class="emphasized-text">*$1*</span>'
-    );
-
-    return formatted;
-  };
+  const { data: photoBase64, isLoading } = useCivitJob(chatId, jobId);
 
   const handleDeleteClick = (type: "single" | "fromHere") => {
     setDeleteType(type);
@@ -94,17 +64,14 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
   const hasDeleteFunctions = onDeleteMessage || onDeleteFromHere;
 
   return (
-    <div className={`message-item ${messageClass}`}>
-      <div className="message-content">
-        <span
-          className={`${messageTextStyle} ${
-            hasDeleteFunctions ? "clickable" : ""
-          }`}
-          dangerouslySetInnerHTML={{
-            __html: formatMessageContent(message.content),
-          }}
-          onClick={handleMessageClick}
-        />
+    <div className="message-item message-system">
+      <div className="message-content" onClick={handleMessageClick}>
+        {(isLoading || !photoBase64) && (
+          <div className="loading-bubble">Loading photo...</div>
+        )}
+        {photoBase64 && (
+          <img src={photoBase64} alt="Story Photo" className="story-photo" />
+        )}
       </div>
       {showDeleteButtons && hasDeleteFunctions && (
         <div className="message-delete-buttons">
@@ -128,7 +95,6 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
           )}
         </div>
       )}
-
       {showDeleteConfirm && (
         <div className="delete-confirmation-overlay">
           <div className="delete-confirmation-dialog">
