@@ -20,7 +20,7 @@ async function fetchPhotoOrProcessJob(
   try {
     return await getStoredPhoto(chatId, jobId);
   } catch {
-    return await processJobStatus(chatId, jobId, queryClient);
+    return await pollJobStatus(chatId, jobId, queryClient);
   }
 }
 
@@ -29,7 +29,7 @@ async function getStoredPhoto(chatId: string, jobId: string): Promise<string> {
   return (photoData as { base64: string }).base64;
 }
 
-async function processJobStatus(
+async function pollJobStatus(
   chatId: string,
   jobId: string,
   queryClient: ReturnType<typeof useQueryClient>
@@ -74,5 +74,6 @@ export const useCivitJob = (chatId: string, jobId: string) => {
     queryFn: async () =>
       await fetchPhotoOrProcessJob(chatId, jobId, queryClient),
     enabled: !!chatId && !!jobId,
+    refetchInterval: (query) => (query.state.data ? 0 : 8000),
   });
 };
