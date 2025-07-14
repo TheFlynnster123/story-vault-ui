@@ -1,6 +1,6 @@
 export interface Message {
   id: string;
-  role: "user" | "system" | "assistant" | "story-feature";
+  role: "user" | "system" | "assistant" | "story-photo";
   content: string;
 }
 

@@ -21,6 +21,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     submitMessage,
     isLoadingHistory,
     status,
+    addMessage,
   } = useChat({
     chatId,
   });
