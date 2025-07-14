@@ -1,8 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CivitJobAPI } from "../clients/CivitJobAPI";
 
-const civitJobAPI = new CivitJobAPI();
-
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -25,7 +23,7 @@ async function fetchPhotoOrProcessJob(
 }
 
 async function getStoredPhoto(chatId: string, jobId: string): Promise<string> {
-  const photoData = await civitJobAPI.getPhoto(chatId, jobId);
+  const photoData = await new CivitJobAPI().getPhoto(chatId, jobId);
   return (photoData as { base64: string }).base64;
 }
 
@@ -34,7 +32,7 @@ async function pollJobStatus(
   jobId: string,
   queryClient: ReturnType<typeof useQueryClient>
 ): Promise<string | null> {
-  const status = await civitJobAPI.getJobStatus(jobId);
+  const status = await new CivitJobAPI().getJobStatus(jobId);
   if (status.result?.length > 0 && status.result[0].available) {
     return await downloadAndSavePhoto(
       chatId,
@@ -57,7 +55,7 @@ async function downloadAndSavePhoto(
   const base64 = await blobToBase64(blob);
 
   const photoDataToSave = { base64 };
-  await civitJobAPI.savePhoto(chatId, jobId, photoDataToSave);
+  await new CivitJobAPI().savePhoto(chatId, jobId, photoDataToSave);
 
   queryClient.invalidateQueries({
     queryKey: ["civit-photo", chatId, jobId],

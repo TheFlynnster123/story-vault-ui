@@ -1,6 +1,7 @@
 import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
 import { AuthAPI } from "./AuthAPI";
+import type { ImageGenerationSettings } from "../models/SystemSettings";
 
 export class CivitJobAPI {
   public URL: string;
@@ -84,6 +85,27 @@ export class CivitJobAPI {
       throw new Error(`Error fetching job status: ${response.statusText}`);
     }
   }
+
+  public async generateImage(settings: ImageGenerationSettings): Promise<any> {
+    const accessToken = await this.authAPI.getAccessToken();
+    await this.encryptionManager.ensureKeysInitialized();
+
+    const encryptionKey = this.encryptionManager.civitaiEncryptionKey!;
+
+    const requestInit = buildGenerateImageRequest(
+      settings,
+      accessToken,
+      encryptionKey
+    );
+    const response = await fetch(`${this.URL}/api/GenerateImage`, requestInit);
+
+    if (response.ok) {
+      return response.json();
+    } else {
+      console.error("Failed to generate image:", response.statusText);
+      throw new Error(`Error generating image: ${response.statusText}`);
+    }
+  }
 }
 
 function buildSavePhotoRequest(
@@ -116,6 +138,22 @@ function buildGetPhotoRequest(
 
 function buildGetJobStatusRequest(
   body: { jobId: string },
+  accessToken: string,
+  encryptionKey: string
+): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      EncryptionKey: encryptionKey,
+    },
+    body: JSON.stringify(body),
+  };
+}
+
+function buildGenerateImageRequest(
+  body: ImageGenerationSettings,
   accessToken: string,
   encryptionKey: string
 ): RequestInit {

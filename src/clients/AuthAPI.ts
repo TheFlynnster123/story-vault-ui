@@ -51,10 +51,7 @@ export class AuthAPI {
   }
 
   async getEncryptionGuid(): Promise<string | undefined> {
-    console.log("Getting encryption guid!");
     const claims = await this.auth0.getIdTokenClaims();
-    console.log(`Claims : `);
-    console.log(claims);
     return claims?.["https://story-vault-api.com/encryption_guid"];
   }
 

@@ -4,12 +4,13 @@ import "./ChatInput.css";
 
 export interface ChatInputProps {
   onSubmit: (inputValue: string) => void;
+  onGenerateImage: () => void;
   isSending: boolean;
   placeholder: string;
 }
 
 export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
-  ({ onSubmit, isSending, placeholder }, ref) => {
+  ({ onSubmit, onGenerateImage, isSending, placeholder }, ref) => {
     const [internalInputValue, setInternalInputValue] = useState<string>("");
 
     const handleFormSubmit = (event: FormEvent) => {
@@ -19,6 +20,10 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       onSubmit(internalInputValue);
 
       setInternalInputValue("");
+    };
+
+    const handleGenerateImage = () => {
+      onGenerateImage();
     };
 
     return (
@@ -32,6 +37,15 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
           className="chat-input-field"
           rows={3}
         />
+        <button
+          type="button"
+          disabled={isSending}
+          onClick={handleGenerateImage}
+          className="chat-input-button photo-button"
+          aria-label="Generate Image"
+        >
+          📷
+        </button>
         <button
           type="submit"
           disabled={isSending}

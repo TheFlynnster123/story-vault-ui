@@ -6,6 +6,9 @@ import { ChatControls } from "./ChatControls/ChatControls";
 import { ChatFlowDialog } from "./ChatFlowDialog";
 import { useChatSettings } from "../hooks/queries/useChatSettings";
 import { useChat } from "../hooks/useChatPages";
+import { CivitJobAPI } from "../clients/CivitJobAPI";
+import { useSystemSettings } from "../hooks/queries/useSystemSettings";
+import type { ImageGenerationSettings } from "../models/SystemSettings";
 
 interface ChatProps {
   chatId: string;
@@ -22,6 +25,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     isLoadingHistory,
     status,
     addMessage,
+    generateImage,
   } = useChat({
     chatId,
   });
@@ -62,6 +66,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       />
 
       <ChatMessageList
+        chatId={chatId}
         pages={pages}
         onDeleteMessage={deleteMessage}
         onDeleteFromHere={deleteMessagesFromIndex}
@@ -78,6 +83,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
+        onGenerateImage={generateImage}
         isSending={isLoadingHistory}
         placeholder={"Type your message here..."}
       />
