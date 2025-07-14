@@ -1,19 +1,26 @@
 import type { Message } from "../Chat/ChatMessage";
 import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
+import type { SystemSettings } from "../models";
 import { AuthAPI } from "./AuthAPI";
 
 interface PostChatRequest {
   messages: Message[];
+  reasoningEffort?: "high" | "low";
+  model?: string;
+  temperature?: number;
 }
 
 export class GrokChatAPI {
   authAPI: AuthAPI;
   encryptionManager: EncryptionManager;
+  systemSettings?: SystemSettings;
+
   API_URL: string;
 
-  constructor() {
+  constructor(systemSettings?: SystemSettings) {
     this.API_URL = config.storyVaultAPIURL;
+    this.systemSettings = systemSettings;
 
     this.authAPI = new AuthAPI();
     this.encryptionManager = new EncryptionManager();
@@ -35,6 +42,7 @@ export class GrokChatAPI {
 
     const requestBody: PostChatRequest = {
       messages: messages,
+      ...this.systemSettings?.chatGenerationSettings,
     };
 
     const response = await this.makeRequest<{ reply: string }>(

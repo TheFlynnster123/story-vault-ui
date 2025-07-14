@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
+import { CivitJobMessage } from "./CivitJobMessage";
 import type { ChatPage } from "../models/ChatPage";
 
 interface ChatMessageListProps {
@@ -25,15 +26,25 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
 
   return (
     <div className="message-list" ref={messageListRef}>
-      {messages.map((msg) => (
-        <ChatMessage
-          key={msg.id}
-          message={msg}
-          onDeleteMessage={onDeleteMessage}
-          onDeleteFromHere={onDeleteFromHere}
-          getDeletePreview={getDeletePreview}
-        />
-      ))}
+      {messages.map((msg) =>
+        msg.role === "story-photo" ? (
+          <CivitJobMessage
+            key={msg.id}
+            message={msg}
+            onDeleteMessage={onDeleteMessage}
+            onDeleteFromHere={onDeleteFromHere}
+            getDeletePreview={getDeletePreview}
+          />
+        ) : (
+          <ChatMessage
+            key={msg.id}
+            message={msg}
+            onDeleteMessage={onDeleteMessage}
+            onDeleteFromHere={onDeleteFromHere}
+            getDeletePreview={getDeletePreview}
+          />
+        )
+      )}
     </div>
   );
 };
