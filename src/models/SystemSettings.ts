@@ -2,6 +2,7 @@ import type { ChatGenerationSettings } from "./ChatGenerationSettings";
 
 export interface ImageGenerationParams {
   prompt: string;
+  prompt: string;
   negativePrompt: string;
   scheduler: string;
   steps: number;

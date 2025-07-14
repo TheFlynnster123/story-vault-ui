@@ -1,0 +1,57 @@
+import { GrokChatAPI } from "../clients/GrokChatAPI";
+import { CivitJobAPI } from "../clients/CivitJobAPI";
+import type { ImageGenerationSettings } from "../models/SystemSettings";
+import type { SystemSettings } from "../models/SystemSettings";
+import { toSystemMessage } from "../utils/messageUtils";
+import type { Message } from "../Chat/ChatMessage";
+
+export class ImageGenerator {
+  public static DEFAULT_SETTINGS: ImageGenerationSettings = {
+    model: "urn:air:sdxl:checkpoint:civitai:257749@290640",
+    params: {
+      prompt:
+        "score_9, score_8_up, score_7_up, score_6_up, source_anime, <lora:tendertroupe_v0.1-pony:1.0>",
+      prompt: "",
+      negativePrompt:
+        "text, text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad anatomy, bad hands, jpeg artifacts",
+      scheduler: "DPM2Karras",
+      steps: 20,
+      cfgScale: 7,
+      width: 1024,
+      height: 1024,
+      clipSkip: 2,
+    },
+    additionalNetworks: {
+      "urn:air:sdxl:lora:civitai:479176@532904": {
+        strength: 1,
+      },
+    },
+  };
+
+  private systemSettings: SystemSettings;
+
+  constructor(systemSettings: SystemSettings) {
+    this.systemSettings = systemSettings;
+  }
+
+  public async generatePrompt(messages: Message[]): Promise<string> {
+    const hardcodedPrompt =
+      "Respond with ONLY a comma separated list depicting the current characters for image generation purposes. Example: 'woman sitting, touching face, chair, table, at chair, black dress, evening, classy, restaurant, italian'";
+
+    const promptMessages = [...messages, toSystemMessage(hardcodedPrompt)];
+
+    return await new GrokChatAPI(this.systemSettings).postChat(promptMessages);
+  }
+
+  public async triggerJob(prompt: string): Promise<string> {
+    const settings =
+      this.systemSettings.imageGenerationSettings ||
+      ImageGenerator.DEFAULT_SETTINGS;
+
+    settings.params.prompt =
+      (settings.params.prompt ? `, ${settings.params.prompt}` : "") + prompt;
+
+    const response = await new CivitJobAPI().generateImage(settings);
+    return response.jobs[0].jobId;
+  }
+}

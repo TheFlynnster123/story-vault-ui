@@ -6,9 +6,7 @@ import { ChatManager } from "../Managers/ChatManager";
 import { toSystemMessage, toUserMessage } from "../utils/messageUtils";
 import { useChatFlow } from "./useChatFlow";
 import { useSystemSettings } from "./queries/useSystemSettings";
-import { GrokChatAPI } from "../clients/GrokChatAPI";
-import { CivitJobAPI } from "../clients/CivitJobAPI";
-import type { ImageGenerationSettings } from "../models/SystemSettings";
+import { ImageGenerator } from "../Managers/ImageGenerator";
 
 export const useChat = ({ chatId }: UseChatProps) => {
   const { chatPageManager, pages, setPages, isLoadingHistory } = useChatManager(
@@ -121,43 +119,15 @@ export const useChat = ({ chatId }: UseChatProps) => {
   );
 
   const generateImage = async () => {
+    if (!systemSettings) return;
+
+    const imageGenerator = new ImageGenerator(systemSettings);
     const messages = getMessageList();
 
-    const hardcodedPrompt =
-      "Respond with ONLY a comma separated list depicting the current characters for image generation purposes.If the story has been NSFW, include NSFW tags/prompt features. Example: 'woman sitting, touching face, chair, table, at chair, black dress, evening, classy, restaurant, italian'";
-
-    const promptMessages = [...messages, toSystemMessage(hardcodedPrompt)];
-
-    const generatedPrompt = await new GrokChatAPI(systemSettings).postChat(
-      promptMessages
-    );
-
-    const defaultSettings: ImageGenerationSettings = {
-      model: "urn:air:sdxl:checkpoint:civitai:288584@324524",
-      params: {
-        prompt: generatedPrompt,
-        negativePrompt:
-          "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad anatomy, bad hands, jpeg artifacts",
-        scheduler: "DPM2Karras",
-        steps: 16,
-        cfgScale: 7,
-        width: 1024,
-        height: 1024,
-        clipSkip: 2,
-      },
-      additionalNetworks: {
-        "urn:air:sdxl:lora:civitai:45521@558984": {
-          strength: 0.8,
-        },
-      },
-    };
-
-    const settings = systemSettings?.imageGenerationSettings || defaultSettings;
-    settings.params.prompt = generatedPrompt;
-
     try {
-      const response = await new CivitJobAPI().generateImage(settings);
-      const jobId = response.jobs[0].jobId;
+      const generatedPrompt = await imageGenerator.generatePrompt(messages);
+      const jobId = await imageGenerator.triggerJob(generatedPrompt);
+
       addMessage({
         id: `civit-job-${Date.now()}`,
         role: "civit-job",
