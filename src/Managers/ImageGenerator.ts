@@ -11,7 +11,6 @@ export class ImageGenerator {
     params: {
       prompt:
         "score_9, score_8_up, score_7_up, score_6_up, source_anime, <lora:tendertroupe_v0.1-pony:1.0>",
-      prompt: "",
       negativePrompt:
         "text, text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad anatomy, bad hands, jpeg artifacts",
       scheduler: "DPM2Karras",
@@ -44,9 +43,10 @@ export class ImageGenerator {
   }
 
   public async triggerJob(prompt: string): Promise<string> {
-    const settings =
+    const originalSettings =
       this.systemSettings.imageGenerationSettings ||
       ImageGenerator.DEFAULT_SETTINGS;
+    const settings = JSON.parse(JSON.stringify(originalSettings));
 
     settings.params.prompt =
       (settings.params.prompt ? `, ${settings.params.prompt}` : "") + prompt;

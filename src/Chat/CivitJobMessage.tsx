@@ -1,5 +1,6 @@
 import type { Message, MessageItemProps } from "./ChatMessage";
 import "./ChatMessage.css";
+import "./CivitJobMessage.css";
 import { useState } from "react";
 import { useCivitJob } from "../hooks/useCivitJob";
 
@@ -65,11 +66,11 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
   return (
     <div className="message-item message-system">
       <div className="message-content" onClick={handleMessageClick}>
-        {isLoading && <div>Loading photo...</div>}
-        {photoBase64 ? (
+        {(isLoading || !photoBase64) && (
+          <div className="loading-bubble">Loading photo...</div>
+        )}
+        {photoBase64 && (
           <img src={photoBase64} alt="Story Photo" className="story-photo" />
-        ) : (
-          <div>Photo not available</div>
         )}
       </div>
       {showDeleteButtons && hasDeleteFunctions && (

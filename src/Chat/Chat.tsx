@@ -6,9 +6,6 @@ import { ChatControls } from "./ChatControls/ChatControls";
 import { ChatFlowDialog } from "./ChatFlowDialog";
 import { useChatSettings } from "../hooks/queries/useChatSettings";
 import { useChat } from "../hooks/useChatPages";
-import { CivitJobAPI } from "../clients/CivitJobAPI";
-import { useSystemSettings } from "../hooks/queries/useSystemSettings";
-import type { ImageGenerationSettings } from "../models/SystemSettings";
 
 interface ChatProps {
   chatId: string;
@@ -24,7 +21,6 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     submitMessage,
     isLoadingHistory,
     status,
-    addMessage,
     generateImage,
   } = useChat({
     chatId,

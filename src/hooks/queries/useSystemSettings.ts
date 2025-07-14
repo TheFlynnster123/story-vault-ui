@@ -64,7 +64,8 @@ export const useSaveSystemSettingsMutation = () => {
       const content = JSON.stringify(settings);
       await new BlobAPI().saveBlob(GLOBAL_CHAT_ID, "system-settings", content);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      queryClient.setQueryData(getQueryKey(), variables.systemSettings);
       queryClient.invalidateQueries({
         queryKey: getQueryKey(),
       });

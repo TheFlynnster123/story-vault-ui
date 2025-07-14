@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { useSystemSettings } from "../hooks/queries/useSystemSettings";
-import type {
-  ImageGenerationSettings,
-  AdditionalNetwork,
-} from "../models/SystemSettings";
+import type { ImageGenerationSettings } from "../models/SystemSettings";
 import { ImageGenerator } from "../Managers/ImageGenerator";
 import "./ImageGenerationSettingsManager.css";
 
