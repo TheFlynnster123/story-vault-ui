@@ -1,16 +1,16 @@
 import { useState, type FormEvent, forwardRef } from "react";
-import { IoSend, IoSync } from "react-icons/io5";
+import { IoCamera, IoSend, IoSync } from "react-icons/io5";
 import "./ChatInput.css";
 
 export interface ChatInputProps {
   onSubmit: (inputValue: string) => void;
   onGenerateImage: () => void;
-  isSending: boolean;
+  isLoading: boolean;
   placeholder: string;
 }
 
 export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
-  ({ onSubmit, onGenerateImage, isSending, placeholder }, ref) => {
+  ({ onSubmit, onGenerateImage, isLoading, placeholder }, ref) => {
     const [internalInputValue, setInternalInputValue] = useState<string>("");
 
     const handleFormSubmit = (event: FormEvent) => {
@@ -33,26 +33,30 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
           value={internalInputValue}
           onChange={(e) => setInternalInputValue(e.target.value)}
           placeholder={placeholder}
-          disabled={isSending}
+          disabled={isLoading}
           className="chat-input-field"
           rows={3}
         />
         <button
           type="button"
-          disabled={isSending}
+          disabled={isLoading}
           onClick={handleGenerateImage}
           className="chat-input-button photo-button"
           aria-label="Generate Image"
         >
-          📷
+          {isLoading ? (
+            <IoSync size={20} className="spinning" />
+          ) : (
+            <IoCamera size={20} />
+          )}
         </button>
         <button
           type="submit"
-          disabled={isSending}
+          disabled={isLoading}
           className="chat-input-button"
-          aria-label={isSending ? "Sending..." : "Send"}
+          aria-label={isLoading ? "Sending..." : "Send"}
         >
-          {isSending ? (
+          {isLoading ? (
             <IoSync size={20} className="spinning" />
           ) : (
             <IoSend size={20} />

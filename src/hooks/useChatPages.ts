@@ -9,6 +9,7 @@ import { useSystemSettings } from "./queries/useSystemSettings";
 import { ImageGenerator } from "../Managers/ImageGenerator";
 
 export const useChat = ({ chatId }: UseChatProps) => {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const { chatPageManager, pages, setPages, isLoadingHistory } = useChatManager(
     { chatId }
   );
@@ -21,11 +22,17 @@ export const useChat = ({ chatId }: UseChatProps) => {
   const { systemSettings } = useSystemSettings();
 
   const submitMessage = async (userMessage: string) => {
-    await addMessage(toUserMessage(userMessage));
+    setIsLoading(true);
 
-    const responseMessage = await generateResponse();
+    try {
+      await addMessage(toUserMessage(userMessage));
 
-    await addMessage(toSystemMessage(responseMessage));
+      const responseMessage = await generateResponse();
+
+      await addMessage(toSystemMessage(responseMessage));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const savePageToApi = useCallback(async (pageToSave: ChatPage) => {
@@ -119,12 +126,13 @@ export const useChat = ({ chatId }: UseChatProps) => {
   );
 
   const generateImage = async () => {
+    setIsLoading(true);
     if (!systemSettings) return;
 
-    const imageGenerator = new ImageGenerator(systemSettings);
-    const messages = getMessageList();
-
     try {
+      const imageGenerator = new ImageGenerator(systemSettings);
+      const messages = getMessageList();
+
       const generatedPrompt = await imageGenerator.generatePrompt(messages);
       const jobId = await imageGenerator.triggerJob(generatedPrompt);
 
@@ -135,6 +143,8 @@ export const useChat = ({ chatId }: UseChatProps) => {
       });
     } catch (error) {
       console.error("Failed to generate image:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -146,7 +156,7 @@ export const useChat = ({ chatId }: UseChatProps) => {
     deleteMessage,
     deleteMessagesFromIndex,
     getDeletePreview,
-    isLoadingHistory,
+    isLoading: isLoading || isLoadingHistory,
     getMessageList,
     generateImage,
   };
