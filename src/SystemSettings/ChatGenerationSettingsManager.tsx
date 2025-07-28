@@ -8,7 +8,9 @@ interface ChatGenerationSettingsManagerProps {
   onSave?: () => void;
 }
 
-export const ChatGenerationSettingsManager: React.FC<ChatGenerationSettingsManagerProps> = ({ onSave }) => {
+export const ChatGenerationSettingsManager: React.FC<
+  ChatGenerationSettingsManagerProps
+> = ({ onSave }) => {
   const { systemSettings, saveSystemSettings, isLoading } = useSystemSettings();
   const [localSettings, setLocalSettings] = useState<ChatGenerationSettings>({
     temperature: DEFAULT_TEMPERATURE,
@@ -101,7 +103,7 @@ export const ChatGenerationSettingsManager: React.FC<ChatGenerationSettingsManag
             id="temperature"
             type="range"
             min="0"
-            max="2"
+            max="1.2"
             step="0.1"
             value={localSettings.temperature ?? DEFAULT_TEMPERATURE}
             onChange={(e) =>
