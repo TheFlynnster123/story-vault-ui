@@ -53,6 +53,7 @@ const PageContainer = styled.div`
   background-color: #0f0f0f;
   color: white;
   padding: 20px;
+  overflow-y: auto;
   
   @media (max-width: 768px) {
     padding: 16px;
@@ -120,16 +121,23 @@ const ContentGrid = styled.div`
   gap: 32px;
   max-width: 1200px;
   margin: 0 auto;
+  padding-bottom: 40px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 24px;
     min-width: 0;
+    padding-bottom: 32px;
+    max-height: calc(100vh - 100px);
   }
   
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
     gap: 20px;
+    padding-bottom: 24px;
+    max-height: calc(100vh - 80px);
   }
 `;
 
