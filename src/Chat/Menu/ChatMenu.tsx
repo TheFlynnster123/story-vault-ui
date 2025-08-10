@@ -1,7 +1,7 @@
 import { useState } from "react";
+import styled from "styled-components";
 import { Chat } from "../Chat";
 import { CreateChatButton } from "./CreateChatButton";
-import "./ChatMenu.css";
 import { ChatList } from "./ChatList";
 import { SystemSettingsButton } from "./SystemSettingsButton";
 import { useChats } from "./useChats";
@@ -32,18 +32,54 @@ function ChatMenu() {
 
   return (
     <>
-      <div className="chat-menu-container">
-        <div className="chat-menu-header">
-          <h2>Chats</h2>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <ChatMenuContainer>
+        <ChatMenuHeader>
+          <ChatMenuTitle>Chats</ChatMenuTitle>
+          <SystemSettingsContainer>
             <SystemSettingsButton />
-          </div>
-        </div>
+          </SystemSettingsContainer>
+        </ChatMenuHeader>
         <CreateChatButton onChatCreated={handleChatCreated} />
         <ChatList chatIds={chatIds} handleSelectChat={handleSelectChat} />
-      </div>
+      </ChatMenuContainer>
     </>
   );
 }
+
+const ChatMenuContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  height: 100vh;
+  overflow-y: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+`;
+
+const ChatMenuHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 15px;
+`;
+
+const ChatMenuTitle = styled.h2`
+  margin: 0;
+  font-size: 1.4em;
+  color: white;
+  text-align: center;
+  flex: 1;
+`;
+
+const SystemSettingsContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
 
 export default ChatMenu;

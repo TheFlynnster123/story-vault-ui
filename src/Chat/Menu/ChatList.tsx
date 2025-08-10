@@ -1,3 +1,4 @@
+import styled from "styled-components";
 import { ChatListItem } from "./ChatListItem";
 
 interface IChatListProps {
@@ -7,7 +8,7 @@ interface IChatListProps {
 
 export const ChatList = ({ chatIds, handleSelectChat }: IChatListProps) => {
   return (
-    <div className="chat-menu-list">
+    <StyledChatList>
       {chatIds.map((chatId) => {
         return (
           <ChatListItem
@@ -17,6 +18,14 @@ export const ChatList = ({ chatIds, handleSelectChat }: IChatListProps) => {
           />
         );
       })}
-    </div>
+    </StyledChatList>
   );
 };
+
+const StyledChatList = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 20px;
+`;
