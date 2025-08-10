@@ -1,35 +1,22 @@
-import { useState } from "react";
 import styled from "styled-components";
-import { Chat } from "../Chat";
+import { useNavigate } from "react-router-dom";
 import { CreateChatButton } from "./CreateChatButton";
 import { ChatList } from "./ChatList";
 import { SystemSettingsButton } from "./SystemSettingsButton";
 import { useChats } from "./useChats";
 
 function ChatMenu() {
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [showMenu, setShowMenu] = useState<boolean>(true);
+  const navigate = useNavigate();
   const { chatIds, refreshChats } = useChats();
 
   const handleSelectChat = (id: string) => {
-    setSelectedChatId(id);
-    setShowMenu(false);
+    navigate(`/chat/${id}`);
   };
 
   const handleChatCreated = (newChatId: string) => {
     refreshChats();
-    setSelectedChatId(newChatId);
-    setShowMenu(false);
+    navigate(`/chat/${newChatId}`);
   };
-
-  const toggleMenu = () => {
-    setShowMenu((prevShowMenu) => !prevShowMenu);
-  };
-
-  if (selectedChatId && !showMenu) {
-    return <Chat chatId={selectedChatId} toggleMenu={toggleMenu} />;
-  }
-
   return (
     <>
       <ChatMenuContainer>

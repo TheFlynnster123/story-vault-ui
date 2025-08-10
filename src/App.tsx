@@ -1,51 +1,15 @@
 import "./App.css";
-import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
+import { Auth0Provider } from "@auth0/auth0-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import config from "./Config";
-import { useGrokKey } from "./hooks/useGrokKey";
-import { GrokKeyInput } from "./GrokKeyInput";
 import React from "react";
-import ChatMenu from "./Chat/Menu/ChatMenu";
-import { useAuth0Setup } from "./hooks/useAuth0Setup";
+import LandingPage from "./pages/LandingPage";
+import ChatMenuPage from "./pages/ChatMenuPage";
+import SystemSettingsPage from "./pages/SystemSettingsPage";
+import ChatPage from "./pages/ChatPage";
 
 const queryClient = new QueryClient();
-
-const AuthenticatedContent: React.FC = ({}) => {
-  const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
-
-  if (hasValidGrokKey === undefined) {
-    return (
-      <div className="app-loading-container">Loading Grok Key status...</div>
-    );
-  }
-
-  if (hasValidGrokKey) {
-    return (
-      <>
-        <ChatMenu />
-      </>
-    );
-  }
-
-  return <GrokKeyInput onGrokKeyUpdated={refreshGrokKeyStatus} />;
-};
-
-function LoginBarrier() {
-  const { isAuthenticated, loginWithRedirect } = useAuth0();
-  useAuth0Setup(); // Set up global Auth0 context
-
-  return (
-    <div>
-      {isAuthenticated ? (
-        <AuthenticatedContent />
-      ) : (
-        <div className="app-login-container">
-          <button onClick={() => loginWithRedirect()}>Log in</button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface AppProps {}
 
@@ -60,7 +24,14 @@ const App: React.FC<AppProps> = () => {
           audience: config.audience,
         }}
       >
-        <LoginBarrier />
+        <Router>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/chat" element={<ChatMenuPage />} />
+            <Route path="/chat/:chatId" element={<ChatPage />} />
+            <Route path="/settings" element={<SystemSettingsPage />} />
+          </Routes>
+        </Router>
       </Auth0Provider>
     </QueryClientProvider>
   );
