@@ -8,6 +8,7 @@ import LandingPage from "./pages/LandingPage";
 import ChatMenuPage from "./pages/ChatMenuPage";
 import SystemSettingsPage from "./pages/SystemSettingsPage";
 import ChatPage from "./pages/ChatPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -27,9 +28,30 @@ const App: React.FC<AppProps> = () => {
         <Router>
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/chat" element={<ChatMenuPage />} />
-            <Route path="/chat/:chatId" element={<ChatPage />} />
-            <Route path="/settings" element={<SystemSettingsPage />} />
+            <Route 
+              path="/chat" 
+              element={
+                <ProtectedRoute>
+                  <ChatMenuPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/chat/:chatId" 
+              element={
+                <ProtectedRoute>
+                  <ChatPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute requireGrokKey={false}>
+                  <SystemSettingsPage />
+                </ProtectedRoute>
+              } 
+            />
           </Routes>
         </Router>
       </Auth0Provider>
