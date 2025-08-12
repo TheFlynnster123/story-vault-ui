@@ -14,6 +14,7 @@ import {
   FileButton,
   Text,
   Stack,
+  Select,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { ChatSettings } from "../models/ChatSettings";
@@ -31,6 +32,8 @@ export const ChatEditorPage: React.FC = () => {
     initialValues: {
       chatTitle: "",
       backgroundPhotoBase64: undefined as string | undefined,
+      promptType: "First Person Character",
+      customPrompt: "",
     },
     validate: {
       chatTitle: (value: string) =>
@@ -43,6 +46,8 @@ export const ChatEditorPage: React.FC = () => {
       form.setValues({
         chatTitle: chatSettings.chatTitle || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
+        promptType: chatSettings.promptType || "First Person Character",
+        customPrompt: chatSettings.customPrompt || "",
       });
     }
   }, [chatSettings]);
@@ -143,6 +148,20 @@ export const ChatEditorPage: React.FC = () => {
               </Group>
             )}
           </div>
+
+          <Select
+            label="Prompt"
+            data={["First Person Character", "Manual"]}
+            {...form.getInputProps("promptType")}
+          />
+
+          {form.values.promptType === "Manual" && (
+            <Textarea
+              label="Custom Prompt"
+              placeholder="Enter your custom prompt..."
+              {...form.getInputProps("customPrompt")}
+            />
+          )}
         </Stack>
 
         <Group justify="space-between" mt="xl">

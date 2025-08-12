@@ -5,7 +5,6 @@ import {
   RiFileList2Line,
 } from "react-icons/ri";
 import "./ChatControls.css";
-import { StoryNotesDialog } from "./StoryNotesDialog/StoryNotesDialog";
 import { useNavigate } from "react-router-dom";
 
 interface ChatControlsProps {
@@ -41,17 +40,11 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
 
       <button
         className="chat-controls-button story-notes-button"
-        onClick={() => setIsStoryNotesDialogOpen(true)}
+        onClick={() => navigate(`/chat/${chatId}/notes`)}
         title="Story Notes"
       >
         <RiFileList2Line />
       </button>
-
-      <StoryNotesDialog
-        chatId={chatId}
-        isOpen={isStoryNotesDialogOpen}
-        onCancel={() => setIsStoryNotesDialogOpen(false)}
-      />
     </div>
   );
 };
