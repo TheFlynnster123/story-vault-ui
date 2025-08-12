@@ -6,6 +6,7 @@ export interface Message {
 
 import "./ChatMessage.css";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 export interface MessageItemProps {
   chatId: string;
@@ -32,29 +33,6 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
     message.role === "user" ? "message-user" : "message-system";
 
   const messageTextStyle = `message-text ${message.role}`;
-
-  // Format message content to handle quotes and asterisks
-  const formatMessageContent = (content: string) => {
-    // First, escape any HTML to prevent XSS
-    const escaped = content
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    // Replace text in quotes with styled spans
-    let formatted = escaped.replace(
-      /"([^"]+)"/g,
-      '<span class="quoted-text">"$1"</span>'
-    );
-
-    // Replace text in asterisks with styled spans
-    formatted = formatted.replace(
-      /\*([^*]+)\*/g,
-      '<span class="emphasized-text">*$1*</span>'
-    );
-
-    return formatted;
-  };
 
   const handleDeleteClick = (type: "single" | "fromHere") => {
     setDeleteType(type);
@@ -96,15 +74,14 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
   return (
     <div className={`message-item ${messageClass}`}>
       <div className="message-content">
-        <span
+        <div
           className={`${messageTextStyle} ${
             hasDeleteFunctions ? "clickable" : ""
           }`}
-          dangerouslySetInnerHTML={{
-            __html: formatMessageContent(message.content),
-          }}
           onClick={handleMessageClick}
-        />
+        >
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+        </div>
       </div>
       {showDeleteButtons && hasDeleteFunctions && (
         <div className="message-delete-buttons">

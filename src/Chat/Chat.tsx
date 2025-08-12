@@ -6,6 +6,8 @@ import { ChatControls } from "./ChatControls/ChatControls";
 import { ChatFlowDialog } from "./ChatFlowDialog";
 import { useChatSettings } from "../hooks/queries/useChatSettings";
 import { useChat } from "../hooks/useChatPages";
+import { toSystemMessage } from "../utils/messageUtils";
+import { FirstPersonCharacterPrompt } from "../templates/FirstPersonCharacterTemplate";
 
 interface ChatProps {
   chatId: string;
@@ -22,6 +24,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     isLoading,
     status,
     generateImage,
+    addMessage,
   } = useChat({
     chatId,
   });
@@ -29,6 +32,20 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
   const { chatSettings } = useChatSettings(chatId);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [isChatFlowDialogOpen, setIsChatFlowDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && pages.length === 0 && chatSettings) {
+      let prompt = "";
+      if (chatSettings.promptType === "First Person Character") {
+        prompt = FirstPersonCharacterPrompt;
+      } else if (chatSettings.promptType === "Manual") {
+        prompt = chatSettings.customPrompt || "";
+      }
+      if (prompt) {
+        addMessage(toSystemMessage(prompt));
+      }
+    }
+  }, [isLoading, pages, chatSettings, addMessage]);
 
   useEffect(() => {
     if (!isLoading) inputRef.current?.focus();

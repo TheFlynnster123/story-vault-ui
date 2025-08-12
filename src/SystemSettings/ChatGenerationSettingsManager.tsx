@@ -85,9 +85,7 @@ export const ChatGenerationSettingsManager: React.FC<
           <option value="">Default</option>
           <option value="grok-4-0709">grok-4-0709</option>
           <option value="grok-3-mini">grok-3-mini (Recommended!)</option>
-          <option value="grok-3-mini-fast">grok-3-mini-fast</option>
           <option value="grok-3">grok-3</option>
-          <option value="grok-3-fast">grok-3-fast</option>
         </select>
       </div>
 

@@ -68,6 +68,27 @@ export const useSaveChatSettingsMutation = () => {
       queryClient.invalidateQueries({
         queryKey: ["chat-settings", chatId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["chats"],
+      });
+    },
+  });
+};
+
+export const useDeleteChatMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (chatId: string) => {
+      await new BlobAPI().deleteBlob(chatId, "chat-settings");
+    },
+    onSuccess: (_, chatId) => {
+      queryClient.invalidateQueries({
+        queryKey: ["chat-settings", chatId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["chats"],
+      });
     },
   });
 };

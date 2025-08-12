@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatManager } from "../Managers/ChatManager";
 import { toSystemMessage, toUserMessage } from "../utils/messageUtils";
 import { useChatFlow } from "./useChatFlow";
+import { useChatHistory } from "./queries/useChatHistory";
 import { useSystemSettings } from "./queries/useSystemSettings";
 import { ImageGenerator } from "../Managers/ImageGenerator";
 
@@ -167,35 +168,23 @@ interface UseChatManagerProps {
 }
 
 const useChatManager = ({ chatId }: UseChatManagerProps) => {
-  const [chatPageManager, setChatManager] = useState<ChatManager | null>(null);
   const [pages, setPages] = useState<ChatPage[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
+
+  const { data: fetchedPages, isLoading: isLoadingHistory } =
+    useChatHistory(chatId);
+
+  const chatPageManager = useMemo(() => {
+    if (!chatId) return null;
+    return new ChatManager(chatId, fetchedPages || []);
+  }, [chatId, fetchedPages]);
 
   useEffect(() => {
-    if (!chatId) {
-      setIsLoadingHistory(false);
+    if (chatPageManager) {
+      setPages(chatPageManager.getPages());
+    } else {
       setPages([]);
-      setChatManager(null);
-      return;
     }
-
-    const loadHistory = async () => {
-      setIsLoadingHistory(true);
-      let fetchedPages: ChatPage[] = [];
-      try {
-        fetchedPages = await new ChatHistoryAPI().getChatHistory(chatId);
-      } catch (error) {
-        console.error("Failed to load chat history:", error);
-      } finally {
-        const manager = new ChatManager(chatId, fetchedPages);
-        setChatManager(manager);
-        setPages(manager.getPages());
-        setIsLoadingHistory(false);
-      }
-    };
-
-    loadHistory();
-  }, [chatId]);
+  }, [chatPageManager]);
 
   return { chatPageManager, pages, setPages, isLoadingHistory };
 };
