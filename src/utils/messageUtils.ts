@@ -1,4 +1,4 @@
-import type { Message } from "../Chat/ChatMessage";
+import type { Message } from "../pages/Chat/ChatMessage";
 
 export function toUserMessage(userMessageText: string): Message {
   return {

@@ -34,7 +34,7 @@ export const ChatEditorPage: React.FC = () => {
   } = useChatEditor(chatIdFromParams);
 
   return (
-    <Container style={{ overflowY: "auto" }} size="md" my="xl">
+    <Container style={{ overflowY: "auto" }} size="lg" my="xl">
       <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} p={30}>
         <ChatEditorHeader
           isEditMode={isEditMode}
