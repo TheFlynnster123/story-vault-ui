@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Chat } from "../Chat/Chat";
+import { Chat } from "./Chat/Chat";
 
 const ChatPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();

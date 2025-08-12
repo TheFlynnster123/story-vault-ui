@@ -1,7 +1,7 @@
+import { useCivitJob } from "../../hooks/useCivitJob";
 import type { MessageItemProps } from "./ChatMessage";
 import "./ChatMessage.css";
 import { useState } from "react";
-import { useCivitJob } from "../hooks/useCivitJob";
 import styled from "styled-components";
 
 const MessageContent = styled.div`

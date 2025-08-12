@@ -1,7 +1,7 @@
 import React from "react";
 import { NoteItem } from "./ChatFlow/NoteItem";
 import "./ChatFlowDialog.css";
-import { useNotes } from "../hooks/useNotes";
+import { useNotes } from "../../hooks/useNotes";
 
 interface ChatFlowDialogProps {
   chatId: string;

@@ -1,6 +1,6 @@
 import styled, { css } from "styled-components";
-import { useChatSettings } from "../../hooks/queries/useChatSettings";
-import type { ChatSettings } from "../../models";
+import { useChatSettings } from "../../../hooks/queries/useChatSettings";
+import type { ChatSettings } from "../../../models";
 
 interface IChatListItemProps {
   chatId: string;

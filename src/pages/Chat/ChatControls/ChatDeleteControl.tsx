@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useDeleteChatMutation } from "../../hooks/queries/useChatSettings";
-import { ConfirmModal } from "../../components/ConfirmModal";
+import { useDeleteChatMutation } from "../../../hooks/queries/useChatSettings";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 
 interface ChatDeleteControlProps {
   chatId: string;
@@ -20,7 +20,6 @@ export const ChatDeleteControl: React.FC<ChatDeleteControlProps> = ({
       onDeleteSuccess();
     } catch (error) {
       console.error("Failed to delete chat:", error);
-      // You might want to show an error message to the user
     }
   };
 

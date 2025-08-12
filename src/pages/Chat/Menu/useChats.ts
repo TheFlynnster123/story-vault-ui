@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChatHistoryAPI } from "../../clients/ChatHistoryAPI";
+import { ChatHistoryAPI } from "../../../clients/ChatHistoryAPI";
 
 export const useChats = () => {
   const queryClient = useQueryClient();

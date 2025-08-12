@@ -4,10 +4,10 @@ import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
 import { ChatFlowDialog } from "./ChatFlowDialog";
-import { useChatSettings } from "../hooks/queries/useChatSettings";
-import { useChat } from "../hooks/useChatPages";
-import { toSystemMessage } from "../utils/messageUtils";
-import { FirstPersonCharacterPrompt } from "../templates/FirstPersonCharacterTemplate";
+import { useChat } from "../../hooks/useChatPages";
+import { useChatSettings } from "../../hooks/queries/useChatSettings";
+import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
+import { toSystemMessage } from "../../utils/messageUtils";
 
 interface ChatProps {
   chatId: string;
