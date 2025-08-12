@@ -1,8 +1,6 @@
 import "./App.css";
-import { Auth0Provider } from "@auth0/auth0-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import config from "./Config";
 import React from "react";
 import LandingPage from "./pages/LandingPage";
 import ChatMenuPage from "./pages/ChatMenuPage";
