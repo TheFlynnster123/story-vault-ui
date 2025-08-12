@@ -7,16 +7,12 @@ import { useChats } from "./useChats";
 
 function ChatMenu() {
   const navigate = useNavigate();
-  const { chatIds, refreshChats } = useChats();
+  const { chatIds } = useChats();
 
   const handleSelectChat = (id: string) => {
     navigate(`/chat/${id}`);
   };
 
-  const handleChatCreated = (newChatId: string) => {
-    refreshChats();
-    navigate(`/chat/${newChatId}`);
-  };
   return (
     <>
       <ChatMenuContainer>
