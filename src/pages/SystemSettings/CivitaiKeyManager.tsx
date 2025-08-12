@@ -1,8 +1,18 @@
 import React, { useState } from "react";
 import { useCivitaiKey } from "../../hooks/useCivitaiKey";
-import "./CivitaiKeyManager.css";
 import { EncryptionManager } from "../../Managers/EncryptionManager";
 import { CivitKeyAPI } from "../../clients/CivitKeyAPI";
+import {
+  PasswordInput,
+  Button,
+  Group,
+  Alert,
+  Loader,
+  Text,
+  Stack,
+} from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { RiCheckboxCircleLine, RiErrorWarningLine } from "react-icons/ri";
 
 export const CivitaiKeyManager: React.FC = () => {
   const { hasValidCivitaiKey, refreshCivitaiKeyStatus } = useCivitaiKey();
@@ -10,33 +20,28 @@ export const CivitaiKeyManager: React.FC = () => {
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [civitaiKey, setCivitaiKey] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   const handleUpdateKeyClick = () => {
     setShowKeyInput(true);
-    setUpdateMessage(null);
   };
 
   const handleCancelUpdate = () => {
     setShowKeyInput(false);
     setCivitaiKey("");
-    setUpdateMessage(null);
   };
 
   const handleSaveKey = async () => {
     if (!civitaiKey.trim()) {
-      setUpdateMessage({
-        type: "error",
-        text: "Please enter a valid Civitai key",
+      notifications.show({
+        title: "Validation Error",
+        message: "Please enter a valid Civitai key",
+        color: "red",
+        icon: <RiErrorWarningLine />,
       });
       return;
     }
 
     setIsUpdating(true);
-    setUpdateMessage(null);
 
     try {
       const encryptionManager = new EncryptionManager();
@@ -48,107 +53,96 @@ export const CivitaiKeyManager: React.FC = () => {
       );
 
       await new CivitKeyAPI().saveCivitaiKey(encryptedKey);
-
       await refreshCivitaiKeyStatus();
 
-      setUpdateMessage({
-        type: "success",
-        text: "Civitai key updated successfully!",
+      notifications.show({
+        title: "Success",
+        message: "Civitai key updated successfully!",
+        color: "green",
+        icon: <RiCheckboxCircleLine />,
       });
 
       setCivitaiKey("");
       setShowKeyInput(false);
     } catch (error) {
       console.error("Failed to save Civitai key:", error);
-      setUpdateMessage({
-        type: "error",
-        text: "Failed to save Civitai key. Please try again.",
+      notifications.show({
+        title: "Error",
+        message: "Failed to save Civitai key. Please try again.",
+        color: "red",
+        icon: <RiErrorWarningLine />,
       });
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const getStatusIcon = () => {
+  const renderStatus = () => {
     if (hasValidCivitaiKey === undefined) {
-      return <span className="civitai-status-loading">⟳</span>;
+      return (
+        <Group>
+          <Loader size="sm" />
+          <Text>Checking key status...</Text>
+        </Group>
+      );
     }
-    return hasValidCivitaiKey ? (
-      <span className="civitai-status-valid">✓</span>
-    ) : (
-      <span className="civitai-status-invalid">✗</span>
+    return (
+      <Alert
+        icon={
+          hasValidCivitaiKey ? <RiCheckboxCircleLine /> : <RiErrorWarningLine />
+        }
+        color={hasValidCivitaiKey ? "green" : "red"}
+        title={
+          hasValidCivitaiKey
+            ? "Valid Civitai key configured"
+            : "No valid Civitai key found"
+        }
+      >
+        {!showKeyInput && (
+          <Button
+            onClick={handleUpdateKeyClick}
+            size="xs"
+            variant="outline"
+            mt="sm"
+          >
+            {hasValidCivitaiKey ? "Update Key" : "Add Key"}
+          </Button>
+        )}
+      </Alert>
     );
   };
 
-  const getStatusText = () => {
-    if (hasValidCivitaiKey === undefined) {
-      return "Checking key status...";
-    }
-    return hasValidCivitaiKey
-      ? "Valid Civitai key configured"
-      : "No valid Civitai key found";
-  };
-
   return (
-    <div className="civitai-key-manager">
-      <div className="civitai-status-display">
-        <div className="civitai-status-info">
-          {getStatusIcon()}
-          <span className="civitai-status-text">{getStatusText()}</span>
-        </div>
-
-        {!showKeyInput && (
-          <button
-            className="civitai-update-button"
-            onClick={handleUpdateKeyClick}
-            disabled={hasValidCivitaiKey === undefined}
-          >
-            {hasValidCivitaiKey ? "Update Key" : "Add Key"}
-          </button>
-        )}
-      </div>
-
+    <Stack>
+      {renderStatus()}
       {showKeyInput && (
-        <div className="civitai-key-input-section">
-          <div className="civitai-input-group">
-            <label htmlFor="civitai-key-input" className="civitai-input-label">
-              Enter your Civitai API key:
-            </label>
-            <input
-              id="civitai-key-input"
-              type="password"
-              value={civitaiKey}
-              onChange={(e) => setCivitaiKey(e.target.value)}
-              placeholder="Enter Civitai API key..."
-              className="civitai-key-input"
-              disabled={isUpdating}
-            />
-          </div>
-
-          <div className="civitai-input-actions">
-            <button
-              className="civitai-cancel-button"
+        <Stack mt="md">
+          <PasswordInput
+            label="Enter your Civitai API key"
+            placeholder="Enter Civitai API key..."
+            value={civitaiKey}
+            onChange={(e) => setCivitaiKey(e.target.value)}
+            disabled={isUpdating}
+            autoFocus
+          />
+          <Group>
+            <Button
+              variant="default"
               onClick={handleCancelUpdate}
               disabled={isUpdating}
             >
               Cancel
-            </button>
-            <button
-              className="civitai-save-button"
+            </Button>
+            <Button
               onClick={handleSaveKey}
-              disabled={isUpdating}
+              loading={isUpdating}
+              disabled={!civitaiKey.trim()}
             >
-              {isUpdating ? "Saving..." : "Save Key"}
-            </button>
-          </div>
-        </div>
+              Save Key
+            </Button>
+          </Group>
+        </Stack>
       )}
-
-      {updateMessage && (
-        <div className={`civitai-update-message ${updateMessage.type}`}>
-          {updateMessage.text}
-        </div>
-      )}
-    </div>
+    </Stack>
   );
 };

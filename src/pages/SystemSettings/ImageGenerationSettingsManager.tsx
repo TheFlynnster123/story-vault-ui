@@ -2,7 +2,21 @@ import React, { useState } from "react";
 import { useSystemSettings } from "../../hooks/queries/useSystemSettings";
 import type { ImageGenerationSettings } from "../../models/SystemSettings";
 import { ImageGenerator } from "../../Managers/ImageGenerator";
-import "./ImageGenerationSettingsManager.css";
+import {
+  TextInput,
+  Textarea,
+  NumberInput,
+  Button,
+  Group,
+  Title,
+  Paper,
+  Slider,
+  ActionIcon,
+  Stack,
+  Box,
+  Text,
+} from "@mantine/core";
+import { RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 
 export const ImageGenerationSettingsManager: React.FC<{
   onSave?: () => void;
@@ -72,118 +86,124 @@ export const ImageGenerationSettingsManager: React.FC<{
   };
 
   return (
-    <div className="image-generation-settings">
-      <h4>Model</h4>
-      <input
-        type="text"
+    <Stack>
+      <TextInput
+        label="Model"
         value={settings.model}
         onChange={(e) => handleModelChange(e.target.value)}
       />
 
-      <h4>Parameters</h4>
-      <label>Base Prompt</label>
-      <textarea
+      <Title order={4}>Parameters</Title>
+      <Textarea
+        label="Base Prompt"
         value={settings.params.prompt}
         onChange={(e) => handleInputChange("prompt", e.target.value)}
+        autosize
+        minRows={3}
       />
-
-      <label>Negative Prompt</label>
-      <textarea
+      <Textarea
+        label="Negative Prompt"
         value={settings.params.negativePrompt}
         onChange={(e) => handleInputChange("negativePrompt", e.target.value)}
+        autosize
+        minRows={3}
       />
-
-      <label>Scheduler</label>
-      <input
-        type="text"
+      <TextInput
+        label="Scheduler"
         value={settings.params.scheduler}
         onChange={(e) => handleInputChange("scheduler", e.target.value)}
       />
-
-      <label>Steps</label>
-      <input
-        type="number"
-        value={settings.params.steps}
-        onChange={(e) => handleInputChange("steps", parseInt(e.target.value))}
-      />
-
-      <label>CFG Scale</label>
-      <input
-        type="number"
-        value={settings.params.cfgScale}
-        onChange={(e) =>
-          handleInputChange("cfgScale", parseFloat(e.target.value))
-        }
-      />
-
-      <label>Width</label>
-      <input
-        type="number"
-        value={settings.params.width}
-        onChange={(e) => handleInputChange("width", parseInt(e.target.value))}
-      />
-
-      <label>Height</label>
-      <input
-        type="number"
-        value={settings.params.height}
-        onChange={(e) => handleInputChange("height", parseInt(e.target.value))}
-      />
-
-      <label>Clip Skip</label>
-      <input
-        type="number"
+      <Group grow>
+        <NumberInput
+          label="Steps"
+          value={settings.params.steps}
+          onChange={(value) => handleInputChange("steps", value || 0)}
+        />
+        <NumberInput
+          label="CFG Scale"
+          value={settings.params.cfgScale}
+          onChange={(value) => handleInputChange("cfgScale", value || 0)}
+          step={0.1}
+        />
+      </Group>
+      <Group grow>
+        <NumberInput
+          label="Width"
+          value={settings.params.width}
+          onChange={(value) => handleInputChange("width", value || 0)}
+        />
+        <NumberInput
+          label="Height"
+          value={settings.params.height}
+          onChange={(value) => handleInputChange("height", value || 0)}
+        />
+      </Group>
+      <NumberInput
+        label="Clip Skip"
         value={settings.params.clipSkip}
-        onChange={(e) =>
-          handleInputChange("clipSkip", parseInt(e.target.value))
-        }
+        onChange={(value) => handleInputChange("clipSkip", value || 0)}
       />
 
-      <div className="additional-networks-section">
-        <h4>Additional Networks</h4>
-        {Object.entries(settings.additionalNetworks).map(
-          ([urn, { strength }]) => (
-            <div key={urn} className="network-item">
-              <span>{urn}</span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.1}
-                value={strength}
-                onChange={(e) =>
-                  updateNetworkStrength(urn, parseFloat(e.target.value))
-                }
-              />
-              <span>{strength}</span>
-              <button onClick={() => removeAdditionalNetwork(urn)}>❌</button>
-            </div>
-          )
-        )}
+      <Paper withBorder p="md" mt="md">
+        <Title order={4} mb="sm">
+          Additional Networks
+        </Title>
+        <Stack>
+          {Object.entries(settings.additionalNetworks).map(
+            ([urn, { strength }]) => (
+              <Paper withBorder p="sm" radius="sm" key={urn}>
+                <Group>
+                  <Text size="sm" style={{ flex: 1 }}>
+                    {urn}
+                  </Text>
+                  <Slider
+                    value={strength}
+                    onChange={(value) => updateNetworkStrength(urn, value)}
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    label={(value) => value.toFixed(1)}
+                    style={{ flex: 2 }}
+                  />
+                  <ActionIcon
+                    color="red"
+                    onClick={() => removeAdditionalNetwork(urn)}
+                  >
+                    <RiDeleteBinLine />
+                  </ActionIcon>
+                </Group>
+              </Paper>
+            )
+          )}
+        </Stack>
 
-        <div className="add-network">
-          <input
-            type="text"
-            placeholder="URN"
-            value={newNetworkURN}
-            onChange={(e) => setNewNetworkURN(e.target.value)}
-          />
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.1}
-            value={newNetworkStrength}
-            onChange={(e) => setNewNetworkStrength(parseFloat(e.target.value))}
-          />
-          <span>{newNetworkStrength}</span>
-          <button onClick={addAdditionalNetwork}>➕</button>
-        </div>
-      </div>
+        <Box mt="md">
+          <Group>
+            <TextInput
+              placeholder="URN"
+              value={newNetworkURN}
+              onChange={(e) => setNewNetworkURN(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <Slider
+              value={newNetworkStrength}
+              onChange={setNewNetworkStrength}
+              min={0}
+              max={1}
+              step={0.1}
+              label={(value) => value.toFixed(1)}
+              style={{ flex: 2 }}
+            />
+            <ActionIcon color="blue" onClick={addAdditionalNetwork}>
+              <RiAddLine />
+            </ActionIcon>
+          </Group>
+        </Box>
+      </Paper>
 
-      <button className="save-button" onClick={handleSave}>
+      <Button onClick={handleSave} mt="xl">
         Save Settings
-      </button>
-    </div>
+      </Button>
+    </Stack>
   );
 };

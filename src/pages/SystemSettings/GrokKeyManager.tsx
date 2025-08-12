@@ -1,8 +1,18 @@
 import React, { useState } from "react";
 import { useGrokKey } from "../../hooks/useGrokKey";
-import "./GrokKeyManager.css";
 import { EncryptionManager } from "../../Managers/EncryptionManager";
 import { GrokKeyAPI } from "../../clients/GrokKeyAPI";
+import {
+  PasswordInput,
+  Button,
+  Group,
+  Alert,
+  Loader,
+  Text,
+  Stack,
+} from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { RiCheckboxCircleLine, RiErrorWarningLine } from "react-icons/ri";
 
 export const GrokKeyManager: React.FC = () => {
   const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
@@ -10,33 +20,28 @@ export const GrokKeyManager: React.FC = () => {
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [grokKey, setGrokKey] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   const handleUpdateKeyClick = () => {
     setShowKeyInput(true);
-    setUpdateMessage(null);
   };
 
   const handleCancelUpdate = () => {
     setShowKeyInput(false);
     setGrokKey("");
-    setUpdateMessage(null);
   };
 
   const handleSaveKey = async () => {
     if (!grokKey.trim()) {
-      setUpdateMessage({
-        type: "error",
-        text: "Please enter a valid Grok key",
+      notifications.show({
+        title: "Validation Error",
+        message: "Please enter a valid Grok key",
+        color: "red",
+        icon: <RiErrorWarningLine />,
       });
       return;
     }
 
     setIsUpdating(true);
-    setUpdateMessage(null);
 
     try {
       const encryptionManager = new EncryptionManager();
@@ -48,108 +53,96 @@ export const GrokKeyManager: React.FC = () => {
       );
 
       await new GrokKeyAPI().saveGrokKey(encryptedKey);
-
-      // Refresh the key status
       await refreshGrokKeyStatus();
 
-      setUpdateMessage({
-        type: "success",
-        text: "Grok key updated successfully!",
+      notifications.show({
+        title: "Success",
+        message: "Grok key updated successfully!",
+        color: "green",
+        icon: <RiCheckboxCircleLine />,
       });
 
       setGrokKey("");
       setShowKeyInput(false);
     } catch (error) {
       console.error("Failed to save Grok key:", error);
-      setUpdateMessage({
-        type: "error",
-        text: "Failed to save Grok key. Please try again.",
+      notifications.show({
+        title: "Error",
+        message: "Failed to save Grok key. Please try again.",
+        color: "red",
+        icon: <RiErrorWarningLine />,
       });
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const getStatusIcon = () => {
+  const renderStatus = () => {
     if (hasValidGrokKey === undefined) {
-      return <span className="grok-status-loading">⟳</span>;
+      return (
+        <Group>
+          <Loader size="sm" />
+          <Text>Checking key status...</Text>
+        </Group>
+      );
     }
-    return hasValidGrokKey ? (
-      <span className="grok-status-valid">✓</span>
-    ) : (
-      <span className="grok-status-invalid">✗</span>
+    return (
+      <Alert
+        icon={
+          hasValidGrokKey ? <RiCheckboxCircleLine /> : <RiErrorWarningLine />
+        }
+        color={hasValidGrokKey ? "green" : "red"}
+        title={
+          hasValidGrokKey
+            ? "Valid Grok key configured"
+            : "No valid Grok key found"
+        }
+      >
+        {!showKeyInput && (
+          <Button
+            onClick={handleUpdateKeyClick}
+            size="xs"
+            variant="outline"
+            mt="sm"
+          >
+            {hasValidGrokKey ? "Update Key" : "Add Key"}
+          </Button>
+        )}
+      </Alert>
     );
   };
 
-  const getStatusText = () => {
-    if (hasValidGrokKey === undefined) {
-      return "Checking key status...";
-    }
-    return hasValidGrokKey
-      ? "Valid Grok key configured"
-      : "No valid Grok key found";
-  };
-
   return (
-    <div className="grok-key-manager">
-      <div className="grok-status-display">
-        <div className="grok-status-info">
-          {getStatusIcon()}
-          <span className="grok-status-text">{getStatusText()}</span>
-        </div>
-
-        {!showKeyInput && (
-          <button
-            className="grok-update-button"
-            onClick={handleUpdateKeyClick}
-            disabled={hasValidGrokKey === undefined}
-          >
-            {hasValidGrokKey ? "Update Key" : "Add Key"}
-          </button>
-        )}
-      </div>
-
+    <Stack>
+      {renderStatus()}
       {showKeyInput && (
-        <div className="grok-key-input-section">
-          <div className="grok-input-group">
-            <label htmlFor="grok-key-input" className="grok-input-label">
-              Enter your Grok API key:
-            </label>
-            <input
-              id="grok-key-input"
-              type="password"
-              value={grokKey}
-              onChange={(e) => setGrokKey(e.target.value)}
-              placeholder="Enter Grok API key..."
-              className="grok-key-input"
-              disabled={isUpdating}
-            />
-          </div>
-
-          <div className="grok-input-actions">
-            <button
-              className="grok-cancel-button"
+        <Stack mt="md">
+          <PasswordInput
+            label="Enter your Grok API key"
+            placeholder="Enter Grok API key..."
+            value={grokKey}
+            onChange={(e) => setGrokKey(e.target.value)}
+            disabled={isUpdating}
+            autoFocus
+          />
+          <Group>
+            <Button
+              variant="default"
               onClick={handleCancelUpdate}
               disabled={isUpdating}
             >
               Cancel
-            </button>
-            <button
-              className="grok-save-button"
+            </Button>
+            <Button
               onClick={handleSaveKey}
-              disabled={isUpdating || !grokKey.trim()}
+              loading={isUpdating}
+              disabled={!grokKey.trim()}
             >
-              {isUpdating ? "Saving..." : "Save Key"}
-            </button>
-          </div>
-        </div>
+              Save Key
+            </Button>
+          </Group>
+        </Stack>
       )}
-
-      {updateMessage && (
-        <div className={`grok-update-message ${updateMessage.type}`}>
-          {updateMessage.text}
-        </div>
-      )}
-    </div>
+    </Stack>
   );
 };

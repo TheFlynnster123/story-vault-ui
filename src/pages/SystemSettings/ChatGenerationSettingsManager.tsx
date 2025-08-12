@@ -1,8 +1,38 @@
 import React, { useState, useEffect } from "react";
 import { useSystemSettings } from "../../hooks/queries/useSystemSettings";
 import type { ChatGenerationSettings } from "../../models";
+import {
+  Select,
+  Slider,
+  Button,
+  Stack,
+  Text,
+  Group,
+  Loader,
+} from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { RiCheckboxCircleLine } from "react-icons/ri";
 
 const DEFAULT_TEMPERATURE = 0.7;
+
+const REASONING_EFFORT_OPTIONS = [
+  { value: "", label: "Default" },
+  { value: "low", label: "Low" },
+  { value: "high", label: "High" },
+];
+
+const MODEL_OPTIONS = [
+  { value: "", label: "Default" },
+  { value: "grok-4-0709", label: "grok-4-0709" },
+  { value: "grok-3-mini", label: "grok-3-mini (Recommended!)" },
+  { value: "grok-3", label: "grok-3" },
+];
+
+const TEMPERATURE_MARKS = [
+  { value: 0, label: "Precise" },
+  { value: 0.7, label: "Creative" },
+  { value: 1.2, label: "Incoherent" },
+];
 
 interface ChatGenerationSettingsManagerProps {
   onSave?: () => void;
@@ -12,9 +42,10 @@ export const ChatGenerationSettingsManager: React.FC<
   ChatGenerationSettingsManagerProps
 > = ({ onSave }) => {
   const { systemSettings, saveSystemSettings, isLoading } = useSystemSettings();
-  const [localSettings, setLocalSettings] = useState<ChatGenerationSettings>({
-    temperature: DEFAULT_TEMPERATURE,
-  });
+  const [localSettings, setLocalSettings] = useState<ChatGenerationSettings>(
+    {}
+  );
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     if (systemSettings?.chatGenerationSettings) {
@@ -25,98 +56,104 @@ export const ChatGenerationSettingsManager: React.FC<
     }
   }, [systemSettings]);
 
+  const handleSettingChange = (
+    newSettings: Partial<ChatGenerationSettings>
+  ) => {
+    setLocalSettings((prev) => ({ ...prev, ...newSettings }));
+    setIsDirty(true);
+  };
+
   const handleSave = async () => {
     await saveSystemSettings({
       ...systemSettings,
       chatGenerationSettings: localSettings,
     });
+    setIsDirty(false);
+    notifications.show({
+      title: "Success",
+      message: "Chat generation settings saved!",
+      color: "green",
+      icon: <RiCheckboxCircleLine />,
+    });
     onSave?.();
   };
 
-  const handleReasoningEffortChange = (value: "high" | "low" | "") => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      reasoningEffort: value === "" ? undefined : value,
-    }));
-  };
-
-  const handleModelChange = (value: string) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      model: value === "" ? undefined : value,
-    }));
-  };
-
-  const handleTemperatureChange = (value: number) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      temperature: value,
-    }));
-  };
-
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <Group>
+        <Loader size="sm" />
+        <Text>Loading settings...</Text>
+      </Group>
+    );
   }
 
   return (
-    <div className="chat-generation-settings">
-      <div className="setting-group">
-        <label htmlFor="reasoning-effort">Reasoning Effort:</label>
-        <select
-          id="reasoning-effort"
-          value={localSettings.reasoningEffort || ""}
-          onChange={(e) =>
-            handleReasoningEffortChange(e.target.value as "high" | "low" | "")
-          }
-        >
-          <option value="">Default</option>
-          <option value="low">Low</option>
-          <option value="high">High</option>
-        </select>
-      </div>
-
-      <div className="setting-group">
-        <label htmlFor="model">Model:</label>
-        <select
-          id="model"
-          value={localSettings.model || ""}
-          onChange={(e) => handleModelChange(e.target.value)}
-        >
-          <option value="">Default</option>
-          <option value="grok-4-0709">grok-4-0709</option>
-          <option value="grok-3-mini">grok-3-mini (Recommended!)</option>
-          <option value="grok-3">grok-3</option>
-        </select>
-      </div>
-
-      <div className="setting-group">
-        <label htmlFor="temperature">Temperature (default: 0.8):</label>
-        <div className="temperature-slider-container">
-          <div className="temperature-labels">
-            <span>Precise</span>
-            <span>Creative (0.7)</span>
-            <span>Incoherent</span>
-          </div>
-          <input
-            id="temperature"
-            type="range"
-            min="0"
-            max="1.2"
-            step="0.1"
-            value={localSettings.temperature ?? DEFAULT_TEMPERATURE}
-            onChange={(e) =>
-              handleTemperatureChange(parseFloat(e.target.value))
-            }
-          />
-          <div className="temperature-value">
-            {(localSettings.temperature ?? DEFAULT_TEMPERATURE).toFixed(1)}
-          </div>
-        </div>
-      </div>
-
-      <button onClick={handleSave} className="save-button">
+    <Stack>
+      <ReasoningEffortSelect
+        value={localSettings.reasoningEffort || ""}
+        onChange={(value) =>
+          handleSettingChange({
+            reasoningEffort: value ? (value as "high" | "low") : undefined,
+          })
+        }
+      />
+      <ModelSelect
+        value={localSettings.model || ""}
+        onChange={(value) => handleSettingChange({ model: value || undefined })}
+      />
+      <TemperatureSlider
+        value={localSettings.temperature ?? DEFAULT_TEMPERATURE}
+        onChange={(value) => handleSettingChange({ temperature: value })}
+      />
+      <Button onClick={handleSave} mt="xl" disabled={!isDirty}>
         Save Settings
-      </button>
-    </div>
+      </Button>
+    </Stack>
   );
 };
+
+const ReasoningEffortSelect: React.FC<{
+  value: string | null;
+  onChange: (value: string | null) => void;
+}> = ({ value, onChange }) => (
+  <Select
+    label="Reasoning Effort"
+    value={value}
+    onChange={onChange}
+    data={REASONING_EFFORT_OPTIONS}
+    clearable
+  />
+);
+
+const ModelSelect: React.FC<{
+  value: string | null;
+  onChange: (value: string | null) => void;
+}> = ({ value, onChange }) => (
+  <Select
+    label="Model"
+    value={value}
+    onChange={onChange}
+    data={MODEL_OPTIONS}
+    clearable
+  />
+);
+
+const TemperatureSlider: React.FC<{
+  value: number;
+  onChange: (value: number) => void;
+}> = ({ value, onChange }) => (
+  <Stack gap="xs">
+    <Text size="sm" fw={500}>
+      Temperature
+    </Text>
+    <Slider
+      value={value}
+      onChange={onChange}
+      min={0}
+      max={1.2}
+      step={0.1}
+      label={(v) => v.toFixed(1)}
+      marks={TEMPERATURE_MARKS}
+    />
+  </Stack>
+);
