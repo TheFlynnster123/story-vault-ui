@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useSystemSettings } from "../hooks/queries/useSystemSettings";
-import type { ChatGenerationSettings } from "../models";
+import { useSystemSettings } from "../../hooks/queries/useSystemSettings";
+import type { ChatGenerationSettings } from "../../models";
 
 const DEFAULT_TEMPERATURE = 0.7;
 

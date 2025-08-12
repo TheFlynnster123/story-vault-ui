@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { useGrokKey } from "../hooks/useGrokKey";
+import { useGrokKey } from "../../hooks/useGrokKey";
 import "./GrokKeyManager.css";
-import { EncryptionManager } from "../Managers/EncryptionManager";
-import { GrokKeyAPI } from "../clients/GrokKeyAPI";
+import { EncryptionManager } from "../../Managers/EncryptionManager";
+import { GrokKeyAPI } from "../../clients/GrokKeyAPI";
 
 export const GrokKeyManager: React.FC = () => {
   const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();

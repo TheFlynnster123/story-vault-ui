@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { useCivitaiKey } from "../hooks/useCivitaiKey";
+import { useCivitaiKey } from "../../hooks/useCivitaiKey";
 import "./CivitaiKeyManager.css";
-import { EncryptionManager } from "../Managers/EncryptionManager";
-import { CivitKeyAPI } from "../clients/CivitKeyAPI";
+import { EncryptionManager } from "../../Managers/EncryptionManager";
+import { CivitKeyAPI } from "../../clients/CivitKeyAPI";
 
 export const CivitaiKeyManager: React.FC = () => {
   const { hasValidCivitaiKey, refreshCivitaiKeyStatus } = useCivitaiKey();
