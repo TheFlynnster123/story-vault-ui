@@ -1,24 +1,15 @@
 import React, { useState, useEffect } from "react";
-import type { ChatSettings } from "../../../models/ChatSettings";
-import { useChatSettings } from "../../../hooks/queries/useChatSettings";
-import "./ChatSettingsDialog.css";
-import { ChatDeleteControl } from "./ChatDeleteControl";
+import styled from "styled-components";
+import { useNavigate, useParams } from "react-router-dom";
+import { RiArrowLeftLine } from "react-icons/ri";
+import type { ChatSettings } from "../models/ChatSettings";
+import { useChatSettings } from "../hooks/queries/useChatSettings";
+import { ChatDeleteControl } from "../Chat/ChatControls/ChatDeleteControl";
+import { v4 as uuidv4 } from "uuid";
 
-interface ChatSettingsDialogProps {
-  chatId?: string;
-  isOpen: boolean;
-  onCancel: () => void;
-  onSubmit: (settings: ChatSettings) => void;
-  onDeleteSuccess?: () => void;
-}
-
-export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
-  chatId,
-  isOpen,
-  onCancel,
-  onSubmit,
-  onDeleteSuccess,
-}) => {
+export const ChatEditorPage: React.FC = () => {
+  const { id: chatId } = useParams();
+  const navigate = useNavigate();
   const { chatSettings, saveChatSettings } = useChatSettings(chatId ?? "");
 
   const [chatTitle, setChatTitle] = useState("");
@@ -32,28 +23,24 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
   }>({});
 
   useEffect(() => {
-    if (isOpen && chatSettings) {
+    if (chatSettings) {
       setChatTitle(chatSettings.chatTitle || "");
       setContext(chatSettings.context || "");
       setBackgroundPhotoBase64(chatSettings.backgroundPhotoBase64);
     }
-  }, [isOpen, chatSettings]);
+  }, [chatSettings]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file type
       if (!file.type.startsWith("image/")) {
         alert("Please select an image file");
         return;
       }
-
-      // Check file size (limit to 5MB)
       if (file.size > 5 * 1024 * 1024) {
         alert("Image size must be less than 5MB");
         return;
       }
-
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64String = event.target?.result as string;
@@ -69,15 +56,8 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
 
   const validateForm = (): boolean => {
     const newErrors: { chatTitle?: string; context?: string } = {};
-
-    if (!chatTitle.trim()) {
-      newErrors.chatTitle = "Story title is required";
-    }
-
-    if (!context.trim()) {
-      newErrors.context = "First message is required";
-    }
-
+    if (!chatTitle.trim()) newErrors.chatTitle = "Story title is required";
+    if (!context.trim()) newErrors.context = "First message is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -90,47 +70,27 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
         backgroundPhotoBase64,
       };
 
-      // Only save settings for existing chats, not new ones
-      if (chatId) {
-        await saveChatSettings(settingsToSave);
-      }
-
-      onSubmit(settingsToSave);
-
-      setChatTitle("");
-      setContext("");
-      setBackgroundPhotoBase64(undefined);
-      setErrors({});
+      const newChatId = chatId || uuidv4();
+      await saveChatSettings(settingsToSave);
+      navigate(`/chat/${newChatId}`);
     }
   };
 
-  const handleCancel = () => {
-    setChatTitle("");
-    setContext("");
-    setBackgroundPhotoBase64(undefined);
-    setErrors({});
-    onCancel();
+  const handleGoBack = () => {
+    navigate(-1);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      handleCancel();
-    }
-  };
-
-  if (!isOpen) return null;
 
   return (
-    <div className="chat-settings-overlay" onKeyDown={handleKeyDown}>
-      <div className="chat-settings-dialog">
-        <div className="chat-settings-header">
-          <h2>{chatId ? "Edit Chat Settings" : "Create New Chat"}</h2>
-          <button className="chat-settings-close" onClick={handleCancel}>
-            ×
-          </button>
-        </div>
+    <PageContainer>
+      <Header>
+        <BackButton onClick={handleGoBack} aria-label="Go back">
+          <RiArrowLeftLine />
+        </BackButton>
+        <Title>{chatId ? "Edit Chat" : "Create New Chat"}</Title>
+      </Header>
 
-        <div className="chat-settings-content">
+      <Content>
+        <SettingsSection>
           <div className="chat-settings-field">
             <label htmlFor="story-title">Story Title *</label>
             <input
@@ -200,25 +160,84 @@ export const ChatSettingsDialog: React.FC<ChatSettingsDialogProps> = ({
               )}
             </div>
           </div>
-        </div>
+        </SettingsSection>
+      </Content>
 
-        <div className="chat-settings-actions">
-          {chatId && onDeleteSuccess && (
-            <ChatDeleteControl
-              chatId={chatId}
-              onDeleteSuccess={onDeleteSuccess}
-            />
-          )}
-          <div className="chat-settings-primary-actions">
-            <button className="chat-settings-cancel" onClick={handleCancel}>
-              Cancel
-            </button>
-            <button className="chat-settings-create" onClick={handleSubmit}>
-              {chatId ? "Save Changes" : "Create Chat"}
-            </button>
-          </div>
+      <Footer>
+        {chatId && (
+          <ChatDeleteControl
+            chatId={chatId}
+            onDeleteSuccess={() => navigate("/chat")}
+          />
+        )}
+        <div className="chat-settings-primary-actions">
+          <button className="chat-settings-cancel" onClick={handleGoBack}>
+            Cancel
+          </button>
+          <button className="chat-settings-create" onClick={handleSubmit}>
+            {chatId ? "Save Changes" : "Create Chat"}
+          </button>
         </div>
-      </div>
-    </div>
+      </Footer>
+    </PageContainer>
   );
 };
+
+const PageContainer = styled.div`
+  min-height: 100vh;
+  background-color: #0f0f0f;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333;
+`;
+
+const BackButton = styled.button`
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Title = styled.h1`
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+`;
+
+const Content = styled.div`
+  flex-grow: 1;
+  overflow-y: auto;
+`;
+
+const SettingsSection = styled.div`
+  background-color: #1a1a1a;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #333;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+`;
+
+const Footer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid #333;
+`;

@@ -7,6 +7,7 @@ import React from "react";
 import LandingPage from "./pages/LandingPage";
 import ChatMenuPage from "./pages/ChatMenuPage";
 import SystemSettingsPage from "./pages/SystemSettingsPage";
+import { ChatEditorPage } from "./pages/ChatEditorPage";
 import ChatPage from "./pages/ChatPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -28,29 +29,45 @@ const App: React.FC<AppProps> = () => {
         <Router>
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route 
-              path="/chat" 
+            <Route
+              path="/chat"
               element={
                 <ProtectedRoute>
                   <ChatMenuPage />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/chat/:chatId" 
+            <Route
+              path="/chat/:chatId"
               element={
                 <ProtectedRoute>
                   <ChatPage />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/settings" 
+            <Route
+              path="/chat/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <ChatEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat/new"
+              element={
+                <ProtectedRoute>
+                  <ChatEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
               element={
                 <ProtectedRoute requireGrokKey={false}>
                   <SystemSettingsPage />
                 </ProtectedRoute>
-              } 
+              }
             />
           </Routes>
         </Router>

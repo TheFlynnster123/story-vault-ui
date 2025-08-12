@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { ChatHistoryAPI } from "../../../clients/ChatHistoryAPI";
-import { ConfirmModal } from "../../../components/ConfirmModal";
-import { useChats } from "../../Menu/useChats";
+import { useDeleteChatMutation } from "../../hooks/queries/useChatSettings";
+import { ConfirmModal } from "../../components/ConfirmModal";
 
 interface ChatDeleteControlProps {
   chatId: string;
@@ -13,18 +12,15 @@ export const ChatDeleteControl: React.FC<ChatDeleteControlProps> = ({
   onDeleteSuccess,
 }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const { refreshChats } = useChats();
+  const deleteChatMutation = useDeleteChatMutation();
 
   const handleDelete = async () => {
     try {
-      const api = new ChatHistoryAPI();
-      const success = await api.deleteChat(chatId);
-      if (success) {
-        refreshChats();
-        onDeleteSuccess();
-      }
+      await deleteChatMutation.mutateAsync(chatId);
+      onDeleteSuccess();
     } catch (error) {
       console.error("Failed to delete chat:", error);
+      // You might want to show an error message to the user
     }
   };
 
@@ -39,11 +35,8 @@ export const ChatDeleteControl: React.FC<ChatDeleteControlProps> = ({
       <ConfirmModal
         isOpen={isConfirmOpen}
         onCancel={() => setIsConfirmOpen(false)}
-        onConfirm={() => {
-          setIsConfirmOpen(false);
-          handleDelete();
-        }}
-        title="Delete Chat"
+        onConfirm={handleDelete}
+        title="Confirm Deletion"
         message="Are you sure you want to delete this chat? This action cannot be undone."
       />
     </>

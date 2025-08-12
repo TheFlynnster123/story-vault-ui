@@ -5,8 +5,8 @@ import {
   RiFileList2Line,
 } from "react-icons/ri";
 import "./ChatControls.css";
-import { ChatSettingsDialog } from "./ChatSettingsDialog/ChatSettingsDialog";
 import { StoryNotesDialog } from "./StoryNotesDialog/StoryNotesDialog";
+import { useNavigate } from "react-router-dom";
 
 interface ChatControlsProps {
   chatId: string;
@@ -18,8 +18,8 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   chatId,
   toggleMenu,
 }) => {
-  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isStoryNotesDialogOpen, setIsStoryNotesDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="chat-controls">
@@ -33,7 +33,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
 
       <button
         className="chat-controls-button settings-button"
-        onClick={() => setIsSettingsDialogOpen(true)}
+        onClick={() => navigate(`/chat/${chatId}/edit`)}
         title="Chat Settings"
       >
         <RiChatSettingsLine />
@@ -46,17 +46,6 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
       >
         <RiFileList2Line />
       </button>
-
-      <ChatSettingsDialog
-        chatId={chatId}
-        isOpen={isSettingsDialogOpen}
-        onSubmit={() => setIsSettingsDialogOpen(false)}
-        onCancel={() => setIsSettingsDialogOpen(false)}
-        onDeleteSuccess={() => {
-          setIsSettingsDialogOpen(false);
-          toggleMenu();
-        }}
-      />
 
       <StoryNotesDialog
         chatId={chatId}

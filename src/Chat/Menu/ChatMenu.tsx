@@ -26,7 +26,7 @@ function ChatMenu() {
             <SystemSettingsButton />
           </SystemSettingsContainer>
         </ChatMenuHeader>
-        <CreateChatButton onChatCreated={handleChatCreated} />
+        <CreateChatButton />
         <ChatList chatIds={chatIds} handleSelectChat={handleSelectChat} />
       </ChatMenuContainer>
     </>
