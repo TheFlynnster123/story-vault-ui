@@ -24,7 +24,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
-  const [chatId, setChatId] = useState(chatIdFromParams ?? uuidv4());
+  const [chatId] = useState(chatIdFromParams ?? uuidv4());
   const navigate = useNavigate();
   const { chatSettings, saveChatSettings } = useChatSettings(chatId);
 

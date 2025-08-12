@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   RiArrowGoBackLine,
   RiChatSettingsLine,
@@ -17,7 +17,6 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   chatId,
   toggleMenu,
 }) => {
-  const [isStoryNotesDialogOpen, setIsStoryNotesDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   return (

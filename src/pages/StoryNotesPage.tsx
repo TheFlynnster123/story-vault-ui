@@ -13,7 +13,6 @@ import {
   Textarea,
   Text,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
 import type { Note } from "../models/Note";
 import { useNotes } from "../hooks/useNotes";
 import { v4 as uuidv4 } from "uuid";
