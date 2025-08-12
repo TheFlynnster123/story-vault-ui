@@ -30,14 +30,11 @@ export const ChatEditorPage: React.FC = () => {
   const form = useForm({
     initialValues: {
       chatTitle: "",
-      context: "",
       backgroundPhotoBase64: undefined as string | undefined,
     },
     validate: {
       chatTitle: (value: string) =>
         value.trim().length > 0 ? null : "Story title is required",
-      context: (value: string) =>
-        value.trim().length > 0 ? null : "First message is required",
     },
   });
 
@@ -45,7 +42,6 @@ export const ChatEditorPage: React.FC = () => {
     if (chatSettings) {
       form.setValues({
         chatTitle: chatSettings.chatTitle || "",
-        context: chatSettings.context || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
       });
     }
@@ -70,9 +66,8 @@ export const ChatEditorPage: React.FC = () => {
 
   const handleSubmit = async (values: typeof form.values) => {
     const settingsToSave: ChatSettings = {
+      ...values,
       chatTitle: values.chatTitle.trim(),
-      context: values.context.trim(),
-      backgroundPhotoBase64: values.backgroundPhotoBase64,
     };
 
     await saveChatSettings(settingsToSave);
@@ -110,15 +105,6 @@ export const ChatEditorPage: React.FC = () => {
             withAsterisk
             autoFocus
             {...form.getInputProps("chatTitle")}
-          />
-
-          <Textarea
-            label="First Message"
-            placeholder="Enter the first message to start your story..."
-            withAsterisk
-            autosize
-            minRows={4}
-            {...form.getInputProps("context")}
           />
 
           <div>
