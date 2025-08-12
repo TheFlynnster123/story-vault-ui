@@ -84,23 +84,25 @@ export const ChatEditorPage: React.FC = () => {
   };
 
   return (
-    <Container size="md" my="xl">
-      <Paper
-        component="form"
-        onSubmit={form.onSubmit(handleSubmit)}
-        withBorder
-        shadow="md"
-        p={30}
-        mt={30}
-        radius="md"
-      >
+    <Container style={{ overflowY: "auto" }} size="md" my="xl">
+      <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} p={30}>
         <Group justify="space-between" align="center" mb="xl">
-          <ActionIcon onClick={handleGoBack} variant="default" size="lg">
-            <RiArrowLeftLine />
-          </ActionIcon>
-          <Title order={2}>
-            {chatIdFromParams ? "Edit Chat" : "Create New Chat"}
-          </Title>
+          <Group>
+            <ActionIcon onClick={handleGoBack} variant="gradient" size="lg">
+              <RiArrowLeftLine />
+            </ActionIcon>
+            <Title order={2}>
+              {chatIdFromParams ? "Edit Chat" : "Create New Chat"}
+            </Title>
+          </Group>
+          <Group>
+            <Button variant="default" onClick={handleGoBack}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!form.isDirty()}>
+              {chatIdFromParams ? "Save Changes" : "Create Chat"}
+            </Button>
+          </Group>
         </Group>
 
         <Stack>
@@ -164,21 +166,13 @@ export const ChatEditorPage: React.FC = () => {
           )}
         </Stack>
 
-        <Group justify="space-between" mt="xl">
+        <Group justify="center" mt="xl">
           {chatIdFromParams && (
             <ChatDeleteControl
               chatId={chatId}
               onDeleteSuccess={() => navigate("/chat")}
             />
           )}
-          <Group>
-            <Button variant="default" onClick={handleGoBack}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {chatIdFromParams ? "Save Changes" : "Create Chat"}
-            </Button>
-          </Group>
         </Group>
       </Paper>
     </Container>

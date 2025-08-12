@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useDeleteChatMutation } from "../../../hooks/queries/useChatSettings";
-import { ConfirmModal } from "../../../components/ConfirmModal";
+import { Button, Modal, Group, Text } from "@mantine/core";
+import { RiDeleteBinLine } from "react-icons/ri";
 
 interface ChatDeleteControlProps {
   chatId: string;
@@ -25,19 +26,32 @@ export const ChatDeleteControl: React.FC<ChatDeleteControlProps> = ({
 
   return (
     <>
-      <button
-        className="chat-settings-delete"
+      <Button
+        color="red"
+        variant="outline"
         onClick={() => setIsConfirmOpen(true)}
+        leftSection={<RiDeleteBinLine />}
       >
         Delete Chat
-      </button>
-      <ConfirmModal
-        isOpen={isConfirmOpen}
-        onCancel={() => setIsConfirmOpen(false)}
-        onConfirm={handleDelete}
+      </Button>
+      <Modal
+        opened={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
         title="Confirm Deletion"
-        message="Are you sure you want to delete this chat? This action cannot be undone."
-      />
+      >
+        <Text>
+          Are you sure you want to delete this chat? This action cannot be
+          undone.
+        </Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={() => setIsConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button color="red" onClick={handleDelete}>
+            Delete
+          </Button>
+        </Group>
+      </Modal>
     </>
   );
 };
