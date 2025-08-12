@@ -4,8 +4,9 @@ import {
   RiChatSettingsLine,
   RiFileList2Line,
 } from "react-icons/ri";
-import "./ChatControls.css";
 import { useNavigate } from "react-router-dom";
+import { ActionIcon, Stack } from "@mantine/core";
+import styled from "styled-components";
 
 interface ChatControlsProps {
   chatId: string;
@@ -20,30 +21,42 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   const navigate = useNavigate();
 
   return (
-    <div className="chat-controls">
-      <button
-        className="chat-controls-button menu-button"
-        onClick={toggleMenu}
-        title="Back to Menu"
-      >
-        <RiArrowGoBackLine />
-      </button>
+    <ControlsContainer>
+      <Stack>
+        <ActionIcon
+          onClick={toggleMenu}
+          variant="gradient"
+          title="Back to Menu"
+          size="xl"
+        >
+          <RiArrowGoBackLine />
+        </ActionIcon>
 
-      <button
-        className="chat-controls-button settings-button"
-        onClick={() => navigate(`/chat/${chatId}/edit`)}
-        title="Chat Settings"
-      >
-        <RiChatSettingsLine />
-      </button>
+        <ActionIcon
+          onClick={() => navigate(`/chat/${chatId}/edit`)}
+          variant="gradient"
+          title="Chat Settings"
+          size="xl"
+        >
+          <RiChatSettingsLine />
+        </ActionIcon>
 
-      <button
-        className="chat-controls-button story-notes-button"
-        onClick={() => navigate(`/chat/${chatId}/notes`)}
-        title="Story Notes"
-      >
-        <RiFileList2Line />
-      </button>
-    </div>
+        <ActionIcon
+          onClick={() => navigate(`/chat/${chatId}/notes`)}
+          variant="gradient"
+          title="Story Notes"
+          size="xl"
+        >
+          <RiFileList2Line />
+        </ActionIcon>
+      </Stack>
+    </ControlsContainer>
   );
 };
+
+const ControlsContainer = styled.div`
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+`;
