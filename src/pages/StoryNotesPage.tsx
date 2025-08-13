@@ -17,6 +17,7 @@ import type { Note } from "../models/Note";
 import { useNotes } from "../hooks/useNotes";
 import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
+import isEqual from "lodash.isequal";
 
 export const StoryNotesPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -25,12 +26,17 @@ export const StoryNotesPage: React.FC = () => {
   const [localNotes, setLocalNotes] = useState<Note[]>([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
       setLocalNotes([...initialNotes]);
     }
   }, [isLoading, initialNotes]);
+
+  useEffect(() => {
+    setIsDirty(!isEqual(initialNotes, localNotes));
+  }, [localNotes, initialNotes]);
 
   const handleAddNote = (type: Note["type"]) => {
     const newNote: Note = {
@@ -74,14 +80,20 @@ export const StoryNotesPage: React.FC = () => {
     localNotes.filter((note) => note.type === type);
 
   return (
-    <Container size="md" my="xl">
-      <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-        <Group justify="space-between" align="center" mb="xl">
-          <ActionIcon onClick={handleGoBack} variant="default" size="lg">
-            <RiArrowLeftLine />
-          </ActionIcon>
-          <Title order={2}>Story Notes</Title>
-        </Group>
+    <Container size="md" miw="70vw" my="xl">
+      <Paper
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        withBorder
+        shadow="md"
+        p={30}
+        mt={30}
+        radius="md"
+      >
+        <StoryNotesHeader onGoBack={handleGoBack} isDirty={isDirty} />
 
         <Stack>
           <NoteSection
@@ -93,13 +105,6 @@ export const StoryNotesPage: React.FC = () => {
             onRemove={handleRemoveNote}
           />
         </Stack>
-
-        <Group justify="flex-end" mt="xl">
-          <Button variant="default" onClick={handleGoBack}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
-        </Group>
       </Paper>
 
       <ConfirmModal
@@ -112,6 +117,28 @@ export const StoryNotesPage: React.FC = () => {
     </Container>
   );
 };
+
+interface StoryNotesHeaderProps {
+  onGoBack: () => void;
+  isDirty: boolean;
+}
+
+const StoryNotesHeader: React.FC<StoryNotesHeaderProps> = ({
+  onGoBack,
+  isDirty,
+}) => (
+  <Group justify="space-between" align="center" mb="xl">
+    <Group>
+      <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
+        <RiArrowLeftLine />
+      </ActionIcon>
+      <Title order={2}>Story Notes</Title>
+    </Group>
+    <Button type="submit" disabled={!isDirty}>
+      Save Changes
+    </Button>
+  </Group>
+);
 
 interface NoteSectionProps {
   title: string;
