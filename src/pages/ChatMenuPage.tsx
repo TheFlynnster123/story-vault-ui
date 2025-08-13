@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { useChats } from "./Menu/useChats";
-import { SystemSettingsButton } from "./Menu/SystemSettingsButton";
-import { CreateChatButton } from "./Menu/CreateChatButton";
-import { ChatList } from "./Menu/ChatList";
+import { useChats } from "./ChatMenu/useChats";
+import { SystemSettingsButton } from "./ChatMenu/SystemSettingsButton";
+import { CreateChatButton } from "./ChatMenu/CreateChatButton";
+import { ChatList } from "./ChatMenu/ChatList";
 import styled from "styled-components";
 
 const ChatMenuPage = () => {
