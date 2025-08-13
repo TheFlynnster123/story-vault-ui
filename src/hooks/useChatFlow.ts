@@ -4,6 +4,8 @@ import type { ChatManager } from "../Managers/ChatManager";
 import { toSystemMessage } from "../utils/messageUtils";
 import { useNotes } from "./useNotes";
 import type { Note } from "../models/Note";
+import { useMemories } from "./useMemories";
+import type { Memory } from "../models/Memory";
 import { useSystemSettings } from "./queries/useSystemSettings";
 import type { Message } from "../pages/Chat/ChatMessage";
 import { useChatSettings } from "./queries/useChatSettings";
@@ -19,6 +21,7 @@ export interface IUseChatFlowProps {
 
 export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
   const { notes } = useNotes(chatId);
+  const { memories } = useMemories(chatId);
   const [status, setStatus] = useState<string>("Ready");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { systemSettings } = useSystemSettings();
@@ -49,7 +52,8 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
       const finalPromptMessages = buildFinalPromptMessages(
         basePrompt,
         chatMessages,
-        updatedPlanningNotes
+        updatedPlanningNotes,
+        memories
       );
 
       return await getFinalResponse(finalPromptMessages);
@@ -110,15 +114,30 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
     );
   };
 
+  const buildMemoryMessages = (memories: Memory[]) => {
+    if (memories.length === 0) return [];
+
+    const memoryContent = memories
+      .map((memory) => memory.content)
+      .filter((content) => content.trim().length > 0)
+      .join("\r\n-");
+
+    if (memoryContent.trim().length === 0) return [];
+
+    return [toSystemMessage(`# Memories\r\n${memoryContent}`)];
+  };
+
   const buildFinalPromptMessages = (
     basePrompt: string,
     chatMessages: Message[],
-    notes: Note[]
+    notes: Note[],
+    memories: Memory[]
   ): Message[] => {
     return [
       toSystemMessage(basePrompt),
       ...chatMessages,
       ...buildNoteMessages(notes),
+      ...buildMemoryMessages(memories),
       toSystemMessage(RESPONSE_PROMPT),
     ];
   };

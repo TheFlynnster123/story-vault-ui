@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { RiArrowLeftLine, RiAddLine } from "react-icons/ri";
+import { RiArrowLeftLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 import {
   Container,
   Title,

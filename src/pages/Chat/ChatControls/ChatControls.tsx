@@ -4,6 +4,7 @@ import {
   RiChatSettingsLine,
   RiFileList2Line,
 } from "react-icons/ri";
+import { LuBrain } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { ActionIcon, Stack } from "@mantine/core";
 import styled from "styled-components";
@@ -43,6 +44,15 @@ export const ChatControls: React.FC<ChatControlsProps> = ({ chatId }) => {
           size="xl"
         >
           <RiFileList2Line />
+        </ActionIcon>
+
+        <ActionIcon
+          onClick={() => navigate(`/chat/${chatId}/memories`)}
+          variant="gradient"
+          title="Memories"
+          size="xl"
+        >
+          <LuBrain />
         </ActionIcon>
       </Stack>
     </ControlsContainer>
