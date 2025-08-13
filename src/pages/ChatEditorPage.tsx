@@ -17,7 +17,7 @@ import { useForm } from "@mantine/form";
 import type { ChatSettings } from "../models/ChatSettings";
 import { useChatSettings } from "../hooks/queries/useChatSettings";
 import { v4 as uuidv4 } from "uuid";
-import { ChatDeleteControl } from "./Chat/ChatControls/ChatDeleteControl";
+import { ChatDeleteControl } from "./ChatEditor/ChatDeleteControl";
 import { BackgroundPhotoUploader } from "./ChatEditor/BackgroundPhotoUploader";
 
 export const ChatEditorPage: React.FC = () => {

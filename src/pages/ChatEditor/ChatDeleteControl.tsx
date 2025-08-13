@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { useDeleteChatMutation } from "../../../hooks/queries/useChatSettings";
+import { useDeleteChatMutation } from "../../hooks/queries/useChatSettings";
 import { Button, Modal, Group, Text } from "@mantine/core";
 import { RiDeleteBinLine } from "react-icons/ri";
-import { ChatHistoryAPI } from "../../../clients/ChatHistoryAPI";
+import { ChatHistoryAPI } from "../../clients/ChatHistoryAPI";
 
 interface ChatDeleteControlProps {
   chatId: string;
