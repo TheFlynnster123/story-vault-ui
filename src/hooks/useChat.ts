@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatManager } from "../Managers/ChatManager";
@@ -8,6 +7,7 @@ import { useChatFlow } from "./useChatFlow";
 import { useChatHistory } from "./queries/useChatHistory";
 import { useSystemSettings } from "./queries/useSystemSettings";
 import { ImageGenerator } from "../Managers/ImageGenerator";
+import type { Message } from "../pages/Chat/ChatMessage";
 
 export const useChat = ({ chatId }: UseChatProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);

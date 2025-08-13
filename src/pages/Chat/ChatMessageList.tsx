@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
-import type { ChatPage } from "../models/ChatPage";
+import type { ChatPage } from "../../models/ChatPage";
 
 interface ChatMessageListProps {
   chatId: string;

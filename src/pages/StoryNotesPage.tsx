@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { RiArrowLeftLine, RiAddLine } from "react-icons/ri";
+import { RiArrowLeftLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 import {
   Container,
   Title,
@@ -17,6 +17,7 @@ import type { Note } from "../models/Note";
 import { useNotes } from "../hooks/useNotes";
 import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
+import isEqual from "lodash.isequal";
 
 export const StoryNotesPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -25,6 +26,7 @@ export const StoryNotesPage: React.FC = () => {
   const [localNotes, setLocalNotes] = useState<Note[]>([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
@@ -32,14 +34,16 @@ export const StoryNotesPage: React.FC = () => {
     }
   }, [isLoading, initialNotes]);
 
+  useEffect(() => {
+    setIsDirty(!isEqual(initialNotes, localNotes));
+  }, [localNotes, initialNotes]);
+
   const handleAddNote = (type: Note["type"]) => {
     const newNote: Note = {
       id: uuidv4(),
       type,
-      name: `New ${type} Note`,
-      requestPrompt: "",
-      updatePrompt: "",
-      content: "",
+      name: `New Note`,
+      prompt: "Write a list of key points relevant to the story:",
     };
     setLocalNotes([...localNotes, newNote]);
   };
@@ -76,14 +80,20 @@ export const StoryNotesPage: React.FC = () => {
     localNotes.filter((note) => note.type === type);
 
   return (
-    <Container size="md" my="xl">
-      <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-        <Group justify="space-between" align="center" mb="xl">
-          <ActionIcon onClick={handleGoBack} variant="default" size="lg">
-            <RiArrowLeftLine />
-          </ActionIcon>
-          <Title order={2}>Story Notes</Title>
-        </Group>
+    <Container size="md" miw="70vw" my="xl">
+      <Paper
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        withBorder
+        shadow="md"
+        p={30}
+        mt={30}
+        radius="md"
+      >
+        <StoryNotesHeader onGoBack={handleGoBack} isDirty={isDirty} />
 
         <Stack>
           <NoteSection
@@ -94,30 +104,7 @@ export const StoryNotesPage: React.FC = () => {
             onChange={handleNoteChange}
             onRemove={handleRemoveNote}
           />
-          <NoteSection
-            title="Refinement Notes"
-            type="refinement"
-            notes={getNotesByType("refinement")}
-            onAdd={handleAddNote}
-            onChange={handleNoteChange}
-            onRemove={handleRemoveNote}
-          />
-          <NoteSection
-            title="Analysis Notes"
-            type="analysis"
-            notes={getNotesByType("analysis")}
-            onAdd={handleAddNote}
-            onChange={handleNoteChange}
-            onRemove={handleRemoveNote}
-          />
         </Stack>
-
-        <Group justify="flex-end" mt="xl">
-          <Button variant="default" onClick={handleGoBack}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
-        </Group>
       </Paper>
 
       <ConfirmModal
@@ -130,6 +117,28 @@ export const StoryNotesPage: React.FC = () => {
     </Container>
   );
 };
+
+interface StoryNotesHeaderProps {
+  onGoBack: () => void;
+  isDirty: boolean;
+}
+
+const StoryNotesHeader: React.FC<StoryNotesHeaderProps> = ({
+  onGoBack,
+  isDirty,
+}) => (
+  <Group justify="space-between" align="center" mb="xl">
+    <Group>
+      <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
+        <RiArrowLeftLine />
+      </ActionIcon>
+      <Title order={2}>Story Notes</Title>
+    </Group>
+    <Button type="submit" disabled={!isDirty}>
+      Save Changes
+    </Button>
+  </Group>
+);
 
 interface NoteSectionProps {
   title: string;
@@ -163,26 +172,10 @@ const NoteSection: React.FC<NoteSectionProps> = ({
           onChange={(e) => onChange(note.id, "name", e.currentTarget.value)}
         />
         <Textarea
-          label="Request Prompt"
-          value={note.requestPrompt}
-          onChange={(e) =>
-            onChange(note.id, "requestPrompt", e.currentTarget.value)
-          }
-          minRows={2}
-        />
-        <Textarea
-          label="Update Prompt"
-          value={note.updatePrompt}
-          onChange={(e) =>
-            onChange(note.id, "updatePrompt", e.currentTarget.value)
-          }
-          minRows={2}
-        />
-        <Textarea
-          label="Content"
-          value={note.content}
-          onChange={(e) => onChange(note.id, "content", e.currentTarget.value)}
-          minRows={4}
+          label="Note Prompt"
+          value={note.prompt}
+          onChange={(e) => onChange(note.id, "prompt", e.currentTarget.value)}
+          minRows={5}
         />
         <Button
           variant="outline"
@@ -190,7 +183,7 @@ const NoteSection: React.FC<NoteSectionProps> = ({
           onClick={() => onRemove(note.id)}
           mt="sm"
         >
-          Delete Note
+          <RiDeleteBinLine /> Delete Note
         </Button>
       </Paper>
     ))}

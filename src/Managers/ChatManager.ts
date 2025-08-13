@@ -1,5 +1,5 @@
-import type { Message } from "../Chat/ChatMessage";
 import type { ChatPage } from "../models/ChatPage";
+import type { Message } from "../pages/Chat/ChatMessage";
 
 export class ChatManager {
   MAX_MESSAGES_PER_PAGE = 10;

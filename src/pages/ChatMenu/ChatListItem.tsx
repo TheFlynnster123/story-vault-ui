@@ -79,6 +79,8 @@ const StyledChatListItem = styled.div<{ hasBackgroundImage?: boolean }>`
       margin: 0 auto 16px auto;
       width: 67vw;
       height: 67vw;
+      max-height: 40vh;
+      max-width: 40vh;
 
       &:hover {
         background-color: transparent;

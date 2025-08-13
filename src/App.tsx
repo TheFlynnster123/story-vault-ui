@@ -8,6 +8,7 @@ import SystemSettingsPage from "./pages/SystemSettingsPage";
 import { ChatEditorPage } from "./pages/ChatEditorPage";
 import ChatPage from "./pages/ChatPage";
 import { StoryNotesPage } from "./pages/StoryNotesPage";
+import { MemoriesPage } from "./pages/MemoriesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,14 @@ const App: React.FC<AppProps> = () => {
             element={
               <ProtectedRoute>
                 <StoryNotesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/memories"
+            element={
+              <ProtectedRoute>
+                <MemoriesPage />
               </ProtectedRoute>
             }
           />

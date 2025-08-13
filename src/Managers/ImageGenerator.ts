@@ -3,7 +3,7 @@ import { CivitJobAPI } from "../clients/CivitJobAPI";
 import type { ImageGenerationSettings } from "../models/SystemSettings";
 import type { SystemSettings } from "../models/SystemSettings";
 import { toSystemMessage } from "../utils/messageUtils";
-import type { Message } from "../Chat/ChatMessage";
+import type { Message } from "../pages/Chat/ChatMessage";
 
 export class ImageGenerator {
   public static DEFAULT_SETTINGS: ImageGenerationSettings = {
@@ -35,7 +35,7 @@ export class ImageGenerator {
 
   public async generatePrompt(messages: Message[]): Promise<string> {
     const hardcodedPrompt =
-      "Respond with ONLY a comma separated list depicting the current characters for image generation purposes. Example: 'woman sitting, touching face, chair, table, at chair, black dress, evening, classy, restaurant, italian'";
+      "Consider setting and the character present. Respond with ONLY a detailed, comma separated list depicting the current characters for image generation purposes. Example: 'woman sitting, touching face, chair, table, at chair, black dress, evening, classy, restaurant, italian'";
 
     const promptMessages = [...messages, toSystemMessage(hardcodedPrompt)];
 

@@ -1,8 +1,25 @@
+import { useCivitJob } from "../../hooks/useCivitJob";
 import type { MessageItemProps } from "./ChatMessage";
 import "./ChatMessage.css";
-import "./CivitJobMessage.css";
 import { useState } from "react";
-import { useCivitJob } from "../hooks/useCivitJob";
+import styled from "styled-components";
+
+const MessageContent = styled.div`
+  max-width: 80vw;
+`;
+
+const StoryPhoto = styled.img`
+  max-width: 100%;
+  height: auto;
+`;
+
+const LoadingBubble = styled.div`
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  text-align: center;
+`;
 
 export const CivitJobMessage: React.FC<MessageItemProps> = ({
   chatId,
@@ -65,14 +82,12 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
 
   return (
     <div className="message-item message-system">
-      <div className="message-content" onClick={handleMessageClick}>
+      <MessageContent onClick={handleMessageClick}>
         {(isLoading || !photoBase64) && (
-          <div className="loading-bubble">Loading photo...</div>
+          <LoadingBubble>Loading photo...</LoadingBubble>
         )}
-        {photoBase64 && (
-          <img src={photoBase64} alt="Story Photo" className="story-photo" />
-        )}
-      </div>
+        {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
+      </MessageContent>
       {showDeleteButtons && hasDeleteFunctions && (
         <div className="message-delete-buttons">
           {onDeleteMessage && (

@@ -10,25 +10,89 @@ import {
   Group,
   Paper,
   ActionIcon,
-  Image,
-  FileButton,
-  Text,
   Stack,
   Select,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { ChatSettings } from "../models/ChatSettings";
 import { useChatSettings } from "../hooks/queries/useChatSettings";
-import { ChatDeleteControl } from "../Chat/ChatControls/ChatDeleteControl";
 import { v4 as uuidv4 } from "uuid";
+import { ChatDeleteControl } from "./ChatEditor/ChatDeleteControl";
+import { BackgroundPhotoUploader } from "./ChatEditor/BackgroundPhotoUploader";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
+  const {
+    chatId,
+    isEditMode,
+    form,
+    handlePhotoUpload,
+    removePhoto,
+    handleSubmit,
+    handleGoBack,
+    handleDeleteSuccess,
+  } = useChatEditor(chatIdFromParams);
+
+  return (
+    <Container style={{ overflowY: "auto" }} miw="70vw">
+      <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} p={30}>
+        <ChatEditorHeader
+          isEditMode={isEditMode}
+          onGoBack={handleGoBack}
+          isFormDirty={form.isDirty()}
+        />
+
+        <Stack>
+          <ChatFormFields form={form} />
+
+          <BackgroundPhotoUploader
+            backgroundPhotoBase64={form.values.backgroundPhotoBase64}
+            onPhotoUpload={handlePhotoUpload}
+            onRemovePhoto={removePhoto}
+          />
+        </Stack>
+
+        <ChatEditorFooter
+          chatId={chatId}
+          isEditMode={isEditMode}
+          onDeleteSuccess={handleDeleteSuccess}
+        />
+      </Paper>
+    </Container>
+  );
+};
+
+interface ChatEditorHeaderProps {
+  isEditMode: boolean;
+  onGoBack: () => void;
+  isFormDirty: boolean;
+}
+
+const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
+  isEditMode,
+  onGoBack,
+  isFormDirty,
+}) => (
+  <Group justify="space-between" align="center" mb="xl">
+    <Group>
+      <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
+        <RiArrowLeftLine />
+      </ActionIcon>
+      <Title order={2}>{isEditMode ? "Edit Chat" : "Create New Chat"}</Title>
+    </Group>
+    <Button type="submit" disabled={!isFormDirty}>
+      {isEditMode ? "Save Changes" : "Create Chat"}
+    </Button>
+  </Group>
+);
+
+const useChatEditor = (chatIdFromParams: string | undefined) => {
   const [chatId] = useState(chatIdFromParams ?? uuidv4());
   const navigate = useNavigate();
   const { chatSettings, saveChatSettings } = useChatSettings(chatId);
+  const isEditMode = Boolean(chatIdFromParams);
 
-  const form = useForm({
+  const form = useForm<ChatSettings>({
     initialValues: {
       chatTitle: "",
       backgroundPhotoBase64: undefined as string | undefined,
@@ -43,15 +107,16 @@ export const ChatEditorPage: React.FC = () => {
 
   useEffect(() => {
     if (chatSettings) {
-      form.setValues({
+      const values = {
         chatTitle: chatSettings.chatTitle || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
         promptType: chatSettings.promptType || "First Person Character",
         customPrompt: chatSettings.customPrompt || "",
-      });
+      };
+      form.setInitialValues(values);
+      form.reset();
     }
   }, [chatSettings]);
-  const backgroundPhotoBase64 = form.values.backgroundPhotoBase64;
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,104 +148,72 @@ export const ChatEditorPage: React.FC = () => {
     navigate(-1);
   };
 
-  return (
-    <Container size="md" my="xl">
-      <Paper
-        component="form"
-        onSubmit={form.onSubmit(handleSubmit)}
-        withBorder
-        shadow="md"
-        p={30}
-        mt={30}
-        radius="md"
-      >
-        <Group justify="space-between" align="center" mb="xl">
-          <ActionIcon onClick={handleGoBack} variant="default" size="lg">
-            <RiArrowLeftLine />
-          </ActionIcon>
-          <Title order={2}>
-            {chatIdFromParams ? "Edit Chat" : "Create New Chat"}
-          </Title>
-        </Group>
+  const handleDeleteSuccess = () => {
+    navigate("/chat");
+  };
 
-        <Stack>
-          <TextInput
-            label="Story Title"
-            placeholder="Enter a title for your story..."
-            withAsterisk
-            autoFocus
-            {...form.getInputProps("chatTitle")}
-          />
-
-          <div>
-            <Text size="sm" fw={500}>
-              Background Photo
-            </Text>
-            {backgroundPhotoBase64 ? (
-              <Paper withBorder p="sm" mt="xs">
-                <Image
-                  src={backgroundPhotoBase64}
-                  alt="Background preview"
-                  radius="sm"
-                />
-                <Button
-                  variant="outline"
-                  color="red"
-                  fullWidth
-                  mt="sm"
-                  onClick={removePhoto}
-                >
-                  Remove Photo
-                </Button>
-              </Paper>
-            ) : (
-              <Group justify="center" mt="xs">
-                <FileButton
-                  onChange={(file) =>
-                    handlePhotoUpload({
-                      target: { files: file ? [file] : null },
-                    } as React.ChangeEvent<HTMLInputElement>)
-                  }
-                  accept="image/png,image/jpeg,image/gif"
-                >
-                  {(props) => <Button {...props}>Upload Image</Button>}
-                </FileButton>
-              </Group>
-            )}
-          </div>
-
-          <Select
-            label="Prompt"
-            data={["First Person Character", "Manual"]}
-            {...form.getInputProps("promptType")}
-          />
-
-          {form.values.promptType === "Manual" && (
-            <Textarea
-              label="Custom Prompt"
-              placeholder="Enter your custom prompt..."
-              {...form.getInputProps("customPrompt")}
-            />
-          )}
-        </Stack>
-
-        <Group justify="space-between" mt="xl">
-          {chatIdFromParams && (
-            <ChatDeleteControl
-              chatId={chatId}
-              onDeleteSuccess={() => navigate("/chat")}
-            />
-          )}
-          <Group>
-            <Button variant="default" onClick={handleGoBack}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {chatIdFromParams ? "Save Changes" : "Create Chat"}
-            </Button>
-          </Group>
-        </Group>
-      </Paper>
-    </Container>
-  );
+  return {
+    chatId,
+    isEditMode,
+    form,
+    handlePhotoUpload,
+    removePhoto,
+    handleSubmit,
+    handleGoBack,
+    handleDeleteSuccess,
+  };
 };
+
+interface ChatFormFieldsProps {
+  form: {
+    getInputProps: (field: string) => any;
+    values: {
+      promptType: string;
+    };
+  };
+}
+
+const ChatFormFields: React.FC<ChatFormFieldsProps> = ({ form }) => (
+  <Stack>
+    <TextInput
+      label="Story Title"
+      placeholder="Enter a title for your story..."
+      withAsterisk
+      autoFocus
+      {...form.getInputProps("chatTitle")}
+    />
+
+    <Select
+      label="Prompt"
+      data={["First Person Character", "Manual"]}
+      {...form.getInputProps("promptType")}
+    />
+
+    {form.values.promptType === "Manual" && (
+      <Textarea
+        label="Custom Prompt"
+        placeholder="Enter your custom prompt..."
+        p="10"
+        {...form.getInputProps("customPrompt")}
+      />
+    )}
+  </Stack>
+);
+
+interface ChatEditorFooterProps {
+  chatId: string;
+  isEditMode: boolean;
+  onDeleteSuccess: () => void;
+}
+
+const ChatEditorFooter: React.FC<ChatEditorFooterProps> = ({
+  chatId,
+  isEditMode,
+  onDeleteSuccess,
+}) => (
+  <Group justify="center" mt="xl">
+    {isEditMode && (
+      <ChatDeleteControl chatId={chatId} onDeleteSuccess={onDeleteSuccess} />
+    )}
+  </Group>
+);
