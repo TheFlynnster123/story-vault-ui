@@ -183,7 +183,7 @@ const NoteSection: React.FC<NoteSectionProps> = ({
           onClick={() => onRemove(note.id)}
           mt="sm"
         >
-          Delete Note
+          <RiDeleteBinLine /> Delete Note
         </Button>
       </Paper>
     ))}
