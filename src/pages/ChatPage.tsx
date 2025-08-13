@@ -6,16 +6,12 @@ const ChatPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
 
-  const toggleMenu = () => {
-    navigate("/chat");
-  };
-
   if (!chatId) {
     navigate("/chat");
     return null;
   }
 
-  return <Chat chatId={chatId} toggleMenu={toggleMenu} />;
+  return <Chat chatId={chatId} />;
 };
 
 export default ChatPage;

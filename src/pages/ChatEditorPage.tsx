@@ -80,14 +80,9 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
       </ActionIcon>
       <Title order={2}>{isEditMode ? "Edit Chat" : "Create New Chat"}</Title>
     </Group>
-    <Group>
-      <Button variant="default" onClick={onGoBack}>
-        Cancel
-      </Button>
-      <Button type="submit" disabled={!isFormDirty}>
-        {isEditMode ? "Save Changes" : "Create Chat"}
-      </Button>
-    </Group>
+    <Button type="submit" disabled={!isFormDirty}>
+      {isEditMode ? "Save Changes" : "Create Chat"}
+    </Button>
   </Group>
 );
 

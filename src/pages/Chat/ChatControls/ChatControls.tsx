@@ -10,21 +10,16 @@ import styled from "styled-components";
 
 interface ChatControlsProps {
   chatId: string;
-  toggleMenu: () => void;
-  toggleChatFlowDialog: () => void;
 }
 
-export const ChatControls: React.FC<ChatControlsProps> = ({
-  chatId,
-  toggleMenu,
-}) => {
+export const ChatControls: React.FC<ChatControlsProps> = ({ chatId }) => {
   const navigate = useNavigate();
 
   return (
     <ControlsContainer>
       <Stack>
         <ActionIcon
-          onClick={toggleMenu}
+          onClick={() => navigate("/chat")}
           variant="gradient"
           title="Back to Menu"
           size="xl"

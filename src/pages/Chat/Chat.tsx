@@ -1,20 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
+import styled from "styled-components";
 import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
-import { ChatFlowDialog } from "./ChatFlowDialog";
 import { useChat } from "../../hooks/useChat";
 import { useChatSettings } from "../../hooks/queries/useChatSettings";
-import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
-import { toSystemMessage } from "../../utils/messageUtils";
 
 interface ChatProps {
   chatId: string;
-  toggleMenu: () => void;
 }
 
-export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
+export const Chat: React.FC<ChatProps> = ({ chatId }) => {
   const {
     pages,
     deleteMessage,
@@ -22,7 +19,6 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
     getDeletePreview,
     submitMessage,
     isLoading,
-    status,
     generateImage,
   } = useChat({
     chatId,
@@ -30,38 +26,17 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
 
   const { chatSettings } = useChatSettings(chatId);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [isChatFlowDialogOpen, setIsChatFlowDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading) inputRef.current?.focus();
   }, [isLoading]);
 
-  const backgroundStyle: React.CSSProperties = {
-    backgroundColor: chatSettings?.backgroundPhotoBase64
-      ? "transparent"
-      : "black",
-    backgroundImage: chatSettings?.backgroundPhotoBase64
-      ? `url(${chatSettings.backgroundPhotoBase64})`
-      : "none",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    backgroundRepeat: "no-repeat",
-    backgroundAttachment: "fixed",
-  };
-
   return (
-    <div
-      className="chat-container"
-      data-chatid={chatId}
-      style={backgroundStyle}
+    <ChatContainer
+      $chatId={chatId}
+      $backgroundPhotoBase64={chatSettings?.backgroundPhotoBase64}
     >
-      <ChatControls
-        chatId={chatId}
-        toggleMenu={toggleMenu}
-        toggleChatFlowDialog={() =>
-          setIsChatFlowDialogOpen(!isChatFlowDialogOpen)
-        }
-      />
+      <ChatControls chatId={chatId} />
 
       <ChatMessageList
         chatId={chatId}
@@ -71,13 +46,6 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         getDeletePreview={getDeletePreview}
       />
 
-      <ChatFlowDialog
-        status={status}
-        chatId={chatId}
-        isOpen={isChatFlowDialogOpen}
-        onCancel={() => setIsChatFlowDialogOpen(false)}
-        onOpen={() => setIsChatFlowDialogOpen(true)}
-      />
       <ChatInput
         ref={inputRef}
         onSubmit={submitMessage}
@@ -85,6 +53,31 @@ export const Chat: React.FC<ChatProps> = ({ chatId, toggleMenu }) => {
         isLoading={isLoading}
         placeholder={"Type your message here..."}
       />
-    </div>
+    </ChatContainer>
   );
 };
+
+const ChatContainer = styled.div.attrs<{
+  $chatId: string;
+}>((props) => ({
+  "data-chatid": props.$chatId,
+  className: "chat-container",
+}))<{
+  $backgroundPhotoBase64?: string;
+}>`
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  background-color: ${(props) =>
+    props.$backgroundPhotoBase64 ? "transparent" : "black"};
+  background-image: ${(props) =>
+    props.$backgroundPhotoBase64
+      ? `url(${props.$backgroundPhotoBase64})`
+      : "none"};
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+`;
