@@ -79,6 +79,7 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
     chatMessages: Message[]
   ) => {
     const promptMessages: Message[] = [
+      ...buildStoryMessages(),
       ...chatMessages,
       toSystemMessage(
         `#${note.name}\r\n
@@ -127,6 +128,11 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
     return [toSystemMessage(`# Memories\r\n${memoryContent}`)];
   };
 
+  const buildStoryMessages = () => {
+    if (!chatSettings?.story?.trim()) return [];
+    return [toSystemMessage(`# Story\r\n${chatSettings.story}`)];
+  };
+
   const buildFinalPromptMessages = (
     basePrompt: string,
     chatMessages: Message[],
@@ -135,6 +141,7 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
   ): Message[] => {
     return [
       toSystemMessage(basePrompt),
+      ...buildStoryMessages(),
       ...chatMessages,
       ...buildNoteMessages(notes),
       ...buildMemoryMessages(memories),
