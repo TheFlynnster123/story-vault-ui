@@ -35,7 +35,7 @@ export class ImageGenerator {
 
   public async generatePrompt(messages: Message[]): Promise<string> {
     const hardcodedPrompt =
-      "Respond with ONLY a comma separated list depicting the current characters for image generation purposes. Example: 'woman sitting, touching face, chair, table, at chair, black dress, evening, classy, restaurant, italian'";
+      "Consider setting and the character present. Respond with ONLY a detailed, comma separated list depicting the current characters for image generation purposes. Example: 'woman sitting, touching face, chair, table, at chair, black dress, evening, classy, restaurant, italian'";
 
     const promptMessages = [...messages, toSystemMessage(hardcodedPrompt)];
 

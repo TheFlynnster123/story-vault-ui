@@ -92,7 +92,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   const { chatSettings, saveChatSettings } = useChatSettings(chatId);
   const isEditMode = Boolean(chatIdFromParams);
 
-  const form = useForm({
+  const form = useForm<ChatSettings>({
     initialValues: {
       chatTitle: "",
       backgroundPhotoBase64: undefined as string | undefined,

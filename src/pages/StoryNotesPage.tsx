@@ -36,10 +36,8 @@ export const StoryNotesPage: React.FC = () => {
     const newNote: Note = {
       id: uuidv4(),
       type,
-      name: `New ${type} Note`,
-      requestPrompt: "",
-      updatePrompt: "",
-      content: "",
+      name: `New Note`,
+      prompt: "Write a list of key points relevant to the story:",
     };
     setLocalNotes([...localNotes, newNote]);
   };
@@ -90,22 +88,6 @@ export const StoryNotesPage: React.FC = () => {
             title="Planning Notes"
             type="planning"
             notes={getNotesByType("planning")}
-            onAdd={handleAddNote}
-            onChange={handleNoteChange}
-            onRemove={handleRemoveNote}
-          />
-          <NoteSection
-            title="Refinement Notes"
-            type="refinement"
-            notes={getNotesByType("refinement")}
-            onAdd={handleAddNote}
-            onChange={handleNoteChange}
-            onRemove={handleRemoveNote}
-          />
-          <NoteSection
-            title="Analysis Notes"
-            type="analysis"
-            notes={getNotesByType("analysis")}
             onAdd={handleAddNote}
             onChange={handleNoteChange}
             onRemove={handleRemoveNote}
@@ -163,26 +145,10 @@ const NoteSection: React.FC<NoteSectionProps> = ({
           onChange={(e) => onChange(note.id, "name", e.currentTarget.value)}
         />
         <Textarea
-          label="Request Prompt"
-          value={note.requestPrompt}
-          onChange={(e) =>
-            onChange(note.id, "requestPrompt", e.currentTarget.value)
-          }
-          minRows={2}
-        />
-        <Textarea
-          label="Update Prompt"
-          value={note.updatePrompt}
-          onChange={(e) =>
-            onChange(note.id, "updatePrompt", e.currentTarget.value)
-          }
-          minRows={2}
-        />
-        <Textarea
-          label="Content"
-          value={note.content}
-          onChange={(e) => onChange(note.id, "content", e.currentTarget.value)}
-          minRows={4}
+          label="Note Prompt"
+          value={note.prompt}
+          onChange={(e) => onChange(note.id, "prompt", e.currentTarget.value)}
+          minRows={5}
         />
         <Button
           variant="outline"
