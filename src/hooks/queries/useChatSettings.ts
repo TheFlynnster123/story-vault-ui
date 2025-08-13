@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BlobAPI } from "../../clients/BlobAPI";
 import type { ChatSettings } from "../../models";
+import { ChatHistoryAPI } from "../../clients/ChatHistoryAPI";
 
 const getQueryKey = (chatId: string) => ["chat-settings", chatId];
 
