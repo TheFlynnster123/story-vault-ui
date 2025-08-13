@@ -3,7 +3,7 @@ import { CivitJobAPI } from "../clients/CivitJobAPI";
 import type { ImageGenerationSettings } from "../models/SystemSettings";
 import type { SystemSettings } from "../models/SystemSettings";
 import { toSystemMessage } from "../utils/messageUtils";
-import type { Message } from "../Chat/ChatMessage";
+import type { Message } from "../pages/Chat/ChatMessage";
 
 export class ImageGenerator {
   public static DEFAULT_SETTINGS: ImageGenerationSettings = {

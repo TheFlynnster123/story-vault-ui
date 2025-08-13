@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { GrokChatAPI } from "../clients/GrokChatAPI";
 import type { ChatManager } from "../Managers/ChatManager";
-import type { Message } from "../Chat/ChatMessage";
 import { toSystemMessage } from "../utils/messageUtils";
 import { useNotes } from "./useNotes";
 import type { Note } from "../models/Note";
 import { useSystemSettings } from "./queries/useSystemSettings";
+import type { Message } from "../pages/Chat/ChatMessage";
 
 const DRAFT_RESPONSE_PROMPT: string =
   "Consider the above notes, and draft a response to the conversation. Provide your response directly without a preamble.";

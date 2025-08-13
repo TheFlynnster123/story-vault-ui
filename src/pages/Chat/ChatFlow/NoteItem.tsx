@@ -1,6 +1,6 @@
 import React from "react";
 import "./NoteItem.css";
-import type { Note } from "../../models/Note";
+import type { Note } from "../../../models";
 
 interface NoteItemProps {
   note: Note;

@@ -1,7 +1,7 @@
-import type { Message } from "../Chat/ChatMessage";
 import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
 import type { SystemSettings } from "../models";
+import type { Message } from "../pages/Chat/ChatMessage";
 import { AuthAPI } from "./AuthAPI";
 
 interface PostChatRequest {
