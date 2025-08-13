@@ -54,4 +54,5 @@ const ControlsContainer = styled.div`
   top: 1rem;
   right: 1rem;
   z-index: 1000;
+  margin: 0.5rem;
 `;
