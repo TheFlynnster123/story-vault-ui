@@ -32,7 +32,7 @@ export const StoryNotesPage: React.FC = () => {
     if (!isLoading) {
       setLocalNotes([...initialNotes]);
     }
-  }, [isLoading, initialNotes]);
+  }, [isLoading]);
 
   useEffect(() => {
     setIsDirty(!isEqual(initialNotes, localNotes));
