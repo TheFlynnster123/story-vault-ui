@@ -67,8 +67,6 @@ const ChatContainer = styled.div.attrs<{
 }>`
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
   position: relative;
   background-color: ${(props) =>
     props.$backgroundPhotoBase64 ? "transparent" : "black"};

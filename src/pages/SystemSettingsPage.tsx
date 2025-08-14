@@ -61,7 +61,7 @@ const SettingsSection: React.FC<SettingsSectionProps> = ({
 const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <>
     <Group>
-      <ActionIcon onClick={onBack} size="lg" variant="default">
+      <ActionIcon onClick={onBack} size="lg" variant="gradient">
         <RiArrowLeftLine />
       </ActionIcon>
       <Title order={1}>System Settings</Title>
