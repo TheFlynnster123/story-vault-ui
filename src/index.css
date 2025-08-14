@@ -12,10 +12,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding: 0rem;
-
-  /* Ensure the app takes up the full screen */
-  height: 100%;
-  width: 100%;
 }
 
 a {
@@ -40,8 +36,7 @@ body {
   width: 100%;
   overflow: hidden;
   position: fixed;
-  /* Prevent overscroll/bounce effect on mobile */
-  overscroll-behavior: none;
+
   /* Prevent pull-to-refresh on mobile */
   touch-action: manipulation;
 }
@@ -50,7 +45,7 @@ body {
 #root {
   height: 100%;
   width: 100%;
-  overflow: hidden;
+  overflow: auto;
   position: fixed;
   top: 0;
   left: 0;
