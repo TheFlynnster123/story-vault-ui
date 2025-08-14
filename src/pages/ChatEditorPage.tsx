@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RiArrowLeftLine } from "react-icons/ri";
 import {
-  Container,
   Title,
   TextInput,
   Textarea,
@@ -19,6 +18,7 @@ import { useChatSettings } from "../hooks/queries/useChatSettings";
 import { v4 as uuidv4 } from "uuid";
 import { ChatDeleteControl } from "./ChatEditor/ChatDeleteControl";
 import { BackgroundPhotoUploader } from "./ChatEditor/BackgroundPhotoUploader";
+import { Page } from "./Page";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
@@ -34,7 +34,7 @@ export const ChatEditorPage: React.FC = () => {
   } = useChatEditor(chatIdFromParams);
 
   return (
-    <Container style={{ overflowY: "auto" }} miw="70vw">
+    <Page>
       <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} p={30}>
         <ChatEditorHeader
           isEditMode={isEditMode}
@@ -58,7 +58,7 @@ export const ChatEditorPage: React.FC = () => {
           onDeleteSuccess={handleDeleteSuccess}
         />
       </Paper>
-    </Container>
+    </Page>
   );
 };
 

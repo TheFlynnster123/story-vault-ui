@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RiArrowLeftLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 import {
-  Container,
   Title,
   Button,
   Group,
@@ -17,11 +16,16 @@ import { useMemories } from "../hooks/useMemories";
 import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
 import isEqual from "lodash.isequal";
+import { Page } from "./Page";
 
 export const MemoriesPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const { memories: initialMemories, saveMemories, isLoading } = useMemories(chatId!);
+  const {
+    memories: initialMemories,
+    saveMemories,
+    isLoading,
+  } = useMemories(chatId!);
   const [localMemories, setLocalMemories] = useState<Memory[]>([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [memoryToDelete, setMemoryToDelete] = useState<string | null>(null);
@@ -62,7 +66,9 @@ export const MemoriesPage: React.FC = () => {
 
   const confirmRemoveMemory = () => {
     if (memoryToDelete) {
-      setLocalMemories((prev) => prev.filter((memory) => memory.id !== memoryToDelete));
+      setLocalMemories((prev) =>
+        prev.filter((memory) => memory.id !== memoryToDelete)
+      );
     }
     setIsConfirmModalOpen(false);
     setMemoryToDelete(null);
@@ -78,7 +84,7 @@ export const MemoriesPage: React.FC = () => {
   };
 
   return (
-    <Container size="md" miw="70vw" my="xl">
+    <Page>
       <Paper
         component="form"
         onSubmit={(e) => {
@@ -105,7 +111,9 @@ export const MemoriesPage: React.FC = () => {
               <Textarea
                 placeholder="Enter your memory here..."
                 value={memory.content}
-                onChange={(e) => handleMemoryChange(memory.id, e.currentTarget.value)}
+                onChange={(e) =>
+                  handleMemoryChange(memory.id, e.currentTarget.value)
+                }
                 minRows={3}
                 autosize
               />
@@ -129,7 +137,7 @@ export const MemoriesPage: React.FC = () => {
         title="Confirm Deletion"
         message="Are you sure you want to delete this memory?"
       />
-    </Container>
+    </Page>
   );
 };
 

@@ -30,8 +30,7 @@ const MODEL_OPTIONS = [
 
 const TEMPERATURE_MARKS = [
   { value: 0, label: "Precise" },
-  { value: 0.7, label: "Creative" },
-  { value: 1.2, label: "Incoherent" },
+  { value: 1.2, label: "Creative" },
 ];
 
 interface ChatGenerationSettingsManagerProps {
@@ -149,11 +148,13 @@ const TemperatureSlider: React.FC<{
     <Slider
       value={value}
       onChange={onChange}
+      variant="gradient"
       min={0}
       max={1.2}
       step={0.1}
       label={(v) => v.toFixed(1)}
       marks={TEMPERATURE_MARKS}
+      m="sm"
     />
   </Stack>
 );

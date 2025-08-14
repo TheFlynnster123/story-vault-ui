@@ -1,19 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Container,
-  Title,
-  Grid,
-  Paper,
-  ActionIcon,
-  Group,
-  Divider,
-} from "@mantine/core";
+import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine } from "react-icons/ri";
 import { GrokKeyManager } from "./SystemSettings/GrokKeyManager";
 import { CivitaiKeyManager } from "./SystemSettings/CivitaiKeyManager";
 import { ChatGenerationSettingsManager } from "./SystemSettings/ChatGenerationSettingsManager";
 import { ImageGenerationSettingsManager } from "./SystemSettings/ImageGenerationSettingsManager";
+import { Page } from "./Page";
 
 interface SettingsSectionProps {
   title: string;
@@ -28,11 +21,7 @@ const SystemSettingsPage: React.FC = () => {
   };
 
   return (
-    <Container
-      size="lg"
-      my="xl"
-      style={{ maxHeight: "100vh", overflowY: "auto" }}
-    >
+    <Page>
       <PageHeader onBack={handleGoBack} />
       <Grid>
         <SettingsSection title="Grok API Configuration">
@@ -51,7 +40,7 @@ const SystemSettingsPage: React.FC = () => {
           <ChatGenerationSettingsManager onSave={() => {}} />
         </SettingsSection>
       </Grid>
-    </Container>
+    </Page>
   );
 };
 
