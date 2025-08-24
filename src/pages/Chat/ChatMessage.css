@@ -129,6 +129,17 @@
   /* Bulk delete button styles */
 }
 
+.regenerate-response {
+  /* Regenerate button specific styles */
+}
+
+.regenerate-response:hover {
+  background: #007bff;
+  color: white;
+  border-color: #0056b3;
+  transform: scale(1.05);
+}
+
 /* Confirmation dialog styles */
 .delete-confirmation-overlay {
   position: fixed;

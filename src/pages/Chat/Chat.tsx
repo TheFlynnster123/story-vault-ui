@@ -16,6 +16,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
     pages,
     deleteMessage,
     deleteMessagesFromIndex,
+    regenerateResponse,
     getDeletePreview,
     submitMessage,
     isLoading,
@@ -43,6 +44,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
         pages={pages}
         onDeleteMessage={deleteMessage}
         onDeleteFromHere={deleteMessagesFromIndex}
+        onRegenerateResponse={regenerateResponse}
         getDeletePreview={getDeletePreview}
       />
 

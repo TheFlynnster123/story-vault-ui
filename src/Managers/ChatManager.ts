@@ -42,6 +42,14 @@ export class ChatManager {
     return this.pages;
   }
 
+  public getMessage(messageId: string): Message | null {
+    for (const page of this.pages) {
+      const message = page.messages.find(msg => msg.id === messageId);
+      if (message) return message;
+    }
+    return null;
+  }
+
   public deleteMessage(messageId: string): ChatPage[] {
     const location = this.findMessageLocation(messageId);
     if (!location) {

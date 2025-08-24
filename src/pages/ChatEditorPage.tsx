@@ -203,7 +203,8 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({ form }) => (
     <Textarea
       label="Story"
       placeholder="Enter story details..."
-      minRows={3}
+      autosize
+      minRows={15}
       {...form.getInputProps("story")}
     />
   </Stack>

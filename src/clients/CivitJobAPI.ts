@@ -1,7 +1,7 @@
 import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
 import { AuthAPI } from "./AuthAPI";
-import type { ImageGenerationSettings } from "../models/SystemSettings";
+import type { ImageGenerationSettings } from "../models/ImageGenerationSettings";
 
 export class CivitJobAPI {
   public URL: string;

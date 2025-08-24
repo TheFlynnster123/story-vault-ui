@@ -7,12 +7,16 @@ export interface Message {
 import "./ChatMessage.css";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { Button, Modal, Group, Text } from "@mantine/core";
+import { RiDeleteBinLine, RiDeleteBin6Line, RiRefreshLine } from "react-icons/ri";
 
 export interface MessageItemProps {
   chatId: string;
   message: Message;
   onDeleteMessage?: (messageId: string) => void;
   onDeleteFromHere?: (messageId: string) => void;
+  onRegenerateResponse?: (messageId: string) => void;
+  isLastMessage?: boolean;
   getDeletePreview?: (messageId: string) => {
     messageCount: number;
     pageCount: number;
@@ -23,6 +27,8 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
   message,
   onDeleteMessage,
   onDeleteFromHere,
+  onRegenerateResponse,
+  isLastMessage,
   getDeletePreview,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -63,70 +69,117 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
     }
   };
 
+  const handleRegenerateClick = () => {
+    if (onRegenerateResponse) {
+      onRegenerateResponse(message.id);
+    }
+  };
+
   const handleMessageClick = () => {
-    if (onDeleteMessage || onDeleteFromHere) {
+    if (
+      onDeleteMessage ||
+      onDeleteFromHere ||
+      (onRegenerateResponse && isLastMessage)
+    ) {
       setShowDeleteButtons(!showDeleteButtons);
     }
   };
 
-  const hasDeleteFunctions = onDeleteMessage || onDeleteFromHere;
+  const hasActionFunctions =
+    onDeleteMessage ||
+    onDeleteFromHere ||
+    (onRegenerateResponse && isLastMessage);
 
   return (
     <div className={`message-item ${messageClass}`}>
       <div className="message-content">
         <div
           className={`${messageTextStyle} ${
-            hasDeleteFunctions ? "clickable" : ""
+            hasActionFunctions ? "clickable" : ""
           }`}
           onClick={handleMessageClick}
         >
           <ReactMarkdown>{message.content}</ReactMarkdown>
         </div>
       </div>
-      {showDeleteButtons && hasDeleteFunctions && (
-        <div className="message-delete-buttons">
-          {onDeleteMessage && (
-            <button
-              className="delete-button delete-single"
-              onClick={() => handleDeleteClick("single")}
-              title="Delete this message"
+      {showDeleteButtons && hasActionFunctions && (
+        <Group gap="xs" justify="center" mt="sm">
+          {onRegenerateResponse && isLastMessage && (
+            <Button
+              size="xs"
+              variant="light"
+              color="blue"
+              leftSection={<RiRefreshLine size={14} />}
+              onClick={handleRegenerateClick}
+              styles={{
+                root: {
+                  backgroundColor: 'rgba(34, 139, 230, 0.25)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(34, 139, 230, 0.35)',
+                  }
+                }
+              }}
             >
-              🗑️
-            </button>
+              Regenerate
+            </Button>
+          )}
+          {onDeleteMessage && (
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              leftSection={<RiDeleteBinLine size={14} />}
+              onClick={() => handleDeleteClick("single")}
+              styles={{
+                root: {
+                  backgroundColor: 'rgba(250, 82, 82, 0.25)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(250, 82, 82, 0.35)',
+                  }
+                }
+              }}
+            >
+              Delete
+            </Button>
           )}
           {onDeleteFromHere && (
-            <button
-              className="delete-button delete-from-here"
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              leftSection={<RiDeleteBin6Line size={14} />}
               onClick={() => handleDeleteClick("fromHere")}
-              title="Delete this message and all below"
+              styles={{
+                root: {
+                  backgroundColor: 'rgba(250, 82, 82, 0.25)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(250, 82, 82, 0.35)',
+                  }
+                }
+              }}
             >
-              🗑️↓
-            </button>
+              Delete All Below
+            </Button>
           )}
-        </div>
+        </Group>
       )}
 
-      {showDeleteConfirm && (
-        <div className="delete-confirmation-overlay">
-          <div className="delete-confirmation-dialog">
-            <p>{getConfirmationMessage()}</p>
-            <div className="delete-confirmation-buttons">
-              <button
-                className="confirm-delete-button"
-                onClick={handleConfirmDelete}
-              >
-                Delete
-              </button>
-              <button
-                className="cancel-delete-button"
-                onClick={handleCancelDelete}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        opened={showDeleteConfirm}
+        onClose={handleCancelDelete}
+        title="Confirm Deletion"
+        size="sm"
+      >
+        <Text>{getConfirmationMessage()}</Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={handleCancelDelete}>
+            Cancel
+          </Button>
+          <Button color="red" onClick={handleConfirmDelete}>
+            Delete
+          </Button>
+        </Group>
+      </Modal>
     </div>
   );
 };

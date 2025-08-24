@@ -1,9 +1,10 @@
 import { GrokChatAPI } from "../clients/GrokChatAPI";
 import { CivitJobAPI } from "../clients/CivitJobAPI";
-import type { ImageGenerationSettings } from "../models/SystemSettings";
+import type { ImageGenerationSettings } from "../models/ImageGenerationSettings";
 import type { SystemSettings } from "../models/SystemSettings";
 import { toSystemMessage } from "../utils/messageUtils";
 import type { Message } from "../pages/Chat/ChatMessage";
+import { ImageGenerationPrompt } from "../templates/ImageGenerationPromptTemplate";
 
 export class ImageGenerator {
   public static DEFAULT_SETTINGS: ImageGenerationSettings = {
@@ -34,10 +35,10 @@ export class ImageGenerator {
   }
 
   public async generatePrompt(messages: Message[]): Promise<string> {
-    const hardcodedPrompt =
-      "Consider setting and the character present. Respond with ONLY a detailed, comma separated list depicting the current characters for image generation purposes. Example: 'woman sitting, touching face, chair, table, at chair, black dress, evening, classy, restaurant, italian'";
-
-    const promptMessages = [...messages, toSystemMessage(hardcodedPrompt)];
+    const promptMessages = [
+      ...messages,
+      toSystemMessage(ImageGenerationPrompt),
+    ];
 
     return await new GrokChatAPI(this.systemSettings).postChat(promptMessages);
   }
