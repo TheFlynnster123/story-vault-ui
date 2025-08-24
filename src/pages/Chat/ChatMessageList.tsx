@@ -8,6 +8,7 @@ interface ChatMessageListProps {
   pages: ChatPage[];
   onDeleteMessage?: (messageId: string) => void;
   onDeleteFromHere?: (messageId: string) => void;
+  onRegenerateResponse?: (messageId: string) => void;
   getDeletePreview?: (messageId: string) => {
     messageCount: number;
     pageCount: number;
@@ -19,6 +20,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   pages,
   onDeleteMessage,
   onDeleteFromHere,
+  onRegenerateResponse,
   getDeletePreview,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -28,8 +30,10 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
 
   return (
     <div className="message-list" ref={messageListRef}>
-      {messages.map((msg) =>
-        msg.role === "civit-job" ? (
+      {messages.map((msg, index) => {
+        const isLastMessage = index === messages.length - 1;
+        
+        return msg.role === "civit-job" ? (
           <CivitJobMessage
             chatId={chatId}
             key={msg.id}
@@ -45,10 +49,12 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
             message={msg}
             onDeleteMessage={onDeleteMessage}
             onDeleteFromHere={onDeleteFromHere}
+            onRegenerateResponse={onRegenerateResponse}
+            isLastMessage={isLastMessage}
             getDeletePreview={getDeletePreview}
           />
-        )
-      )}
+        );
+      })}
     </div>
   );
 };

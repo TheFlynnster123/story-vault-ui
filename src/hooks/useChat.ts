@@ -126,6 +126,52 @@ export const useChat = ({ chatId }: UseChatProps) => {
     [chatPageManager]
   );
 
+  const regenerateResponse = useCallback(
+    async (messageId: string) => {
+      if (!chatPageManager) {
+        return;
+      }
+
+      const location = chatPageManager.findMessageLocation(messageId);
+      if (!location) {
+        console.warn(`Message with id ${messageId} not found`);
+        return;
+      }
+
+      const message = chatPageManager.getMessage(messageId);
+      if (!message) {
+        console.warn(`Message with id ${messageId} not found`);
+        return;
+      }
+
+      setIsLoading(true);
+
+      try {
+        // Delete the message first
+        chatPageManager.deleteMessage(messageId);
+        const updatedPages = chatPageManager.getPages();
+        setPages([...updatedPages]);
+
+        // Save the affected page
+        const affectedPage = updatedPages[location.pageIndex];
+        if (affectedPage) {
+          await savePageToApi(affectedPage);
+        }
+
+        // Generate a new response
+        const responseMessage = await generateResponse();
+        
+        // Add the new response
+        await addMessage(toSystemMessage(responseMessage));
+      } catch (error) {
+        console.error("Failed to regenerate response:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [chatPageManager, savePageToApi, setPages, generateResponse, addMessage]
+  );
+
   const generateImage = async () => {
     setIsLoading(true);
     if (!systemSettings) return;
@@ -156,6 +202,7 @@ export const useChat = ({ chatId }: UseChatProps) => {
     submitMessage,
     deleteMessage,
     deleteMessagesFromIndex,
+    regenerateResponse,
     getDeletePreview,
     isLoading: isLoading || isLoadingHistory,
     getMessageList,
