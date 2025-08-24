@@ -1,6 +1,6 @@
 import { GrokChatAPI } from "../clients/GrokChatAPI";
 import { CivitJobAPI } from "../clients/CivitJobAPI";
-import type { ImageGenerationSettings } from "../models/SystemSettings";
+import type { ImageGenerationSettings } from "../models/ImageGenerationSettings";
 import type { SystemSettings } from "../models/SystemSettings";
 import { toSystemMessage } from "../utils/messageUtils";
 import type { Message } from "../pages/Chat/ChatMessage";

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useSystemSettings } from "../../hooks/queries/useSystemSettings";
-import type { ImageGenerationSettings } from "../../models/SystemSettings";
+import type { ImageGenerationSettings } from "../../models/ImageGenerationSettings";
 import { ImageGenerator } from "../../Managers/ImageGenerator";
 import {
   TextInput,
