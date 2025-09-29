@@ -6,7 +6,6 @@ import { AuthAPI } from "./AuthAPI";
 
 interface PostChatRequest {
   messages: Message[];
-  reasoningEffort?: "high" | "low";
   model?: string;
   temperature?: number;
 }
@@ -26,19 +25,12 @@ export class GrokChatAPI {
     this.encryptionManager = new EncryptionManager();
   }
 
-  public async postChat(
-    messages: Message[],
-    reasoning?: "high" | "low"
-  ): Promise<string> {
+  public async postChat(messages: Message[]): Promise<string> {
     await this.encryptionManager.ensureKeysInitialized();
 
     const headers: Record<string, string> = {
       EncryptionKey: this.encryptionManager.grokEncryptionKey as string,
     };
-
-    if (reasoning) {
-      headers.Reasoning = reasoning;
-    }
 
     const requestBody: PostChatRequest = {
       messages: messages,
@@ -83,6 +75,8 @@ export class GrokChatAPI {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API request failed:", errorText);
         throw this.createResponseError(response);
       }
 

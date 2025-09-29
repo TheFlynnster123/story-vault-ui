@@ -15,16 +15,14 @@ import { RiCheckboxCircleLine } from "react-icons/ri";
 
 const DEFAULT_TEMPERATURE = 0.7;
 
-const REASONING_EFFORT_OPTIONS = [
-  { value: "", label: "Default" },
-  { value: "low", label: "Low" },
-  { value: "high", label: "High" },
-];
-
 const MODEL_OPTIONS = [
   { value: "", label: "Default" },
   { value: "grok-4-0709", label: "grok-4-0709" },
-  { value: "grok-3-mini", label: "grok-3-mini (Recommended!)" },
+  { value: "grok-4-fast-non-reasoning", label: "grok-4-fast-non-reasoning" },
+  {
+    value: "grok-4-fast-reasoning",
+    label: "grok-4-fast-reasoning (Recommended!)",
+  },
   { value: "grok-3", label: "grok-3" },
 ];
 
@@ -88,14 +86,6 @@ export const ChatGenerationSettingsManager: React.FC<
 
   return (
     <Stack>
-      <ReasoningEffortSelect
-        value={localSettings.reasoningEffort || ""}
-        onChange={(value) =>
-          handleSettingChange({
-            reasoningEffort: value ? (value as "high" | "low") : undefined,
-          })
-        }
-      />
       <ModelSelect
         value={localSettings.model || ""}
         onChange={(value) => handleSettingChange({ model: value || undefined })}
@@ -110,19 +100,6 @@ export const ChatGenerationSettingsManager: React.FC<
     </Stack>
   );
 };
-
-const ReasoningEffortSelect: React.FC<{
-  value: string | null;
-  onChange: (value: string | null) => void;
-}> = ({ value, onChange }) => (
-  <Select
-    label="Reasoning Effort"
-    value={value}
-    onChange={onChange}
-    data={REASONING_EFFORT_OPTIONS}
-    clearable
-  />
-);
 
 const ModelSelect: React.FC<{
   value: string | null;
