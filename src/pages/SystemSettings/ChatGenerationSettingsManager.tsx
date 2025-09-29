@@ -101,25 +101,3 @@ const ModelSelect: React.FC<{
     clearable
   />
 );
-
-const TemperatureSlider: React.FC<{
-  value: number;
-  onChange: (value: number) => void;
-}> = ({ value, onChange }) => (
-  <Stack gap="xs">
-    <Text size="sm" fw={500}>
-      Temperature
-    </Text>
-    <Slider
-      value={value}
-      onChange={onChange}
-      variant="gradient"
-      min={0}
-      max={1.2}
-      step={0.1}
-      label={(v) => v.toFixed(1)}
-      marks={TEMPERATURE_MARKS}
-      m="sm"
-    />
-  </Stack>
-);

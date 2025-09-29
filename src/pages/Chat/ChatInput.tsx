@@ -17,10 +17,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       event.preventDefault();
       if (!internalInputValue.trim()) return;
 
-      console.log("yo");
       onSubmit(internalInputValue);
 
-      console.log("yo2");
       setInternalInputValue("");
     };
 
