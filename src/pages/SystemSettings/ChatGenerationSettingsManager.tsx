@@ -1,19 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useSystemSettings } from "../../hooks/queries/useSystemSettings";
 import type { ChatGenerationSettings } from "../../models";
-import {
-  Select,
-  Slider,
-  Button,
-  Stack,
-  Text,
-  Group,
-  Loader,
-} from "@mantine/core";
+import { Select, Button, Stack, Text, Group, Loader } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { RiCheckboxCircleLine } from "react-icons/ri";
-
-const DEFAULT_TEMPERATURE = 0.7;
 
 const MODEL_OPTIONS = [
   { value: "", label: "Default" },
@@ -24,11 +14,6 @@ const MODEL_OPTIONS = [
     label: "grok-4-fast-reasoning (Recommended!)",
   },
   { value: "grok-3", label: "grok-3" },
-];
-
-const TEMPERATURE_MARKS = [
-  { value: 0, label: "Precise" },
-  { value: 1.2, label: "Creative" },
 ];
 
 interface ChatGenerationSettingsManagerProps {
@@ -47,7 +32,6 @@ export const ChatGenerationSettingsManager: React.FC<
   useEffect(() => {
     if (systemSettings?.chatGenerationSettings) {
       setLocalSettings({
-        temperature: DEFAULT_TEMPERATURE,
         ...systemSettings.chatGenerationSettings,
       });
     }
@@ -90,10 +74,6 @@ export const ChatGenerationSettingsManager: React.FC<
         value={localSettings.model || ""}
         onChange={(value) => handleSettingChange({ model: value || undefined })}
       />
-      <TemperatureSlider
-        value={localSettings.temperature ?? DEFAULT_TEMPERATURE}
-        onChange={(value) => handleSettingChange({ temperature: value })}
-      />
       <Button onClick={handleSave} mt="xl" disabled={!isDirty}>
         Save Settings
       </Button>
@@ -112,26 +92,4 @@ const ModelSelect: React.FC<{
     data={MODEL_OPTIONS}
     clearable
   />
-);
-
-const TemperatureSlider: React.FC<{
-  value: number;
-  onChange: (value: number) => void;
-}> = ({ value, onChange }) => (
-  <Stack gap="xs">
-    <Text size="sm" fw={500}>
-      Temperature
-    </Text>
-    <Slider
-      value={value}
-      onChange={onChange}
-      variant="gradient"
-      min={0}
-      max={1.2}
-      step={0.1}
-      label={(v) => v.toFixed(1)}
-      marks={TEMPERATURE_MARKS}
-      m="sm"
-    />
-  </Stack>
 );
