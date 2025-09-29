@@ -7,7 +7,6 @@ import { AuthAPI } from "./AuthAPI";
 interface PostChatRequest {
   messages: Message[];
   model?: string;
-  temperature?: number;
 }
 
 export class GrokChatAPI {

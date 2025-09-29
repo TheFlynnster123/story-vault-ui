@@ -13,8 +13,6 @@ import {
 import { notifications } from "@mantine/notifications";
 import { RiCheckboxCircleLine } from "react-icons/ri";
 
-const DEFAULT_TEMPERATURE = 0.7;
-
 const MODEL_OPTIONS = [
   { value: "", label: "Default" },
   { value: "grok-4-0709", label: "grok-4-0709" },
@@ -24,11 +22,6 @@ const MODEL_OPTIONS = [
     label: "grok-4-fast-reasoning (Recommended!)",
   },
   { value: "grok-3", label: "grok-3" },
-];
-
-const TEMPERATURE_MARKS = [
-  { value: 0, label: "Precise" },
-  { value: 1.2, label: "Creative" },
 ];
 
 interface ChatGenerationSettingsManagerProps {
@@ -47,7 +40,6 @@ export const ChatGenerationSettingsManager: React.FC<
   useEffect(() => {
     if (systemSettings?.chatGenerationSettings) {
       setLocalSettings({
-        temperature: DEFAULT_TEMPERATURE,
         ...systemSettings.chatGenerationSettings,
       });
     }
@@ -89,10 +81,6 @@ export const ChatGenerationSettingsManager: React.FC<
       <ModelSelect
         value={localSettings.model || ""}
         onChange={(value) => handleSettingChange({ model: value || undefined })}
-      />
-      <TemperatureSlider
-        value={localSettings.temperature ?? DEFAULT_TEMPERATURE}
-        onChange={(value) => handleSettingChange({ temperature: value })}
       />
       <Button onClick={handleSave} mt="xl" disabled={!isDirty}>
         Save Settings
