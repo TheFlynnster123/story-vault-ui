@@ -31,7 +31,6 @@ export const useChat = ({ chatId }: UseChatProps) => {
       const responseMessage = await generateResponse();
 
       await addMessage(toSystemMessage(responseMessage));
-    } catch (e) {
     } finally {
       setIsLoading(false);
     }

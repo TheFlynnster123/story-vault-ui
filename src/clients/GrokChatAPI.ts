@@ -84,6 +84,7 @@ export class GrokChatAPI {
       if (error instanceof Error) {
         throw error;
       }
+
       throw this.createFetchError(error);
     }
   }
