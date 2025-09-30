@@ -1,3 +1,4 @@
+import { d } from "../app/Dependencies/Dependencies";
 import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
 import type { SystemSettings } from "../models";
@@ -80,12 +81,17 @@ export class GrokChatAPI {
       }
 
       return await response.json();
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
+    } catch (e: any) {
+      console.error("Fetch error:", e);
+      if (e.message.includes("429")) {
+        d.ErrorService().log(
+          "Grok rate limit exceeded - check that you have credits!",
+          e
+        );
+        throw e;
       }
-
-      throw this.createFetchError(error);
+      d.ErrorService().log("Failed to make API request", e);
+      throw this.createFetchError(e);
     }
   }
 

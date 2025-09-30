@@ -5,6 +5,7 @@ import type { Memory } from "../../models/Memory";
 import type { Message } from "../../pages/Chat/ChatMessage";
 import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
 import { toSystemMessage } from "../../utils/messageUtils";
+import { d } from "../Dependencies/Dependencies";
 import { PlanningNotesService } from "./ChatFlowPlanningNotes";
 
 const RESPONSE_PROMPT: string =
@@ -64,8 +65,8 @@ export class ChatFlow {
       );
 
       return await this.getFinalResponse(finalPromptMessages);
-    } catch (error) {
-      console.error("Error generating response:", error);
+    } catch (e) {
+      d.ErrorService().log("Failed to generate chat response", e as Error);
     } finally {
       this.setIsLoading(false);
       this.setStatus("Ready");

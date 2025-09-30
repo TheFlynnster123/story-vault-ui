@@ -13,6 +13,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { RiCheckboxCircleLine, RiErrorWarningLine } from "react-icons/ri";
+import { d } from "../../app/Dependencies/Dependencies";
 
 export const GrokKeyManager: React.FC = () => {
   const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
@@ -64,8 +65,8 @@ export const GrokKeyManager: React.FC = () => {
 
       setGrokKey("");
       setShowKeyInput(false);
-    } catch (error) {
-      console.error("Failed to save Grok key:", error);
+    } catch (e) {
+      d.ErrorService().log("Failed to save Grok key", e);
       notifications.show({
         title: "Error",
         message: "Failed to save Grok key. Please try again.",

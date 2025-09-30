@@ -1,3 +1,4 @@
+import { d } from "../../app/Dependencies/Dependencies";
 import { useCivitJob } from "../../hooks/useCivitJob";
 import type { MessageItemProps } from "./ChatMessage";
 import "./ChatMessage.css";
@@ -36,8 +37,8 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
   try {
     const contentJson = JSON.parse(message.content);
     jobId = contentJson.jobId;
-  } catch (error) {
-    console.error("Failed to parse jobId from message content:", error);
+  } catch (e) {
+    d.ErrorService().log("Failed to parse jobId from message content", e);
     jobId = "";
   }
 

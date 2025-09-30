@@ -8,6 +8,7 @@ import { useChatHistory } from "./queries/useChatHistory";
 import { useSystemSettings } from "./queries/useSystemSettings";
 import { ImageGenerator } from "../Managers/ImageGenerator";
 import type { Message } from "../pages/Chat/ChatMessage";
+import { d } from "../app/Dependencies/Dependencies";
 
 export const useChat = ({ chatId }: UseChatProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -39,8 +40,8 @@ export const useChat = ({ chatId }: UseChatProps) => {
   const savePageToApi = useCallback(async (pageToSave: ChatPage) => {
     try {
       await new ChatHistoryAPI().saveChatPage(pageToSave);
-    } catch (error) {
-      console.error("Failed to save page:", pageToSave.pageId, error);
+    } catch (e) {
+      d.ErrorService().log("Failed to save chat page", e);
     }
   }, []);
 
@@ -163,8 +164,8 @@ export const useChat = ({ chatId }: UseChatProps) => {
 
         // Add the new response
         await addMessage(toSystemMessage(responseMessage));
-      } catch (error) {
-        console.error("Failed to regenerate response:", error);
+      } catch (e) {
+        d.ErrorService().log("Failed to regenerate response", e);
       } finally {
         setIsLoading(false);
       }
@@ -188,8 +189,8 @@ export const useChat = ({ chatId }: UseChatProps) => {
         role: "civit-job",
         content: JSON.stringify({ jobId }),
       });
-    } catch (error) {
-      console.error("Failed to generate image:", error);
+    } catch (e) {
+      d.ErrorService().log("Failed to generate image", e);
     } finally {
       setIsLoading(false);
     }

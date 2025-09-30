@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BlobAPI } from "../clients/BlobAPI";
 import type { Memory } from "../models/Memory";
+import { d } from "../app/Dependencies/Dependencies";
 
 const getQueryKey = (chatId: string) => ["memories", chatId];
 
@@ -47,8 +48,8 @@ export const GetMemories = async (chatId: string): Promise<Memory[]> => {
 
   try {
     return JSON.parse(blobContent) as Memory[];
-  } catch (error) {
-    console.error("Failed to parse memories:", error);
+  } catch (e) {
+    d.ErrorService().log("Failed to parse memories", e);
     return [];
   }
 };

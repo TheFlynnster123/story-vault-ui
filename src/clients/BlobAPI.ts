@@ -1,3 +1,4 @@
+import { d } from "../app/Dependencies/Dependencies";
 import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
 import { AuthAPI } from "./AuthAPI";
@@ -61,10 +62,10 @@ export class BlobAPI {
 
       validateResponse(response, "save blob");
       return true;
-    } catch (error) {
-      console.error("Failed to save blob:", error);
-      if (error instanceof Error) {
-        throw error;
+    } catch (e) {
+      d.ErrorService().log("Failed to save blob", e as Error);
+      if (e instanceof Error) {
+        throw e;
       }
       throw new Error("Unknown error occurred while saving blob");
     }
@@ -90,10 +91,10 @@ export class BlobAPI {
         blobResponse.content
       );
       return decryptedContent;
-    } catch (error) {
-      console.error("Failed to get blob:", error);
-      if (error instanceof Error) {
-        throw error;
+    } catch (e) {
+      d.ErrorService().log("Failed to get blob", e);
+      if (e instanceof Error) {
+        throw e;
       }
       throw new Error("Unknown error occurred while fetching blob");
     }
@@ -111,10 +112,10 @@ export class BlobAPI {
 
       validateResponse(response, "delete blob");
       return true;
-    } catch (error) {
-      console.error("Failed to delete blob:", error);
-      if (error instanceof Error) {
-        throw error;
+    } catch (e) {
+      d.ErrorService().log("Failed to delete blob", e);
+      if (e instanceof Error) {
+        throw e;
       }
       throw new Error("Unknown error occurred while deleting blob");
     }

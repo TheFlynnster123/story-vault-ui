@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BlobAPI } from "../../clients/BlobAPI";
 import type { SystemSettings } from "../../models";
+import { d } from "../../app/Dependencies/Dependencies";
 
 const GLOBAL_CHAT_ID = "global";
 const getQueryKey = () => ["system-settings"];
@@ -44,8 +45,8 @@ export const GetSystemSettings = async (): Promise<
 
   try {
     return JSON.parse(blobContent) as SystemSettings;
-  } catch (error) {
-    console.error("Failed to parse system settings:", error);
+  } catch (e) {
+    d.ErrorService().log("Failed to parse system settings", e);
     return undefined;
   }
 };

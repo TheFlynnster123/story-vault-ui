@@ -13,6 +13,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { RiCheckboxCircleLine, RiErrorWarningLine } from "react-icons/ri";
+import { d } from "../../app/Dependencies/Dependencies";
 
 export const CivitaiKeyManager: React.FC = () => {
   const { hasValidCivitaiKey, refreshCivitaiKeyStatus } = useCivitaiKey();
@@ -64,8 +65,8 @@ export const CivitaiKeyManager: React.FC = () => {
 
       setCivitaiKey("");
       setShowKeyInput(false);
-    } catch (error) {
-      console.error("Failed to save Civitai key:", error);
+    } catch (e) {
+      d.ErrorService().log("Failed to save Civitai key", e);
       notifications.show({
         title: "Error",
         message: "Failed to save Civitai key. Please try again.",
