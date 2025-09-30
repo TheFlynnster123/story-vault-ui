@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { EncryptionManager } from "./Managers/EncryptionManager";
 import { GrokKeyAPI } from "./clients/GrokKeyAPI";
+import { d } from "./app/Dependencies/Dependencies";
 
 interface IGrokKeyInput {
   onGrokKeyUpdated: () => void;
@@ -22,9 +23,8 @@ export const GrokKeyInput: React.FC<IGrokKeyInput> = ({ onGrokKeyUpdated }) => {
       await new GrokKeyAPI().saveGrokKey(encryptedKey);
 
       onGrokKeyUpdated();
-    } catch (error) {
-      console.error("Failed to save Grok key:", error);
-      alert("Failed to save Grok key. Please try again.");
+    } catch (e) {
+      d.ErrorService().log("Failed to save Grok key", e as Error);
     }
   };
 

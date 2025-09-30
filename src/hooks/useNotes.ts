@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BlobAPI } from "../clients/BlobAPI";
 import type { Note } from "../models/Note";
+import { d } from "../app/Dependencies/Dependencies";
 
 const getQueryKey = (chatId: string) => ["notes", chatId];
 
@@ -47,8 +48,8 @@ export const GetNotes = async (chatId: string): Promise<Note[]> => {
 
   try {
     return JSON.parse(blobContent) as Note[];
-  } catch (error) {
-    console.error("Failed to parse notes:", error);
+  } catch (e) {
+    d.ErrorService().log("Failed to parse notes", e);
     return [];
   }
 };

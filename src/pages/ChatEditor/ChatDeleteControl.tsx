@@ -3,6 +3,7 @@ import { useDeleteChatMutation } from "../../hooks/queries/useChatSettings";
 import { Button, Modal, Group, Text } from "@mantine/core";
 import { RiDeleteBinLine } from "react-icons/ri";
 import { ChatHistoryAPI } from "../../clients/ChatHistoryAPI";
+import { d } from "../../app/Dependencies/Dependencies";
 
 interface ChatDeleteControlProps {
   chatId: string;
@@ -22,8 +23,8 @@ export const ChatDeleteControl: React.FC<ChatDeleteControlProps> = ({
       await new ChatHistoryAPI().deleteChat(chatId);
 
       onDeleteSuccess();
-    } catch (error) {
-      console.error("Failed to delete chat:", error);
+    } catch (e) {
+      d.ErrorService().log("Failed to delete chat", e);
     }
   };
 

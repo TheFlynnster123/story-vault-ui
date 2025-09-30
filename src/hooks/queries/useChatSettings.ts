@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BlobAPI } from "../../clients/BlobAPI";
 import type { ChatSettings } from "../../models";
+import { d } from "../../app/Dependencies/Dependencies";
 
 const getQueryKey = (chatId: string) => ["chat-settings", chatId];
 
@@ -42,8 +43,8 @@ export const GetChatSettings = async (
 
   try {
     return JSON.parse(blobContent) as ChatSettings;
-  } catch (error) {
-    console.error("Failed to parse chat settings:", error);
+  } catch (e) {
+    d.ErrorService().log("Failed to parse chat settings", e);
     return undefined;
   }
 };

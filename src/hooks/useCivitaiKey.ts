@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CivitKeyAPI } from "../clients/CivitKeyAPI";
+import { d } from "../app/Dependencies/Dependencies";
 
 export const useCivitaiKey = () => {
   const [hasValidCivitaiKey, setHasValidCivitaiKey] = useState<
@@ -10,8 +11,8 @@ export const useCivitaiKey = () => {
     try {
       const isValid = await new CivitKeyAPI().hasValidCivitaiKey();
       setHasValidCivitaiKey(isValid);
-    } catch (error) {
-      console.error("Failed to check Civitai key status:", error);
+    } catch (e) {
+      d.ErrorService().log("Failed to check Civitai key status", e);
     }
   };
 
