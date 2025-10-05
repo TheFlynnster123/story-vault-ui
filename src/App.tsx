@@ -5,6 +5,8 @@ import React from "react";
 import LandingPage from "./pages/LandingPage";
 import ChatMenuPage from "./pages/ChatMenuPage";
 import SystemSettingsPage from "./pages/SystemSettingsPage";
+import ChatSettingsPage from "./pages/ChatSettingsPage";
+import ImageSettingsPage from "./pages/ImageSettingsPage";
 import { ChatEditorPage } from "./pages/ChatEditorPage";
 import ChatPage from "./pages/ChatPage";
 import { StoryNotesPage } from "./pages/StoryNotesPage";
@@ -74,6 +76,22 @@ const App: React.FC<AppProps> = () => {
             element={
               <ProtectedRoute requireGrokKey={false}>
                 <SystemSettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat-settings"
+            element={
+              <ProtectedRoute requireGrokKey={false}>
+                <ChatSettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/image-settings"
+            element={
+              <ProtectedRoute requireGrokKey={false}>
+                <ImageSettingsPage />
               </ProtectedRoute>
             }
           />

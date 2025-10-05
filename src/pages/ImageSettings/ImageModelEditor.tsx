@@ -18,7 +18,7 @@ import {
 } from "@mantine/core";
 import { RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 
-export const ImageGenerationSettingsManager: React.FC<{
+export const ImageModelEditor: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
   const { systemSettings, saveSystemSettings } = useSystemSettings();

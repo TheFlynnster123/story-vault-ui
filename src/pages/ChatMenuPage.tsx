@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useChats } from "./ChatMenu/useChats";
-import { SystemSettingsButton } from "./ChatMenu/SystemSettingsButton";
+import { ChatSettingsButton } from "./ChatMenu/ChatSettingsButton";
+import { ImageSettingsButton } from "./ChatMenu/ImageSettingsButton";
 import { CreateChatButton } from "./ChatMenu/CreateChatButton";
 import { ChatList } from "./ChatMenu/ChatList";
 import styled from "styled-components";
@@ -19,7 +20,8 @@ const ChatMenuPage = () => {
         <ChatMenuHeader>
           <ChatMenuTitle>Chats</ChatMenuTitle>
           <SystemSettingsContainer>
-            <SystemSettingsButton />
+            <ChatSettingsButton />
+            <ImageSettingsButton />
           </SystemSettingsContainer>
         </ChatMenuHeader>
         <CreateChatButton />
@@ -62,7 +64,7 @@ const ChatMenuTitle = styled.h2`
 const SystemSettingsContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 `;
 
 export default ChatMenuPage;
