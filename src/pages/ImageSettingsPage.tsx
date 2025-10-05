@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine } from "react-icons/ri";
 import { CivitaiKeyManager } from "./ImageSettings/CivitaiKeyManager";
-import { ImageModelEditor } from "./ImageSettings/ImageModelEditor";
+import { ImageModelEditor } from "./ImageSettings/ImageModelView";
 import { Page } from "./Page";
 
 interface SettingsSectionProps {

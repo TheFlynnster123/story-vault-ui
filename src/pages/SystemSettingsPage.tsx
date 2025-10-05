@@ -5,7 +5,7 @@ import { RiArrowLeftLine } from "react-icons/ri";
 import { GrokKeyManager } from "./ChatSettings/GrokKeyManager";
 import { CivitaiKeyManager } from "./ImageSettings/CivitaiKeyManager";
 import { ChatSettingsEditor } from "./ChatSettings/ChatSettingsEditor";
-import { ImageModelEditor } from "./ImageSettings/ImageModelEditor";
+import { ImageModelEditor } from "./ImageSettings/ImageModelView";
 import { Page } from "./Page";
 
 interface SettingsSectionProps {
