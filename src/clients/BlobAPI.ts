@@ -24,6 +24,8 @@ interface GetBlobResponse {
 }
 
 export class BlobAPI {
+  GLOBAL_CHAT_ID = "global";
+
   public URL: string;
   public encryptionManager: EncryptionManager;
   private authAPI: AuthAPI;
