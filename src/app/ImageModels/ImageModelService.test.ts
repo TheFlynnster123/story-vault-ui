@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ImageModelService, type UserImageModels } from "./ImageModelService";
 import type { ImageModel } from "./ImageModel";
 import { d } from "../Dependencies/Dependencies";
+import { randomUUID } from "crypto";
 
 // Create mock functions that will persist across calls
 const mockGetBlob = vi.fn();
@@ -27,8 +28,10 @@ vi.mock("../Dependencies/Dependencies", () => ({
 describe("ImageModelService", () => {
   let service: ImageModelService;
 
-  const createMockImageModel = (id: number = 1): ImageModel => ({
-    id,
+  const createMockImageModel = (
+    id: string | undefined = undefined
+  ): ImageModel => ({
+    id: id ?? randomUUID().toString(),
     name: `Test Model ${id}`,
     input: {
       model: "test-model",
@@ -60,7 +63,7 @@ describe("ImageModelService", () => {
 
   describe("SaveImageModel", () => {
     it("should save new model successfully", async () => {
-      const mockModel = createMockImageModel();
+      const mockModel = createMockImageModel("Image Model 1");
       const mockUserModels = createMockUserImageModels();
 
       mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
@@ -72,7 +75,7 @@ describe("ImageModelService", () => {
       expect(mockSaveBlob).toHaveBeenCalledWith(
         GLOBAL_CHAT_ID,
         "UserImageModels",
-        expect.stringContaining('"id":1')
+        expect.stringContaining('"id":"Image Model 1"')
       );
     });
 
@@ -108,6 +111,22 @@ describe("ImageModelService", () => {
         "Failed to save image model",
         expect.any(Error)
       );
+    });
+
+    it("should return false when model has no id", async () => {
+      const modelWithoutId = createMockImageModel();
+      // Remove the id by setting it to an invalid value
+      (modelWithoutId as any).id = undefined;
+
+      const result = await service.SaveImageModel(modelWithoutId);
+
+      expect(result).toBe(false);
+      expect(mockLog).toHaveBeenCalledWith(
+        "Cannot save image model without a valid ID",
+        expect.any(Error)
+      );
+      expect(mockGetBlob).not.toHaveBeenCalled();
+      expect(mockSaveBlob).not.toHaveBeenCalled();
     });
   });
 
@@ -155,8 +174,8 @@ describe("ImageModelService", () => {
 
   describe("DeleteImageModel", () => {
     it("should delete model successfully", async () => {
-      const modelToDelete = createMockImageModel(1);
-      const modelToKeep = createMockImageModel(2);
+      const modelToDelete = createMockImageModel("Image Model 1");
+      const modelToKeep = createMockImageModel("Image Model 2");
       const mockUserModels = createMockUserImageModels([
         modelToDelete,
         modelToKeep,
@@ -176,7 +195,7 @@ describe("ImageModelService", () => {
     });
 
     it("should reset selected model when deleting selected model", async () => {
-      const selectedModel = createMockImageModel(1);
+      const selectedModel = createMockImageModel("Image Model 1");
       const mockUserModels = {
         selectedModelId: "1",
         models: [selectedModel],
@@ -215,19 +234,19 @@ describe("ImageModelService", () => {
 
   describe("SelectImageModel", () => {
     it("should select model and return it", async () => {
-      const modelToSelect = createMockImageModel(1);
+      const modelToSelect = createMockImageModel("Image Model 1");
       const mockUserModels = createMockUserImageModels([modelToSelect]);
 
       mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
       mockSaveBlob.mockResolvedValue(true);
 
-      const result = await service.SelectImageModel("1");
+      const result = await service.SelectImageModel("Image Model 1");
 
       expect(result).toEqual(modelToSelect);
       expect(mockSaveBlob).toHaveBeenCalledWith(
         GLOBAL_CHAT_ID,
         "UserImageModels",
-        expect.stringContaining('"selectedModelId":"1"')
+        expect.stringContaining('"selectedModelId":"Image Model 1"')
       );
     });
 

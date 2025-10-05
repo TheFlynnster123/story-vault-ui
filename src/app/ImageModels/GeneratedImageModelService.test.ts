@@ -308,7 +308,7 @@ describe("GeneratedImageModelService", () => {
 
       expect(mockMapScheduler).toHaveBeenCalledWith("DPM++ 2M");
       expect(result).toEqual({
-        id: 99999,
+        id: expect.any(String),
         name: "Realistic Vision XL - 99999",
         input: {
           model: "urn:air:sdxl:checkpoint:civitai:123456@789012",
@@ -339,7 +339,7 @@ describe("GeneratedImageModelService", () => {
 
       const result = service.mapToImageModel(generatedData);
 
-      expect(result.id).toBe(11111);
+      expect(result.id).toEqual(expect.any(String));
       expect(result.name).toBe("Generated Model 11111");
       expect(result.input.model).toBe("");
       expect(result.input.additionalNetworks).toEqual({});
@@ -361,7 +361,7 @@ describe("GeneratedImageModelService", () => {
         expect.objectContaining({ method: "GET" })
       );
       expect(result).toEqual({
-        id: 12345,
+        id: expect.any(String),
         name: "Realistic Vision XL - 12345",
         input: expect.objectContaining({
           model: "urn:air:sdxl:checkpoint:civitai:123456@789012",

@@ -1,7 +1,7 @@
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 
 export type ImageModel = {
-  id: number;
+  id: string;
   name: string;
 
   /**

@@ -3,6 +3,7 @@ import type { GeneratedImageModel } from "./GeneratedImageModel";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { d } from "../Dependencies/Dependencies";
 import { SchedulerMapper } from "./SchedulerMapper";
+import { randomUUID } from "crypto";
 
 export class GeneratedImageModelService {
   private schedulerMapper = new SchedulerMapper();
@@ -65,7 +66,7 @@ export class GeneratedImageModelService {
   }
 
   mapToImageModel = (generatedData: GeneratedImageModel): ImageModel => ({
-    id: generatedData.remixOf.id,
+    id: randomUUID().toString(),
     name: this.generateModelName(generatedData),
     input: this.mapToFromTextInput(generatedData),
   });

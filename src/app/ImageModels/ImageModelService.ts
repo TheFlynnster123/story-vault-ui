@@ -7,6 +7,14 @@ export class ImageModelService {
 
   public async SaveImageModel(model: ImageModel): Promise<boolean> {
     try {
+      if (!model.id) {
+        d.ErrorService().log(
+          "Cannot save image model without a valid ID",
+          new Error("Invalid model ID")
+        );
+        return false;
+      }
+
       const userImageModels = await this.GetAllImageModels();
 
       if (this.modelExists(userImageModels.models, model)) {
