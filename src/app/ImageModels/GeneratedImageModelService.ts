@@ -2,12 +2,9 @@ import type { ImageModel } from "./ImageModel";
 import type { GeneratedImageModel } from "./GeneratedImageModel";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { d } from "../Dependencies/Dependencies";
-import { SchedulerMapper } from "./SchedulerMapper";
-import { randomUUID } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
 export class GeneratedImageModelService {
-  private schedulerMapper = new SchedulerMapper();
-
   public async GenerateImageModel(imageId: string): Promise<ImageModel | null> {
     try {
       const generatedImageData = await this.fetchGeneratedImageData(imageId);
@@ -66,7 +63,8 @@ export class GeneratedImageModelService {
   }
 
   mapToImageModel = (generatedData: GeneratedImageModel): ImageModel => ({
-    id: randomUUID().toString(),
+    id: uuidv4().toString(),
+    timestampUtcMs: Date.now(),
     name: this.generateModelName(generatedData),
     input: this.mapToFromTextInput(generatedData),
   });
@@ -95,9 +93,7 @@ export class GeneratedImageModelService {
       params: {
         prompt: generatedData.params.prompt,
         negativePrompt: generatedData.params.negativePrompt,
-        scheduler: this.schedulerMapper.MapScheduler(
-          generatedData.params.sampler
-        ),
+        scheduler: generatedData.params.sampler,
         steps: generatedData.params.steps,
         cfgScale: generatedData.params.cfgScale,
         width: generatedData.params.width,
@@ -109,7 +105,14 @@ export class GeneratedImageModelService {
   }
 
   mapAdditionalNetworks(generatedData: GeneratedImageModel) {
+    const primaryResource = this.getPrimaryResource(generatedData);
+
     return generatedData.resources.reduce((networks, resource) => {
+      // Skip the primary resource to avoid duplicating it in additional networks
+      if (resource === primaryResource) {
+        return networks;
+      }
+
       networks[resource.air] = {
         strength: resource.strength,
       };

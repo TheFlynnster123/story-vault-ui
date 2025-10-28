@@ -7,14 +7,12 @@ import type {
 } from "./GeneratedImageModel";
 import type { ImageModel } from "./ImageModel";
 import { d } from "../Dependencies/Dependencies";
-import { SchedulerMapper } from "./SchedulerMapper";
 
 // Mock global fetch
 global.fetch = vi.fn();
 
 // Mock dependencies
 const mockLog = vi.fn();
-const mockMapScheduler = vi.fn();
 
 vi.mock("../Dependencies/Dependencies", () => ({
   d: {
@@ -22,12 +20,6 @@ vi.mock("../Dependencies/Dependencies", () => ({
       log: mockLog,
     })),
   },
-}));
-
-vi.mock("./SchedulerMapper", () => ({
-  SchedulerMapper: vi.fn(() => ({
-    MapScheduler: mockMapScheduler,
-  })),
 }));
 
 describe("GeneratedImageModelService", () => {
@@ -83,8 +75,6 @@ describe("GeneratedImageModelService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Setup default scheduler mapper behavior
-    mockMapScheduler.mockImplementation((scheduler: string) => scheduler);
     service = new GeneratedImageModelService();
     mockFetch = global.fetch as any;
   });
@@ -174,7 +164,6 @@ describe("GeneratedImageModelService", () => {
       const result = service.mapAdditionalNetworks(generatedData);
 
       expect(result).toEqual({
-        "urn:air:sdxl:checkpoint:civitai:123456@789012": { strength: 1.0 },
         "urn:air:sdxl:lora:civitai:654321@210987": { strength: 0.8 },
         "urn:air:sdxl:lora:civitai:111111@222222": { strength: 0.6 },
       });
@@ -195,7 +184,9 @@ describe("GeneratedImageModelService", () => {
         strength: 1.0,
         air: "different:air",
       };
+      const checkpointResource = createMockCheckpointResource();
       const generatedData = createMockGeneratedImageModel([
+        checkpointResource,
         weakLora,
         strongLora,
       ]);
@@ -210,23 +201,19 @@ describe("GeneratedImageModelService", () => {
   });
 
   describe("Params Mapping", () => {
-    it("should map all params correctly with scheduler mapper", () => {
+    it("should map all params correctly with raw scheduler value", () => {
       const params = createMockGeneratedImageParams();
       const generatedData = createMockGeneratedImageModel(
         [createMockCheckpointResource()],
         params
       );
 
-      // Mock the scheduler mapper to return expected value
-      mockMapScheduler.mockReturnValueOnce("DPM2M");
-
       const result = service.mapToFromTextInput(generatedData);
 
-      expect(mockMapScheduler).toHaveBeenCalledWith("DPM++ 2M");
       expect(result.params).toEqual({
         prompt: "beautiful landscape",
         negativePrompt: "ugly, blurry",
-        scheduler: "DPM2M",
+        scheduler: "DPM++ 2M",
         steps: 20,
         cfgScale: 7.5,
         width: 512,
@@ -235,7 +222,7 @@ describe("GeneratedImageModelService", () => {
       });
     });
 
-    it("should handle different sampler types with scheduler mapper", () => {
+    it("should handle different sampler types with raw scheduler value", () => {
       const params = {
         ...createMockGeneratedImageParams(),
         sampler: "Euler a" as any,
@@ -245,13 +232,9 @@ describe("GeneratedImageModelService", () => {
         params
       );
 
-      // Mock the scheduler mapper to return expected value
-      mockMapScheduler.mockReturnValueOnce("EulerA");
-
       const result = service.mapToFromTextInput(generatedData);
 
-      expect(mockMapScheduler).toHaveBeenCalledWith("Euler a");
-      expect(result.params.scheduler).toBe("EulerA");
+      expect(result.params.scheduler).toBe("Euler a");
     });
 
     it("should map model from primary resource", () => {
@@ -284,7 +267,6 @@ describe("GeneratedImageModelService", () => {
       const result = service.mapToFromTextInput(generatedData);
 
       expect(result.additionalNetworks).toEqual({
-        "urn:air:sdxl:checkpoint:civitai:123456@789012": { strength: 1.0 },
         "urn:air:sdxl:lora:civitai:654321@210987": { strength: 0.8 },
       });
     });
@@ -301,21 +283,18 @@ describe("GeneratedImageModelService", () => {
         99999
       );
 
-      // Mock the scheduler mapper to return expected value
-      mockMapScheduler.mockReturnValueOnce("DPM2M");
-
       const result = service.mapToImageModel(generatedData);
 
-      expect(mockMapScheduler).toHaveBeenCalledWith("DPM++ 2M");
       expect(result).toEqual({
         id: expect.any(String),
         name: "Realistic Vision XL - 99999",
+        timestampUtcMs: expect.any(Number),
         input: {
           model: "urn:air:sdxl:checkpoint:civitai:123456@789012",
           params: {
             prompt: "beautiful landscape",
             negativePrompt: "ugly, blurry",
-            scheduler: "DPM2M",
+            scheduler: "DPM++ 2M",
             steps: 20,
             cfgScale: 7.5,
             width: 512,
@@ -323,7 +302,6 @@ describe("GeneratedImageModelService", () => {
             clipSkip: 1,
           },
           additionalNetworks: {
-            "urn:air:sdxl:checkpoint:civitai:123456@789012": { strength: 1.0 },
             "urn:air:sdxl:lora:civitai:654321@210987": { strength: 0.8 },
           },
         },
@@ -363,6 +341,7 @@ describe("GeneratedImageModelService", () => {
       expect(result).toEqual({
         id: expect.any(String),
         name: "Realistic Vision XL - 12345",
+        timestampUtcMs: expect.any(Number),
         input: expect.objectContaining({
           model: "urn:air:sdxl:checkpoint:civitai:123456@789012",
           params: expect.objectContaining({

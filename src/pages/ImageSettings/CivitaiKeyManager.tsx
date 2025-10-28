@@ -78,44 +78,13 @@ export const CivitaiKeyManager: React.FC = () => {
     }
   };
 
-  const renderStatus = () => {
-    if (hasValidCivitaiKey === undefined) {
-      return (
-        <Group>
-          <Loader size="sm" />
-          <Text>Checking key status...</Text>
-        </Group>
-      );
-    }
-    return (
-      <Alert
-        icon={
-          hasValidCivitaiKey ? <RiCheckboxCircleLine /> : <RiErrorWarningLine />
-        }
-        color={hasValidCivitaiKey ? "green" : "red"}
-        title={
-          hasValidCivitaiKey
-            ? "Valid Civitai key configured"
-            : "No valid Civitai key found"
-        }
-      >
-        {!showKeyInput && (
-          <Button
-            onClick={handleUpdateKeyClick}
-            size="xs"
-            variant="outline"
-            mt="sm"
-          >
-            {hasValidCivitaiKey ? "Update Key" : "Add Key"}
-          </Button>
-        )}
-      </Alert>
-    );
-  };
-
   return (
-    <Stack>
-      {renderStatus()}
+    <Stack w={"100%"}>
+      <KeyStatus
+        hasValidCivitaiKey={hasValidCivitaiKey}
+        showKeyInput={showKeyInput}
+        handleUpdateKeyClick={handleUpdateKeyClick}
+      />
       {showKeyInput && (
         <Stack mt="md">
           <PasswordInput
@@ -145,5 +114,51 @@ export const CivitaiKeyManager: React.FC = () => {
         </Stack>
       )}
     </Stack>
+  );
+};
+
+interface IKeyStatus {
+  hasValidCivitaiKey: boolean | undefined;
+  showKeyInput: boolean;
+  handleUpdateKeyClick: () => void;
+}
+
+const KeyStatus = ({
+  hasValidCivitaiKey,
+  showKeyInput,
+  handleUpdateKeyClick,
+}: IKeyStatus) => {
+  if (hasValidCivitaiKey === undefined) {
+    return (
+      <Group>
+        <Loader size="sm" />
+        <Text>Checking key status...</Text>
+      </Group>
+    );
+  }
+
+  return (
+    <Alert
+      icon={
+        hasValidCivitaiKey ? <RiCheckboxCircleLine /> : <RiErrorWarningLine />
+      }
+      color={hasValidCivitaiKey ? "green" : "red"}
+      title={
+        hasValidCivitaiKey
+          ? "Valid Civitai key configured"
+          : "No valid Civitai key found"
+      }
+    >
+      {!showKeyInput && (
+        <Button
+          onClick={handleUpdateKeyClick}
+          size="xs"
+          variant="outline"
+          mt="sm"
+        >
+          {hasValidCivitaiKey ? "Update Key" : "Add Key"}
+        </Button>
+      )}
+    </Alert>
   );
 };

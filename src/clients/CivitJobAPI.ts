@@ -2,6 +2,7 @@ import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
 import { AuthAPI } from "./AuthAPI";
 import type { ImageGenerationSettings } from "../models/ImageGenerationSettings";
+import type { FromTextInput } from "civitai/dist/types/Inputs";
 
 export class CivitJobAPI {
   public URL: string;
@@ -86,11 +87,14 @@ export class CivitJobAPI {
     }
   }
 
-  public async generateImage(settings: ImageGenerationSettings): Promise<any> {
+  public async generateImage(input: FromTextInput): Promise<any> {
     const accessToken = await this.authAPI.getAccessToken();
     await this.encryptionManager.ensureKeysInitialized();
 
     const encryptionKey = this.encryptionManager.civitaiEncryptionKey!;
+
+    // Convert FromTextInput to ImageGenerationSettings for API compatibility
+    const settings = this.convertToImageGenerationSettings(input);
 
     const requestInit = buildGenerateImageRequest(
       settings,
@@ -105,6 +109,25 @@ export class CivitJobAPI {
       console.error("Failed to generate image:", response.statusText);
       throw new Error(`Error generating image: ${response.statusText}`);
     }
+  }
+
+  private convertToImageGenerationSettings(
+    input: FromTextInput
+  ): ImageGenerationSettings {
+    return {
+      model: input.model,
+      params: {
+        prompt: input.params.prompt || "",
+        negativePrompt: input.params.negativePrompt || "",
+        scheduler: input.params.scheduler || "DPM++ 2M",
+        steps: input.params.steps || 20,
+        cfgScale: Number(input.params.cfgScale) || 7.5,
+        width: input.params.width || 512,
+        height: input.params.height || 512,
+        clipSkip: input.params.clipSkip || 1,
+      },
+      additionalNetworks: input.additionalNetworks || {},
+    };
   }
 }
 

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine } from "react-icons/ri";
 import { CivitaiKeyManager } from "./ImageSettings/CivitaiKeyManager";
-import { ImageModelEditor } from "./ImageSettings/ImageModelView";
+import { ImageModelList } from "./ImageSettings/ImageModelList";
 import { Page } from "./Page";
 
 interface SettingsSectionProps {
@@ -22,13 +22,13 @@ const ImageSettingsPage: React.FC = () => {
     <Page>
       <PageHeader onBack={handleGoBack} />
       <Grid>
-        <SettingsSection title="Civitai API Configuration">
-          <CivitaiKeyManager />
-        </SettingsSection>
+        <CivitaiKeyManager />
 
-        <SettingsSection title="Image Generation Settings">
-          <ImageModelEditor onSave={() => {}} />
-        </SettingsSection>
+        <Grid.Col span={12}>
+          <Paper withBorder p="xl" radius="md">
+            <ImageModelList onSave={() => {}} />
+          </Paper>
+        </Grid.Col>
       </Grid>
     </Page>
   );

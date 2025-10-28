@@ -5,7 +5,7 @@ import { RiArrowLeftLine } from "react-icons/ri";
 import { GrokKeyManager } from "./ChatSettings/GrokKeyManager";
 import { CivitaiKeyManager } from "./ImageSettings/CivitaiKeyManager";
 import { ChatSettingsEditor } from "./ChatSettings/ChatSettingsEditor";
-import { ImageModelEditor } from "./ImageSettings/ImageModelView";
+import { ImageModelList } from "./ImageSettings/ImageModelList";
 import { Page } from "./Page";
 
 interface SettingsSectionProps {
@@ -33,7 +33,7 @@ const SystemSettingsPage: React.FC = () => {
         </SettingsSection>
 
         <SettingsSection title="Image Generation Settings">
-          <ImageModelEditor onSave={() => {}} />
+          <ImageModelList onSave={() => {}} />
         </SettingsSection>
 
         <SettingsSection title="Chat Generation Settings">

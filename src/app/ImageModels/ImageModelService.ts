@@ -15,16 +15,22 @@ export class ImageModelService {
         return false;
       }
 
+      // Map the scheduler before saving
+      const modelWithMappedScheduler = this.mapSchedulerInModel(model);
+
       const userImageModels = await this.GetAllImageModels();
 
-      if (this.modelExists(userImageModels.models, model)) {
-        const updatedModels = this.updateModel(userImageModels.models, model);
+      if (this.modelExists(userImageModels.models, modelWithMappedScheduler)) {
+        const updatedModels = this.updateModel(
+          userImageModels.models,
+          modelWithMappedScheduler
+        );
         await this.saveUserImageModels({
           ...userImageModels,
           models: updatedModels,
         });
       } else {
-        const newModels = [...userImageModels.models, model];
+        const newModels = [...userImageModels.models, modelWithMappedScheduler];
         await this.saveUserImageModels({
           ...userImageModels,
           models: newModels,
@@ -146,6 +152,28 @@ export class ImageModelService {
     modelId: string
   ): ImageModel | undefined =>
     models.find((model) => model.id.toString() === modelId);
+
+  private mapSchedulerInModel(model: ImageModel): ImageModel {
+    try {
+      const mappedScheduler = d
+        .SchedulerMapper()
+        .MapToSchedulerName(model.input.params.scheduler);
+
+      return {
+        ...model,
+        input: {
+          ...model.input,
+          params: {
+            ...model.input.params,
+            scheduler: mappedScheduler,
+          },
+        },
+      };
+    } catch (error) {
+      // If mapping fails, return the original model unchanged
+      return model;
+    }
+  }
 }
 
 export type UserImageModels = {

@@ -8,6 +8,7 @@ import { randomUUID } from "crypto";
 const mockGetBlob = vi.fn();
 const mockSaveBlob = vi.fn();
 const mockLog = vi.fn();
+const mockMapToSchedulerName = vi.fn();
 
 const GLOBAL_CHAT_ID = "GLOBAL_CHAT_ID";
 
@@ -21,6 +22,9 @@ vi.mock("../Dependencies/Dependencies", () => ({
     })),
     ErrorService: vi.fn(() => ({
       log: mockLog,
+    })),
+    SchedulerMapper: vi.fn(() => ({
+      MapToSchedulerName: mockMapToSchedulerName,
     })),
   },
 }));
@@ -58,6 +62,8 @@ describe("ImageModelService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Set up default scheduler mapper behavior
+    mockMapToSchedulerName.mockImplementation((scheduler: string) => scheduler);
     service = new ImageModelService();
   });
 
@@ -127,6 +133,46 @@ describe("ImageModelService", () => {
       );
       expect(mockGetBlob).not.toHaveBeenCalled();
       expect(mockSaveBlob).not.toHaveBeenCalled();
+    });
+
+    it("should map scheduler when saving model", async () => {
+      const mockModel = createMockImageModel();
+      mockModel.input.params.scheduler = "DPM++ 2M";
+      const mockUserModels = createMockUserImageModels();
+
+      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
+      mockSaveBlob.mockResolvedValue(undefined);
+      mockMapToSchedulerName.mockReturnValue("DPM2M");
+
+      const result = await service.SaveImageModel(mockModel);
+
+      expect(result).toBe(true);
+      expect(mockMapToSchedulerName).toHaveBeenCalledWith("DPM++ 2M");
+
+      // Verify the saved model has the mapped scheduler
+      const savedModel = JSON.parse(mockSaveBlob.mock.calls[0][2]);
+      expect(savedModel.models[0].input.params.scheduler).toBe("DPM2M");
+    });
+
+    it("should preserve original scheduler when mapping fails", async () => {
+      const mockModel = createMockImageModel();
+      mockModel.input.params.scheduler = "CustomScheduler";
+      const mockUserModels = createMockUserImageModels();
+
+      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
+      mockSaveBlob.mockResolvedValue(undefined);
+      mockMapToSchedulerName.mockReturnValue("CustomScheduler"); // No-op behavior
+
+      const result = await service.SaveImageModel(mockModel);
+
+      expect(result).toBe(true);
+      expect(mockMapToSchedulerName).toHaveBeenCalledWith("CustomScheduler");
+
+      // Verify the saved model has the original scheduler
+      const savedModel = JSON.parse(mockSaveBlob.mock.calls[0][2]);
+      expect(savedModel.models[0].input.params.scheduler).toBe(
+        "CustomScheduler"
+      );
     });
   });
 

@@ -93,8 +93,7 @@ export class BlobAPI {
         blobResponse.content
       );
       return decryptedContent;
-    } catch (e) {
-      d.ErrorService().log("Failed to get blob", e);
+    } catch (e: any) {
       if (e instanceof Error) {
         throw e;
       }
