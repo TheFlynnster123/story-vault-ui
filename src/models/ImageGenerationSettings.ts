@@ -1,3 +1,7 @@
+/**
+ * LEGACY model sent to CivitAI via the API for image generation.
+ */
+
 export interface AdditionalNetwork {
   strength: number;
 }

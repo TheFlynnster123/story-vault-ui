@@ -24,6 +24,8 @@ interface GetBlobResponse {
 }
 
 export class BlobAPI {
+  GLOBAL_CHAT_ID = "global";
+
   public URL: string;
   public encryptionManager: EncryptionManager;
   private authAPI: AuthAPI;
@@ -91,8 +93,7 @@ export class BlobAPI {
         blobResponse.content
       );
       return decryptedContent;
-    } catch (e) {
-      d.ErrorService().log("Failed to get blob", e);
+    } catch (e: any) {
       if (e instanceof Error) {
         throw e;
       }

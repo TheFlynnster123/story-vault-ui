@@ -16,13 +16,13 @@ const MODEL_OPTIONS = [
   { value: "grok-3", label: "grok-3" },
 ];
 
-interface ChatGenerationSettingsManagerProps {
+interface IChatSettingsEditor {
   onSave?: () => void;
 }
 
-export const ChatGenerationSettingsManager: React.FC<
-  ChatGenerationSettingsManagerProps
-> = ({ onSave }) => {
+export const ChatSettingsEditor: React.FC<IChatSettingsEditor> = ({
+  onSave,
+}) => {
   const { systemSettings, saveSystemSettings, isLoading } = useSystemSettings();
   const [localSettings, setLocalSettings] = useState<ChatGenerationSettings>(
     {}
