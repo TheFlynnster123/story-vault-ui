@@ -6,11 +6,6 @@ import { CivitaiKeyManager } from "./ImageSettings/CivitaiKeyManager";
 import { ImageModelList } from "./ImageSettings/ImageModelList";
 import { Page } from "./Page";
 
-interface SettingsSectionProps {
-  title: string;
-  children: React.ReactNode;
-}
-
 const ImageSettingsPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -33,20 +28,6 @@ const ImageSettingsPage: React.FC = () => {
     </Page>
   );
 };
-
-const SettingsSection: React.FC<SettingsSectionProps> = ({
-  title,
-  children,
-}) => (
-  <Grid.Col span={{ base: 12, md: 6 }}>
-    <Paper withBorder p="xl" radius="md">
-      <Title order={2} mb="lg">
-        {title}
-      </Title>
-      {children}
-    </Paper>
-  </Grid.Col>
-);
 
 const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <>
