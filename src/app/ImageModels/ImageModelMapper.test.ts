@@ -1,30 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GeneratedImageModelService } from "./GeneratedImageModelService";
+import { describe, it, expect, beforeEach } from "vitest";
+import { ImageModelMapper } from "./ImageModelMapper";
 import type {
-  GeneratedImageModel,
+  GeneratedImage,
   GeneratedImageResource,
   GeneratedImageParams,
-} from "./GeneratedImageModel";
-import type { ImageModel } from "./ImageModel";
-import { d } from "../Dependencies/Dependencies";
+} from "./GeneratedImage";
 
-// Mock global fetch
-global.fetch = vi.fn();
-
-// Mock dependencies
-const mockLog = vi.fn();
-
-vi.mock("../Dependencies/Dependencies", () => ({
-  d: {
-    ErrorService: vi.fn(() => ({
-      log: mockLog,
-    })),
-  },
-}));
-
-describe("GeneratedImageModelService", () => {
-  let service: GeneratedImageModelService;
-  let mockFetch: any;
+describe("ImageModelMapper", () => {
+  let mapper: ImageModelMapper;
 
   const createMockGeneratedImageParams = (): GeneratedImageParams => ({
     prompt: "beautiful landscape",
@@ -62,11 +45,11 @@ describe("GeneratedImageModelService", () => {
     },
   });
 
-  const createMockGeneratedImageModel = (
+  const createMockGeneratedImage = (
     resources: GeneratedImageResource[] = [createMockCheckpointResource()],
     params: GeneratedImageParams = createMockGeneratedImageParams(),
     remixId: number = 12345
-  ): GeneratedImageModel => ({
+  ): GeneratedImage => ({
     type: "image",
     remixOf: { id: remixId },
     resources,
@@ -74,32 +57,19 @@ describe("GeneratedImageModelService", () => {
   });
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    service = new GeneratedImageModelService();
-    mockFetch = global.fetch as any;
-  });
-
-  describe("API Integration", () => {
-    it("should build correct API URL", () => {
-      const imageId = "12345";
-      const url = service.buildApiUrl(imageId);
-
-      expect(url).toBe(
-        "https://civitai.com/api/generation/data?type=image&id=12345"
-      );
-    });
+    mapper = new ImageModelMapper();
   });
 
   describe("Primary Resource Selection", () => {
     it("should select CHECKPOINT as primary resource", () => {
       const checkpointResource = createMockCheckpointResource();
       const loraResource = createMockLoraResource();
-      const generatedData = createMockGeneratedImageModel([
+      const generatedImage = createMockGeneratedImage([
         loraResource,
         checkpointResource,
       ]);
 
-      const result = service.getPrimaryResource(generatedData);
+      const result = mapper.getPrimaryResource(generatedImage);
 
       expect(result).toBe(checkpointResource);
       expect(result.model.type).toBe("CHECKPOINT");
@@ -108,45 +78,47 @@ describe("GeneratedImageModelService", () => {
     it("should fallback to first resource when no CHECKPOINT", () => {
       const lora1 = createMockLoraResource();
       const lora2 = { ...createMockLoraResource(), name: "Second LoRA" };
-      const generatedData = createMockGeneratedImageModel([lora1, lora2]);
+      const generatedImage = createMockGeneratedImage([lora1, lora2]);
 
-      const result = service.getPrimaryResource(generatedData);
+      const result = mapper.getPrimaryResource(generatedImage);
 
       expect(result).toBe(lora1);
       expect(result.model.type).toBe("LORA");
     });
 
     it("should handle empty resources array", () => {
-      const generatedData = createMockGeneratedImageModel([]);
+      const generatedImage = createMockGeneratedImage([]);
 
-      const result = service.getPrimaryResource(generatedData);
+      const result = mapper.getPrimaryResource(generatedImage);
 
       expect(result).toBeUndefined();
     });
+  });
 
+  describe("Model Name Generation", () => {
     it("should generate name with primary resource", () => {
       const checkpointResource = createMockCheckpointResource();
-      const generatedData = createMockGeneratedImageModel(
+      const generatedImage = createMockGeneratedImage(
         [checkpointResource],
         undefined,
         98765
       );
 
-      const result = service.generateModelName(generatedData);
+      const result = mapper.generateModelName(generatedImage);
 
       expect(result).toBe("Realistic Vision XL - 98765");
     });
 
     it("should generate fallback name without primary resource", () => {
-      const generatedData = createMockGeneratedImageModel([], undefined, 54321);
+      const generatedImage = createMockGeneratedImage([], undefined, 54321);
 
-      const result = service.generateModelName(generatedData);
+      const result = mapper.generateModelName(generatedImage);
 
       expect(result).toBe("Generated Model 54321");
     });
   });
 
-  describe("Resources Mapping", () => {
+  describe("Additional Networks Mapping", () => {
     it("should map LORA resources to additional networks", () => {
       const lora1 = createMockLoraResource();
       const lora2 = {
@@ -155,13 +127,13 @@ describe("GeneratedImageModelService", () => {
         strength: 0.6,
       };
       const checkpointResource = createMockCheckpointResource();
-      const generatedData = createMockGeneratedImageModel([
+      const generatedImage = createMockGeneratedImage([
         checkpointResource,
         lora1,
         lora2,
       ]);
 
-      const result = service.mapAdditionalNetworks(generatedData);
+      const result = mapper.mapAdditionalNetworks(generatedImage);
 
       expect(result).toEqual({
         "urn:air:sdxl:lora:civitai:654321@210987": { strength: 0.8 },
@@ -170,9 +142,9 @@ describe("GeneratedImageModelService", () => {
     });
 
     it("should return empty object for no resources", () => {
-      const generatedData = createMockGeneratedImageModel([]);
+      const generatedImage = createMockGeneratedImage([]);
 
-      const result = service.mapAdditionalNetworks(generatedData);
+      const result = mapper.mapAdditionalNetworks(generatedImage);
 
       expect(result).toEqual({});
     });
@@ -185,30 +157,46 @@ describe("GeneratedImageModelService", () => {
         air: "different:air",
       };
       const checkpointResource = createMockCheckpointResource();
-      const generatedData = createMockGeneratedImageModel([
+      const generatedImage = createMockGeneratedImage([
         checkpointResource,
         weakLora,
         strongLora,
       ]);
 
-      const result = service.mapAdditionalNetworks(generatedData);
+      const result = mapper.mapAdditionalNetworks(generatedImage);
 
       expect(result["urn:air:sdxl:lora:civitai:654321@210987"]).toEqual({
         strength: 0.2,
       });
       expect(result["different:air"]).toEqual({ strength: 1.0 });
     });
+
+    it("should exclude primary resource from additional networks", () => {
+      const checkpointResource = createMockCheckpointResource();
+      const loraResource = createMockLoraResource();
+      const generatedImage = createMockGeneratedImage([
+        checkpointResource,
+        loraResource,
+      ]);
+
+      const result = mapper.mapAdditionalNetworks(generatedImage);
+
+      expect(result).not.toHaveProperty(
+        "urn:air:sdxl:checkpoint:civitai:123456@789012"
+      );
+      expect(result).toHaveProperty("urn:air:sdxl:lora:civitai:654321@210987");
+    });
   });
 
-  describe("Params Mapping", () => {
+  describe("FromTextInput Mapping", () => {
     it("should map all params correctly with raw scheduler value", () => {
       const params = createMockGeneratedImageParams();
-      const generatedData = createMockGeneratedImageModel(
+      const generatedImage = createMockGeneratedImage(
         [createMockCheckpointResource()],
         params
       );
 
-      const result = service.mapToFromTextInput(generatedData);
+      const result = mapper.mapToFromTextInput(generatedImage);
 
       expect(result.params).toEqual({
         prompt: "beautiful landscape",
@@ -227,21 +215,21 @@ describe("GeneratedImageModelService", () => {
         ...createMockGeneratedImageParams(),
         sampler: "Euler a" as any,
       };
-      const generatedData = createMockGeneratedImageModel(
+      const generatedImage = createMockGeneratedImage(
         [createMockCheckpointResource()],
         params
       );
 
-      const result = service.mapToFromTextInput(generatedData);
+      const result = mapper.mapToFromTextInput(generatedImage);
 
       expect(result.params.scheduler).toBe("Euler a");
     });
 
     it("should map model from primary resource", () => {
       const checkpointResource = createMockCheckpointResource();
-      const generatedData = createMockGeneratedImageModel([checkpointResource]);
+      const generatedImage = createMockGeneratedImage([checkpointResource]);
 
-      const result = service.mapToFromTextInput(generatedData);
+      const result = mapper.mapToFromTextInput(generatedImage);
 
       expect(result.model).toBe(
         "urn:air:sdxl:checkpoint:civitai:123456@789012"
@@ -249,9 +237,9 @@ describe("GeneratedImageModelService", () => {
     });
 
     it("should handle missing primary resource", () => {
-      const generatedData = createMockGeneratedImageModel([]);
+      const generatedImage = createMockGeneratedImage([]);
 
-      const result = service.mapToFromTextInput(generatedData);
+      const result = mapper.mapToFromTextInput(generatedImage);
 
       expect(result.model).toBe("");
     });
@@ -259,12 +247,12 @@ describe("GeneratedImageModelService", () => {
     it("should include additional networks in mapping", () => {
       const checkpointResource = createMockCheckpointResource();
       const loraResource = createMockLoraResource();
-      const generatedData = createMockGeneratedImageModel([
+      const generatedImage = createMockGeneratedImage([
         checkpointResource,
         loraResource,
       ]);
 
-      const result = service.mapToFromTextInput(generatedData);
+      const result = mapper.mapToFromTextInput(generatedImage);
 
       expect(result.additionalNetworks).toEqual({
         "urn:air:sdxl:lora:civitai:654321@210987": { strength: 0.8 },
@@ -272,18 +260,18 @@ describe("GeneratedImageModelService", () => {
     });
   });
 
-  describe("Complete Image Model Mapping", () => {
-    it("should map complete GeneratedImageModel to ImageModel", () => {
+  describe("FromGeneratedImage", () => {
+    it("should map complete GeneratedImage to ImageModel", () => {
       const checkpointResource = createMockCheckpointResource();
       const loraResource = createMockLoraResource();
       const params = createMockGeneratedImageParams();
-      const generatedData = createMockGeneratedImageModel(
+      const generatedImage = createMockGeneratedImage(
         [checkpointResource, loraResource],
         params,
         99999
       );
 
-      const result = service.mapToImageModel(generatedData);
+      const result = mapper.FromGeneratedImage(generatedImage);
 
       expect(result).toEqual({
         id: expect.any(String),
@@ -308,64 +296,19 @@ describe("GeneratedImageModelService", () => {
       });
     });
 
-    it("should handle minimal GeneratedImageModel", () => {
-      const generatedData = createMockGeneratedImageModel(
+    it("should handle minimal GeneratedImage", () => {
+      const generatedImage = createMockGeneratedImage(
         [],
         createMockGeneratedImageParams(),
         11111
       );
 
-      const result = service.mapToImageModel(generatedData);
+      const result = mapper.FromGeneratedImage(generatedImage);
 
       expect(result.id).toEqual(expect.any(String));
       expect(result.name).toBe("Generated Model 11111");
       expect(result.input.model).toBe("");
       expect(result.input.additionalNetworks).toEqual({});
-    });
-  });
-
-  describe("End-to-End GenerateImage", () => {
-    it("should complete full image generation flow", async () => {
-      const mockGeneratedData = createMockGeneratedImageModel();
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue(mockGeneratedData),
-      });
-
-      const result = await service.GenerateImageModel("12345");
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://civitai.com/api/generation/data?type=image&id=12345",
-        expect.objectContaining({ method: "GET" })
-      );
-      expect(result).toEqual({
-        id: expect.any(String),
-        name: "Realistic Vision XL - 12345",
-        timestampUtcMs: expect.any(Number),
-        input: expect.objectContaining({
-          model: "urn:air:sdxl:checkpoint:civitai:123456@789012",
-          params: expect.objectContaining({
-            prompt: "beautiful landscape",
-            steps: 20,
-          }),
-        }),
-      });
-    });
-
-    it("should return null and log error on API failure", async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: "Internal Server Error",
-      });
-
-      const result = await service.GenerateImageModel("12345");
-
-      expect(result).toBeNull();
-      expect(mockLog).toHaveBeenCalledWith(
-        "Failed to generate image model",
-        expect.any(Error)
-      );
     });
   });
 });

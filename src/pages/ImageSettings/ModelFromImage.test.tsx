@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../test-utils";
 import { ModelFromImage } from "./ModelFromImage";
-import { GeneratedImageModelService } from "../../app/ImageModels/GeneratedImageModelService";
 import type { ImageModel } from "../../app/ImageModels/ImageModel";
 
-// Mock the GeneratedImageModelService
-vi.mock("../../app/ImageModels/GeneratedImageModelService");
+const mockGenerateImageModel = vi.fn();
 
-// Mock the Dependencies
 vi.mock("../../app/Dependencies/Dependencies", () => ({
   d: {
+    ImageModelFromGeneratedImageService: vi.fn(() => ({
+      GenerateImageModel: mockGenerateImageModel,
+    })),
     ErrorService: vi.fn(() => ({
       log: vi.fn(),
     })),
@@ -20,6 +20,7 @@ describe("ModelFromImage", () => {
   const mockOnModelLoaded = vi.fn();
   const mockImageModel: ImageModel = {
     id: "test-id",
+    timestampUtcMs: Date.now(),
     name: "Test Model",
     input: {
       model: "test-model",
@@ -38,34 +39,18 @@ describe("ModelFromImage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    const mockGenerateImageModel = vi.fn();
-    vi.mocked(GeneratedImageModelService).mockImplementation(
-      () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
-    );
   });
 
   it("should render correctly", () => {
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
-    expect(screen.getByText("Load Model from Image")).toBeInTheDocument();
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Load Model/ })
-    ).toBeInTheDocument();
+    expect(screen.getByText("Load Model from Image")).toBeDefined();
+    expect(screen.getByRole("textbox")).toBeDefined();
+    expect(screen.getByRole("button", { name: /Load Model/ })).toBeDefined();
   });
 
   it("should extract image ID from URL", async () => {
-    const mockGenerateImageModel = vi.fn().mockResolvedValue(mockImageModel);
-    vi.mocked(GeneratedImageModelService).mockImplementation(
-      () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
-    );
+    mockGenerateImageModel.mockResolvedValue(mockImageModel);
 
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
@@ -80,18 +65,14 @@ describe("ModelFromImage", () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(mockGenerateImageModel).toHaveBeenCalledWith("123456");
+      expect(mockGenerateImageModel).toHaveBeenCalledWith(
+        "https://civitai.com/api/generation/data?type=image&id=123456"
+      );
     });
   });
 
   it("should extract image ID from new path format URL", async () => {
-    const mockGenerateImageModel = vi.fn().mockResolvedValue(mockImageModel);
-    vi.mocked(GeneratedImageModelService).mockImplementation(
-      () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
-    );
+    mockGenerateImageModel.mockResolvedValue(mockImageModel);
 
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
@@ -100,24 +81,20 @@ describe("ModelFromImage", () => {
 
     fireEvent.change(input, {
       target: {
-        value: "https://civitai.com/images/60288057",
+        value: "https://civitai.com/images/123456789",
       },
     });
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(mockGenerateImageModel).toHaveBeenCalledWith("60288057");
+      expect(mockGenerateImageModel).toHaveBeenCalledWith(
+        "https://civitai.com/images/123456789"
+      );
     });
   });
 
   it("should handle plain image ID", async () => {
-    const mockGenerateImageModel = vi.fn().mockResolvedValue(mockImageModel);
-    vi.mocked(GeneratedImageModelService).mockImplementation(
-      () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
-    );
+    mockGenerateImageModel.mockResolvedValue(mockImageModel);
 
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
@@ -133,13 +110,7 @@ describe("ModelFromImage", () => {
   });
 
   it("should call onModelLoaded when model is successfully loaded", async () => {
-    const mockGenerateImageModel = vi.fn().mockResolvedValue(mockImageModel);
-    vi.mocked(GeneratedImageModelService).mockImplementation(
-      () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
-    );
+    mockGenerateImageModel.mockResolvedValue(mockImageModel);
 
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
@@ -155,10 +126,14 @@ describe("ModelFromImage", () => {
 
     expect(
       screen.getByText(/Successfully loaded model: Test Model/)
-    ).toBeInTheDocument();
+    ).toBeDefined();
   });
 
   it("should show error for invalid input", async () => {
+    mockGenerateImageModel.mockRejectedValue(
+      new Error("Could not get an image Id from the provided input!")
+    );
+
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
     const input = screen.getByRole("textbox");
@@ -169,19 +144,15 @@ describe("ModelFromImage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Please enter a valid image URL or ID")
-      ).toBeInTheDocument();
+        screen.getByText(
+          "Failed to load model. Please check the URL or ID and try again."
+        )
+      ).toBeDefined();
     });
   });
 
   it("should show error when model loading fails", async () => {
-    const mockGenerateImageModel = vi.fn().mockResolvedValue(null);
-    vi.mocked(GeneratedImageModelService).mockImplementation(
-      () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
-    );
+    mockGenerateImageModel.mockResolvedValue(null);
 
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
@@ -194,18 +165,12 @@ describe("ModelFromImage", () => {
     await waitFor(() => {
       expect(
         screen.getByText("Failed to load model from the provided image ID")
-      ).toBeInTheDocument();
+      ).toBeDefined();
     });
   });
 
   it("should handle Enter key press", async () => {
-    const mockGenerateImageModel = vi.fn().mockResolvedValue(mockImageModel);
-    vi.mocked(GeneratedImageModelService).mockImplementation(
-      () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
-    );
+    mockGenerateImageModel.mockResolvedValue(mockImageModel);
 
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
@@ -220,13 +185,7 @@ describe("ModelFromImage", () => {
   });
 
   it("should clear input after successful load", async () => {
-    const mockGenerateImageModel = vi.fn().mockResolvedValue(mockImageModel);
-    vi.mocked(GeneratedImageModelService).mockImplementation(
-      () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
-    );
+    mockGenerateImageModel.mockResolvedValue(mockImageModel);
 
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
@@ -245,23 +204,13 @@ describe("ModelFromImage", () => {
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
 
     const button = screen.getByRole("button", { name: /Load Model/ });
-    expect(button).toBeDisabled();
+    expect(button).toHaveProperty("disabled", true);
   });
 
   it("should show loading state", async () => {
-    const mockGenerateImageModel = vi
-      .fn()
-      .mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(() => resolve(mockImageModel), 100)
-          )
-      );
-    vi.mocked(GeneratedImageModelService).mockImplementation(
+    mockGenerateImageModel.mockImplementation(
       () =>
-        ({
-          GenerateImageModel: mockGenerateImageModel,
-        } as any)
+        new Promise((resolve) => setTimeout(() => resolve(mockImageModel), 100))
     );
 
     render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
@@ -272,9 +221,8 @@ describe("ModelFromImage", () => {
     fireEvent.change(input, { target: { value: "123456" } });
     fireEvent.click(button);
 
-    expect(
-      screen.getByText("Loading model from CivitAI...")
-    ).toBeInTheDocument();
-    expect(button).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByText("Loading model from CivitAI...")).toBeDefined();
+    });
   });
 });

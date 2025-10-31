@@ -2,7 +2,7 @@
  * The model representing a generated image and its associated parameters and resources.
  * This data comes from the endpoint https://civitai.com/api/generation/data?type=image&id=[number]
  */
-export type GeneratedImageModel = {
+export type GeneratedImage = {
   type: "image" | any;
   remixOf: {
     id: number;

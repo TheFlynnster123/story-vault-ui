@@ -1,4 +1,3 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../test-utils";
 import { SampleImageGenerator } from "./SampleImageGenerator";
@@ -24,6 +23,7 @@ vi.mock("../../app/Dependencies/Dependencies", () => ({
 describe("SampleImageGenerator", () => {
   const mockImageModel: ImageModel = {
     id: "test-id",
+    timestampUtcMs: Date.now(),
     name: "Test Model",
     input: {
       model: "test-model",
@@ -132,12 +132,13 @@ describe("SampleImageGenerator", () => {
   it("should handle missing params gracefully", () => {
     const modelWithMissingParams: ImageModel = {
       id: "test-id",
+      timestampUtcMs: Date.now(),
       name: "Test Model",
       input: {
         model: "test-model",
         params: {
           prompt: "test prompt",
-        } as any, // Incomplete params
+        } as any,
       },
     };
 
