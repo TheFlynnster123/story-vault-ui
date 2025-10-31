@@ -2,8 +2,16 @@ import type { ImageModel } from "./ImageModel";
 import type { GeneratedImage } from "./GeneratedImage";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { v4 as uuidv4 } from "uuid";
+import { BaseModelMapper } from "./BaseModelMapper";
 
 export class ImageModelMapper {
+  private readonly MAX_DIMENSION = 1024;
+  private baseModelMapper: BaseModelMapper;
+
+  constructor(baseModelMapper?: BaseModelMapper) {
+    this.baseModelMapper = baseModelMapper || new BaseModelMapper();
+  }
+
   FromGeneratedImage = (generatedData: GeneratedImage): ImageModel => ({
     id: uuidv4().toString(),
     timestampUtcMs: Date.now(),
@@ -29,28 +37,46 @@ export class ImageModelMapper {
 
   mapToFromTextInput(generatedData: GeneratedImage): FromTextInput {
     const primaryResource = this.getPrimaryResource(generatedData);
+    const isCheckpoint = primaryResource?.model.type === "CHECKPOINT";
+    const firstResourceBaseModel = generatedData.resources[0]?.baseModel;
+
+    const modelAir = isCheckpoint
+      ? primaryResource.air
+      : firstResourceBaseModel
+      ? this.baseModelMapper.toAIR(firstResourceBaseModel)
+      : "";
 
     return {
-      model: primaryResource?.air || "",
+      model: modelAir,
       params: {
         prompt: generatedData.params.prompt,
         negativePrompt: generatedData.params.negativePrompt,
         scheduler: generatedData.params.sampler,
         steps: generatedData.params.steps,
         cfgScale: generatedData.params.cfgScale,
-        width: generatedData.params.width,
-        height: generatedData.params.height,
-        clipSkip: generatedData.params.clipSkip,
+        width: this.truncateDimension(generatedData.params.width),
+        height: this.truncateDimension(generatedData.params.height),
+        clipSkip: this.defaultClipSkip(generatedData.params.clipSkip),
       },
       additionalNetworks: this.mapAdditionalNetworks(generatedData),
     };
   }
 
+  private truncateDimension = (dimension: number): number =>
+    Math.min(dimension, this.MAX_DIMENSION);
+
+  private defaultClipSkip = (clipSkip: number | undefined): number =>
+    clipSkip ?? 2;
+
   mapAdditionalNetworks(generatedData: GeneratedImage) {
     const primaryResource = this.getPrimaryResource(generatedData);
+    const primaryResourceIsCheckpoint =
+      primaryResource?.model.type === "CHECKPOINT";
 
     return generatedData.resources.reduce((networks, resource) => {
-      if (resource === primaryResource) {
+      // If we have a checkpoint, exclude it from additional networks
+      // If no checkpoint (using BaseModelMapper), include all resources
+      if (primaryResourceIsCheckpoint && resource === primaryResource) {
         return networks;
       }
 

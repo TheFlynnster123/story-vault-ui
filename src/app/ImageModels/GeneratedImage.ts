@@ -22,6 +22,7 @@ export type GeneratedImageResource = {
     name: string;
     type: "LORA" | "CHECKPOINT";
   };
+  baseModel?: string;
 };
 
 export type GeneratedImageParams = {

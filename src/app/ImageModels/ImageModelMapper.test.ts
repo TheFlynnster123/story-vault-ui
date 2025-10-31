@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ImageModelMapper } from "./ImageModelMapper";
+import { BaseModelMapper } from "./BaseModelMapper";
 import type {
   GeneratedImage,
   GeneratedImageResource,
@@ -8,6 +9,7 @@ import type {
 
 describe("ImageModelMapper", () => {
   let mapper: ImageModelMapper;
+  let mockBaseModelMapper: BaseModelMapper;
 
   const createMockGeneratedImageParams = (): GeneratedImageParams => ({
     prompt: "beautiful landscape",
@@ -57,7 +59,10 @@ describe("ImageModelMapper", () => {
   });
 
   beforeEach(() => {
-    mapper = new ImageModelMapper();
+    mockBaseModelMapper = {
+      toAIR: vi.fn(),
+    } as any;
+    mapper = new ImageModelMapper(mockBaseModelMapper);
   });
 
   describe("Primary Resource Selection", () => {
@@ -257,6 +262,118 @@ describe("ImageModelMapper", () => {
       expect(result.additionalNetworks).toEqual({
         "urn:air:sdxl:lora:civitai:654321@210987": { strength: 0.8 },
       });
+    });
+
+    it("should use BaseModelMapper when no CHECKPOINT resource available", () => {
+      const mockMappedBaseModelAIR = "urn:air:mock:checkpoint:test:123@456";
+      (mockBaseModelMapper.toAIR as any).mockReturnValue(
+        mockMappedBaseModelAIR
+      );
+
+      const loraResource = createMockLoraResource();
+      loraResource.baseModel = "TestModel";
+      const generatedImage = createMockGeneratedImage([loraResource]);
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(mockBaseModelMapper.toAIR).toHaveBeenCalledWith("TestModel");
+      expect(result.additionalNetworks).toEqual({
+        [loraResource.air]: { strength: 0.8 },
+      });
+      expect(result.model).toBe(mockMappedBaseModelAIR);
+    });
+
+    it("should not use BaseModelMapper when CHECKPOINT resource available", () => {
+      const checkpointResource = createMockCheckpointResource();
+      checkpointResource.baseModel = "TestModel";
+      const generatedImage = createMockGeneratedImage([checkpointResource]);
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(mockBaseModelMapper.toAIR).not.toHaveBeenCalled();
+      expect(result.model).toBe(
+        "urn:air:sdxl:checkpoint:civitai:123456@789012"
+      );
+    });
+
+    it("should truncate width to 1024 when over limit", () => {
+      const params = createMockGeneratedImageParams();
+      params.width = 2048;
+      params.height = 768;
+
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params
+      );
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(result.params.width).toBe(1024);
+      expect(result.params.height).toBe(768);
+    });
+
+    it("should truncate height to 1024 when over limit", () => {
+      const params = createMockGeneratedImageParams();
+      params.width = 512;
+      params.height = 2048;
+
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params
+      );
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(result.params.width).toBe(512);
+      expect(result.params.height).toBe(1024);
+    });
+
+    it("should truncate both width and height when both over limit", () => {
+      const params = createMockGeneratedImageParams();
+      params.width = 2560;
+      params.height = 1920;
+
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params
+      );
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(result.params.width).toBe(1024);
+      expect(result.params.height).toBe(1024);
+    });
+
+    it("should not modify dimensions when under 1024 limit", () => {
+      const params = {
+        ...createMockGeneratedImageParams(),
+        width: 1024,
+        height: 1024,
+      };
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params
+      );
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(result.params.width).toBe(1024);
+      expect(result.params.height).toBe(1024);
+    });
+
+    it("should default clipSkip to 2 when not available", () => {
+      const params = {
+        ...createMockGeneratedImageParams(),
+        clipSkip: undefined as any,
+      };
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params
+      );
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(result.params.clipSkip).toBe(2);
     });
   });
 

@@ -3,6 +3,7 @@ import { EncryptionManager } from "../Managers/EncryptionManager";
 import { AuthAPI } from "./AuthAPI";
 import type { ImageGenerationSettings } from "../models/ImageGenerationSettings";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
+import { d } from "../app/Dependencies/Dependencies";
 
 export class CivitJobAPI {
   public URL: string;
@@ -101,13 +102,31 @@ export class CivitJobAPI {
       accessToken,
       encryptionKey
     );
+
     const response = await fetch(`${this.URL}/api/GenerateImage`, requestInit);
+
+    console.log("Yo");
 
     if (response.ok) {
       return response.json();
     } else {
-      console.error("Failed to generate image:", response.statusText);
+      this.logError(response);
       throw new Error(`Error generating image: ${response.statusText}`);
+    }
+  }
+
+  private async logError(response: Response) {
+    try {
+      const errorJson = await response.json();
+
+      //Log all of the error properties
+      const errorObject = errorJson[0];
+
+      d.ErrorService().log("Code: " + errorObject?.code);
+      d.ErrorService().log(errorObject?.message);
+      d.ErrorService().log("Path: " + errorObject?.path.join(", "));
+    } catch (e) {
+      d.ErrorService().log("Error from CivitAPI: " + response.statusText);
     }
   }
 
