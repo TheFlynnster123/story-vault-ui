@@ -19,7 +19,7 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: photoBase64 } = useCivitJob(chatId, jobId || "");
+  const { photoBase64 } = useCivitJob(chatId, jobId || "");
 
   // Track if we're actively waiting for a job (either generating or polling)
   const isWaitingForJob = !!jobId && !photoBase64;

@@ -65,7 +65,9 @@ export class CivitJobAPI {
     }
   }
 
-  public async getJobStatus(jobId: string): Promise<any> {
+  public async getJobStatus(
+    jobId: string
+  ): Promise<{ result?: Array<{ available: boolean; blobUrl: string }> }> {
     const accessToken = await this.authAPI.getAccessToken();
     await this.encryptionManager.ensureKeysInitialized();
 

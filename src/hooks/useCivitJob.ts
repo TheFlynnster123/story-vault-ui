@@ -1,77 +1,44 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CivitJobAPI } from "../clients/CivitJobAPI";
+import { Query, useQuery } from "@tanstack/react-query";
+import { CivitJobOrchestrator } from "../services/CivitJobOrchestrator";
+import type { CivitJobResult } from "../types/CivitJob";
 
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-  });
-};
-
-async function fetchPhotoOrProcessJob(
-  chatId: string,
-  jobId: string,
-  queryClient: ReturnType<typeof useQueryClient>
-): Promise<string | null> {
-  try {
-    return await getStoredPhoto(chatId, jobId);
-  } catch {
-    return await pollJobStatus(chatId, jobId, queryClient);
-  }
-}
-
-async function getStoredPhoto(chatId: string, jobId: string): Promise<string> {
-  const photoData = await new CivitJobAPI().getPhoto(chatId, jobId);
-  return (photoData as { base64: string }).base64;
-}
-
-async function pollJobStatus(
-  chatId: string,
-  jobId: string,
-  queryClient: ReturnType<typeof useQueryClient>
-): Promise<string | null> {
-  const status = await new CivitJobAPI().getJobStatus(jobId);
-  if (status.result?.length > 0 && status.result[0].available) {
-    return await downloadAndSavePhoto(
-      chatId,
-      jobId,
-      status.result[0].blobUrl,
-      queryClient
-    );
-  }
-  return null;
-}
-
-async function downloadAndSavePhoto(
-  chatId: string,
-  jobId: string,
-  blobUrl: string,
-  queryClient: ReturnType<typeof useQueryClient>
-): Promise<string> {
-  const response = await fetch(blobUrl);
-  const blob = await response.blob();
-  const base64 = await blobToBase64(blob);
-
-  const photoDataToSave = { base64 };
-  await new CivitJobAPI().savePhoto(chatId, jobId, photoDataToSave);
-
-  queryClient.invalidateQueries({
-    queryKey: ["civit-photo", chatId, jobId],
-  });
-
-  return base64;
-}
+const POLL_INTERVAL_MS = 2000;
 
 export const useCivitJob = (chatId: string, jobId: string) => {
-  const queryClient = useQueryClient();
-
-  return useQuery({
-    queryKey: ["civit-photo", chatId, jobId],
-    queryFn: async () =>
-      await fetchPhotoOrProcessJob(chatId, jobId, queryClient),
+  const queryResult = useQuery<CivitJobResult>({
+    queryKey: ["civit-job", chatId, jobId],
+    // Enable
     enabled: !!chatId && !!jobId,
-    refetchInterval: (query) => (query.state.data ? 0 : 8000),
+
+    queryFn: async () =>
+      await new CivitJobOrchestrator().getOrPollPhoto(chatId, jobId),
+
+    refetchInterval: (query) => shouldPoll(query),
+
+    // Don't retry on errors, let the orchestrator handle error states.
+    // Once we have a photo, we're home free.
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
+
+  return {
+    ...queryResult,
+    photoBase64: queryResult.data?.photoBase64,
+    jobStatus: queryResult.data,
+  };
+};
+
+const shouldPoll = (
+  query: Query<CivitJobResult, Error, CivitJobResult, readonly unknown[]>
+): number | false => {
+  const data = query.state.data;
+
+  // Stop polling if we have a photo, there's an error, or job is not scheduled
+  if (data?.photoBase64 || data?.error || !data?.isScheduled) {
+    return false;
+  }
+
+  // Only continue polling if job is explicitly scheduled
+  return data?.isScheduled ? POLL_INTERVAL_MS : false;
 };
