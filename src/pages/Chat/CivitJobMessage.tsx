@@ -42,7 +42,19 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
     jobId = "";
   }
 
-  const { data: photoBase64, isLoading } = useCivitJob(chatId, jobId);
+  const {
+    photoBase64: photoBase64,
+    isLoading,
+    jobStatus,
+  } = useCivitJob(chatId, jobId);
+
+  const getStatusMessage = () => {
+    if (isLoading) return "Loading...";
+    if (jobStatus?.error) return "Failed to load photo";
+    if (jobStatus?.isScheduled) return "Image is being generated...";
+    if (!photoBase64) return "No photo available";
+    return null;
+  };
 
   const handleDeleteClick = (type: "single" | "fromHere") => {
     setDeleteType(type);
@@ -84,8 +96,8 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
   return (
     <div className="message-item message-system">
       <MessageContent onClick={handleMessageClick}>
-        {(isLoading || !photoBase64) && (
-          <LoadingBubble>Loading photo...</LoadingBubble>
+        {getStatusMessage() && (
+          <LoadingBubble>{getStatusMessage()}</LoadingBubble>
         )}
         {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
       </MessageContent>

@@ -48,6 +48,7 @@ export const ImageModelList: React.FC<{
       },
       additionalNetworks: {},
     },
+    sampleImageId: undefined,
   });
 
   const handleToggleExpanded = (modelId: string) => {
@@ -87,6 +88,8 @@ export const ImageModelList: React.FC<{
     const newModel = createNewModel();
     const success = await saveImageModel(newModel);
     if (success) {
+      if (onSave) onSave();
+      // Automatically expand the new model for editing
       setExpandedModels((prev) => new Set(prev).add(newModel.id));
     }
   };

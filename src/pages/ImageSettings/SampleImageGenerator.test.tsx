@@ -1,4 +1,3 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../test-utils";
 import { SampleImageGenerator } from "./SampleImageGenerator";
@@ -24,6 +23,7 @@ vi.mock("../../app/Dependencies/Dependencies", () => ({
 describe("SampleImageGenerator", () => {
   const mockImageModel: ImageModel = {
     id: "test-id",
+    timestampUtcMs: Date.now(),
     name: "Test Model",
     input: {
       model: "test-model",
@@ -40,15 +40,14 @@ describe("SampleImageGenerator", () => {
     },
   };
 
+  const mockOnSampleImageCreated = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Setup default mock return values
     vi.mocked(useCivitJob).mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
+      photoBase64: null,
     } as any);
 
     const mockGenerateImage = vi.fn();
@@ -60,95 +59,150 @@ describe("SampleImageGenerator", () => {
     );
   });
 
-  it("should render correctly with initial state", () => {
-    render(<SampleImageGenerator model={mockImageModel} />);
-
-    expect(screen.getByText("Sample Image Generator")).toBeInTheDocument();
-    expect(screen.getByText("Generate Sample")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Generate a sample image using this model configuration/)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Click "Generate Sample" to create a preview image/)
-    ).toBeInTheDocument();
-  });
-
-  it("should show loading state when polling", () => {
-    // This test verifies the loading logic works - in practice, when a jobId exists
-    // but no photo is returned yet, the component will show the loading state
-    vi.mocked(useCivitJob).mockReturnValue({
-      data: null,
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-
-    render(<SampleImageGenerator model={mockImageModel} />);
-
-    // Component renders normally when not in loading state
-    expect(screen.getByText("Sample Image Generator")).toBeInTheDocument();
-    expect(screen.getByText("Generate Sample")).toBeInTheDocument();
-  });
-
-  it("should show different messages for different loading states", () => {
-    // Test "Starting job..." message (isGenerating = true, isLoading = false)
-    // In practice, this would be when the button is clicked but the job hasn't started polling yet
-    // We verify the logic by checking that the conditional renders the correct message
-    expect(true).toBe(true); // Placeholder - the conditional logic is tested in the rendering
-  });
-
-  it("should display generated image when available", () => {
-    const mockBase64 = "data:image/jpeg;base64,mockimagedata";
-    vi.mocked(useCivitJob).mockReturnValue({
-      data: mockBase64,
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-
-    render(<SampleImageGenerator model={mockImageModel} />);
-
-    expect(screen.getByText("Generated Sample:")).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: "Generated sample image" })
-    ).toBeInTheDocument();
-    expect(screen.getByText("Generate New Sample")).toBeInTheDocument();
-  });
-
-  it("should use default chatId when none provided", () => {
-    render(<SampleImageGenerator model={mockImageModel} />);
-
-    expect(useCivitJob).toHaveBeenCalledWith("SAMPLE_GENERATOR", "");
-  });
-
-  it("should use provided chatId", () => {
+  it("should render button with default state", () => {
     render(
-      <SampleImageGenerator model={mockImageModel} chatId="custom-chat-id" />
+      <SampleImageGenerator
+        model={mockImageModel}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
     );
 
-    expect(useCivitJob).toHaveBeenCalledWith("custom-chat-id", "");
+    const button = screen.getByRole("button");
+    expect(button).toHaveTextContent("Generate Sample");
+    expect(button).not.toBeDisabled();
   });
 
-  it("should handle missing params gracefully", () => {
-    const modelWithMissingParams: ImageModel = {
-      id: "test-id",
-      name: "Test Model",
-      input: {
-        model: "test-model",
-        params: {
-          prompt: "test prompt",
-        } as any, // Incomplete params
-      },
+  it("should show generating state when button is clicked", async () => {
+    const mockGenerateImage = vi.fn().mockImplementation(async () => {
+      // Delay to allow us to see the generating state
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return { jobs: [{ jobId: "test-job-123" }] };
+    });
+
+    vi.mocked(CivitJobAPI).mockImplementation(
+      () =>
+        ({
+          generateImage: mockGenerateImage,
+        } as any)
+    );
+
+    render(
+      <SampleImageGenerator
+        model={mockImageModel}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
+    );
+
+    const button = screen.getByRole("button");
+    fireEvent.click(button);
+
+    // Should show generating state (both isGenerating and isWaitingForJob show this message)
+    expect(button).toHaveTextContent("Generating image...");
+    expect(button).toBeDisabled();
+  });
+
+  it("should show waiting state when job is created", () => {
+    const modelWithJobId: ImageModel = {
+      ...mockImageModel,
+      sampleImageId: "existing-job-123",
     };
 
-    render(<SampleImageGenerator model={modelWithMissingParams} />);
+    vi.mocked(useCivitJob).mockReturnValue({
+      photoBase64: null, // No image yet
+    } as any);
 
-    expect(screen.getByText("Sample Image Generator")).toBeInTheDocument();
+    render(
+      <SampleImageGenerator
+        model={modelWithJobId}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
+    );
+
+    const button = screen.getByRole("button");
+    expect(button).toHaveTextContent("Generating image...");
+    expect(button).toBeDisabled();
   });
 
-  it("should include additional networks in generation settings", async () => {
+  it("should show success state when image is generated", () => {
+    const mockBase64 = "data:image/jpeg;base64,mockimagedata";
+
+    // Mock a model with existing job and image
+    const modelWithJobId: ImageModel = {
+      ...mockImageModel,
+      sampleImageId: "existing-job-123",
+    };
+
+    vi.mocked(useCivitJob).mockReturnValue({
+      photoBase64: mockBase64,
+    } as any);
+
+    render(
+      <SampleImageGenerator
+        model={modelWithJobId}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
+    );
+
+    const button = screen.getByRole("button");
+    expect(button).toHaveTextContent("Generate Sample");
+    expect(button).not.toBeDisabled();
+    // Should have green color and checkmark icon when successful
+  });
+
+  it("should show error state when generation fails", async () => {
+    const mockGenerateImage = vi.fn().mockRejectedValue(new Error("API Error"));
+    vi.mocked(CivitJobAPI).mockImplementation(
+      () =>
+        ({
+          generateImage: mockGenerateImage,
+        } as any)
+    );
+
+    render(
+      <SampleImageGenerator
+        model={mockImageModel}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
+    );
+
+    const button = screen.getByRole("button");
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button).toHaveTextContent("Generation Failed - Retry");
+      expect(button).not.toBeDisabled();
+    });
+  });
+
+  it("should call onSampleImageCreated when job is created", async () => {
     const mockGenerateImage = vi.fn().mockResolvedValue({
-      jobs: [{ jobId: "test-job-123" }],
+      jobs: [{ jobId: "test-job-456" }],
+    });
+    vi.mocked(CivitJobAPI).mockImplementation(
+      () =>
+        ({
+          generateImage: mockGenerateImage,
+        } as any)
+    );
+
+    render(
+      <SampleImageGenerator
+        model={mockImageModel}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
+    );
+
+    const button = screen.getByRole("button");
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(mockOnSampleImageCreated).toHaveBeenCalledWith("test-job-456");
+    });
+  });
+
+  it("should include additional networks in generation request", async () => {
+    const mockGenerateImage = vi.fn().mockResolvedValue({
+      jobs: [{ jobId: "test-job-789" }],
     });
     vi.mocked(CivitJobAPI).mockImplementation(
       () =>
@@ -168,12 +222,15 @@ describe("SampleImageGenerator", () => {
       },
     };
 
-    render(<SampleImageGenerator model={modelWithNetworks} />);
+    render(
+      <SampleImageGenerator
+        model={modelWithNetworks}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
+    );
 
-    const generateButton = screen.getByRole("button", {
-      name: /Generate Sample/,
-    });
-    fireEvent.click(generateButton);
+    const button = screen.getByRole("button");
+    fireEvent.click(button);
 
     await waitFor(() => {
       expect(mockGenerateImage).toHaveBeenCalledWith({
@@ -193,6 +250,52 @@ describe("SampleImageGenerator", () => {
           "test-network-2": { strength: 0.6 },
         },
       });
+    });
+  });
+
+  it("should use correct chat ID for job polling", () => {
+    render(
+      <SampleImageGenerator
+        model={mockImageModel}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
+    );
+
+    expect(useCivitJob).toHaveBeenCalledWith("SAMPLE_IMAGE_GENERATOR", "");
+  });
+
+  it("should retry generation when error state button is clicked", async () => {
+    const mockGenerateImage = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("First failure"))
+      .mockResolvedValueOnce({ jobs: [{ jobId: "retry-job-123" }] });
+
+    vi.mocked(CivitJobAPI).mockImplementation(
+      () =>
+        ({
+          generateImage: mockGenerateImage,
+        } as any)
+    );
+
+    render(
+      <SampleImageGenerator
+        model={mockImageModel}
+        onSampleImageCreated={mockOnSampleImageCreated}
+      />
+    );
+
+    const button = screen.getByRole("button");
+
+    // First click fails
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(button).toHaveTextContent("Generation Failed - Retry");
+    });
+
+    // Click retry
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(mockOnSampleImageCreated).toHaveBeenCalledWith("retry-job-123");
     });
   });
 });

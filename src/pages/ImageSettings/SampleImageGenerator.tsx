@@ -1,28 +1,37 @@
-import React, { useState } from "react";
-import { Button, Card, Group, Text, Image, Loader, Alert } from "@mantine/core";
-import { RiImageLine, RiErrorWarningLine } from "react-icons/ri";
+import React, { useState, useEffect } from "react";
+import { Button, Group } from "@mantine/core";
+import { RiImageLine, RiErrorWarningLine, RiCheckLine } from "react-icons/ri";
 import { CivitJobAPI } from "../../clients/CivitJobAPI";
 import { useCivitJob } from "../../hooks/useCivitJob";
 import type { ImageModel } from "../../app/ImageModels/ImageModel";
 import { d } from "../../app/Dependencies/Dependencies";
 
+const EMULATED_CHAT_ID = "SAMPLE_IMAGE_GENERATOR";
+
 interface SampleImageGeneratorProps {
   model: ImageModel;
-  chatId?: string; // For storing the generated image
+  onSampleImageCreated?: (jobId: string) => void;
 }
 
 export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
   model,
-  chatId = "SAMPLE_GENERATOR",
+  onSampleImageCreated,
 }) => {
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(
+    model.sampleImageId || null
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: photoBase64 } = useCivitJob(chatId, jobId || "");
+  useEffect(() => {
+    setJobId(model.sampleImageId || null);
+  }, [model.sampleImageId]);
+
+  const { photoBase64 } = useCivitJob(EMULATED_CHAT_ID, jobId || "");
 
   // Track if we're actively waiting for a job (either generating or polling)
-  const isWaitingForJob = !!jobId && !photoBase64;
+  const isWaitingForJob = !!jobId && !photoBase64 && !isGenerating && !error;
+  const hasImage = !!photoBase64 && !error;
 
   const startGeneration = async () => {
     setIsGenerating(true);
@@ -31,83 +40,64 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
 
     try {
       const response = await new CivitJobAPI().generateImage(model.input);
-      setJobId(response.jobs[0].jobId);
+      const newJobId = response.jobs[0].jobId;
+      setJobId(newJobId);
+      onSampleImageCreated?.(newJobId);
     } catch (e) {
       d.ErrorService().log("Failed to generate sample image", e);
-      setError("Failed to generate sample image. Please try again.");
+      setError("Failed to generate sample image");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const isLoading = isGenerating || isWaitingForJob;
-  const hasImage = photoBase64 && !isLoading;
+  const getButtonProps = () => {
+    if (error) {
+      return {
+        children: "Generation Failed - Retry",
+        color: "red" as const,
+        variant: "light" as const,
+        leftSection: <RiErrorWarningLine />,
+        loading: false,
+        disabled: false,
+      };
+    }
+
+    if (isGenerating || isWaitingForJob) {
+      return {
+        loaderProps: { type: "dots" },
+        children: "Generating image...",
+        variant: "filled" as const,
+        leftSection: null, // No icon when loading
+        loading: true,
+        disabled: true,
+      };
+    }
+
+    if (hasImage) {
+      return {
+        children: "Generate Sample",
+        color: "green" as const,
+        variant: "light" as const,
+        leftSection: <RiImageLine />,
+        rightSection: <RiCheckLine />,
+        loading: false,
+        disabled: false,
+      };
+    }
+
+    return {
+      children: "Generate Sample",
+      variant: "light" as const,
+      leftSection: <RiImageLine />,
+      loading: false,
+      disabled: false,
+    };
+  };
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Group justify="space-between" mb="md">
-        <Text fw={500} size="lg">
-          Sample Image Generator
-        </Text>
-        <Button
-          variant="light"
-          leftSection={<RiImageLine />}
-          onClick={startGeneration}
-          disabled={isLoading}
-          loading={isGenerating}
-        >
-          {hasImage ? "Generate New Sample" : "Generate Sample"}
-        </Button>
-      </Group>
-
-      <Text size="sm" c="dimmed" mb="md">
-        Generate a sample image using this model configuration to preview the
-        results.
-      </Text>
-
-      {error && (
-        <Alert
-          icon={<RiErrorWarningLine />}
-          title="Generation Failed"
-          color="red"
-          mb="md"
-        >
-          {error}
-        </Alert>
-      )}
-
-      {isLoading && (
-        <Group justify="center" p="xl">
-          <Loader size="lg" />
-          <Text>
-            {isGenerating ? "Starting job..." : "Waiting for image..."}
-          </Text>
-        </Group>
-      )}
-
-      {hasImage && (
-        <div>
-          <Text size="sm" fw={500} mb="xs">
-            Generated Sample:
-          </Text>
-          <Image
-            src={photoBase64}
-            alt="Generated sample image"
-            radius="md"
-            fit="contain"
-            style={{ maxHeight: "400px" }}
-          />
-        </div>
-      )}
-
-      {!hasImage && !isLoading && !error && (
-        <Group justify="center" p="xl">
-          <Text c="dimmed" ta="center">
-            Click "Generate Sample" to create a preview image using this model
-            configuration.
-          </Text>
-        </Group>
-      )}
-    </Card>
+    <Group justify="center">
+      <Button {...getButtonProps()} onClick={startGeneration} />
+    </Group>
   );
 };

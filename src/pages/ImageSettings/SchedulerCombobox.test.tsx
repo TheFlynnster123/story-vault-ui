@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../test-utils";
 import { SchedulerCombobox } from "./SchedulerCombobox";
-import { d } from "../../app/Dependencies/Dependencies";
 
 // Mock dependencies
 const mockGetAvailableSchedulers = vi.fn();

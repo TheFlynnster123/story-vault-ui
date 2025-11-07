@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ImageModelService, type UserImageModels } from "./ImageModelService";
 import type { ImageModel } from "./ImageModel";
-import { d } from "../Dependencies/Dependencies";
 import { randomUUID } from "crypto";
 
 // Create mock functions that will persist across calls
@@ -36,6 +35,7 @@ describe("ImageModelService", () => {
     id: string | undefined = undefined
   ): ImageModel => ({
     id: id ?? randomUUID().toString(),
+    timestampUtcMs: Date.now(),
     name: `Test Model ${id}`,
     input: {
       model: "test-model",
@@ -51,6 +51,7 @@ describe("ImageModelService", () => {
       },
       additionalNetworks: {},
     },
+    sampleImageId: undefined,
   });
 
   const createMockUserImageModels = (
