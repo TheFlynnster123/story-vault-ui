@@ -1,31 +1,31 @@
 import React, { useState } from "react";
 import type { ImageModel } from "../../app/ImageModels/ImageModel";
-import type { FromTextInput } from "civitai/dist/types/Inputs";
 import {
   TextInput,
-  Textarea,
-  NumberInput,
   Button,
   Group,
   Title,
   Paper,
-  Slider,
   ActionIcon,
   Stack,
-  Box,
-  Text,
   Collapse,
   Badge,
+  ThemeIcon,
 } from "@mantine/core";
 import {
-  RiAddLine,
   RiDeleteBinLine,
   RiArrowDownSLine,
-  RiArrowRightSLine,
+  RiArrowUpSLine,
 } from "react-icons/ri";
-import { SchedulerCombobox } from "./SchedulerCombobox";
 import { SampleImageGenerator } from "./SampleImageGenerator";
 import { ModelFromImage } from "./ModelFromImage";
+import { ModelSampleImage } from "./ModelSampleImage";
+import { ConfirmModal } from "../../components/ConfirmModal";
+import {
+  PromptsComponent,
+  ParametersComponent,
+  AdditionalNetworksComponent,
+} from "./ImageModelViewComponents";
 
 interface ImageModelViewProps {
   model: ImageModel;
@@ -46,89 +46,46 @@ export const ImageModelView: React.FC<ImageModelViewProps> = ({
   onSave,
   onDelete,
 }) => {
-  const [localModel, setLocalModel] = useState<ImageModel>(model);
-  const [newNetworkURN, setNewNetworkURN] = useState("");
-  const [newNetworkStrength, setNewNetworkStrength] = useState(0.8);
+  const [imageModel, setImageModel] = useState<ImageModel>(model);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   React.useEffect(() => {
-    setLocalModel(model);
+    setImageModel(model);
   }, [model]);
 
-  const handleInputChange = (
-    field: keyof FromTextInput["params"],
-    value: string | number
-  ) => {
-    setLocalModel((prev) => ({
-      ...prev,
-      input: {
-        ...prev.input,
-        params: {
-          ...prev.input.params,
-          [field]: value,
-        },
-      },
-    }));
+  const handleModelChange = (updatedModel: ImageModel) => {
+    setImageModel(updatedModel);
   };
 
-  const handleModelChange = (value: string) => {
-    setLocalModel((prev) => ({
-      ...prev,
-      input: {
-        ...prev.input,
-        model: value,
-      },
-    }));
-  };
-
-  const addAdditionalNetwork = () => {
-    if (newNetworkURN) {
-      setLocalModel((prev) => ({
-        ...prev,
-        input: {
-          ...prev.input,
-          additionalNetworks: {
-            ...prev.input.additionalNetworks,
-            [newNetworkURN]: { strength: newNetworkStrength },
-          },
-        },
-      }));
-      setNewNetworkURN("");
-      setNewNetworkStrength(0.8);
-    }
-  };
-
-  const removeAdditionalNetwork = (urn: string) => {
-    setLocalModel((prev) => {
-      const { [urn]: _, ...rest } = prev.input.additionalNetworks || {};
-      return {
-        ...prev,
-        input: {
-          ...prev.input,
-          additionalNetworks: rest,
-        },
-      };
-    });
-  };
-
-  const updateNetworkStrength = (urn: string, strength: number) => {
-    setLocalModel((prev) => ({
-      ...prev,
-      input: {
-        ...prev.input,
-        additionalNetworks: {
-          ...prev.input.additionalNetworks,
-          [urn]: { strength },
-        },
-      },
-    }));
+  const handleModelNameChange = (value: string) => {
+    setImageModel((prev) => ({ ...prev, name: value }));
   };
 
   const handleSave = () => {
-    onSave(localModel);
+    onSave(imageModel);
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    setShowDeleteConfirm(false);
+    onDelete();
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const handleSampleJobCreated = async (jobId: string) => {
+    const updatedModel = { ...imageModel, sampleImageId: jobId };
+    setImageModel(updatedModel);
+    onSave(updatedModel);
   };
 
   const handleModelFromImage = (loadedModel: ImageModel) => {
-    setLocalModel((prev) => ({
+    setImageModel((prev) => ({
       ...prev,
       name: loadedModel.name,
       input: {
@@ -143,163 +100,81 @@ export const ImageModelView: React.FC<ImageModelViewProps> = ({
 
   return (
     <Paper withBorder p="md" mb="md">
-      <Group mb="sm">
-        <ActionIcon variant="subtle" onClick={onToggleExpanded} size="sm">
-          {isExpanded ? <RiArrowDownSLine /> : <RiArrowRightSLine />}
-        </ActionIcon>
+      <Stack align="center" justify="center" onClick={onToggleExpanded}>
         <Title order={4} style={{ flex: 1 }}>
-          {localModel.name}
+          {imageModel.name}
         </Title>
-        {isSelected && (
-          <Badge color="blue" variant="filled">
-            Selected
-          </Badge>
-        )}
-        <Group gap="xs">
-          <Button size="xs" variant="light" onClick={onSelect}>
+        <ModelSampleImage sampleImageJobId={model.sampleImageId} size="large" />
+        <Group gap="xs" justify="center">
+          {isSelected && (
+            <Badge color="blue" variant="filled">
+              Selected
+            </Badge>
+          )}
+          <Button size="md" variant="light" onClick={onSelect}>
             Select
           </Button>
-          <ActionIcon color="red" variant="light" size="sm" onClick={onDelete}>
+          <ActionIcon
+            color="red"
+            variant="light"
+            size="xl"
+            onClick={handleDeleteClick}
+          >
             <RiDeleteBinLine />
           </ActionIcon>
         </Group>
-      </Group>
+
+        <ThemeIcon size="xl" variant="transparent">
+          {isExpanded ? (
+            <RiArrowUpSLine size="md" />
+          ) : (
+            <RiArrowDownSLine size="md" />
+          )}
+        </ThemeIcon>
+      </Stack>
 
       <Collapse in={isExpanded}>
         <Stack>
+          <SampleImageGenerator
+            model={imageModel}
+            onSampleImageCreated={handleSampleJobCreated}
+          />
           <ModelFromImage onModelLoaded={handleModelFromImage} />
 
           <TextInput
             label="Name"
-            value={localModel.name}
-            onChange={(e) =>
-              setLocalModel((prev) => ({ ...prev, name: e.target.value }))
-            }
-          />
-          <TextInput
-            label="Model (AIR)"
-            value={localModel.input.model}
-            onChange={(e) => handleModelChange(e.target.value)}
+            value={imageModel.name}
+            onChange={(e) => handleModelNameChange(e.target.value)}
           />
 
-          <Title order={5}>Parameters</Title>
-          <Textarea
-            label="Base Prompt"
-            value={localModel.input.params.prompt}
-            onChange={(e) => handleInputChange("prompt", e.target.value)}
-            autosize
-            minRows={3}
-          />
-          <Textarea
-            label="Negative Prompt"
-            value={localModel.input.params.negativePrompt}
-            onChange={(e) =>
-              handleInputChange("negativePrompt", e.target.value)
-            }
-            autosize
-            minRows={3}
-          />
-          <SchedulerCombobox
-            value={localModel.input.params.scheduler}
-            onChange={(value) => handleInputChange("scheduler", value)}
-          />
-          <Group grow>
-            <NumberInput
-              label="Steps"
-              value={localModel.input.params.steps}
-              onChange={(value) => handleInputChange("steps", value || 0)}
-            />
-            <NumberInput
-              label="CFG Scale"
-              value={localModel.input.params.cfgScale}
-              onChange={(value) => handleInputChange("cfgScale", value || 0)}
-              step={0.1}
-            />
-          </Group>
-          <Group grow>
-            <NumberInput
-              label="Width"
-              value={localModel.input.params.width}
-              onChange={(value) => handleInputChange("width", value || 0)}
-            />
-            <NumberInput
-              label="Height"
-              value={localModel.input.params.height}
-              onChange={(value) => handleInputChange("height", value || 0)}
-            />
-          </Group>
-          <NumberInput
-            label="Clip Skip"
-            value={localModel.input.params.clipSkip}
-            onChange={(value) => handleInputChange("clipSkip", value || 0)}
+          <PromptsComponent
+            imageModel={imageModel}
+            onChange={handleModelChange}
           />
 
-          <Paper withBorder p="md" mt="md">
-            <Title order={5} mb="sm">
-              Additional Networks
-            </Title>
-            <Stack>
-              {Object.entries(localModel.input.additionalNetworks || {}).map(
-                ([urn, { strength }]) => (
-                  <Paper withBorder p="sm" radius="sm" key={urn}>
-                    <Group>
-                      <Text size="sm" style={{ flex: 1 }}>
-                        {urn}
-                      </Text>
-                      <Slider
-                        value={strength}
-                        onChange={(value) => updateNetworkStrength(urn, value)}
-                        min={0}
-                        max={1}
-                        step={0.1}
-                        label={(value) => value.toFixed(1)}
-                        style={{ flex: 2 }}
-                      />
-                      <ActionIcon
-                        color="red"
-                        onClick={() => removeAdditionalNetwork(urn)}
-                      >
-                        <RiDeleteBinLine />
-                      </ActionIcon>
-                    </Group>
-                  </Paper>
-                )
-              )}
-            </Stack>
+          <ParametersComponent
+            imageModel={imageModel}
+            onChange={handleModelChange}
+          />
 
-            <Box mt="md">
-              <Group>
-                <TextInput
-                  placeholder="URN"
-                  value={newNetworkURN}
-                  onChange={(e) => setNewNetworkURN(e.target.value)}
-                  style={{ flex: 1 }}
-                />
-                <Slider
-                  value={newNetworkStrength}
-                  onChange={setNewNetworkStrength}
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  label={(value) => value.toFixed(1)}
-                  style={{ flex: 2 }}
-                />
-                <ActionIcon color="blue" onClick={addAdditionalNetwork}>
-                  <RiAddLine />
-                </ActionIcon>
-              </Group>
-            </Box>
-          </Paper>
+          <AdditionalNetworksComponent
+            imageModel={imageModel}
+            onChange={handleModelChange}
+          />
 
           <Button onClick={handleSave} mt="xl">
             Save Model
           </Button>
-
-          <Box mt="xl">
-            <SampleImageGenerator model={localModel} />
-          </Box>
         </Stack>
       </Collapse>
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Image Model"
+        message={`Are you sure you want to delete "${imageModel.name}"? This action cannot be undone.`}
+      />
     </Paper>
   );
 };

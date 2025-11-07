@@ -35,6 +35,7 @@ describe("ModelFromImage", () => {
         clipSkip: 1,
       },
     },
+    sampleImageId: undefined,
   };
 
   beforeEach(() => {

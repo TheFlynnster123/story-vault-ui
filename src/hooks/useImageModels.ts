@@ -13,6 +13,23 @@ export const useImageModels = () => {
 
   const imageModelService = d.ImageModelService();
 
+  const withErrorHandling = async <T>(
+    operation: () => Promise<T>,
+    errorMessage: string,
+    onSuccess?: (result: T) => void
+  ): Promise<T | null> => {
+    try {
+      setError(null);
+      const result = await operation();
+      onSuccess?.(result);
+      return result;
+    } catch (err) {
+      setError(errorMessage);
+      console.error(`${errorMessage}:`, err);
+      return null;
+    }
+  };
+
   const loadImageModels = async () => {
     try {
       setLoading(true);
@@ -27,49 +44,80 @@ export const useImageModels = () => {
     }
   };
 
+  const modelExists = (models: ImageModel[], modelId: string): boolean =>
+    models.some((m) => m.id === modelId);
+
+  const updateExistingModel = (
+    models: ImageModel[],
+    updatedModel: ImageModel
+  ): ImageModel[] =>
+    models.map((m) => (m.id === updatedModel.id ? updatedModel : m));
+
+  const addNewModel = (
+    models: ImageModel[],
+    newModel: ImageModel
+  ): ImageModel[] => [...models, newModel];
+
+  const updateModelInState = (updatedModel: ImageModel) => {
+    setUserImageModels((prev) => ({
+      ...prev,
+      models: modelExists(prev.models, updatedModel.id)
+        ? updateExistingModel(prev.models, updatedModel)
+        : addNewModel(prev.models, updatedModel),
+    }));
+  };
+
+  const removeModelById = (
+    models: ImageModel[],
+    modelId: string
+  ): ImageModel[] => models.filter((m) => m.id !== modelId);
+
+  const clearSelectionIfMatch = (
+    currentSelection: string,
+    modelId: string
+  ): string => (currentSelection === modelId ? "" : currentSelection);
+
+  const removeModelFromState = (modelId: string) => {
+    setUserImageModels((prev) => ({
+      ...prev,
+      models: removeModelById(prev.models, modelId),
+      selectedModelId: clearSelectionIfMatch(prev.selectedModelId, modelId),
+    }));
+  };
+
+  const updateSelectedModelInState = (modelId: string) => {
+    setUserImageModels((prev) => ({
+      ...prev,
+      selectedModelId: modelId,
+    }));
+  };
+
   const saveImageModel = async (model: ImageModel): Promise<boolean> => {
-    try {
-      setError(null);
-      const success = await imageModelService.SaveImageModel(model);
-      if (success) {
-        await loadImageModels(); // Refresh the list
-      }
-      return success;
-    } catch (err) {
-      setError("Failed to save image model");
-      console.error("Error saving image model:", err);
-      return false;
-    }
+    const success = await withErrorHandling(
+      () => imageModelService.SaveImageModel(model),
+      "Failed to save image model",
+      (result) => result && updateModelInState(model)
+    );
+    return success ?? false;
   };
 
   const deleteImageModel = async (modelId: string): Promise<boolean> => {
-    try {
-      setError(null);
-      const success = await imageModelService.DeleteImageModel(modelId);
-      if (success) {
-        await loadImageModels(); // Refresh the list
-      }
-      return success;
-    } catch (err) {
-      setError("Failed to delete image model");
-      console.error("Error deleting image model:", err);
-      return false;
-    }
+    const success = await withErrorHandling(
+      () => imageModelService.DeleteImageModel(modelId),
+      "Failed to delete image model",
+      (result) => result && removeModelFromState(modelId)
+    );
+    return success ?? false;
   };
 
   const selectImageModel = async (
     modelId: string
   ): Promise<ImageModel | null> => {
-    try {
-      setError(null);
-      const model = await imageModelService.SelectImageModel(modelId);
-      await loadImageModels(); // Refresh to update selected state
-      return model;
-    } catch (err) {
-      setError("Failed to select image model");
-      console.error("Error selecting image model:", err);
-      return null;
-    }
+    return await withErrorHandling(
+      () => imageModelService.SelectImageModel(modelId),
+      "Failed to select image model",
+      (model) => model && updateSelectedModelInState(modelId)
+    );
   };
 
   const getSelectedModel = (): ImageModel | null => {

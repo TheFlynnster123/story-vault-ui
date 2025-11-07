@@ -51,6 +51,7 @@ describe("ImageModelService", () => {
       },
       additionalNetworks: {},
     },
+    sampleImageId: undefined,
   });
 
   const createMockUserImageModels = (

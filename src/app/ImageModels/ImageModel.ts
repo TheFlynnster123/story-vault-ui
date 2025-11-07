@@ -9,4 +9,9 @@ export type ImageModel = {
    * The image input parameters used to generate an image via CivitAI.
    */
   input: FromTextInput;
+
+  /**
+   * The job ID for the sample image generated for this model.
+   */
+  sampleImageId?: string;
 };
