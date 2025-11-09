@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ChatManager } from "../Managers/ChatManager";
+import type { ChatCache } from "../Managers/ChatCache";
 import { useNotes } from "./useNotes";
 import { useMemories } from "./useMemories";
 import { useSystemSettings } from "./queries/useSystemSettings";
@@ -9,10 +9,10 @@ import { PlanningNotesService } from "../app/ChatFlow/ChatFlowPlanningNotes";
 
 export interface IUseChatFlowProps {
   chatId: string;
-  chatManager: ChatManager | null;
+  chatCache: ChatCache | null;
 }
 
-export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
+export const useChatFlow = ({ chatId, chatCache }: IUseChatFlowProps) => {
   const { notes } = useNotes(chatId);
   const { memories } = useMemories(chatId);
   const [status, setStatus] = useState<string>("Ready");
@@ -20,7 +20,7 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
   const { systemSettings } = useSystemSettings();
   const { chatSettings } = useChatSettings(chatId);
 
-  if (!chatManager) {
+  if (!chatCache) {
     return {
       generateResponse: async () => "",
       status: "Ready",
@@ -35,7 +35,7 @@ export const useChatFlow = ({ chatId, chatManager }: IUseChatFlowProps) => {
     );
 
     var chatFlow = new ChatFlow(
-      chatManager,
+      chatCache,
       planningNotesService,
       notes,
       memories,

@@ -1,6 +1,6 @@
 import type { Message } from "../pages/Chat/ChatMessage";
 
-export class ChatManager {
+export class ChatCache {
   private messages: Message[];
   private chatId: string;
 
@@ -13,7 +13,7 @@ export class ChatManager {
     this.messages.push(message);
   }
 
-  public getMessageList(): Message[] {
+  public getMessagesForLLM(): Message[] {
     return this.messages.filter((msg) => msg.role !== "civit-job");
   }
 
@@ -41,9 +41,11 @@ export class ChatManager {
 
   public getDeletePreview(messageId: string): { messageCount: number } {
     const index = this.messages.findIndex((msg) => msg.id === messageId);
+
     if (index === -1) {
       return { messageCount: 0 };
     }
+
     return { messageCount: this.messages.length - index };
   }
 

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { ChatManager } from "./ChatManager";
+import { ChatCache } from "./ChatCache";
 import type { Message } from "../pages/Chat/ChatMessage";
 
-describe("ChatManager", () => {
+describe("ChatCache", () => {
   const mockChatId = "test-chat-123";
   const mockMessages: Message[] = [
     { id: "1", role: "user", content: "Hello" },
@@ -18,14 +18,14 @@ describe("ChatManager", () => {
 
   describe("constructor", () => {
     it("should initialize with chatId and empty messages array when no messages provided", () => {
-      const manager = new ChatManager(mockChatId);
+      const manager = new ChatCache(mockChatId);
 
       expect(manager.getChatId()).toBe(mockChatId);
       expect(manager.getMessages()).toEqual([]);
     });
 
     it("should initialize with provided messages", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       expect(manager.getChatId()).toBe(mockChatId);
       expect(manager.getMessages()).toEqual(mockMessages);
@@ -34,7 +34,7 @@ describe("ChatManager", () => {
 
   describe("addMessage", () => {
     it("should add a message to the messages array", () => {
-      const manager = new ChatManager(mockChatId);
+      const manager = new ChatCache(mockChatId);
       const newMessage: Message = {
         id: "new",
         role: "user",
@@ -48,7 +48,7 @@ describe("ChatManager", () => {
     });
 
     it("should append to existing messages", () => {
-      const manager = new ChatManager(mockChatId, [mockMessages[0]]);
+      const manager = new ChatCache(mockChatId, [mockMessages[0]]);
       const newMessage: Message = {
         id: "new",
         role: "user",
@@ -63,7 +63,7 @@ describe("ChatManager", () => {
 
   describe("getMessages", () => {
     it("should return all messages including civit-job messages", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       const result = manager.getMessages();
 
@@ -74,11 +74,11 @@ describe("ChatManager", () => {
     });
   });
 
-  describe("getMessageList", () => {
+  describe("getMessagesForLLM", () => {
     it("should return messages excluding civit-job messages", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
-      const result = manager.getMessageList();
+      const result = manager.getMessagesForLLM();
       const expectedMessages = mockMessages.filter(
         (msg) => msg.role !== "civit-job"
       );
@@ -94,9 +94,9 @@ describe("ChatManager", () => {
         { id: "1", role: "civit-job", content: "{}" },
         { id: "2", role: "civit-job", content: "{}" },
       ];
-      const manager = new ChatManager(mockChatId, civitOnlyMessages);
+      const manager = new ChatCache(mockChatId, civitOnlyMessages);
 
-      const result = manager.getMessageList();
+      const result = manager.getMessagesForLLM();
 
       expect(result).toEqual([]);
     });
@@ -104,7 +104,7 @@ describe("ChatManager", () => {
 
   describe("getMessage", () => {
     it("should return the message with matching id", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       const result = manager.getMessage("3");
 
@@ -112,7 +112,7 @@ describe("ChatManager", () => {
     });
 
     it("should return null when message id does not exist", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       const result = manager.getMessage("nonexistent");
 
@@ -120,7 +120,7 @@ describe("ChatManager", () => {
     });
 
     it("should return null when messages array is empty", () => {
-      const manager = new ChatManager(mockChatId);
+      const manager = new ChatCache(mockChatId);
 
       const result = manager.getMessage("any-id");
 
@@ -130,7 +130,7 @@ describe("ChatManager", () => {
 
   describe("deleteMessage", () => {
     it("should remove the message with matching id", () => {
-      const manager = new ChatManager(mockChatId, [...mockMessages]);
+      const manager = new ChatCache(mockChatId, [...mockMessages]);
 
       manager.deleteMessage("3");
 
@@ -140,7 +140,7 @@ describe("ChatManager", () => {
     });
 
     it("should do nothing when message id does not exist", () => {
-      const manager = new ChatManager(mockChatId, [...mockMessages]);
+      const manager = new ChatCache(mockChatId, [...mockMessages]);
       const originalLength = mockMessages.length;
 
       manager.deleteMessage("nonexistent");
@@ -149,7 +149,7 @@ describe("ChatManager", () => {
     });
 
     it("should maintain order of remaining messages", () => {
-      const manager = new ChatManager(mockChatId, [...mockMessages]);
+      const manager = new ChatCache(mockChatId, [...mockMessages]);
 
       manager.deleteMessage("3"); // Remove middle message
 
@@ -162,7 +162,7 @@ describe("ChatManager", () => {
 
   describe("deleteMessagesAfterIndex", () => {
     it("should remove the message and all messages after it", () => {
-      const manager = new ChatManager(mockChatId, [...mockMessages]);
+      const manager = new ChatCache(mockChatId, [...mockMessages]);
 
       manager.deleteMessagesAfterIndex("2"); // Remove from index 1 onwards
 
@@ -171,7 +171,7 @@ describe("ChatManager", () => {
     });
 
     it("should remove all messages when deleting from first message", () => {
-      const manager = new ChatManager(mockChatId, [...mockMessages]);
+      const manager = new ChatCache(mockChatId, [...mockMessages]);
 
       manager.deleteMessagesAfterIndex("1");
 
@@ -179,7 +179,7 @@ describe("ChatManager", () => {
     });
 
     it("should only remove the last message when deleting from last message", () => {
-      const manager = new ChatManager(mockChatId, [...mockMessages]);
+      const manager = new ChatCache(mockChatId, [...mockMessages]);
 
       manager.deleteMessagesAfterIndex("5");
 
@@ -188,7 +188,7 @@ describe("ChatManager", () => {
     });
 
     it("should do nothing when message id does not exist", () => {
-      const manager = new ChatManager(mockChatId, [...mockMessages]);
+      const manager = new ChatCache(mockChatId, [...mockMessages]);
       const originalLength = mockMessages.length;
 
       manager.deleteMessagesAfterIndex("nonexistent");
@@ -199,7 +199,7 @@ describe("ChatManager", () => {
 
   describe("getDeletePreview", () => {
     it("should return correct count for messages to be deleted from middle", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       const result = manager.getDeletePreview("3"); // Index 2, should delete 3 messages
 
@@ -207,7 +207,7 @@ describe("ChatManager", () => {
     });
 
     it("should return correct count when deleting from first message", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       const result = manager.getDeletePreview("1");
 
@@ -215,7 +215,7 @@ describe("ChatManager", () => {
     });
 
     it("should return 1 when deleting only the last message", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       const result = manager.getDeletePreview("5");
 
@@ -223,7 +223,7 @@ describe("ChatManager", () => {
     });
 
     it("should return 0 when message id does not exist", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       const result = manager.getDeletePreview("nonexistent");
 
@@ -231,7 +231,7 @@ describe("ChatManager", () => {
     });
 
     it("should return 0 when messages array is empty", () => {
-      const manager = new ChatManager(mockChatId);
+      const manager = new ChatCache(mockChatId);
 
       const result = manager.getDeletePreview("any-id");
 
@@ -241,7 +241,7 @@ describe("ChatManager", () => {
 
   describe("getDeleteFromHerePreview", () => {
     it("should return same result as getDeletePreview", () => {
-      const manager = new ChatManager(mockChatId, mockMessages);
+      const manager = new ChatCache(mockChatId, mockMessages);
 
       const previewResult = manager.getDeletePreview("3");
       const fromHereResult = manager.getDeleteFromHerePreview("3");
@@ -253,7 +253,7 @@ describe("ChatManager", () => {
   describe("getChatId", () => {
     it("should return the chat id provided during construction", () => {
       const testChatId = "my-special-chat";
-      const manager = new ChatManager(testChatId, mockMessages);
+      const manager = new ChatCache(testChatId, mockMessages);
 
       expect(manager.getChatId()).toBe(testChatId);
     });

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { Message } from "../pages/Chat/ChatMessage";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
-import { ChatManager } from "../Managers/ChatManager";
+import { ChatCache } from "../Managers/ChatCache";
 import { toSystemMessage, toUserMessage } from "../utils/messageUtils";
 import { useChatFlow } from "./useChatFlow";
 import { useChatHistory } from "./queries/useChatHistory";
@@ -11,13 +11,13 @@ import { d } from "../app/Dependencies/Dependencies";
 
 export const useChat = ({ chatId }: UseChatProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { chatManager, messages, isLoadingHistory } = useChatManager({
+  const { chatCache, messages, isLoadingHistory } = useChatCache({
     chatId,
   });
 
   const { generateResponse, status } = useChatFlow({
     chatId,
-    chatManager,
+    chatCache,
   });
 
   const { systemSettings } = useSystemSettings();
@@ -62,63 +62,63 @@ export const useChat = ({ chatId }: UseChatProps) => {
     [chatId]
   );
 
-  const getMessageList = useCallback(() => {
-    return chatManager?.getMessageList() || [];
-  }, [chatManager]);
+  const getMessagesForLLM = useCallback(() => {
+    return chatCache?.getMessagesForLLM() || [];
+  }, [chatCache]);
 
   const addMessage = useCallback(
     async (message: Message) => {
-      if (!chatManager) {
+      if (!chatCache) {
         return;
       }
 
-      chatManager.addMessage(message);
+      chatCache.addMessage(message);
       await addMessageToApi(message);
     },
-    [chatManager, addMessageToApi]
+    [chatCache, addMessageToApi]
   );
 
   const deleteMessage = useCallback(
     async (messageId: string) => {
-      if (!chatManager) {
+      if (!chatCache) {
         return;
       }
 
-      chatManager.deleteMessage(messageId);
-      await saveHistoryToApi(chatManager.getMessages());
+      chatCache.deleteMessage(messageId);
+      await saveHistoryToApi(chatCache.getMessages());
     },
-    [chatManager, saveHistoryToApi]
+    [chatCache, saveHistoryToApi]
   );
 
   const deleteMessagesFromIndex = useCallback(
     async (messageId: string) => {
-      if (!chatManager) {
+      if (!chatCache) {
         return;
       }
 
-      chatManager.deleteMessagesAfterIndex(messageId);
-      await saveHistoryToApi(chatManager.getMessages());
+      chatCache.deleteMessagesAfterIndex(messageId);
+      await saveHistoryToApi(chatCache.getMessages());
     },
-    [chatManager, saveHistoryToApi]
+    [chatCache, saveHistoryToApi]
   );
 
   const getDeletePreview = useCallback(
     (messageId: string) => {
-      if (!chatManager) {
+      if (!chatCache) {
         return { messageCount: 0 };
       }
-      return chatManager.getDeletePreview(messageId);
+      return chatCache.getDeletePreview(messageId);
     },
-    [chatManager]
+    [chatCache]
   );
 
   const regenerateResponse = useCallback(
     async (messageId: string) => {
-      if (!chatManager) {
+      if (!chatCache) {
         return;
       }
 
-      const message = chatManager.getMessage(messageId);
+      const message = chatCache.getMessage(messageId);
       if (!message) {
         console.warn(`Message with id ${messageId} not found`);
         return;
@@ -128,8 +128,8 @@ export const useChat = ({ chatId }: UseChatProps) => {
 
       try {
         // Delete the message first
-        chatManager.deleteMessage(messageId);
-        await saveHistoryToApi(chatManager.getMessages());
+        chatCache.deleteMessage(messageId);
+        await saveHistoryToApi(chatCache.getMessages());
 
         // Generate a new response
         const responseMessage = await generateResponse();
@@ -142,7 +142,7 @@ export const useChat = ({ chatId }: UseChatProps) => {
         setIsLoading(false);
       }
     },
-    [chatManager, saveHistoryToApi, generateResponse, addMessage]
+    [chatCache, saveHistoryToApi, generateResponse, addMessage]
   );
 
   const generateImage = async () => {
@@ -151,7 +151,7 @@ export const useChat = ({ chatId }: UseChatProps) => {
 
     try {
       const imageGenerator = new ImageGenerator(systemSettings);
-      const messageList = getMessageList();
+      const messageList = getMessagesForLLM();
 
       const generatedPrompt = await imageGenerator.generatePrompt(messageList);
       const jobId = await imageGenerator.triggerJob(generatedPrompt);
@@ -178,26 +178,26 @@ export const useChat = ({ chatId }: UseChatProps) => {
     regenerateResponse,
     getDeletePreview,
     isLoading: isLoading || isLoadingHistory,
-    getMessageList,
+    getMessagesForLLM,
     generateImage,
   };
 };
 
-interface UseChatManagerProps {
+interface UseChatCacheProps {
   chatId: string | null;
 }
 
-const useChatManager = ({ chatId }: UseChatManagerProps) => {
+const useChatCache = ({ chatId }: UseChatCacheProps) => {
   const { data, isLoading: isLoadingHistory } = useChatHistory(chatId);
 
-  const chatManager = useMemo(() => {
+  const chatCache = useMemo(() => {
     if (!chatId) return null;
-    return new ChatManager(chatId, data || []);
+    return new ChatCache(chatId, data || []);
   }, [chatId, data]);
 
-  const messages = chatManager?.getMessages() || [];
+  const messages = chatCache?.getMessages() || [];
 
-  return { chatManager, messages, isLoadingHistory };
+  return { chatCache, messages, isLoadingHistory };
 };
 
 interface UseChatProps {

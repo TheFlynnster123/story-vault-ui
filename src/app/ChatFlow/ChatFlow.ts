@@ -1,5 +1,5 @@
 import { GrokChatAPI } from "../../clients/GrokChatAPI";
-import type { ChatManager } from "../../Managers/ChatManager";
+import type { ChatCache } from "../../Managers/ChatCache";
 import type { Note } from "../../models";
 import type { Memory } from "../../models/Memory";
 import type { Message } from "../../pages/Chat/ChatMessage";
@@ -12,7 +12,7 @@ const RESPONSE_PROMPT: string =
   "Consider the above notes, write a response to the conversation. Provide your response directly without a preamble.";
 
 export class ChatFlow {
-  private chatManager: ChatManager;
+  private chatCache: ChatCache;
   private planningNotesService: PlanningNotesService;
 
   private notes: Note[];
@@ -23,7 +23,7 @@ export class ChatFlow {
   private setIsLoading: (isLoading: boolean) => void;
 
   constructor(
-    chatManager: ChatManager,
+    chatCache: ChatCache,
     planningNotesService: PlanningNotesService,
     notes: Note[],
     memories: Memory[],
@@ -32,7 +32,7 @@ export class ChatFlow {
     setStatus: (status: string) => void,
     setIsLoading: (isLoading: boolean) => void
   ) {
-    this.chatManager = chatManager;
+    this.chatCache = chatCache;
     this.planningNotesService = planningNotesService;
     this.notes = notes;
     this.memories = memories;
@@ -48,7 +48,7 @@ export class ChatFlow {
 
     try {
       const basePrompt = this.getBasePrompt();
-      const chatMessages = this.chatManager.getMessageList();
+      const chatMessages = this.chatCache.getMessagesForLLM();
       const planningNotes = this.getPlanningNotes();
 
       const updatedPlanningNotes =
