@@ -5,6 +5,7 @@ const NOTES_BLOB_NAME = "notes";
 
 export const getNotesQueryKey = (chatId: string) => ["notes", chatId];
 
+
 export class NotesService {
   private chatId: string;
 

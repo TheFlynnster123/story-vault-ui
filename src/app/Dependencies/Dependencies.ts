@@ -14,7 +14,10 @@ import { MemoriesService } from "../../queries/memories/MemoriesService";
 import { NotesService } from "../../queries/notes/NotesService";
 import { CivitJobAPI } from "../../clients/CivitJobAPI";
 import { GrokChatAPI } from "../../clients/GrokChatAPI";
-import { PlanningNotesService } from "../ChatGeneration/PlanningNotesService";
+import {
+  PlanningNotesService,
+  getPlanningNotesCacheInstance,
+} from "../ChatGeneration/PlanningNotesService";
 import {
   ChatGeneration,
   getChatGenerationInstance,
@@ -40,7 +43,7 @@ export class Dependencies {
     return getChatGenerationInstance(chatId) as ChatGeneration;
   }
   PlanningNotesService(chatId: string) {
-    return new PlanningNotesService(chatId);
+    return getPlanningNotesCacheInstance(chatId) as PlanningNotesService;
   }
   GrokChatAPI() {
     return new GrokChatAPI();

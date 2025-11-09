@@ -67,9 +67,9 @@ export class ChatGeneration {
       const chatMessages = d.ChatCache(chatId).getMessagesForLLM();
 
       this.setStatus("Planning...");
-      const updatedPlanningNotes = await d
-        .PlanningNotesService(chatId)
-        .generateUpdatedPlanningNotes(chatMessages);
+      const planningNotesService = d.PlanningNotesService(chatId);
+      await planningNotesService.generateUpdatedPlanningNotes(chatMessages);
+      const updatedPlanningNotes = planningNotesService.getPlanningNotes();
 
       const requestMessages = this.buildRequestMessages(
         chatSettings,
