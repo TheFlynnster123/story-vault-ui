@@ -8,6 +8,8 @@ const mockGetBlob = vi.fn();
 const mockSaveBlob = vi.fn();
 const mockLog = vi.fn();
 const mockMapToSchedulerName = vi.fn();
+const mockEnsureQueryData = vi.fn();
+const mockInvalidateQueries = vi.fn();
 
 const GLOBAL_CHAT_ID = "GLOBAL_CHAT_ID";
 
@@ -24,6 +26,10 @@ vi.mock("../Dependencies/Dependencies", () => ({
     })),
     SchedulerMapper: vi.fn(() => ({
       MapToSchedulerName: mockMapToSchedulerName,
+    })),
+    QueryClient: vi.fn(() => ({
+      ensureQueryData: mockEnsureQueryData,
+      invalidateQueries: mockInvalidateQueries,
     })),
   },
 }));
@@ -63,10 +69,19 @@ describe("ImageModelService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Set up default scheduler mapper behavior
-    mockMapToSchedulerName.mockImplementation((scheduler: string) => scheduler);
+    setupDefaultMocks();
     service = new ImageModelService();
   });
+
+  function setupDefaultMocks(): void {
+    mockMapToSchedulerName.mockImplementation((scheduler: string) => scheduler);
+    mockEnsureQueryData.mockImplementation(
+      async ({ queryFn }: { queryFn: () => Promise<string | null> }) => {
+        return await queryFn();
+      }
+    );
+    mockInvalidateQueries.mockResolvedValue(undefined);
+  }
 
   describe("SaveImageModel", () => {
     it("should save new model successfully", async () => {

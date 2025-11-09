@@ -140,7 +140,7 @@ export class ChatGeneration {
     messages.push(...chatMessages);
     messages.push(...this.buildNoteMessages(notes));
     messages.push(...this.buildMemoryMessages(memories));
-    messages.push(toSystemMessage(RESPONSE_PROMPT));
+    if (includeResponsePrompt) messages.push(toSystemMessage(RESPONSE_PROMPT));
 
     return messages;
   };

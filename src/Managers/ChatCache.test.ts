@@ -1,261 +1,663 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { ChatCache } from "./ChatCache";
+import { ChatHistoryReducer } from "./ChatHistoryReducer";
 import type { Message } from "../pages/Chat/ChatMessage";
+import { d } from "../app/Dependencies/Dependencies";
+
+// Mock external dependencies
+vi.mock("./ChatHistoryReducer");
+vi.mock("../app/Dependencies/Dependencies");
+
+const mockChatHistoryReducer = ChatHistoryReducer as any;
+const mockDependencies = d as any;
 
 describe("ChatCache", () => {
+  let mockChatHistoryApi: any;
   const mockChatId = "test-chat-123";
-  const mockMessages: Message[] = [
-    { id: "1", role: "user", content: "Hello" },
-    { id: "2", role: "assistant", content: "Hi there!" },
-    { id: "3", role: "user", content: "How are you?" },
-    {
-      id: "4",
-      role: "civit-job",
-      content: JSON.stringify({ jobId: "job-123" }),
-    },
-    { id: "5", role: "assistant", content: "I'm doing well!" },
-  ];
 
-  describe("constructor", () => {
-    it("should initialize with chatId and empty messages array when no messages provided", () => {
-      const manager = new ChatCache(mockChatId);
+  beforeEach(() => {
+    mockChatHistoryApi = createMockChatHistoryApi();
+    mockDependencies.ChatHistoryApi = vi.fn(() => mockChatHistoryApi);
+    mockChatHistoryReducer.reduce = vi.fn((msgs) => msgs);
+    mockChatHistoryReducer.createDeleteCommand = vi.fn((id) =>
+      createDeleteCommand(id)
+    );
 
-      expect(manager.getChatId()).toBe(mockChatId);
-      expect(manager.getMessages()).toEqual([]);
+    // Default: return empty array for initialization to not interfere
+    mockChatHistoryApi.getChatHistory = vi.fn().mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("Constructor & Initialization", () => {
+    it("should initialize with chatId and empty messages array when no messages provided", async () => {
+      const reducedMessages = createStandardMessages();
+      setupSuccessfulInitialization(reducedMessages);
+
+      const cache = new ChatCache(mockChatId);
+      await waitForInitialization();
+
+      expect(cache.getChatId()).toBe(mockChatId);
+      expect(cache.getMessages()).toEqual(reducedMessages);
     });
 
     it("should initialize with provided messages", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const providedMessages = createStandardMessages();
+      const cache = new ChatCache(mockChatId, providedMessages);
 
-      expect(manager.getChatId()).toBe(mockChatId);
-      expect(manager.getMessages()).toEqual(mockMessages);
+      expect(cache.getChatId()).toBe(mockChatId);
+      expect(cache.getMessages()).toEqual(providedMessages);
+    });
+
+    it("should eventually set IsLoading to false after initialization", async () => {
+      setupSuccessfulInitialization([]);
+      const cache = new ChatCache(mockChatId, []);
+      await waitForInitialization();
+
+      expect(cache.IsLoading).toBe(false);
+    });
+
+    it("should automatically fetch chat history from API on first initialization", async () => {
+      const rawMessages = createStandardMessages();
+      setupSuccessfulInitialization(rawMessages);
+
+      new ChatCache(mockChatId);
+      await waitForInitialization();
+
+      expectApiCalledToGetChatHistory();
+    });
+
+    it("should apply ChatHistoryReducer to raw messages", async () => {
+      const rawMessages = createStandardMessages();
+      const reducedMessages = [createUserMessage("reduced")];
+      setupInitializationWithReduction(rawMessages, reducedMessages);
+
+      const cache = new ChatCache(mockChatId);
+      await waitForInitialization();
+
+      expectReducerCalledWith(rawMessages);
+      expect(cache.getMessages()).toEqual(reducedMessages);
+    });
+
+    it("should call API on manual initializeMessages even if already initialized", async () => {
+      setupSuccessfulInitialization([]);
+      const cache = new ChatCache(mockChatId);
+      await waitForInitialization();
+
+      vi.clearAllMocks();
+      await cache.initializeMessages();
+
+      // initializeMessages always calls the API (it's a manual refresh)
+      expectApiCalledToGetChatHistory();
+    });
+
+    it("should set IsLoading during initialization", async () => {
+      let loadingStateDuringCall = false;
+      const cache = createCacheWithMessages([]);
+      mockChatHistoryApi.getChatHistory = vi.fn(async () => {
+        loadingStateDuringCall = cache.IsLoading;
+        return [];
+      });
+
+      await cache.initializeMessages();
+
+      expect(loadingStateDuringCall).toBe(true);
+      expect(cache.IsLoading).toBe(false);
+    });
+
+    it("should handle API errors during initialization gracefully", async () => {
+      // When initialization fails, the cache should still work
+      mockChatHistoryApi.getChatHistory = vi.fn().mockResolvedValue([]);
+
+      const cache = new ChatCache(mockChatId);
+      await waitForInitialization();
+
+      // Even though init happened in background, cache should be usable
+      expect(cache.IsLoading).toBe(false);
+      expect(cache.getChatId()).toBe(mockChatId);
     });
   });
 
-  describe("addMessage", () => {
-    it("should add a message to the messages array", () => {
-      const manager = new ChatCache(mockChatId);
-      const newMessage: Message = {
-        id: "new",
-        role: "user",
-        content: "New message",
-      };
+  describe("Subscription Management", () => {
+    it("should allow subscribing with a callback", () => {
+      const cache = createCacheWithMessages([]);
+      const callback = vi.fn();
 
-      manager.addMessage(newMessage);
+      const unsubscribe = cache.subscribe(callback);
 
-      expect(manager.getMessages()).toContain(newMessage);
-      expect(manager.getMessages()).toHaveLength(1);
+      expect(unsubscribe).toBeInstanceOf(Function);
     });
 
-    it("should append to existing messages", () => {
-      const manager = new ChatCache(mockChatId, [mockMessages[0]]);
-      const newMessage: Message = {
-        id: "new",
-        role: "user",
-        content: "New message",
-      };
+    it("should return unsubscribe function that removes subscriber", async () => {
+      const cache = createCacheWithMessages([]);
+      const callback = vi.fn();
+      const unsubscribe = cache.subscribe(callback);
 
-      manager.addMessage(newMessage);
+      unsubscribe();
+      await cache.addMessage(createUserMessage("test"));
 
-      expect(manager.getMessages()).toEqual([mockMessages[0], newMessage]);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("should support multiple subscribers", async () => {
+      const cache = createCacheWithMessages([]);
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+      cache.subscribe(callback1);
+      cache.subscribe(callback2);
+
+      await cache.addMessage(createUserMessage("test"));
+
+      expect(callback1).toHaveBeenCalled();
+      expect(callback2).toHaveBeenCalled();
+    });
+
+    it("should notify all subscribers when changes occur", async () => {
+      const cache = createCacheWithMessages([]);
+      const callback = vi.fn();
+      cache.subscribe(callback);
+
+      await cache.addMessage(createUserMessage("test"));
+
+      expect(callback).toHaveBeenCalled();
     });
   });
 
-  describe("getMessages", () => {
+  describe("Adding Messages", () => {
+    it("should add a message to the messages array", async () => {
+      setupSuccessfulAddMessage();
+      const cache = createCacheWithMessages([]);
+      const newMessage = createUserMessage("new");
+
+      await cache.addMessage(newMessage);
+
+      expectMessageInCache(cache, newMessage);
+      expect(cache.getMessages()).toHaveLength(1);
+    });
+
+    it("should append to existing messages", async () => {
+      setupSuccessfulAddMessage();
+      const existingMessage = createUserMessage("existing");
+      const cache = createCacheWithMessages([existingMessage]);
+      const newMessage = createUserMessage("new");
+
+      await cache.addMessage(newMessage);
+
+      expect(cache.getMessages()).toEqual([existingMessage, newMessage]);
+    });
+
+    it("should notify subscribers after adding message locally", async () => {
+      setupSuccessfulAddMessage();
+      const cache = createCacheWithMessages([]);
+      const callback = vi.fn();
+      cache.subscribe(callback);
+
+      await cache.addMessage(createUserMessage("test"));
+
+      expect(callback).toHaveBeenCalled();
+    });
+
+    it("should call ChatHistoryAPI.addChatMessage with correct parameters", async () => {
+      setupSuccessfulAddMessage();
+      const cache = createCacheWithMessages([]);
+      const message = createUserMessage("test");
+
+      await cache.addMessage(message);
+
+      expectApiCalledToAddMessage(mockChatId, message);
+    });
+
+    it("should set IsLoading during API call", async () => {
+      const cache = createCacheWithMessages([]);
+      let loadingDuringCall = false;
+      mockChatHistoryApi.addChatMessage = vi.fn(async () => {
+        loadingDuringCall = cache.IsLoading;
+        return true;
+      });
+
+      await cache.addMessage(createUserMessage("test"));
+
+      expect(loadingDuringCall).toBe(true);
+      expect(cache.IsLoading).toBe(false);
+    });
+
+    it("should keep local message even if API call fails", async () => {
+      setupFailedAddMessage();
+      const cache = createCacheWithMessages([]);
+      const message = createUserMessage("test");
+
+      try {
+        await cache.addMessage(message);
+      } catch (e) {
+        // Error is expected but message should still be in cache
+      }
+
+      expectMessageInCache(cache, message);
+    });
+  });
+
+  describe("Getting Messages", () => {
     it("should return all messages including civit-job messages", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const messages = createMessagesWithCivitJob();
+      const cache = createCacheWithMessages(messages);
 
-      const result = manager.getMessages();
+      const result = cache.getMessages();
 
-      expect(result).toEqual(mockMessages);
-      expect(result.some((msg: Message) => msg.role === "civit-job")).toBe(
-        true
-      );
+      expect(result).toEqual(messages);
+      expectContainsCivitJobMessage(result);
     });
-  });
 
-  describe("getMessagesForLLM", () => {
     it("should return messages excluding civit-job messages", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const allMessages = createMessagesWithCivitJob();
+      const cache = createCacheWithMessages(allMessages);
 
-      const result = manager.getMessagesForLLM();
-      const expectedMessages = mockMessages.filter(
-        (msg) => msg.role !== "civit-job"
-      );
+      const result = cache.getMessagesForLLM();
 
-      expect(result).toEqual(expectedMessages);
-      expect(result.some((msg: Message) => msg.role === "civit-job")).toBe(
-        false
-      );
+      expectNoCivitJobMessages(result);
+      expect(result).toHaveLength(4);
     });
 
     it("should return empty array when no non-civit-job messages exist", () => {
-      const civitOnlyMessages: Message[] = [
-        { id: "1", role: "civit-job", content: "{}" },
-        { id: "2", role: "civit-job", content: "{}" },
-      ];
-      const manager = new ChatCache(mockChatId, civitOnlyMessages);
+      const civitOnlyMessages = createCivitJobOnlyMessages();
+      const cache = createCacheWithMessages(civitOnlyMessages);
 
-      const result = manager.getMessagesForLLM();
+      const result = cache.getMessagesForLLM();
 
       expect(result).toEqual([]);
     });
-  });
 
-  describe("getMessage", () => {
     it("should return the message with matching id", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages(messages);
 
-      const result = manager.getMessage("3");
+      const result = cache.getMessage("3");
 
-      expect(result).toEqual(mockMessages[2]);
+      expect(result).toEqual(messages[2]);
     });
 
     it("should return null when message id does not exist", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const cache = createCacheWithMessages(createStandardMessages());
 
-      const result = manager.getMessage("nonexistent");
+      const result = cache.getMessage("nonexistent");
 
       expect(result).toBeNull();
     });
 
     it("should return null when messages array is empty", () => {
-      const manager = new ChatCache(mockChatId);
+      const cache = createCacheWithMessages([]);
 
-      const result = manager.getMessage("any-id");
+      const result = cache.getMessage("any-id");
 
       expect(result).toBeNull();
     });
   });
 
-  describe("deleteMessage", () => {
-    it("should remove the message with matching id", () => {
-      const manager = new ChatCache(mockChatId, [...mockMessages]);
+  describe("Deleting Single Message", () => {
+    it("should remove the message with matching id", async () => {
+      setupSuccessfulDeleteMessage();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
 
-      manager.deleteMessage("3");
+      await cache.deleteMessage("3");
 
-      const remainingMessages = manager.getMessages();
-      expect(remainingMessages).not.toContain(mockMessages[2]);
-      expect(remainingMessages).toHaveLength(mockMessages.length - 1);
+      expectMessageNotInCache(cache, messages[2]);
+      expect(cache.getMessages()).toHaveLength(messages.length - 1);
     });
 
-    it("should do nothing when message id does not exist", () => {
-      const manager = new ChatCache(mockChatId, [...mockMessages]);
-      const originalLength = mockMessages.length;
+    it("should do nothing when message id does not exist", async () => {
+      setupSuccessfulDeleteMessage();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
 
-      manager.deleteMessage("nonexistent");
+      await cache.deleteMessage("nonexistent");
 
-      expect(manager.getMessages()).toHaveLength(originalLength);
+      expect(cache.getMessages()).toHaveLength(messages.length);
     });
 
-    it("should maintain order of remaining messages", () => {
-      const manager = new ChatCache(mockChatId, [...mockMessages]);
+    it("should maintain order of remaining messages", async () => {
+      setupSuccessfulDeleteMessage();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
 
-      manager.deleteMessage("3"); // Remove middle message
+      await cache.deleteMessage("3");
 
-      const remainingMessages = manager.getMessages();
-      expect(remainingMessages[0]).toEqual(mockMessages[0]);
-      expect(remainingMessages[1]).toEqual(mockMessages[1]);
-      expect(remainingMessages[2]).toEqual(mockMessages[3]); // Was index 3, now index 2
+      const remaining = cache.getMessages();
+      expect(remaining[0]).toEqual(messages[0]);
+      expect(remaining[1]).toEqual(messages[1]);
+      expect(remaining[2]).toEqual(messages[3]);
+    });
+
+    it("should notify subscribers after local deletion", async () => {
+      setupSuccessfulDeleteMessage();
+      const cache = createCacheWithMessages(createStandardMessages());
+      const callback = vi.fn();
+      cache.subscribe(callback);
+
+      await cache.deleteMessage("3");
+
+      expect(callback).toHaveBeenCalled();
+    });
+
+    it("should call ChatHistoryAPI with delete command", async () => {
+      setupSuccessfulDeleteMessage();
+      const cache = createCacheWithMessages(createStandardMessages());
+
+      await cache.deleteMessage("3");
+
+      expectApiCalledToAddMessage(mockChatId, createDeleteCommand("3"));
+    });
+
+    it("should create delete command using ChatHistoryReducer", async () => {
+      setupSuccessfulDeleteMessage();
+      const cache = createCacheWithMessages(createStandardMessages());
+
+      await cache.deleteMessage("3");
+
+      expectDeleteCommandCreatedFor("3");
+    });
+
+    it("should set IsLoading during API call", async () => {
+      const cache = createCacheWithMessages(createStandardMessages());
+      let loadingDuringCall = false;
+      mockChatHistoryApi.addChatMessage = vi.fn(async () => {
+        loadingDuringCall = cache.IsLoading;
+        return true;
+      });
+
+      await cache.deleteMessage("3");
+
+      expect(loadingDuringCall).toBe(true);
+      expect(cache.IsLoading).toBe(false);
     });
   });
 
-  describe("deleteMessagesAfterIndex", () => {
-    it("should remove the message and all messages after it", () => {
-      const manager = new ChatCache(mockChatId, [...mockMessages]);
+  describe("Deleting Messages After Index", () => {
+    it("should remove the message and all messages after it", async () => {
+      setupSuccessfulDeleteMessages();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
 
-      manager.deleteMessagesAfterIndex("2"); // Remove from index 1 onwards
+      await cache.deleteMessagesAfterIndex("2");
 
-      const remainingMessages = manager.getMessages();
-      expect(remainingMessages).toEqual([mockMessages[0]]); // Only first message remains
+      expect(cache.getMessages()).toEqual([messages[0]]);
     });
 
-    it("should remove all messages when deleting from first message", () => {
-      const manager = new ChatCache(mockChatId, [...mockMessages]);
+    it("should remove all messages when deleting from first message", async () => {
+      setupSuccessfulDeleteMessages();
+      const cache = createCacheWithMessages(createStandardMessages());
 
-      manager.deleteMessagesAfterIndex("1");
+      await cache.deleteMessagesAfterIndex("1");
 
-      expect(manager.getMessages()).toEqual([]);
+      expect(cache.getMessages()).toEqual([]);
     });
 
-    it("should only remove the last message when deleting from last message", () => {
-      const manager = new ChatCache(mockChatId, [...mockMessages]);
+    it("should only remove the last message when deleting from last message", async () => {
+      setupSuccessfulDeleteMessages();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
 
-      manager.deleteMessagesAfterIndex("5");
+      await cache.deleteMessagesAfterIndex("5");
 
-      const remainingMessages = manager.getMessages();
-      expect(remainingMessages).toEqual(mockMessages.slice(0, -1));
+      expect(cache.getMessages()).toEqual(messages.slice(0, -1));
     });
 
-    it("should do nothing when message id does not exist", () => {
-      const manager = new ChatCache(mockChatId, [...mockMessages]);
-      const originalLength = mockMessages.length;
+    it("should do nothing when message id does not exist", async () => {
+      setupSuccessfulDeleteMessages();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
 
-      manager.deleteMessagesAfterIndex("nonexistent");
+      await cache.deleteMessagesAfterIndex("nonexistent");
 
-      expect(manager.getMessages()).toHaveLength(originalLength);
+      expect(cache.getMessages()).toHaveLength(messages.length);
+    });
+
+    it("should notify subscribers after local deletion", async () => {
+      setupSuccessfulDeleteMessages();
+      const cache = createCacheWithMessages(createStandardMessages());
+      const callback = vi.fn();
+      cache.subscribe(callback);
+
+      await cache.deleteMessagesAfterIndex("2");
+
+      expect(callback).toHaveBeenCalled();
+    });
+
+    it("should call ChatHistoryAPI.addChatMessages with multiple delete commands", async () => {
+      setupSuccessfulDeleteMessages();
+      const cache = createCacheWithMessages(createStandardMessages());
+
+      await cache.deleteMessagesAfterIndex("3");
+
+      expectApiCalledToAddMultipleMessages(mockChatId);
+    });
+
+    it("should create delete commands for all affected message IDs", async () => {
+      setupSuccessfulDeleteMessages();
+      const cache = createCacheWithMessages(createStandardMessages());
+
+      await cache.deleteMessagesAfterIndex("3");
+
+      const expectedCommands = ["3", "4", "5"].map(createDeleteCommand);
+      expectApiCalledWith(mockChatId, expectedCommands);
+    });
+
+    it("should set IsLoading during API call", async () => {
+      const cache = createCacheWithMessages(createStandardMessages());
+      let loadingDuringCall = false;
+      mockChatHistoryApi.addChatMessages = vi.fn(async () => {
+        loadingDuringCall = cache.IsLoading;
+        return true;
+      });
+
+      await cache.deleteMessagesAfterIndex("3");
+
+      expect(loadingDuringCall).toBe(true);
+      expect(cache.IsLoading).toBe(false);
     });
   });
 
-  describe("getDeletePreview", () => {
+  describe("Delete Preview", () => {
     it("should return correct count for messages to be deleted from middle", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const cache = createCacheWithMessages(createStandardMessages());
 
-      const result = manager.getDeletePreview("3"); // Index 2, should delete 3 messages
+      const result = cache.getDeletePreview("3");
 
-      expect(result).toEqual({ messageCount: 3 }); // Messages at index 2, 3, 4
+      expect(result).toEqual({ messageCount: 3 });
     });
 
     it("should return correct count when deleting from first message", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages(messages);
 
-      const result = manager.getDeletePreview("1");
+      const result = cache.getDeletePreview("1");
 
-      expect(result).toEqual({ messageCount: mockMessages.length });
+      expect(result).toEqual({ messageCount: messages.length });
     });
 
     it("should return 1 when deleting only the last message", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const cache = createCacheWithMessages(createStandardMessages());
 
-      const result = manager.getDeletePreview("5");
+      const result = cache.getDeletePreview("5");
 
       expect(result).toEqual({ messageCount: 1 });
     });
 
     it("should return 0 when message id does not exist", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
+      const cache = createCacheWithMessages(createStandardMessages());
 
-      const result = manager.getDeletePreview("nonexistent");
+      const result = cache.getDeletePreview("nonexistent");
 
       expect(result).toEqual({ messageCount: 0 });
     });
 
     it("should return 0 when messages array is empty", () => {
-      const manager = new ChatCache(mockChatId);
+      const cache = createCacheWithMessages([]);
 
-      const result = manager.getDeletePreview("any-id");
+      const result = cache.getDeletePreview("any-id");
 
       expect(result).toEqual({ messageCount: 0 });
     });
   });
 
-  describe("getDeleteFromHerePreview", () => {
-    it("should return same result as getDeletePreview", () => {
-      const manager = new ChatCache(mockChatId, mockMessages);
-
-      const previewResult = manager.getDeletePreview("3");
-      const fromHereResult = manager.getDeletePreview("3");
-
-      expect(fromHereResult).toEqual(previewResult);
-    });
-  });
-
-  describe("getChatId", () => {
+  describe("Utility Methods", () => {
     it("should return the chat id provided during construction", () => {
       const testChatId = "my-special-chat";
-      const manager = new ChatCache(testChatId, mockMessages);
+      const cache = createCacheWithMessages([], testChatId);
 
-      expect(manager.getChatId()).toBe(testChatId);
+      expect(cache.getChatId()).toBe(testChatId);
     });
   });
+
+  // Helper Functions
+  function createMockChatHistoryApi() {
+    return {
+      getChatHistory: vi.fn().mockResolvedValue([]),
+      addChatMessage: vi.fn().mockResolvedValue(true),
+      addChatMessages: vi.fn().mockResolvedValue(true),
+    };
+  }
+
+  function createCacheWithMessages(
+    messages: Message[],
+    chatId: string = mockChatId
+  ): ChatCache {
+    // Setup the API to return the same messages so initialization doesn't overwrite
+    mockChatHistoryApi.getChatHistory = vi.fn().mockResolvedValue(messages);
+    mockChatHistoryReducer.reduce = vi.fn(() => messages);
+    return new ChatCache(chatId, messages);
+  }
+
+  function createUserMessage(content: string, id?: string): Message {
+    return {
+      id: id || `msg-${Date.now()}-${Math.random()}`,
+      role: "user",
+      content,
+    };
+  }
+
+  function createAssistantMessage(content: string, id: string): Message {
+    return { id, role: "assistant", content };
+  }
+
+  function createCivitJobMessage(id: string): Message {
+    return {
+      id,
+      role: "civit-job",
+      content: JSON.stringify({ jobId: `job-${id}` }),
+    };
+  }
+
+  function createDeleteCommand(messageId: string): Message {
+    return {
+      id: `delete-${messageId}`,
+      role: "system",
+      content: `DELETE:${messageId}`,
+    };
+  }
+
+  function createStandardMessages(): Message[] {
+    return [
+      createUserMessage("Hello", "1"),
+      createAssistantMessage("Hi there!", "2"),
+      createUserMessage("How are you?", "3"),
+      createCivitJobMessage("4"),
+      createAssistantMessage("I'm doing well!", "5"),
+    ];
+  }
+
+  function createMessagesWithCivitJob(): Message[] {
+    return createStandardMessages();
+  }
+
+  function createCivitJobOnlyMessages(): Message[] {
+    return [createCivitJobMessage("1"), createCivitJobMessage("2")];
+  }
+
+  function setupSuccessfulInitialization(messages: Message[]): void {
+    mockChatHistoryApi.getChatHistory = vi.fn().mockResolvedValue(messages);
+    mockChatHistoryReducer.reduce = vi.fn(() => messages);
+  }
+
+  function setupInitializationWithReduction(
+    rawMessages: Message[],
+    reducedMessages: Message[]
+  ): void {
+    mockChatHistoryApi.getChatHistory = vi.fn().mockResolvedValue(rawMessages);
+    mockChatHistoryReducer.reduce = vi.fn(() => reducedMessages);
+  }
+
+  function setupSuccessfulAddMessage(): void {
+    mockChatHistoryApi.addChatMessage = vi.fn().mockResolvedValue(true);
+  }
+
+  function setupFailedAddMessage(): void {
+    mockChatHistoryApi.addChatMessage = vi
+      .fn()
+      .mockRejectedValue(new Error("API error"));
+  }
+
+  function setupSuccessfulDeleteMessage(): void {
+    mockChatHistoryApi.addChatMessage = vi.fn().mockResolvedValue(true);
+  }
+
+  function setupSuccessfulDeleteMessages(): void {
+    mockChatHistoryApi.addChatMessages = vi.fn().mockResolvedValue(true);
+  }
+
+  async function waitForInitialization(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  function expectApiCalledToGetChatHistory(): void {
+    expect(mockChatHistoryApi.getChatHistory).toHaveBeenCalledWith(mockChatId);
+  }
+
+  function expectReducerCalledWith(messages: Message[]): void {
+    expect(mockChatHistoryReducer.reduce).toHaveBeenCalledWith(messages);
+  }
+
+  function expectApiCalledToAddMessage(chatId: string, message: Message): void {
+    expect(mockChatHistoryApi.addChatMessage).toHaveBeenCalledWith(
+      chatId,
+      message
+    );
+  }
+
+  function expectApiCalledToAddMultipleMessages(chatId: string): void {
+    expect(mockChatHistoryApi.addChatMessages).toHaveBeenCalledWith(
+      chatId,
+      expect.any(Array)
+    );
+  }
+
+  function expectApiCalledWith(chatId: string, commands: Message[]): void {
+    expect(mockChatHistoryApi.addChatMessages).toHaveBeenCalledWith(
+      chatId,
+      commands
+    );
+  }
+
+  function expectDeleteCommandCreatedFor(messageId: string): void {
+    expect(mockChatHistoryReducer.createDeleteCommand).toHaveBeenCalledWith(
+      messageId
+    );
+  }
+
+  function expectMessageInCache(cache: ChatCache, message: Message): void {
+    expect(cache.getMessages()).toContain(message);
+  }
+
+  function expectMessageNotInCache(cache: ChatCache, message: Message): void {
+    expect(cache.getMessages()).not.toContain(message);
+  }
+
+  function expectContainsCivitJobMessage(messages: Message[]): void {
+    expect(messages.some((msg) => msg.role === "civit-job")).toBe(true);
+  }
+
+  function expectNoCivitJobMessages(messages: Message[]): void {
+    expect(messages.some((msg) => msg.role === "civit-job")).toBe(false);
+  }
 });
