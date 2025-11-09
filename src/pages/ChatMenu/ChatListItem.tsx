@@ -1,5 +1,5 @@
 import styled, { css } from "styled-components";
-import { useChatSettings } from "../../hooks/queries/useChatSettings";
+import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
 import type { ChatSettings } from "../../models";
 
 interface IChatListItemProps {

@@ -1,28 +1,25 @@
 import React, { useState } from "react";
-import { useDeleteChatMutation } from "../../hooks/queries/useChatSettings";
+import { useChatDeletion } from "../../queries/useDeleteChat";
 import { Button, Modal, Group, Text } from "@mantine/core";
 import { RiDeleteBinLine } from "react-icons/ri";
-import { ChatHistoryAPI } from "../../clients/ChatHistoryAPI";
 import { d } from "../../app/Dependencies/Dependencies";
+import { useNavigate } from "react-router-dom";
 
 interface ChatDeleteControlProps {
   chatId: string;
-  onDeleteSuccess: () => void;
 }
 
 export const ChatDeleteControl: React.FC<ChatDeleteControlProps> = ({
   chatId,
-  onDeleteSuccess,
 }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const deleteChatMutation = useDeleteChatMutation();
+  const { deleteChat } = useChatDeletion();
+  const navigate = useNavigate();
 
   const handleDelete = async () => {
     try {
-      await deleteChatMutation.mutateAsync(chatId);
-      await new ChatHistoryAPI().deleteChat(chatId);
-
-      onDeleteSuccess();
+      await deleteChat(chatId);
+      navigate("/chat");
     } catch (e) {
       d.ErrorService().log("Failed to delete chat", e);
     }

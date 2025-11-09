@@ -1,4 +1,5 @@
 import { d } from "../../app/Dependencies/Dependencies";
+import { useChatCache } from "../../hooks/useChatCache";
 import { useCivitJob } from "../../hooks/useCivitJob";
 import type { MessageItemProps } from "./ChatMessage";
 import "./ChatMessage.css";
@@ -25,13 +26,12 @@ const LoadingBubble = styled.div`
 export const CivitJobMessage: React.FC<MessageItemProps> = ({
   chatId,
   message,
-  onDeleteMessage,
-  onDeleteFromHere,
-  getDeletePreview,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
+  const { getDeletePreview, deleteMessage, deleteMessagesAfterIndex } =
+    useChatCache(chatId);
 
   let jobId: string;
   try {
@@ -62,10 +62,10 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
   };
 
   const handleConfirmDelete = () => {
-    if (deleteType === "single" && onDeleteMessage) {
-      onDeleteMessage(message.id);
-    } else if (deleteType === "fromHere" && onDeleteFromHere) {
-      onDeleteFromHere(message.id);
+    if (deleteType === "single") {
+      deleteMessage(message.id);
+    } else if (deleteType === "fromHere") {
+      deleteMessagesAfterIndex(message.id);
     }
     setShowDeleteConfirm(false);
   };
@@ -80,18 +80,14 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
     } else {
       const preview = getDeletePreview
         ? getDeletePreview(message.id)
-        : { messageCount: 0, pageCount: 0 };
-      return `Are you sure you want to delete this message and all messages below it? This will delete ${preview.messageCount} messages across ${preview.pageCount} pages.`;
+        : { messageCount: 0 };
+      return `Are you sure you want to delete this message and all messages below it? This will delete ${preview.messageCount} messages.`;
     }
   };
 
   const handleMessageClick = () => {
-    if (onDeleteMessage || onDeleteFromHere) {
-      setShowDeleteButtons(!showDeleteButtons);
-    }
+    setShowDeleteButtons(!showDeleteButtons);
   };
-
-  const hasDeleteFunctions = onDeleteMessage || onDeleteFromHere;
 
   return (
     <div className="message-item message-system">
@@ -101,26 +97,22 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
         )}
         {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
       </MessageContent>
-      {showDeleteButtons && hasDeleteFunctions && (
+      {showDeleteButtons && (
         <div className="message-delete-buttons">
-          {onDeleteMessage && (
-            <button
-              className="delete-button delete-single"
-              onClick={() => handleDeleteClick("single")}
-              title="Delete this message"
-            >
-              🗑️
-            </button>
-          )}
-          {onDeleteFromHere && (
-            <button
-              className="delete-button delete-from-here"
-              onClick={() => handleDeleteClick("fromHere")}
-              title="Delete this message and all below"
-            >
-              🗑️↓
-            </button>
-          )}
+          <button
+            className="delete-button delete-single"
+            onClick={() => handleDeleteClick("single")}
+            title="Delete this message"
+          >
+            🗑️
+          </button>
+          <button
+            className="delete-button delete-from-here"
+            onClick={() => handleDeleteClick("fromHere")}
+            title="Delete this message and all below"
+          >
+            🗑️↓
+          </button>
         </div>
       )}
       {showDeleteConfirm && (

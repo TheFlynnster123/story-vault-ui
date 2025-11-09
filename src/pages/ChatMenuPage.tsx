@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { useChats } from "./ChatMenu/useChats";
 import { ChatSettingsButton } from "./ChatMenu/ChatSettingsButton";
 import { ImageSettingsButton } from "./ChatMenu/ImageSettingsButton";
 import { CreateChatButton } from "./ChatMenu/CreateChatButton";
 import { ChatList } from "./ChatMenu/ChatList";
 import styled from "styled-components";
+import { useChats } from "../hooks/useChats";
 
 const ChatMenuPage = () => {
   const navigate = useNavigate();

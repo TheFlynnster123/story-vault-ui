@@ -1,6 +1,8 @@
 import { d } from "../Dependencies/Dependencies";
 import type { ImageModel } from "./ImageModel";
 
+export const USER_IMAGE_MODELS_QUERY_KEY = ["user-image-models"];
+
 export class ImageModelService {
   readonly USER_IMAGE_MODELS = "UserImageModels";
   readonly DEFAULT_SELECTED_MODEL_ID = "";
@@ -98,15 +100,64 @@ export class ImageModelService {
     return selectedModel;
   }
 
-  async fetchUserImageModelsBlob(): Promise<string | null> {
-    try {
-      const blob = await d
-        .BlobAPI()
-        .getBlob(d.BlobAPI().GLOBAL_CHAT_ID, this.USER_IMAGE_MODELS);
-      return blob || null;
-    } catch {
-      return null;
+  public async getOrDefaultSelectedModel(): Promise<ImageModel> {
+    const userImageModels = await this.GetAllImageModels();
+
+    let selectedModel: ImageModel | null = null;
+    if (userImageModels.selectedModelId) {
+      selectedModel =
+        userImageModels.models.find(
+          (model) => model.id === userImageModels.selectedModelId
+        ) || null;
     }
+
+    // If no selected model, use the first available model or create a default
+    if (!selectedModel) {
+      selectedModel =
+        userImageModels.models[0] || this.createDefaultImageModel();
+    }
+
+    return selectedModel;
+  }
+
+  private createDefaultImageModel(): ImageModel {
+    return {
+      id: "default-image-model",
+      name: "Default Image Model",
+      timestampUtcMs: Date.now(),
+      input: {
+        model: "urn:air:sdxl:checkpoint:civitai:257749@290640",
+        params: {
+          prompt: "score_9, score_8_up, score_7_up, score_6_up, source_anime",
+          negativePrompt:
+            "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad hands, jpeg artifacts",
+          scheduler: "DPM2Karras",
+          steps: 20,
+          cfgScale: 7,
+          width: 1024,
+          height: 1024,
+          clipSkip: 2,
+        },
+        additionalNetworks: {},
+      },
+    };
+  }
+
+  async fetchUserImageModelsBlob(): Promise<string | null> {
+    return await d.QueryClient().ensureQueryData({
+      queryKey: USER_IMAGE_MODELS_QUERY_KEY,
+      queryFn: async () => {
+        try {
+          const blob = await d
+            .BlobAPI()
+            .getBlob(d.BlobAPI().GLOBAL_CHAT_ID, this.USER_IMAGE_MODELS);
+          return blob || null;
+        } catch {
+          return null;
+        }
+      },
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
   }
 
   parseUserImageModels = (content: string): UserImageModels => {
@@ -131,6 +182,11 @@ export class ImageModelService {
         this.USER_IMAGE_MODELS,
         JSON.stringify(userImageModels)
       );
+
+    // Invalidate the cache so next fetch gets fresh data
+    d.QueryClient().invalidateQueries({
+      queryKey: USER_IMAGE_MODELS_QUERY_KEY,
+    });
   }
 
   modelExists = (models: ImageModel[], model: ImageModel): boolean =>

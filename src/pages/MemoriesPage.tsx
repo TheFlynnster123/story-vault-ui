@@ -18,70 +18,64 @@ import { ConfirmModal } from "../components/ConfirmModal";
 import isEqual from "lodash.isequal";
 import { Page } from "./Page";
 
+const createEmptyMemory = (): Memory => ({
+  id: uuidv4(),
+  content: "",
+});
+
 export const MemoriesPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const {
-    memories: initialMemories,
-    saveMemories,
-    isLoading,
-  } = useMemories(chatId!);
-  const [localMemories, setLocalMemories] = useState<Memory[]>([]);
+
+  const { memories, saveMemories, isLoading } = useMemories(chatId!);
+
+  const [formMemories, setFormMemories] = useState<Memory[]>([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [memoryToDelete, setMemoryToDelete] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
+
+  const [memoryToDeleteId, setMemoryToDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoading && !hasInitialized) {
-      setLocalMemories([...initialMemories]);
-      setHasInitialized(true);
-    }
-  }, [isLoading, initialMemories, hasInitialized]);
+    if (!isLoading) setFormMemories([...memories]);
+  }, [isLoading, memories]);
 
-  useEffect(() => {
-    if (hasInitialized) {
-      setIsDirty(!isEqual(initialMemories, localMemories));
-    }
-  }, [localMemories, initialMemories, hasInitialized]);
+  const hasChanges = !isEqual(memories, formMemories);
 
   const handleAddMemory = () => {
-    const newMemory: Memory = {
-      id: uuidv4(),
-      content: "",
-    };
-    setLocalMemories([...localMemories, newMemory]);
+    const newMemory = createEmptyMemory();
+    setFormMemories([...formMemories, newMemory]);
   };
 
   const handleMemoryChange = (id: string, content: string) => {
-    setLocalMemories((prev) =>
-      prev.map((memory) => (memory.id === id ? { ...memory, content } : memory))
+    setFormMemories((previousMemories) =>
+      previousMemories.map((memory) =>
+        memory.id === id ? { ...memory, content } : memory
+      )
     );
   };
 
   const handleRemoveMemory = (id: string) => {
-    setMemoryToDelete(id);
+    setMemoryToDeleteId(id);
     setIsConfirmModalOpen(true);
   };
 
   const confirmRemoveMemory = () => {
-    if (memoryToDelete) {
-      setLocalMemories((prev) =>
-        prev.filter((memory) => memory.id !== memoryToDelete)
+    if (memoryToDeleteId)
+      setFormMemories((prev) =>
+        prev.filter((memory) => memory.id !== memoryToDeleteId)
       );
-    }
+
     setIsConfirmModalOpen(false);
-    setMemoryToDelete(null);
+    setMemoryToDeleteId(null);
   };
 
   const handleSave = async () => {
-    await saveMemories(localMemories);
-    navigate(`/chat/${chatId}`);
+    await saveMemories(formMemories);
+    navigateToChat();
   };
 
-  const handleGoBack = () => {
-    navigate(`/chat/${chatId}`);
-  };
+  const navigateToChat = () => navigate(`/chat/${chatId}`);
+
+  const handleGoBack = () => navigateToChat();
 
   return (
     <Page>
@@ -97,7 +91,7 @@ export const MemoriesPage: React.FC = () => {
         mt={30}
         radius="md"
       >
-        <MemoriesHeader onGoBack={handleGoBack} isDirty={isDirty} />
+        <MemoriesHeader onGoBack={handleGoBack} isDirty={hasChanges} />
 
         <Stack>
           <Group justify="space-between">
@@ -106,7 +100,7 @@ export const MemoriesPage: React.FC = () => {
               <RiAddLine /> Add Memory
             </Button>
           </Group>
-          {localMemories.map((memory) => (
+          {formMemories.map((memory) => (
             <Paper key={memory.id} withBorder p="md">
               <Textarea
                 placeholder="Enter your memory here..."

@@ -1,30 +1,15 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
-import type { ChatPage } from "../../models/ChatPage";
+import { useChatCache } from "../../hooks/useChatCache";
 
 interface ChatMessageListProps {
   chatId: string;
-  pages: ChatPage[];
-  onDeleteMessage?: (messageId: string) => void;
-  onDeleteFromHere?: (messageId: string) => void;
-  onRegenerateResponse?: (messageId: string) => void;
-  getDeletePreview?: (messageId: string) => {
-    messageCount: number;
-    pageCount: number;
-  };
 }
 
-export const ChatMessageList: React.FC<ChatMessageListProps> = ({
-  chatId,
-  pages,
-  onDeleteMessage,
-  onDeleteFromHere,
-  onRegenerateResponse,
-  getDeletePreview,
-}) => {
+export const ChatMessageList: React.FC<ChatMessageListProps> = ({ chatId }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
-  const messages = pages.flatMap((page) => page.messages);
+  const { messages } = useChatCache(chatId);
 
   useAutoScrolling(messageListRef, messages);
 
@@ -32,26 +17,20 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
     <div className="message-list" ref={messageListRef}>
       {messages.map((msg, index) => {
         const isLastMessage = index === messages.length - 1;
-        
+
         return msg.role === "civit-job" ? (
           <CivitJobMessage
             chatId={chatId}
             key={msg.id}
             message={msg}
-            onDeleteMessage={onDeleteMessage}
-            onDeleteFromHere={onDeleteFromHere}
-            getDeletePreview={getDeletePreview}
+            isLastMessage={isLastMessage}
           />
         ) : (
           <ChatMessage
             chatId={chatId}
             key={msg.id}
             message={msg}
-            onDeleteMessage={onDeleteMessage}
-            onDeleteFromHere={onDeleteFromHere}
-            onRegenerateResponse={onRegenerateResponse}
             isLastMessage={isLastMessage}
-            getDeletePreview={getDeletePreview}
           />
         );
       })}

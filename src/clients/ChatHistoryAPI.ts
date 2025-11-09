@@ -1,6 +1,6 @@
 import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
-import type { ChatPage } from "../models/ChatPage";
+import type { Message } from "../pages/Chat/ChatMessage";
 import { AuthAPI } from "./AuthAPI";
 
 export class ChatHistoryAPI {
@@ -16,63 +16,87 @@ export class ChatHistoryAPI {
     this.encryptionManager = new EncryptionManager();
   }
 
-  public async saveChatPage(chatPage: ChatPage): Promise<boolean> {
-    var accessToken = await this.authAPI.getAccessToken();
+  public async getChatHistory(chatId: string): Promise<Message[]> {
+    const accessToken = await this.authAPI.getAccessToken();
 
-    const encryptedPage = await this.EncryptPage(chatPage);
-    var response = await fetch(
-      `${this.URL}/api/SaveChatPage`,
-      buildSaveChatPageRequest(encryptedPage, accessToken)
-    );
-
-    if (response.ok) {
-      return true;
-    } else {
-      console.error("Failed to save chat page:", response.statusText);
-      return false;
-    }
-  }
-
-  public async getChatHistory(chatId: string): Promise<ChatPage[]> {
-    var accessToken = await this.authAPI.getAccessToken();
-
-    var response = await fetch(
+    const response = await fetch(
       `${this.URL}/api/GetChatHistory`,
       buildGetChatHistoryRequest(chatId, accessToken)
     );
 
     if (response.ok) {
-      const pages = await response.json();
-      return Promise.all(
-        pages.map(async (p: ChatPage) => await this.DecryptPage(p))
-      );
+      const chatHistoryResponse: ChatHistoryResponse = await response.json();
+      return this.decryptMessages(chatHistoryResponse.messages);
     } else {
       console.error("Failed to get chat history:", response.statusText);
       throw new Error(`Error fetching chat history: ${response.statusText}`);
     }
   }
 
-  public async getChatPage(chatId: string, pageId: string): Promise<ChatPage> {
-    var accessToken = await this.authAPI.getAccessToken();
+  public async addChatMessage(
+    chatId: string,
+    message: Message
+  ): Promise<boolean> {
+    const accessToken = await this.authAPI.getAccessToken();
+    const encryptedMessage = await this.encryptMessage(message);
 
-    var response = await fetch(
-      `${this.URL}/api/GetChatPage`,
-      buildGetChatPageRequest(chatId, pageId, accessToken)
+    const response = await fetch(
+      `${this.URL}/api/AddChatMessage`,
+      buildAddChatMessageRequest(chatId, encryptedMessage, accessToken)
     );
 
     if (response.ok) {
-      const page = await response.json();
-      return await this.DecryptPage(page);
+      return true;
     } else {
-      console.error("Failed to get chat page:", response.statusText);
-      throw new Error(`Error fetching chat page: ${response.statusText}`);
+      console.error("Failed to add chat message:", response.statusText);
+      return false;
     }
   }
 
-  public async getChats(): Promise<string[]> {
-    var accessToken = await this.authAPI.getAccessToken();
+  public async addChatMessages(
+    chatId: string,
+    messages: Message[]
+  ): Promise<boolean> {
+    const accessToken = await this.authAPI.getAccessToken();
+    const encryptedMessages = await this.encryptMessages(messages);
 
-    var response = await fetch(`${this.URL}/api/GetChats`, {
+    const response = await fetch(
+      `${this.URL}/api/AddChatMessages`,
+      buildAddChatMessagesRequest(chatId, encryptedMessages, accessToken)
+    );
+
+    if (response.ok) {
+      return true;
+    } else {
+      console.error("Failed to add chat messages:", response.statusText);
+      return false;
+    }
+  }
+
+  public async saveChatHistory(
+    chatId: string,
+    messages: Message[]
+  ): Promise<boolean> {
+    const accessToken = await this.authAPI.getAccessToken();
+    const encryptedMessages = await this.encryptMessages(messages);
+
+    const response = await fetch(
+      `${this.URL}/api/SaveChatHistory`,
+      buildSaveChatHistoryRequest(chatId, encryptedMessages, accessToken)
+    );
+
+    if (response.ok) {
+      return true;
+    } else {
+      console.error("Failed to save chat history:", response.statusText);
+      return false;
+    }
+  }
+
+  public async getChatIds(): Promise<string[]> {
+    const accessToken = await this.authAPI.getAccessToken();
+
+    const response = await fetch(`${this.URL}/api/GetChats`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -81,17 +105,20 @@ export class ChatHistoryAPI {
     });
 
     if (response.ok) {
-      return response.json();
+      const chats = await response.json();
+      return chats.filter(
+        (chatId: string) => chatId !== "SAMPLE_IMAGE_GENERATOR"
+      );
     } else {
       console.error("Failed to get chats:", response.statusText);
-      throw new Error(`Error fetching chat page: ${response.statusText}`);
+      throw new Error(`Error fetching chats: ${response.statusText}`);
     }
   }
 
   public async deleteChat(chatId: string): Promise<boolean> {
-    var accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await this.authAPI.getAccessToken();
 
-    var response = await fetch(
+    const response = await fetch(
       `${this.URL}/api/DeleteChat`,
       buildDeleteChatRequest(chatId, accessToken)
     );
@@ -104,72 +131,45 @@ export class ChatHistoryAPI {
     }
   }
 
-  private async EncryptPage(chatPage: ChatPage): Promise<ChatPage> {
+  async encryptMessage(message: Message): Promise<Message> {
     await this.encryptionManager.ensureKeysInitialized();
 
-    const encryptedMessages = await Promise.all(
-      chatPage.messages.map(async (message) => {
-        const encryptedContent = await this.encryptionManager.encryptString(
-          this.encryptionManager.chatEncryptionKey!,
-          message.content
-        );
-        return { ...message, content: encryptedContent };
-      })
+    const encryptedContent = await this.encryptionManager.encryptString(
+      this.encryptionManager.chatEncryptionKey!,
+      message.content
     );
 
-    return { ...chatPage, messages: encryptedMessages };
+    return { ...message, content: encryptedContent };
   }
 
-  private async DecryptPage(chatPage: ChatPage): Promise<ChatPage> {
+  async decryptMessage(message: Message): Promise<Message> {
     await this.encryptionManager.ensureKeysInitialized();
 
-    const decryptedMessages = await Promise.all(
-      chatPage.messages.map(async (message) => {
-        const decryptedContent = await this.encryptionManager.decryptString(
-          this.encryptionManager.chatEncryptionKey!,
-          message.content
-        );
-        return { ...message, content: decryptedContent };
-      })
+    const decryptedContent = await this.encryptionManager.decryptString(
+      this.encryptionManager.chatEncryptionKey!,
+      message.content
     );
 
-    return { ...chatPage, messages: decryptedMessages };
+    return { ...message, content: decryptedContent };
   }
-}
 
-function buildGetChatPageRequest(
-  chatId: string,
-  pageId: string,
-  accessToken: string
-): RequestInit | undefined {
-  return {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ chatId, pageId }),
-  };
-}
+  async encryptMessages(messages: Message[]): Promise<Message[]> {
+    return await Promise.all(
+      messages.map((message) => this.encryptMessage(message))
+    );
+  }
 
-function buildSaveChatPageRequest(
-  chatPage: ChatPage,
-  accessToken: string
-): RequestInit | undefined {
-  return {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(chatPage),
-  };
+  async decryptMessages(messages: Message[]): Promise<Message[]> {
+    return await Promise.all(
+      messages.map((message) => this.decryptMessage(message))
+    );
+  }
 }
 
 function buildGetChatHistoryRequest(
   chatId: string,
   accessToken: string
-): RequestInit | undefined {
+): RequestInit {
   return {
     method: "POST",
     headers: {
@@ -177,13 +177,58 @@ function buildGetChatHistoryRequest(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ chatId }),
+  };
+}
+
+function buildAddChatMessageRequest(
+  chatId: string,
+  message: Message,
+  accessToken: string
+): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ chatId, message }),
+  };
+}
+
+function buildAddChatMessagesRequest(
+  chatId: string,
+  messages: Message[],
+  accessToken: string
+): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ chatId, messages }),
+  };
+}
+
+function buildSaveChatHistoryRequest(
+  chatId: string,
+  messages: Message[],
+  accessToken: string
+): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ chatId, messages }),
   };
 }
 
 function buildDeleteChatRequest(
   chatId: string,
   accessToken: string
-): RequestInit | undefined {
+): RequestInit {
   return {
     method: "POST",
     headers: {
@@ -192,4 +237,9 @@ function buildDeleteChatRequest(
     },
     body: JSON.stringify({ chatId }),
   };
+}
+
+interface ChatHistoryResponse {
+  chatId: string;
+  messages: Message[];
 }
