@@ -88,10 +88,11 @@ export class ChatCache {
   }
 
   public async deleteMessagesAfterIndex(messageId: string): Promise<void> {
+    const messageIdsToDelete = this.getMessageIdsAfterIndex(messageId);
+
     this.applyLocalDeletionFromIndex(messageId);
     this.notifySubscribers();
 
-    const messageIdsToDelete = this.getMessageIdsAfterIndex(messageId);
     const deleteCommands = this.createDeleteCommands(messageIdsToDelete);
 
     await this.withLoading(() =>

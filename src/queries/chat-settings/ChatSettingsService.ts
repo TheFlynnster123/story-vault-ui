@@ -19,6 +19,7 @@ export class ChatSettingsService {
     (await d.QueryClient().ensureQueryData({
       queryKey: getChatSettingsQueryKey(this.chatId),
       queryFn: async () => await this.fetchChatSettings(),
+      revalidateIfStale: false,
     })) as ChatSettings;
 
   save = async (chatSettings: ChatSettings): Promise<void> => {

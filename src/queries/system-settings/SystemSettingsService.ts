@@ -12,6 +12,7 @@ export class SystemSettingsService {
     await d.QueryClient().ensureQueryData({
       queryKey: SYSTEM_SETTINGS_QUERY_KEY,
       queryFn: async () => await this.fetchSystemSettings(),
+      revalidateIfStale: false,
     });
 
   save = async (systemSettings: SystemSettings): Promise<void> => {

@@ -1,6 +1,8 @@
 import { d } from "../Dependencies/Dependencies";
 import type { ImageModel } from "./ImageModel";
 
+export const USER_IMAGE_MODELS_QUERY_KEY = ["user-image-models"];
+
 export class ImageModelService {
   readonly USER_IMAGE_MODELS = "UserImageModels";
   readonly DEFAULT_SELECTED_MODEL_ID = "";
@@ -142,14 +144,20 @@ export class ImageModelService {
   }
 
   async fetchUserImageModelsBlob(): Promise<string | null> {
-    try {
-      const blob = await d
-        .BlobAPI()
-        .getBlob(d.BlobAPI().GLOBAL_CHAT_ID, this.USER_IMAGE_MODELS);
-      return blob || null;
-    } catch {
-      return null;
-    }
+    return await d.QueryClient().ensureQueryData({
+      queryKey: USER_IMAGE_MODELS_QUERY_KEY,
+      queryFn: async () => {
+        try {
+          const blob = await d
+            .BlobAPI()
+            .getBlob(d.BlobAPI().GLOBAL_CHAT_ID, this.USER_IMAGE_MODELS);
+          return blob || null;
+        } catch {
+          return null;
+        }
+      },
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
   }
 
   parseUserImageModels = (content: string): UserImageModels => {
@@ -174,6 +182,11 @@ export class ImageModelService {
         this.USER_IMAGE_MODELS,
         JSON.stringify(userImageModels)
       );
+
+    // Invalidate the cache so next fetch gets fresh data
+    d.QueryClient().invalidateQueries({
+      queryKey: USER_IMAGE_MODELS_QUERY_KEY,
+    });
   }
 
   modelExists = (models: ImageModel[], model: ImageModel): boolean =>

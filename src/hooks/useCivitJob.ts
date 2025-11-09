@@ -20,6 +20,7 @@ export const useCivitJob = (chatId: string, jobId: string) => {
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   return {
