@@ -1,29 +1,27 @@
 import { useState, type FormEvent, forwardRef } from "react";
 import { IoCamera, IoSend, IoSync } from "react-icons/io5";
 import "./ChatInput.css";
+import { useChatGeneration } from "../../hooks/useChatGeneration";
 
 export interface ChatInputProps {
-  onSubmit: (inputValue: string) => void;
-  onGenerateImage: () => void;
-  isLoading: boolean;
-  placeholder: string;
+  chatId: string;
 }
 
 export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
-  ({ onSubmit, onGenerateImage, isLoading, placeholder }, ref) => {
+  ({ chatId }, ref) => {
     const [internalInputValue, setInternalInputValue] = useState<string>("");
+
+    const { generateImage, generateResponse, isLoading } = useChatGeneration({
+      chatId,
+    });
 
     const handleFormSubmit = (event: FormEvent) => {
       event.preventDefault();
       if (!internalInputValue.trim()) return;
 
-      onSubmit(internalInputValue);
+      generateResponse(internalInputValue);
 
       setInternalInputValue("");
-    };
-
-    const handleGenerateImage = () => {
-      onGenerateImage();
     };
 
     return (
@@ -32,7 +30,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
           ref={ref}
           value={internalInputValue}
           onChange={(e) => setInternalInputValue(e.target.value)}
-          placeholder={placeholder}
+          placeholder={"Type your message here..."}
           disabled={isLoading}
           className="chat-input-field"
           rows={3}
@@ -40,7 +38,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
         <button
           type="button"
           disabled={isLoading}
-          onClick={handleGenerateImage}
+          onClick={generateImage}
           className="chat-input-button photo-button"
           aria-label="Generate Image"
         >

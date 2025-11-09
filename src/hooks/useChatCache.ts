@@ -1,48 +1,53 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useEffect, useState } from "react";
 import { ChatCache } from "../Managers/ChatCache";
-import { useChatHistory } from "./queries/useChatHistory";
 import type { Message } from "../pages/Chat/ChatMessage";
 
-// Simple singleton manager
+// Singleton instances
 const chatCacheInstances = new Map<string, ChatCache>();
 
-const getChatCache = (
-  chatId: string,
-  initialMessages: Message[] = []
-): ChatCache => {
-  if (!chatCacheInstances.has(chatId)) {
-    chatCacheInstances.set(chatId, new ChatCache(chatId, initialMessages));
-  }
+const getChatCache = (chatId: string | null): ChatCache | null => {
+  if (!chatId) return null;
+
+  if (!chatCacheInstances.has(chatId))
+    chatCacheInstances.set(chatId, new ChatCache(chatId));
+
   return chatCacheInstances.get(chatId)!;
 };
 
 export const useChatCache = (chatId: string | null) => {
-  const queryClient = useQueryClient();
-  const { data: historyData, isLoading: isLoadingHistory } =
-    useChatHistory(chatId);
+  const [, forceUpdate] = useState({});
+  const chatCache = getChatCache(chatId);
 
-  // Get the singleton ChatCache instance
-  const { data: chatCache } = useQuery({
-    queryKey: ["chatCache", chatId],
-    queryFn: () => (chatId ? getChatCache(chatId, historyData || []) : null),
-    enabled: !!chatId,
-    staleTime: Infinity, // Never refetch
-  });
-
-  // Simple function to trigger re-renders when cache is modified
-  const invalidateCache = useCallback(() => {
-    if (chatId) {
-      queryClient.invalidateQueries({ queryKey: ["chatCache", chatId] });
-    }
-  }, [chatId, queryClient]);
-
-  const messages = chatCache?.getMessages() || [];
+  useEffect(() => {
+    if (!chatCache) return;
+    return chatCache.subscribe(() => forceUpdate({}));
+  }, [chatCache]);
 
   return {
     chatCache,
-    messages,
-    isLoadingHistory,
-    invalidateCache,
+    messages: chatCache?.Messages || [],
+    isLoading: chatCache?.IsLoading || false,
+    getMessagesForLLM: () => chatCache?.getMessagesForLLM() || [],
+    getMessage: (messageId: string) => chatCache?.getMessage(messageId) || null,
+    getDeletePreview: (messageId: string) =>
+      chatCache?.getDeletePreview(messageId) || { messageCount: 0 },
+    addMessage: async (message: Message) =>
+      await chatCache?.addMessage(message),
+    deleteMessage: async (messageId: string) =>
+      await chatCache?.deleteMessage(messageId),
+    deleteMessagesAfterIndex: async (messageId: string) =>
+      await chatCache?.deleteMessagesAfterIndex(messageId),
   };
+};
+
+export const useChatMessages = (chatId: string | null) => {
+  const [, forceUpdate] = useState({});
+  const chatCache = getChatCache(chatId);
+
+  useEffect(() => {
+    if (!chatCache) return;
+    return chatCache.subscribe(() => forceUpdate({}));
+  }, [chatCache]);
+
+  return chatCache?.Messages || [];
 };

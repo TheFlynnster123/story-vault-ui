@@ -6,12 +6,12 @@ import type { Message } from "../../pages/Chat/ChatMessage";
 import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
-import { PlanningNotesService } from "./ChatFlowPlanningNotes";
+import type { PlanningNotesService } from "./ChatGenerationPlanningNotes";
 
 const RESPONSE_PROMPT: string =
   "Consider the above notes, write a response to the conversation. Provide your response directly without a preamble.";
 
-export class ChatFlow {
+export class ChatGeneration {
   private chatCache: ChatCache;
   private planningNotesService: PlanningNotesService;
 
@@ -42,7 +42,7 @@ export class ChatFlow {
     this.setIsLoading = setIsLoading;
   }
 
-  async generateResponse() {
+  async generateResponse(): Promise<string | undefined> {
     this.setIsLoading(true);
     this.setStatus("Generating response...");
 
@@ -64,7 +64,9 @@ export class ChatFlow {
         this.memories
       );
 
-      return await this.getFinalResponse(finalPromptMessages);
+      const response = await this.getFinalResponse(finalPromptMessages);
+      await this.chatCache.addMessage(toSystemMessage(response));
+      return response;
     } catch (e) {
       d.ErrorService().log("Failed to generate chat response", e as Error);
     } finally {

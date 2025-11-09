@@ -1,27 +1,15 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
+import { useChatCache } from "../../hooks/useChatCache";
 
 interface ChatMessageListProps {
   chatId: string;
-  messages: Message[];
-  onDeleteMessage?: (messageId: string) => void;
-  onDeleteFromHere?: (messageId: string) => void;
-  onRegenerateResponse?: (messageId: string) => void;
-  getDeletePreview?: (messageId: string) => {
-    messageCount: number;
-  };
 }
 
-export const ChatMessageList: React.FC<ChatMessageListProps> = ({
-  chatId,
-  messages,
-  onDeleteMessage,
-  onDeleteFromHere,
-  onRegenerateResponse,
-  getDeletePreview,
-}) => {
+export const ChatMessageList: React.FC<ChatMessageListProps> = ({ chatId }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
+  const { messages } = useChatCache(chatId);
 
   useAutoScrolling(messageListRef, messages);
 
@@ -35,20 +23,14 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
             chatId={chatId}
             key={msg.id}
             message={msg}
-            onDeleteMessage={onDeleteMessage}
-            onDeleteFromHere={onDeleteFromHere}
-            getDeletePreview={getDeletePreview}
+            isLastMessage={isLastMessage}
           />
         ) : (
           <ChatMessage
             chatId={chatId}
             key={msg.id}
             message={msg}
-            onDeleteMessage={onDeleteMessage}
-            onDeleteFromHere={onDeleteFromHere}
-            onRegenerateResponse={onRegenerateResponse}
             isLastMessage={isLastMessage}
-            getDeletePreview={getDeletePreview}
           />
         );
       })}

@@ -53,6 +53,26 @@ export class ChatHistoryAPI {
     }
   }
 
+  public async addChatMessages(
+    chatId: string,
+    messages: Message[]
+  ): Promise<boolean> {
+    const accessToken = await this.authAPI.getAccessToken();
+    const encryptedMessages = await this.encryptMessages(messages);
+
+    const response = await fetch(
+      `${this.URL}/api/AddChatMessages`,
+      buildAddChatMessagesRequest(chatId, encryptedMessages, accessToken)
+    );
+
+    if (response.ok) {
+      return true;
+    } else {
+      console.error("Failed to add chat messages:", response.statusText);
+      return false;
+    }
+  }
+
   public async saveChatHistory(
     chatId: string,
     messages: Message[]
@@ -172,6 +192,21 @@ function buildAddChatMessageRequest(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ chatId, message }),
+  };
+}
+
+function buildAddChatMessagesRequest(
+  chatId: string,
+  messages: Message[],
+  accessToken: string
+): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ chatId, messages }),
   };
 }
 

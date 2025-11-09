@@ -4,27 +4,15 @@ import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
-import { useChat } from "../../hooks/useChat";
 import { useChatSettings } from "../../hooks/queries/useChatSettings";
+import { useChatCache } from "../../hooks/useChatCache";
 
 interface ChatProps {
   chatId: string;
 }
 
 export const Chat: React.FC<ChatProps> = ({ chatId }) => {
-  const {
-    messages,
-    deleteMessage,
-    deleteMessagesFromIndex,
-    regenerateResponse,
-    getDeletePreview,
-    submitMessage,
-    isLoading,
-    generateImage,
-  } = useChat({
-    chatId,
-  });
-
+  const { isLoading } = useChatCache(chatId);
   const { chatSettings } = useChatSettings(chatId);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -39,22 +27,9 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
     >
       <ChatControls chatId={chatId} />
 
-      <ChatMessageList
-        chatId={chatId}
-        messages={messages}
-        onDeleteMessage={deleteMessage}
-        onDeleteFromHere={deleteMessagesFromIndex}
-        onRegenerateResponse={regenerateResponse}
-        getDeletePreview={getDeletePreview}
-      />
+      <ChatMessageList chatId={chatId} />
 
-      <ChatInput
-        ref={inputRef}
-        onSubmit={submitMessage}
-        onGenerateImage={generateImage}
-        isLoading={isLoading}
-        placeholder={"Type your message here..."}
-      />
+      <ChatInput ref={inputRef} chatId={chatId} />
     </ChatContainer>
   );
 };
