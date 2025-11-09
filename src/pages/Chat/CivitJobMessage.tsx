@@ -80,8 +80,8 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
     } else {
       const preview = getDeletePreview
         ? getDeletePreview(message.id)
-        : { messageCount: 0, pageCount: 0 };
-      return `Are you sure you want to delete this message and all messages below it? This will delete ${preview.messageCount} messages across ${preview.pageCount} pages.`;
+        : { messageCount: 0 };
+      return `Are you sure you want to delete this message and all messages below it? This will delete ${preview.messageCount} messages.`;
     }
   };
 

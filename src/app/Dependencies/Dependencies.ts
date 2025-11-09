@@ -1,4 +1,5 @@
 import { BlobAPI } from "../../clients/BlobAPI";
+import { ChatHistoryAPI } from "../../clients/ChatHistoryAPI";
 import { ErrorService } from "../ErrorHandling/ErrorService";
 import { GeneratedImageQuery } from "../ImageModels/GeneratedImageQuery";
 import { ImageIdExtractor } from "../ImageModels/ImageIdExtractor";
@@ -37,6 +38,13 @@ export class Dependencies {
 
   ImageModelMapper() {
     return new ImageModelMapper();
+  }
+
+  _chatHistoryApi: ChatHistoryAPI | undefined;
+
+  ChatHistoryApi() {
+    if (!this._chatHistoryApi) this._chatHistoryApi = new ChatHistoryAPI();
+    return this._chatHistoryApi;
   }
 }
 

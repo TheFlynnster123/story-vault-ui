@@ -13,7 +13,7 @@ interface ChatProps {
 
 export const Chat: React.FC<ChatProps> = ({ chatId }) => {
   const {
-    pages,
+    messages,
     deleteMessage,
     deleteMessagesFromIndex,
     regenerateResponse,
@@ -41,7 +41,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
 
       <ChatMessageList
         chatId={chatId}
-        pages={pages}
+        messages={messages}
         onDeleteMessage={deleteMessage}
         onDeleteFromHere={deleteMessagesFromIndex}
         onRegenerateResponse={regenerateResponse}

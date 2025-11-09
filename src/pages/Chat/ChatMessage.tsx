@@ -8,7 +8,11 @@ import "./ChatMessage.css";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Button, Modal, Group, Text } from "@mantine/core";
-import { RiDeleteBinLine, RiDeleteBin6Line, RiRefreshLine } from "react-icons/ri";
+import {
+  RiDeleteBinLine,
+  RiDeleteBin6Line,
+  RiRefreshLine,
+} from "react-icons/ri";
 
 export interface MessageItemProps {
   chatId: string;
@@ -19,7 +23,6 @@ export interface MessageItemProps {
   isLastMessage?: boolean;
   getDeletePreview?: (messageId: string) => {
     messageCount: number;
-    pageCount: number;
   };
 }
 
@@ -64,8 +67,8 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
     } else {
       const preview = getDeletePreview
         ? getDeletePreview(message.id)
-        : { messageCount: 0, pageCount: 0 };
-      return `Are you sure you want to delete this message and all messages below it? This will delete ${preview.messageCount} messages across ${preview.pageCount} pages.`;
+        : { messageCount: 0 };
+      return `Are you sure you want to delete this message and all messages below it? This will delete ${preview.messageCount} messages.`;
     }
   };
 
@@ -113,11 +116,11 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
               onClick={handleRegenerateClick}
               styles={{
                 root: {
-                  backgroundColor: 'rgba(34, 139, 230, 0.25)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(34, 139, 230, 0.35)',
-                  }
-                }
+                  backgroundColor: "rgba(34, 139, 230, 0.25)",
+                  "&:hover": {
+                    backgroundColor: "rgba(34, 139, 230, 0.35)",
+                  },
+                },
               }}
             >
               Regenerate
@@ -132,11 +135,11 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
               onClick={() => handleDeleteClick("single")}
               styles={{
                 root: {
-                  backgroundColor: 'rgba(250, 82, 82, 0.25)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(250, 82, 82, 0.35)',
-                  }
-                }
+                  backgroundColor: "rgba(250, 82, 82, 0.25)",
+                  "&:hover": {
+                    backgroundColor: "rgba(250, 82, 82, 0.35)",
+                  },
+                },
               }}
             >
               Delete
@@ -151,11 +154,11 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
               onClick={() => handleDeleteClick("fromHere")}
               styles={{
                 root: {
-                  backgroundColor: 'rgba(250, 82, 82, 0.25)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(250, 82, 82, 0.35)',
-                  }
-                }
+                  backgroundColor: "rgba(250, 82, 82, 0.25)",
+                  "&:hover": {
+                    backgroundColor: "rgba(250, 82, 82, 0.35)",
+                  },
+                },
               }}
             >
               Delete All Below

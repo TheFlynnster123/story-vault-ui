@@ -1,30 +1,27 @@
 import React, { useEffect, useRef } from "react";
 import { ChatMessage, type Message } from "./ChatMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
-import type { ChatPage } from "../../models/ChatPage";
 
 interface ChatMessageListProps {
   chatId: string;
-  pages: ChatPage[];
+  messages: Message[];
   onDeleteMessage?: (messageId: string) => void;
   onDeleteFromHere?: (messageId: string) => void;
   onRegenerateResponse?: (messageId: string) => void;
   getDeletePreview?: (messageId: string) => {
     messageCount: number;
-    pageCount: number;
   };
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   chatId,
-  pages,
+  messages,
   onDeleteMessage,
   onDeleteFromHere,
   onRegenerateResponse,
   getDeletePreview,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
-  const messages = pages.flatMap((page) => page.messages);
 
   useAutoScrolling(messageListRef, messages);
 
@@ -32,7 +29,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
     <div className="message-list" ref={messageListRef}>
       {messages.map((msg, index) => {
         const isLastMessage = index === messages.length - 1;
-        
+
         return msg.role === "civit-job" ? (
           <CivitJobMessage
             chatId={chatId}

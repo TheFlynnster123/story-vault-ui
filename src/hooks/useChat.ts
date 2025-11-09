@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChatPage } from "../models/ChatPage";
+import { useCallback, useMemo, useState } from "react";
+import type { Message } from "../pages/Chat/ChatMessage";
 import { ChatHistoryAPI } from "../clients/ChatHistoryAPI";
 import { ChatManager } from "../Managers/ChatManager";
 import { toSystemMessage, toUserMessage } from "../utils/messageUtils";
@@ -7,18 +7,17 @@ import { useChatFlow } from "./useChatFlow";
 import { useChatHistory } from "./queries/useChatHistory";
 import { useSystemSettings } from "./queries/useSystemSettings";
 import { ImageGenerator } from "../Managers/ImageGenerator";
-import type { Message } from "../pages/Chat/ChatMessage";
 import { d } from "../app/Dependencies/Dependencies";
 
 export const useChat = ({ chatId }: UseChatProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { chatPageManager, pages, setPages, isLoadingHistory } = useChatManager(
-    { chatId }
-  );
+  const { chatManager, messages, isLoadingHistory } = useChatManager({
+    chatId,
+  });
 
   const { generateResponse, status } = useChatFlow({
     chatId,
-    chatManager: chatPageManager,
+    chatManager,
   });
 
   const { systemSettings } = useSystemSettings();
@@ -37,109 +36,89 @@ export const useChat = ({ chatId }: UseChatProps) => {
     }
   };
 
-  const savePageToApi = useCallback(async (pageToSave: ChatPage) => {
-    try {
-      await new ChatHistoryAPI().saveChatPage(pageToSave);
-    } catch (e) {
-      d.ErrorService().log("Failed to save chat page", e);
-    }
-  }, []);
+  const saveHistoryToApi = useCallback(
+    async (messages: Message[]) => {
+      if (!chatId) return;
+
+      try {
+        await new ChatHistoryAPI().saveChatHistory(chatId, messages);
+      } catch (e) {
+        d.ErrorService().log("Failed to save chat history", e);
+      }
+    },
+    [chatId]
+  );
+
+  const addMessageToApi = useCallback(
+    async (message: Message) => {
+      if (!chatId) return;
+
+      try {
+        await new ChatHistoryAPI().addChatMessage(chatId, message);
+      } catch (e) {
+        d.ErrorService().log("Failed to add chat message", e);
+      }
+    },
+    [chatId]
+  );
 
   const getMessageList = useCallback(() => {
-    return chatPageManager?.getMessageList() || [];
-  }, [chatPageManager]);
+    return chatManager?.getMessageList() || [];
+  }, [chatManager]);
 
   const addMessage = useCallback(
     async (message: Message) => {
-      if (!chatPageManager) {
+      if (!chatManager) {
         return;
       }
 
-      chatPageManager.addMessage(message);
-      const updatedPages = chatPageManager.getPages();
-      setPages([...updatedPages]);
-
-      const lastPage = updatedPages[updatedPages.length - 1];
-      if (lastPage) {
-        await savePageToApi(lastPage);
-      }
+      chatManager.addMessage(message);
+      await addMessageToApi(message);
     },
-    [chatPageManager, savePageToApi, setPages]
+    [chatManager, addMessageToApi]
   );
 
   const deleteMessage = useCallback(
     async (messageId: string) => {
-      if (!chatPageManager) {
+      if (!chatManager) {
         return;
       }
 
-      const location = chatPageManager.findMessageLocation(messageId);
-      if (!location) {
-        console.warn(`Message with id ${messageId} not found`);
-        return;
-      }
-
-      chatPageManager.deleteMessage(messageId);
-      const updatedPages = chatPageManager.getPages();
-      setPages([...updatedPages]);
-
-      // Save the affected page
-      const affectedPage = updatedPages[location.pageIndex];
-      if (affectedPage) {
-        await savePageToApi(affectedPage);
-      }
+      chatManager.deleteMessage(messageId);
+      await saveHistoryToApi(chatManager.getMessages());
     },
-    [chatPageManager, savePageToApi, setPages]
+    [chatManager, saveHistoryToApi]
   );
 
   const deleteMessagesFromIndex = useCallback(
     async (messageId: string) => {
-      if (!chatPageManager) {
+      if (!chatManager) {
         return;
       }
 
-      const location = chatPageManager.findMessageLocation(messageId);
-      if (!location) {
-        console.warn(`Message with id ${messageId} not found`);
-        return;
-      }
-
-      chatPageManager.deleteMessagesAfterIndex(messageId);
-      const updatedPages = chatPageManager.getPages();
-      setPages([...updatedPages]);
-
-      // Save all affected pages (from the target page onwards)
-      const affectedPages = updatedPages.slice(location.pageIndex);
-      for (const page of affectedPages) {
-        await savePageToApi(page);
-      }
+      chatManager.deleteMessagesAfterIndex(messageId);
+      await saveHistoryToApi(chatManager.getMessages());
     },
-    [chatPageManager, savePageToApi, setPages]
+    [chatManager, saveHistoryToApi]
   );
 
   const getDeletePreview = useCallback(
     (messageId: string) => {
-      if (!chatPageManager) {
-        return { messageCount: 0, pageCount: 0 };
+      if (!chatManager) {
+        return { messageCount: 0 };
       }
-      return chatPageManager.countMessagesFromIndex(messageId);
+      return chatManager.getDeletePreview(messageId);
     },
-    [chatPageManager]
+    [chatManager]
   );
 
   const regenerateResponse = useCallback(
     async (messageId: string) => {
-      if (!chatPageManager) {
+      if (!chatManager) {
         return;
       }
 
-      const location = chatPageManager.findMessageLocation(messageId);
-      if (!location) {
-        console.warn(`Message with id ${messageId} not found`);
-        return;
-      }
-
-      const message = chatPageManager.getMessage(messageId);
+      const message = chatManager.getMessage(messageId);
       if (!message) {
         console.warn(`Message with id ${messageId} not found`);
         return;
@@ -149,15 +128,8 @@ export const useChat = ({ chatId }: UseChatProps) => {
 
       try {
         // Delete the message first
-        chatPageManager.deleteMessage(messageId);
-        const updatedPages = chatPageManager.getPages();
-        setPages([...updatedPages]);
-
-        // Save the affected page
-        const affectedPage = updatedPages[location.pageIndex];
-        if (affectedPage) {
-          await savePageToApi(affectedPage);
-        }
+        chatManager.deleteMessage(messageId);
+        await saveHistoryToApi(chatManager.getMessages());
 
         // Generate a new response
         const responseMessage = await generateResponse();
@@ -170,7 +142,7 @@ export const useChat = ({ chatId }: UseChatProps) => {
         setIsLoading(false);
       }
     },
-    [chatPageManager, savePageToApi, setPages, generateResponse, addMessage]
+    [chatManager, saveHistoryToApi, generateResponse, addMessage]
   );
 
   const generateImage = async () => {
@@ -179,9 +151,9 @@ export const useChat = ({ chatId }: UseChatProps) => {
 
     try {
       const imageGenerator = new ImageGenerator(systemSettings);
-      const messages = getMessageList();
+      const messageList = getMessageList();
 
-      const generatedPrompt = await imageGenerator.generatePrompt(messages);
+      const generatedPrompt = await imageGenerator.generatePrompt(messageList);
       const jobId = await imageGenerator.triggerJob(generatedPrompt);
 
       addMessage({
@@ -198,7 +170,7 @@ export const useChat = ({ chatId }: UseChatProps) => {
 
   return {
     status,
-    pages,
+    messages,
     addMessage,
     submitMessage,
     deleteMessage,
@@ -216,25 +188,16 @@ interface UseChatManagerProps {
 }
 
 const useChatManager = ({ chatId }: UseChatManagerProps) => {
-  const [pages, setPages] = useState<ChatPage[]>([]);
+  const { data, isLoading: isLoadingHistory } = useChatHistory(chatId);
 
-  const { data: fetchedPages, isLoading: isLoadingHistory } =
-    useChatHistory(chatId);
-
-  const chatPageManager = useMemo(() => {
+  const chatManager = useMemo(() => {
     if (!chatId) return null;
-    return new ChatManager(chatId, fetchedPages || []);
-  }, [chatId, fetchedPages]);
+    return new ChatManager(chatId, data || []);
+  }, [chatId, data]);
 
-  useEffect(() => {
-    if (chatPageManager) {
-      setPages(chatPageManager.getPages());
-    } else {
-      setPages([]);
-    }
-  }, [chatPageManager]);
+  const messages = chatManager?.getMessages() || [];
 
-  return { chatPageManager, pages, setPages, isLoadingHistory };
+  return { chatManager, messages, isLoadingHistory };
 };
 
 interface UseChatProps {
