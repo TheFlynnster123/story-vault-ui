@@ -84,11 +84,16 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
 const useChatEditor = (chatIdFromParams: string | undefined) => {
   const [chatId] = useState(chatIdFromParams ?? uuidv4());
   const navigate = useNavigate();
-  const { chatSettings, saveChatSettings } = useChatSettings(chatId);
-  const isEditMode = Boolean(chatIdFromParams);
+  const isEditMode =
+    chatIdFromParams != undefined && chatIdFromParams !== "new";
+  const { chatSettings, saveChatSettings } = useChatSettings(
+    chatId,
+    !isEditMode
+  );
 
   const form = useForm<ChatSettings>({
     initialValues: {
+      timestampCreatedUtcMs: Date.now(),
       chatTitle: "",
       backgroundPhotoBase64: undefined as string | undefined,
       promptType: "First Person Character",
@@ -104,6 +109,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   useEffect(() => {
     if (chatSettings) {
       const values = {
+        timestampCreatedUtcMs: Date.now(),
         chatTitle: chatSettings.chatTitle || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
         promptType: chatSettings.promptType || "First Person Character",

@@ -10,15 +10,18 @@ export interface UseChatSettingsResult {
   saveChatSettings: (chatSettings: ChatSettings) => void;
 }
 
-export const useChatSettings = (chatId: string): UseChatSettingsResult => {
+export const useChatSettings = (
+  chatId: string,
+  isNew: boolean = false
+): UseChatSettingsResult => {
   const queryClient = useQueryClient();
 
   const { data: chatSettings, isLoading } = useQuery({
+    enabled: !!chatId && !isNew,
     queryKey: getChatSettingsQueryKey(chatId),
     queryFn: async () => {
       return await d.ChatSettingsService(chatId).fetchChatSettings();
     },
-    enabled: !!chatId,
     retry: false,
     refetchOnReconnect: false,
     refetchOnMount: false,
@@ -30,12 +33,10 @@ export const useChatSettings = (chatId: string): UseChatSettingsResult => {
       await d.ChatSettingsService(chatId).save(settings);
     },
     onSuccess: (_, variables) => {
-      // Update cache immediately
       queryClient.setQueryData(
         getChatSettingsQueryKey(chatId),
         variables.chatSettings
       );
-      // Invalidate to ensure consistency
       queryClient.invalidateQueries({
         queryKey: getChatSettingsQueryKey(chatId),
       });
