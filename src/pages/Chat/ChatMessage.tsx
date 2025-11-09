@@ -13,7 +13,7 @@ export interface Message {
 import "./ChatMessage.css";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Button, Modal, Group, Text } from "@mantine/core";
+import { Button, Modal, Group, Text, Textarea, Stack } from "@mantine/core";
 import {
   RiDeleteBinLine,
   RiDeleteBin6Line,
@@ -36,11 +36,14 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedback, setFeedback] = useState("");
   const { getDeletePreview, deleteMessage, deleteMessagesAfterIndex } =
     useChatCache(chatId);
-  const { regenerateResponse } = useChatGeneration({
-    chatId,
-  });
+  const { regenerateResponse, regenerateResponseWithFeedback } =
+    useChatGeneration({
+      chatId,
+    });
 
   const messageClass =
     message.role === "user" ? "message-user" : "message-system";
@@ -80,6 +83,25 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
     regenerateResponse(message.id);
   };
 
+  const handleRegenerateWithFeedbackClick = () => {
+    setShowFeedbackModal(true);
+  };
+
+  const handleFeedbackSubmit = () => {
+    if (feedback.trim()) {
+      regenerateResponseWithFeedback(message.id, feedback);
+    } else {
+      regenerateResponse(message.id);
+    }
+    setShowFeedbackModal(false);
+    setFeedback("");
+  };
+
+  const handleFeedbackCancel = () => {
+    setShowFeedbackModal(false);
+    setFeedback("");
+  };
+
   const handleMessageClick = () => {
     setShowDeleteButtons(!showDeleteButtons);
   };
@@ -101,23 +123,44 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
       {showDeleteButtons && (
         <Group gap="xs" justify="center" mt="sm">
           {isLastMessage && (
-            <Button
-              size="xs"
-              variant="light"
-              color="blue"
-              leftSection={<RiRefreshLine size={14} />}
-              onClick={handleRegenerateClick}
-              styles={{
-                root: {
-                  backgroundColor: "rgba(34, 139, 230, 0.25)",
-                  "&:hover": {
-                    backgroundColor: "rgba(34, 139, 230, 0.35)",
+            <>
+              <Button
+                size="xs"
+                variant="light"
+                color="blue"
+                onClick={handleRegenerateClick}
+                styles={{
+                  root: {
+                    backgroundColor: "rgba(34, 139, 230, 0.25)",
+                    "&:hover": {
+                      backgroundColor: "rgba(34, 139, 230, 0.35)",
+                    },
+                    minWidth: "36px",
+                    padding: "0 8px",
                   },
-                },
-              }}
-            >
-              Regenerate
-            </Button>
+                }}
+                title="Regenerate"
+              >
+                <RiRefreshLine size={16} />
+              </Button>
+              <Button
+                size="xs"
+                variant="light"
+                color="blue"
+                leftSection={<RiRefreshLine size={14} />}
+                onClick={handleRegenerateWithFeedbackClick}
+                styles={{
+                  root: {
+                    backgroundColor: "rgba(34, 139, 230, 0.25)",
+                    "&:hover": {
+                      backgroundColor: "rgba(34, 139, 230, 0.35)",
+                    },
+                  },
+                }}
+              >
+                With Feedback
+              </Button>
+            </>
           )}
           <Button
             size="xs"
@@ -171,6 +214,35 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
             Delete
           </Button>
         </Group>
+      </Modal>
+
+      <Modal
+        opened={showFeedbackModal}
+        onClose={handleFeedbackCancel}
+        title="Regenerate with Feedback"
+        size="md"
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Provide feedback to guide the regeneration. If left blank, the
+            response will be regenerated without additional context.
+          </Text>
+          <Textarea
+            placeholder="Enter your feedback here..."
+            value={feedback}
+            onChange={(e) => setFeedback(e.currentTarget.value)}
+            minRows={4}
+            autoFocus
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={handleFeedbackCancel}>
+              Cancel
+            </Button>
+            <Button color="blue" onClick={handleFeedbackSubmit}>
+              Regenerate
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </div>
   );

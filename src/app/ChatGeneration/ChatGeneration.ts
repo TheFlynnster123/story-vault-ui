@@ -55,28 +55,47 @@ export class ChatGeneration {
   async generateResponse(): Promise<string | undefined> {
     const chatId = this.chatId;
 
-    const chatSettings = await d.ChatSettingsService(chatId).get();
+    this.setIsLoading(true);
+
+    try {
+      const requestMessages = await this.buildGenerationRequestMessages();
+
+      this.setStatus("Generating response...");
+      const response = await d.GrokChatAPI().postChat(requestMessages);
+
+      this.setStatus("Saving...");
+      await d.ChatCache(chatId).addMessage(toSystemMessage(response));
+
+      return response;
+    } finally {
+      this.setIsLoading(false);
+      this.setStatus();
+    }
+  }
+
+  async regenerateResponse(
+    messageId: string,
+    feedback?: string
+  ): Promise<string | undefined> {
+    const message = d.ChatCache(this.chatId).getMessage(messageId);
+
+    if (!message) {
+      console.warn(`Message with id ${messageId} not found`);
+      return;
+    }
+
+    const chatId = this.chatId;
 
     this.setIsLoading(true);
 
-    this.setStatus("Fetching memories...");
-    const memories = await d.MemoriesService(chatId).get();
-
     try {
-      const storyPrompt = this.getStoryPrompt(chatSettings);
-      const chatMessages = d.ChatCache(chatId).getMessagesForLLM();
+      const originalContent = message.content;
 
-      this.setStatus("Planning...");
-      const planningNotesService = d.PlanningNotesService(chatId);
-      await planningNotesService.generateUpdatedPlanningNotes(chatMessages);
-      const updatedPlanningNotes = planningNotesService.getPlanningNotes();
+      await d.ChatCache(chatId).deleteMessage(messageId);
 
-      const requestMessages = this.buildRequestMessages(
-        chatSettings,
-        storyPrompt,
-        chatMessages,
-        updatedPlanningNotes,
-        memories
+      const requestMessages = await this.buildRegenerationRequestMessages(
+        originalContent,
+        feedback
       );
 
       this.setStatus("Generating response...");
@@ -86,8 +105,6 @@ export class ChatGeneration {
       await d.ChatCache(chatId).addMessage(toSystemMessage(response));
 
       return response;
-    } catch (e) {
-      d.ErrorService().log("Failed to generate chat response", e as Error);
     } finally {
       this.setIsLoading(false);
       this.setStatus();
@@ -101,21 +118,31 @@ export class ChatGeneration {
     return FirstPersonCharacterPrompt;
   };
 
-  buildRequestMessages = (
-    chatSettings: ChatSettings,
-    storyPrompt: string,
-    chatMessages: Message[],
-    notes: Note[],
-    memories: Memory[]
-  ): Message[] => {
-    return [
-      toSystemMessage(storyPrompt),
-      ...this.buildStoryMessages(chatSettings),
-      ...chatMessages,
-      ...this.buildNoteMessages(notes),
-      ...this.buildMemoryMessages(memories),
-      toSystemMessage(RESPONSE_PROMPT),
-    ];
+  buildGenerationRequestMessages = async (
+    includeResponsePrompt: boolean = true
+  ): Promise<Message[]> => {
+    const chatSettings = await d.ChatSettingsService(this.chatId).get();
+
+    const storyPrompt = this.getStoryPrompt(chatSettings);
+    const chatMessages = d.ChatCache(this.chatId).getMessagesForLLM();
+
+    this.setStatus("Planning...");
+    const planningNotesService = d.PlanningNotesService(this.chatId);
+    await planningNotesService.generateUpdatedPlanningNotes(chatMessages);
+    const notes = planningNotesService.getPlanningNotes();
+
+    this.setStatus("Fetching memories...");
+    const memories = await d.MemoriesService(this.chatId).get();
+
+    const messages: Message[] = [];
+    messages.push(toSystemMessage(storyPrompt));
+    messages.push(...this.buildStoryMessages(chatSettings));
+    messages.push(...chatMessages);
+    messages.push(...this.buildNoteMessages(notes));
+    messages.push(...this.buildMemoryMessages(memories));
+    messages.push(toSystemMessage(RESPONSE_PROMPT));
+
+    return messages;
   };
 
   buildNoteMessages = (updatedPlanningNotes: Note[]) => {
@@ -130,7 +157,7 @@ export class ChatGeneration {
     const memoryContent = memories
       .map((memory) => memory.content)
       .filter((content) => content.trim().length > 0)
-      .join("\r\n-");
+      .join("\r\n");
 
     if (memoryContent.trim().length === 0) return [];
 
@@ -141,4 +168,34 @@ export class ChatGeneration {
     if (!chatSettings?.story?.trim()) return [];
     return [toSystemMessage(`# Story\r\n${chatSettings.story}`)];
   };
+
+  buildRegenerationRequestMessages = async (
+    originalContent: string,
+    feedback?: string
+  ): Promise<Message[]> => {
+    const temporaryFeedbackMessage = this.buildTemporaryFeedbackMessage(
+      originalContent,
+      feedback
+    );
+
+    const messages = await this.buildGenerationRequestMessages(false);
+
+    if (temporaryFeedbackMessage)
+      messages.push(toSystemMessage(temporaryFeedbackMessage));
+
+    return messages;
+  };
+
+  private buildTemporaryFeedbackMessage(
+    originalContent: string | undefined,
+    feedback?: string
+  ) {
+    if (feedback === undefined) return undefined;
+
+    let temporaryFeedbackMessage: string | undefined;
+    if (feedback && feedback.trim()) {
+      temporaryFeedbackMessage = `The previous response was: "${originalContent}"\n\nPlease regenerate with this feedback: ${feedback}`;
+    }
+    return temporaryFeedbackMessage;
+  }
 }

@@ -16,8 +16,7 @@ export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
     return chatGeneration.subscribe(() => forceUpdate({}));
   }, [chatGeneration]);
 
-  const { chatCache, addMessage, deleteMessage, getMessagesForLLM } =
-    useChatCache(chatId);
+  const { addMessage, getMessagesForLLM } = useChatCache(chatId);
 
   const generateResponse = useCallback(
     async (userInput: string): Promise<string> => {
@@ -25,27 +24,29 @@ export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
 
       return (await chatGeneration.generateResponse()) ?? "";
     },
-    [chatCache, chatGeneration, addMessage]
+    [chatGeneration, addMessage]
   );
 
   const regenerateResponse = useCallback(
     async (messageId: string) => {
-      const message = chatCache?.getMessage(messageId);
-
-      if (!message) {
-        console.warn(`Message with id ${messageId} not found`);
-        return;
-      }
-
       try {
-        await deleteMessage(messageId);
-
-        await chatGeneration.generateResponse();
+        return await chatGeneration.regenerateResponse(messageId);
       } catch (e) {
         d.ErrorService().log("Failed to regenerate response", e);
       }
     },
-    [chatCache, chatGeneration, deleteMessage, addMessage]
+    [chatGeneration]
+  );
+
+  const regenerateResponseWithFeedback = useCallback(
+    async (messageId: string, feedback?: string) => {
+      try {
+        return await chatGeneration.regenerateResponse(messageId, feedback);
+      } catch (e) {
+        d.ErrorService().log("Failed to regenerate response with feedback", e);
+      }
+    },
+    [chatGeneration]
   );
 
   const generateImage = useCallback(async () => {
@@ -71,6 +72,7 @@ export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
   return {
     generateResponse,
     regenerateResponse,
+    regenerateResponseWithFeedback,
     generateImage,
     status: chatGeneration?.Status,
     isLoading: chatGeneration?.IsLoading || false,
