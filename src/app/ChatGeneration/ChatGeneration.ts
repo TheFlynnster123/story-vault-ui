@@ -1,114 +1,121 @@
-import { GrokChatAPI } from "../../clients/GrokChatAPI";
-import type { ChatCache } from "../../Managers/ChatCache";
-import type { Note } from "../../models";
+import type { ChatSettings, Note } from "../../models";
 import type { Memory } from "../../models/Memory";
 import type { Message } from "../../pages/Chat/ChatMessage";
 import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
-import type { PlanningNotesService } from "./ChatGenerationPlanningNotes";
 
 const RESPONSE_PROMPT: string =
   "Consider the above notes, write a response to the conversation. Provide your response directly without a preamble.";
 
+// Singleton instances
+const chatGenerationInstances = new Map<string, ChatGeneration>();
+
+export const getChatGenerationInstance = (
+  chatId: string | null
+): ChatGeneration | null => {
+  if (!chatId) return null;
+
+  if (!chatGenerationInstances.has(chatId))
+    chatGenerationInstances.set(chatId, new ChatGeneration(chatId));
+
+  return chatGenerationInstances.get(chatId)!;
+};
+
 export class ChatGeneration {
-  private chatCache: ChatCache;
-  private planningNotesService: PlanningNotesService;
+  public IsLoading: boolean = false;
+  public Status?: string;
 
-  private notes: Note[];
-  private memories: Memory[];
-  private systemSettings: any;
-  private chatSettings: any;
-  private setStatus: (status: string) => void;
-  private setIsLoading: (isLoading: boolean) => void;
+  private chatId: string;
+  private subscribers = new Set<() => void>();
 
-  constructor(
-    chatCache: ChatCache,
-    planningNotesService: PlanningNotesService,
-    notes: Note[],
-    memories: Memory[],
-    systemSettings: any,
-    chatSettings: any,
-    setStatus: (status: string) => void,
-    setIsLoading: (isLoading: boolean) => void
-  ) {
-    this.chatCache = chatCache;
-    this.planningNotesService = planningNotesService;
-    this.notes = notes;
-    this.memories = memories;
-    this.systemSettings = systemSettings;
-    this.chatSettings = chatSettings;
-    this.setStatus = setStatus;
-    this.setIsLoading = setIsLoading;
+  constructor(chatId: string) {
+    this.chatId = chatId;
   }
 
+  public subscribe(callback: () => void): () => void {
+    this.subscribers.add(callback);
+    return () => this.subscribers.delete(callback);
+  }
+
+  private notifySubscribers(): void {
+    this.subscribers.forEach((callback) => callback());
+  }
+
+  private setIsLoading = (isLoading: boolean) => {
+    this.IsLoading = isLoading;
+    this.notifySubscribers();
+  };
+
+  private setStatus = (status?: string) => {
+    this.Status = status;
+    this.notifySubscribers();
+  };
+
   async generateResponse(): Promise<string | undefined> {
+    const chatId = this.chatId;
+
+    const chatSettings = await d.ChatSettingsService(chatId).get();
+
     this.setIsLoading(true);
-    this.setStatus("Generating response...");
+
+    this.setStatus("Fetching memories...");
+    const memories = await d.MemoriesService(chatId).get();
 
     try {
-      const basePrompt = this.getBasePrompt();
-      const chatMessages = this.chatCache.getMessagesForLLM();
-      const planningNotes = this.getPlanningNotes();
+      const storyPrompt = this.getStoryPrompt(chatSettings);
+      const chatMessages = d.ChatCache(chatId).getMessagesForLLM();
 
-      const updatedPlanningNotes =
-        await this.planningNotesService.generatePlanningNoteContents(
-          planningNotes,
-          chatMessages
-        );
+      this.setStatus("Planning...");
+      const updatedPlanningNotes = await d
+        .PlanningNotesService(chatId)
+        .generateUpdatedPlanningNotes(chatMessages);
 
-      const finalPromptMessages = this.buildFinalPromptMessages(
-        basePrompt,
+      const requestMessages = this.buildRequestMessages(
+        chatSettings,
+        storyPrompt,
         chatMessages,
         updatedPlanningNotes,
-        this.memories
+        memories
       );
 
-      const response = await this.getFinalResponse(finalPromptMessages);
-      await this.chatCache.addMessage(toSystemMessage(response));
+      this.setStatus("Generating response...");
+      const response = await d.GrokChatAPI().postChat(requestMessages);
+
+      this.setStatus("Saving...");
+      await d.ChatCache(chatId).addMessage(toSystemMessage(response));
+
       return response;
     } catch (e) {
       d.ErrorService().log("Failed to generate chat response", e as Error);
     } finally {
       this.setIsLoading(false);
-      this.setStatus("Ready");
+      this.setStatus();
     }
   }
 
-  getBasePrompt = () => {
-    if (
-      this.chatSettings?.promptType == "Manual" &&
-      this.chatSettings?.customPrompt
-    )
-      return this.chatSettings.customPrompt;
+  getStoryPrompt = (chatSettings: ChatSettings) => {
+    if (chatSettings?.promptType == "Manual" && chatSettings?.customPrompt)
+      return chatSettings.customPrompt;
 
     return FirstPersonCharacterPrompt;
   };
 
-  getPlanningNotes = () => {
-    return this.notes.filter((n) => n.type === "planning");
-  };
-
-  buildFinalPromptMessages = (
-    basePrompt: string,
+  buildRequestMessages = (
+    chatSettings: ChatSettings,
+    storyPrompt: string,
     chatMessages: Message[],
     notes: Note[],
     memories: Memory[]
   ): Message[] => {
     return [
-      toSystemMessage(basePrompt),
-      ...this.buildStoryMessages(),
+      toSystemMessage(storyPrompt),
+      ...this.buildStoryMessages(chatSettings),
       ...chatMessages,
       ...this.buildNoteMessages(notes),
       ...this.buildMemoryMessages(memories),
       toSystemMessage(RESPONSE_PROMPT),
     ];
-  };
-
-  getFinalResponse = async (finalPromptMessages: Message[]) => {
-    return await new GrokChatAPI(this.systemSettings).postChat(
-      finalPromptMessages
-    );
   };
 
   buildNoteMessages = (updatedPlanningNotes: Note[]) => {
@@ -130,8 +137,8 @@ export class ChatGeneration {
     return [toSystemMessage(`# Memories\r\n${memoryContent}`)];
   };
 
-  buildStoryMessages = () => {
-    if (!this.chatSettings?.story?.trim()) return [];
-    return [toSystemMessage(`# Story\r\n${this.chatSettings.story}`)];
+  buildStoryMessages = (chatSettings: ChatSettings) => {
+    if (!chatSettings?.story?.trim()) return [];
+    return [toSystemMessage(`# Story\r\n${chatSettings.story}`)];
   };
 }

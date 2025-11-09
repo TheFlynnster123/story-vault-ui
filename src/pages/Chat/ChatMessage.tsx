@@ -100,23 +100,25 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
       </div>
       {showDeleteButtons && (
         <Group gap="xs" justify="center" mt="sm">
-          <Button
-            size="xs"
-            variant="light"
-            color="blue"
-            leftSection={<RiRefreshLine size={14} />}
-            onClick={handleRegenerateClick}
-            styles={{
-              root: {
-                backgroundColor: "rgba(34, 139, 230, 0.25)",
-                "&:hover": {
-                  backgroundColor: "rgba(34, 139, 230, 0.35)",
+          {isLastMessage && (
+            <Button
+              size="xs"
+              variant="light"
+              color="blue"
+              leftSection={<RiRefreshLine size={14} />}
+              onClick={handleRegenerateClick}
+              styles={{
+                root: {
+                  backgroundColor: "rgba(34, 139, 230, 0.25)",
+                  "&:hover": {
+                    backgroundColor: "rgba(34, 139, 230, 0.35)",
+                  },
                 },
-              },
-            }}
-          >
-            Regenerate
-          </Button>
+              }}
+            >
+              Regenerate
+            </Button>
+          )}
           <Button
             size="xs"
             variant="light"

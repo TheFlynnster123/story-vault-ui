@@ -14,11 +14,11 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { ChatSettings } from "../models/ChatSettings";
-import { useChatSettings } from "../hooks/queries/useChatSettings";
 import { v4 as uuidv4 } from "uuid";
 import { ChatDeleteControl } from "./ChatEditor/ChatDeleteControl";
 import { BackgroundPhotoUploader } from "./ChatEditor/BackgroundPhotoUploader";
 import { Page } from "./Page";
+import { useChatSettings } from "../queries/chat-settings/useChatSettings";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
@@ -30,7 +30,6 @@ export const ChatEditorPage: React.FC = () => {
     removePhoto,
     handleSubmit,
     handleGoBack,
-    handleDeleteSuccess,
   } = useChatEditor(chatIdFromParams);
 
   return (
@@ -52,11 +51,7 @@ export const ChatEditorPage: React.FC = () => {
           />
         </Stack>
 
-        <ChatEditorFooter
-          chatId={chatId}
-          isEditMode={isEditMode}
-          onDeleteSuccess={handleDeleteSuccess}
-        />
+        <ChatEditorFooter chatId={chatId} isEditMode={isEditMode} />
       </Paper>
     </Page>
   );
@@ -213,17 +208,13 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({ form }) => (
 interface ChatEditorFooterProps {
   chatId: string;
   isEditMode: boolean;
-  onDeleteSuccess: () => void;
 }
 
 const ChatEditorFooter: React.FC<ChatEditorFooterProps> = ({
   chatId,
   isEditMode,
-  onDeleteSuccess,
 }) => (
   <Group justify="center" mt="xl">
-    {isEditMode && (
-      <ChatDeleteControl chatId={chatId} onDeleteSuccess={onDeleteSuccess} />
-    )}
+    {isEditMode && <ChatDeleteControl chatId={chatId} />}
   </Group>
 );

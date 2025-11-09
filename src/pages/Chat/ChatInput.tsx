@@ -11,9 +11,10 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ({ chatId }, ref) => {
     const [internalInputValue, setInternalInputValue] = useState<string>("");
 
-    const { generateImage, generateResponse, isLoading } = useChatGeneration({
-      chatId,
-    });
+    const { generateImage, generateResponse, isLoading, status } =
+      useChatGeneration({
+        chatId,
+      });
 
     const handleFormSubmit = (event: FormEvent) => {
       event.preventDefault();
@@ -30,7 +31,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
           ref={ref}
           value={internalInputValue}
           onChange={(e) => setInternalInputValue(e.target.value)}
-          placeholder={"Type your message here..."}
+          placeholder={status ?? "Type your message here..."}
           disabled={isLoading}
           className="chat-input-field"
           rows={3}

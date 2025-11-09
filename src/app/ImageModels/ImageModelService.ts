@@ -98,6 +98,49 @@ export class ImageModelService {
     return selectedModel;
   }
 
+  public async getOrDefaultSelectedModel(): Promise<ImageModel> {
+    const userImageModels = await this.GetAllImageModels();
+
+    let selectedModel: ImageModel | null = null;
+    if (userImageModels.selectedModelId) {
+      selectedModel =
+        userImageModels.models.find(
+          (model) => model.id === userImageModels.selectedModelId
+        ) || null;
+    }
+
+    // If no selected model, use the first available model or create a default
+    if (!selectedModel) {
+      selectedModel =
+        userImageModels.models[0] || this.createDefaultImageModel();
+    }
+
+    return selectedModel;
+  }
+
+  private createDefaultImageModel(): ImageModel {
+    return {
+      id: "default-image-model",
+      name: "Default Image Model",
+      timestampUtcMs: Date.now(),
+      input: {
+        model: "urn:air:sdxl:checkpoint:civitai:257749@290640",
+        params: {
+          prompt: "score_9, score_8_up, score_7_up, score_6_up, source_anime",
+          negativePrompt:
+            "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad hands, jpeg artifacts",
+          scheduler: "DPM2Karras",
+          steps: 20,
+          cfgScale: 7,
+          width: 1024,
+          height: 1024,
+          clipSkip: 2,
+        },
+        additionalNetworks: {},
+      },
+    };
+  }
+
   async fetchUserImageModelsBlob(): Promise<string | null> {
     try {
       const blob = await d

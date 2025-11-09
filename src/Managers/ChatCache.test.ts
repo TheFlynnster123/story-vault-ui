@@ -244,7 +244,7 @@ describe("ChatCache", () => {
       const manager = new ChatCache(mockChatId, mockMessages);
 
       const previewResult = manager.getDeletePreview("3");
-      const fromHereResult = manager.getDeleteFromHerePreview("3");
+      const fromHereResult = manager.getDeletePreview("3");
 
       expect(fromHereResult).toEqual(previewResult);
     });

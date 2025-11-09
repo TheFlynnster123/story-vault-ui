@@ -2,6 +2,20 @@ import { d } from "../app/Dependencies/Dependencies";
 import type { Message } from "../pages/Chat/ChatMessage";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
 
+// Singleton instances
+const chatCacheInstances = new Map<string, ChatCache>();
+
+export const getChatCacheInstance = (
+  chatId: string | null
+): ChatCache | null => {
+  if (!chatId) return null;
+
+  if (!chatCacheInstances.has(chatId))
+    chatCacheInstances.set(chatId, new ChatCache(chatId));
+
+  return chatCacheInstances.get(chatId)!;
+};
+
 export class ChatCache {
   public Messages: Message[];
   public IsLoading: boolean = false;
@@ -47,12 +61,12 @@ export class ChatCache {
   }
 
   public async addMessage(message: Message): Promise<void> {
+    this.Messages.push(message);
+    this.notifySubscribers();
+
     await this.withLoading(() =>
       d.ChatHistoryApi().addChatMessage(this.chatId, message)
     );
-
-    this.Messages.push(message);
-    this.notifySubscribers();
   }
 
   public getMessagesForLLM(): Message[] {
@@ -64,25 +78,25 @@ export class ChatCache {
   }
 
   public async deleteMessage(messageId: string): Promise<void> {
+    this.applyLocalDeletion(messageId);
+    this.notifySubscribers();
+
     const deleteCommand = ChatHistoryReducer.createDeleteCommand(messageId);
     await this.withLoading(() =>
       d.ChatHistoryApi().addChatMessage(this.chatId, deleteCommand)
     );
-
-    this.applyLocalDeletion(messageId);
-    this.notifySubscribers();
   }
 
   public async deleteMessagesAfterIndex(messageId: string): Promise<void> {
+    this.applyLocalDeletionFromIndex(messageId);
+    this.notifySubscribers();
+
     const messageIdsToDelete = this.getMessageIdsAfterIndex(messageId);
     const deleteCommands = this.createDeleteCommands(messageIdsToDelete);
 
     await this.withLoading(() =>
       d.ChatHistoryApi().addChatMessages(this.chatId, deleteCommands)
     );
-
-    this.applyLocalDeletionFromIndex(messageId);
-    this.notifySubscribers();
   }
 
   public getDeletePreview(messageId: string): { messageCount: number } {

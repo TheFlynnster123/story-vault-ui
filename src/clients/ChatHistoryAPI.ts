@@ -93,7 +93,7 @@ export class ChatHistoryAPI {
     }
   }
 
-  public async getChats(): Promise<string[]> {
+  public async getChatIds(): Promise<string[]> {
     const accessToken = await this.authAPI.getAccessToken();
 
     const response = await fetch(`${this.URL}/api/GetChats`, {

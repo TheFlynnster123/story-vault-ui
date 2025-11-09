@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChatHistoryAPI } from "../../../clients/ChatHistoryAPI";
+import { d } from "../app/Dependencies/Dependencies";
+
+export const getChatIdsQueryKey = () => ["chat-ids"];
 
 export const useChats = () => {
   const queryClient = useQueryClient();
@@ -9,10 +11,13 @@ export const useChats = () => {
     isLoading: isLoadingChats,
     error: chatError,
   } = useQuery({
-    queryKey: ["chat-ids"],
+    queryKey: getChatIdsQueryKey(),
     queryFn: async () => {
-      return await new ChatHistoryAPI().getChats();
+      return await d.ChatHistoryApi().getChatIds();
     },
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const refreshChats = () => {

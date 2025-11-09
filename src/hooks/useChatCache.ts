@@ -1,22 +1,10 @@
 import { useEffect, useState } from "react";
-import { ChatCache } from "../Managers/ChatCache";
+import { getChatCacheInstance } from "../Managers/ChatCache";
 import type { Message } from "../pages/Chat/ChatMessage";
-
-// Singleton instances
-const chatCacheInstances = new Map<string, ChatCache>();
-
-const getChatCache = (chatId: string | null): ChatCache | null => {
-  if (!chatId) return null;
-
-  if (!chatCacheInstances.has(chatId))
-    chatCacheInstances.set(chatId, new ChatCache(chatId));
-
-  return chatCacheInstances.get(chatId)!;
-};
 
 export const useChatCache = (chatId: string | null) => {
   const [, forceUpdate] = useState({});
-  const chatCache = getChatCache(chatId);
+  const chatCache = getChatCacheInstance(chatId);
 
   useEffect(() => {
     if (!chatCache) return;
@@ -42,7 +30,7 @@ export const useChatCache = (chatId: string | null) => {
 
 export const useChatMessages = (chatId: string | null) => {
   const [, forceUpdate] = useState({});
-  const chatCache = getChatCache(chatId);
+  const chatCache = getChatCacheInstance(chatId);
 
   useEffect(() => {
     if (!chatCache) return;

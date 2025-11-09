@@ -1,21 +1,20 @@
-import { GrokChatAPI } from "../../clients/GrokChatAPI";
-import type { ChatSettings, Note, SystemSettings } from "../../models";
+import type { ChatSettings, Note } from "../../models";
 import type { Message } from "../../pages/Chat/ChatMessage";
 import { toSystemMessage } from "../../utils/messageUtils";
+import { d } from "../Dependencies/Dependencies";
 
 export class PlanningNotesService {
-  systemSettings: SystemSettings;
-  chatSettings: ChatSettings;
+  chatId: string;
 
-  constructor(systemSettings: SystemSettings, chatSettings: ChatSettings) {
-    this.systemSettings = systemSettings;
-    this.chatSettings = chatSettings;
+  constructor(chatId: string) {
+    this.chatId = chatId;
   }
 
-  public generatePlanningNoteContents = async (
-    planningNotes: Note[],
+  public generateUpdatedPlanningNotes = async (
     chatMessages: Message[]
   ): Promise<Note[]> => {
+    const planningNotes = await d.NotesService(this.chatId).getPlanningNotes();
+
     const processPromises = planningNotes.map(
       async (note) => await this.generatePlanningNoteContent(note, chatMessages)
     );
@@ -24,8 +23,10 @@ export class PlanningNotesService {
   };
 
   generatePlanningNoteContent = async (note: Note, chatMessages: Message[]) => {
+    const chatSettings = await d.ChatSettingsService(this.chatId).get();
+
     const promptMessages: Message[] = [
-      ...this.buildStoryMessages(),
+      ...this.buildStoryMessages(chatSettings),
       ...chatMessages,
       toSystemMessage(
         `#${note.name}\r\n
@@ -37,15 +38,13 @@ export class PlanningNotesService {
       ),
     ];
 
-    const response = await new GrokChatAPI(this.systemSettings).postChat(
-      promptMessages
-    );
+    const response = await d.GrokChatAPI().postChat(promptMessages);
 
     return { ...note, content: response };
   };
 
-  buildStoryMessages = () => {
-    if (!this.chatSettings?.story?.trim()) return [];
-    return [toSystemMessage(`# Story\r\n${this.chatSettings.story}`)];
+  buildStoryMessages = (chatSettings?: ChatSettings) => {
+    if (!chatSettings?.story?.trim()) return [];
+    return [toSystemMessage(`# Story\r\n${chatSettings.story}`)];
   };
 }

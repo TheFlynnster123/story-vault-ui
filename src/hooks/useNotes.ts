@@ -1,24 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { BlobAPI } from "../clients/BlobAPI";
 import type { Note } from "../models/Note";
 import { d } from "../app/Dependencies/Dependencies";
+import { getNotesQueryKey } from "../queries/notes/NotesService";
 
-const getQueryKey = (chatId: string) => ["notes", chatId];
-
-export interface UseNotesResult {
-  notes: Note[];
-  isLoading: boolean;
-  saveNotes: (notes: Note[]) => Promise<void>;
-  refreshNotes: () => void;
-}
-
-export const useNotes = (chatId: string): UseNotesResult => {
+export const useNotes = (chatId: string) => {
   const queryClient = useQueryClient();
-  const saveNotesMutation = useSaveNotesMutation(chatId);
 
   const { data: notes = [], isLoading } = useQuery({
-    queryKey: getQueryKey(chatId),
-    queryFn: async () => await GetNotes(chatId),
+    queryKey: getNotesQueryKey(chatId),
+    queryFn: async () => {
+      return await d.NotesService(chatId).fetchNotes();
+    },
     enabled: !!chatId,
     retry: false,
     refetchOnReconnect: false,
@@ -26,12 +18,27 @@ export const useNotes = (chatId: string): UseNotesResult => {
     refetchOnWindowFocus: false,
   });
 
+  const saveNotesMutation = useMutation({
+    mutationFn: async (notes: Note[]) => {
+      await d.NotesService(chatId).save(notes);
+      return notes;
+    },
+    onSuccess: (notes) => {
+      // Update cache immediately
+      queryClient.setQueryData(getNotesQueryKey(chatId), notes);
+      // Invalidate to ensure consistency
+      queryClient.invalidateQueries({
+        queryKey: getNotesQueryKey(chatId),
+      });
+    },
+  });
+
   const saveNotes = async (notes: Note[]) => {
     await saveNotesMutation.mutateAsync(notes);
   };
 
   const refreshNotes = () => {
-    queryClient.invalidateQueries({ queryKey: getQueryKey(chatId) });
+    queryClient.invalidateQueries({ queryKey: getNotesQueryKey(chatId) });
   };
 
   return {
@@ -40,31 +47,4 @@ export const useNotes = (chatId: string): UseNotesResult => {
     saveNotes,
     refreshNotes,
   };
-};
-
-export const GetNotes = async (chatId: string): Promise<Note[]> => {
-  const blobContent = await new BlobAPI().getBlob(chatId, "notes");
-  if (!blobContent) return [];
-
-  try {
-    return JSON.parse(blobContent) as Note[];
-  } catch (e) {
-    d.ErrorService().log("Failed to parse notes", e);
-    return [];
-  }
-};
-
-const useSaveNotesMutation = (chatId: string) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (notes: Note[]) => {
-      const content = JSON.stringify(notes);
-      await new BlobAPI().saveBlob(chatId, "notes", content);
-      return notes;
-    },
-    onSuccess: (notes) => {
-      queryClient.setQueryData(getQueryKey(chatId), notes);
-    },
-  });
 };

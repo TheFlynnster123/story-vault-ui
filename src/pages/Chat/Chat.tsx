@@ -4,8 +4,8 @@ import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
-import { useChatSettings } from "../../hooks/queries/useChatSettings";
 import { useChatCache } from "../../hooks/useChatCache";
+import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
 
 interface ChatProps {
   chatId: string;

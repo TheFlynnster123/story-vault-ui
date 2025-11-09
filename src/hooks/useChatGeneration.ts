@@ -1,110 +1,62 @@
-import { useState, useCallback } from "react";
-import { useNotes } from "./useNotes";
-import { useMemories } from "./useMemories";
-import { useSystemSettings } from "./queries/useSystemSettings";
-import { useChatSettings } from "./queries/useChatSettings";
-import { ChatGeneration } from "../app/ChatGeneration/ChatGeneration";
-import { PlanningNotesService } from "../app/ChatGeneration/ChatGenerationPlanningNotes";
-import { useChatCache } from "./useChatCache";
-import { ImageGenerator } from "../Managers/ImageGenerator";
-import { toSystemMessage, toUserMessage } from "../utils/messageUtils";
+import { useCallback, useState, useEffect } from "react";
+import { toUserMessage } from "../utils/messageUtils";
 import { d } from "../app/Dependencies/Dependencies";
+import { useChatCache } from "./useChatCache";
 
 export interface IUseChatGenerationProps {
   chatId: string;
 }
 
 export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
-  const { notes } = useNotes(chatId);
-  const { memories } = useMemories(chatId);
-  const [status, setStatus] = useState<string>("Ready");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { systemSettings } = useSystemSettings();
-  const { chatSettings } = useChatSettings(chatId);
+  const [, forceUpdate] = useState({});
+  const chatGeneration = d.ChatGenerationService(chatId);
+
+  useEffect(() => {
+    if (!chatGeneration) return;
+    return chatGeneration.subscribe(() => forceUpdate({}));
+  }, [chatGeneration]);
+
   const { chatCache, addMessage, deleteMessage, getMessagesForLLM } =
     useChatCache(chatId);
 
   const generateResponse = useCallback(
     async (userInput: string): Promise<string> => {
-      if (!chatCache) return "";
-
-      const userMessage = toUserMessage(userInput);
-      await addMessage(userMessage);
-
-      const planningNotesService = new PlanningNotesService(
-        systemSettings as any,
-        chatSettings as any
-      );
-
-      const chatGeneration = new ChatGeneration(
-        chatCache,
-        planningNotesService,
-        notes,
-        memories,
-        systemSettings,
-        chatSettings,
-        setStatus,
-        setIsLoading
-      );
+      await addMessage(toUserMessage(userInput));
 
       return (await chatGeneration.generateResponse()) ?? "";
     },
-    [chatCache, systemSettings, chatSettings, notes, memories]
+    [chatCache, chatGeneration, addMessage]
   );
 
   const regenerateResponse = useCallback(
     async (messageId: string) => {
-      if (!chatCache) return;
+      const message = chatCache?.getMessage(messageId);
 
-      const message = chatCache.getMessage(messageId);
       if (!message) {
         console.warn(`Message with id ${messageId} not found`);
         return;
       }
 
-      setIsLoading(true);
-
       try {
         await deleteMessage(messageId);
 
-        const planningNotesService = new PlanningNotesService(
-          systemSettings as any,
-          chatSettings as any
-        );
-
-        const chatGeneration = new ChatGeneration(
-          chatCache,
-          planningNotesService,
-          notes,
-          memories,
-          systemSettings,
-          chatSettings,
-          setStatus,
-          setIsLoading
-        );
-
-        const responseMessage = await chatGeneration.generateResponse();
-
-        if (responseMessage) await addMessage(toSystemMessage(responseMessage));
+        await chatGeneration.generateResponse();
       } catch (e) {
         d.ErrorService().log("Failed to regenerate response", e);
-      } finally {
-        setIsLoading(false);
       }
     },
-    [chatCache, deleteMessage, generateResponse, addMessage]
+    [chatCache, chatGeneration, deleteMessage, addMessage]
   );
 
   const generateImage = useCallback(async () => {
-    setIsLoading(true);
-    if (!systemSettings) return;
-
     try {
-      const imageGenerator = new ImageGenerator(systemSettings);
       const messageList = await getMessagesForLLM();
 
-      const generatedPrompt = await imageGenerator.generatePrompt(messageList);
-      const jobId = await imageGenerator.triggerJob(generatedPrompt);
+      const generatedPrompt = await d
+        .ImageGenerator()
+        .generatePrompt(messageList);
+
+      const jobId = await d.ImageGenerator().triggerJob(generatedPrompt);
 
       await addMessage({
         id: `civit-job-${Date.now()}`,
@@ -113,16 +65,14 @@ export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
       });
     } catch (e) {
       d.ErrorService().log("Failed to generate image", e);
-    } finally {
-      setIsLoading(false);
     }
-  }, [systemSettings, getMessagesForLLM, addMessage]);
+  }, [getMessagesForLLM, addMessage]);
 
   return {
     generateResponse,
     regenerateResponse,
     generateImage,
-    status,
-    isLoading,
+    status: chatGeneration?.Status,
+    isLoading: chatGeneration?.IsLoading || false,
   };
 };

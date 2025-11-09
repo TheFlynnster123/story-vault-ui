@@ -13,13 +13,13 @@ import { StoryNotesPage } from "./pages/StoryNotesPage";
 import { MemoriesPage } from "./pages/MemoriesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-const queryClient = new QueryClient();
+export const QUERY_CLIENT = new QueryClient();
 
 interface AppProps {}
 
 const App: React.FC<AppProps> = () => {
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={QUERY_CLIENT}>
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />

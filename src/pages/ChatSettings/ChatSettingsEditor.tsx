@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSystemSettings } from "../../hooks/queries/useSystemSettings";
+import { useSystemSettings } from "../../queries/system-settings/useSystemSettings";
 import type { ChatGenerationSettings } from "../../models";
 import { Select, Button, Stack, Text, Group, Loader } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
