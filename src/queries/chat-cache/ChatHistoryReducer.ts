@@ -1,4 +1,4 @@
-import type { Message } from "../pages/Chat/ChatMessage";
+import type { Message } from "../../pages/Chat/ChatMessage";
 
 export interface DeleteMessageCommand {
   type: "delete";
@@ -10,6 +10,8 @@ export type ReducerCommand = DeleteMessageCommand;
 
 export class ChatHistoryReducer {
   public static reduce(messages: Message[]): Message[] {
+    const startTime = Date.now();
+
     const reducedMessages: Message[] = [];
 
     for (const message of messages) {
@@ -20,6 +22,12 @@ export class ChatHistoryReducer {
       }
     }
 
+    const endTime = Date.now();
+    console.log(
+      `ChatHistoryReducer.reduce processed ${messages.length} messages in ${
+        endTime - startTime
+      } ms`
+    );
     return reducedMessages;
   }
 

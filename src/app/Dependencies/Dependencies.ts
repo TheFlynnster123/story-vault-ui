@@ -22,7 +22,10 @@ import {
   ChatGeneration,
   getChatGenerationInstance,
 } from "../ChatGeneration/ChatGeneration";
-import { ChatCache, getChatCacheInstance } from "../../Managers/ChatCache";
+import {
+  ChatCache,
+  getChatCacheInstance,
+} from "../../queries/chat-cache/ChatCache";
 import { ImageGenerator } from "../../Managers/ImageGenerator";
 
 export class Dependencies {

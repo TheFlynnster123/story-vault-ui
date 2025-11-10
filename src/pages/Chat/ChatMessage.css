@@ -72,10 +72,8 @@
   padding: 0 3px;
 }
 
-/* Delete functionality styles */
 .message-content {
   position: relative;
-  display: inline-block;
   max-width: 100%;
 }
 

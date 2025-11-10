@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { ChatMessage, type Message } from "./ChatMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
 import { useChatCache } from "../../hooks/useChatCache";
@@ -8,91 +9,69 @@ interface ChatMessageListProps {
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({ chatId }) => {
-  const messageListRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const { messages } = useChatCache(chatId);
+  const [shouldFollowOutput, setShouldFollowOutput] = useState(true);
 
-  useAutoScrolling(messageListRef, messages);
+  useScrollToBottomOnNewMessages(virtuosoRef, messages, shouldFollowOutput);
 
   return (
-    <div className="message-list" ref={messageListRef}>
-      {messages.map((msg, index) => {
-        const isLastMessage = index === messages.length - 1;
-
-        return msg.role === "civit-job" ? (
-          <CivitJobMessage
-            chatId={chatId}
-            key={msg.id}
-            message={msg}
-            isLastMessage={isLastMessage}
-          />
-        ) : (
-          <ChatMessage
-            chatId={chatId}
-            key={msg.id}
-            message={msg}
-            isLastMessage={isLastMessage}
-          />
-        );
-      })}
-    </div>
+    <Virtuoso
+      ref={virtuosoRef}
+      data={messages}
+      followOutput={shouldFollowOutput ? "smooth" : false}
+      atBottomStateChange={(atBottom) => setShouldFollowOutput(atBottom)}
+      itemContent={(index, msg) =>
+        renderMessageItem(chatId, msg, index, messages.length)
+      }
+      increaseViewportBy={{ top: 800, bottom: 800 }}
+      initialTopMostItemIndex={messages.length - 1}
+    />
   );
 };
 
-function useAutoScrolling(
-  messageListRef: React.RefObject<HTMLDivElement | null>,
-  messages: Message[]
+function renderMessageItem(
+  chatId: string,
+  msg: Message,
+  index: number,
+  totalMessages: number
+): React.ReactNode {
+  const isLastMessage = index === totalMessages - 1;
+
+  return msg.role === "civit-job" ? (
+    <CivitJobMessage
+      chatId={chatId}
+      key={msg.id}
+      message={msg}
+      isLastMessage={isLastMessage}
+    />
+  ) : (
+    <ChatMessage
+      chatId={chatId}
+      key={msg.id}
+      message={msg}
+      isLastMessage={isLastMessage}
+    />
+  );
+}
+
+function useScrollToBottomOnNewMessages(
+  virtuosoRef: React.RefObject<VirtuosoHandle | null>,
+  messages: Message[],
+  shouldFollowOutput: boolean
 ) {
-  const isAtBottomRef = useRef(true);
+  const previousMessageCountRef = useRef(messages.length);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (messageListRef.current) {
-        const { scrollHeight, clientHeight, scrollTop } =
-          messageListRef.current;
-        const atBottom = scrollHeight - clientHeight <= scrollTop + 1;
-        isAtBottomRef.current = atBottom;
-      }
-    };
+    const hasNewMessages = messages.length > previousMessageCountRef.current;
+    previousMessageCountRef.current = messages.length;
 
-    const currentMessageList = messageListRef.current;
-    currentMessageList?.addEventListener("scroll", handleScroll);
-
-    return () => {
-      currentMessageList?.removeEventListener("scroll", handleScroll);
-    };
-  }, [messageListRef]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (isAtBottomRef.current && messageListRef.current) {
-        setTimeout(() => {
-          if (messageListRef.current) {
-            messageListRef.current.scrollTop =
-              messageListRef.current.scrollHeight;
-          }
-        }, 100);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isAtBottomRef.current && messageListRef.current) {
-        messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [messageListRef]);
-
-  useEffect(() => {
-    if (messageListRef.current && isAtBottomRef.current) {
-      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    if (hasNewMessages && shouldFollowOutput && virtuosoRef.current) {
+      // Scroll to bottom when new messages arrive and user is at bottom
+      virtuosoRef.current.scrollToIndex({
+        index: messages.length - 1,
+        behavior: "smooth",
+      });
     }
-  }, [messages, messageListRef]);
+  }, [messages, shouldFollowOutput, virtuosoRef]);
 }
