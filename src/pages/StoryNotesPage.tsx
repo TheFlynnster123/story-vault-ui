@@ -14,7 +14,7 @@ import {
   Text,
 } from "@mantine/core";
 import type { Note } from "../models/Note";
-import { useNotes } from "../hooks/useNotes";
+import { usePlanningNotes } from "../hooks/usePlanningNotes";
 import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
 import isEqual from "lodash.isequal";
@@ -22,7 +22,11 @@ import isEqual from "lodash.isequal";
 export const StoryNotesPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const { notes: initialNotes, saveNotes, isLoading } = useNotes(chatId!);
+  const {
+    notes: initialNotes,
+    saveNotes,
+    isLoading,
+  } = usePlanningNotes(chatId!);
   const [localNotes, setLocalNotes] = useState<Note[]>([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);

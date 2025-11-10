@@ -11,7 +11,6 @@ import { QUERY_CLIENT } from "../../App";
 import { SystemSettingsService } from "../../queries/system-settings/SystemSettingsService";
 import { ChatSettingsService } from "../../queries/chat-settings/ChatSettingsService";
 import { MemoriesService } from "../../queries/memories/MemoriesService";
-import { NotesService } from "../../queries/notes/NotesService";
 import { CivitJobAPI } from "../../clients/CivitJobAPI";
 import { GrokChatAPI } from "../../clients/GrokChatAPI";
 import {
@@ -29,10 +28,6 @@ import {
 import { ImageGenerator } from "../../Managers/ImageGenerator";
 
 export class Dependencies {
-  NotesService(chatId: string) {
-    return new NotesService(chatId);
-  }
-
   MemoriesService(chatId: string) {
     return new MemoriesService(chatId);
   }

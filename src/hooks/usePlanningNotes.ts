@@ -1,15 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Note } from "../models/Note";
 import { d } from "../app/Dependencies/Dependencies";
-import { getNotesQueryKey } from "../queries/notes/NotesService";
+import { getPlanningNotesQueryKey } from "../app/ChatGeneration/PlanningNotesService";
 
-export const useNotes = (chatId: string) => {
+export const usePlanningNotes = (chatId: string) => {
   const queryClient = useQueryClient();
 
   const { data: notes = [], isLoading } = useQuery({
-    queryKey: getNotesQueryKey(chatId),
+    queryKey: getPlanningNotesQueryKey(chatId),
     queryFn: async () => {
-      return await d.NotesService(chatId).fetchNotes();
+      return await d.PlanningNotesService(chatId).fetchPlanningNotes();
     },
     enabled: !!chatId,
     retry: false,
@@ -20,15 +20,13 @@ export const useNotes = (chatId: string) => {
 
   const saveNotesMutation = useMutation({
     mutationFn: async (notes: Note[]) => {
-      await d.NotesService(chatId).save(notes);
+      await d.PlanningNotesService(chatId).savePlanningNotes(notes);
       return notes;
     },
     onSuccess: (notes) => {
-      // Update cache immediately
-      queryClient.setQueryData(getNotesQueryKey(chatId), notes);
-      // Invalidate to ensure consistency
+      queryClient.setQueryData(getPlanningNotesQueryKey(chatId), notes);
       queryClient.invalidateQueries({
-        queryKey: getNotesQueryKey(chatId),
+        queryKey: getPlanningNotesQueryKey(chatId),
       });
     },
   });
@@ -38,7 +36,9 @@ export const useNotes = (chatId: string) => {
   };
 
   const refreshNotes = () => {
-    queryClient.invalidateQueries({ queryKey: getNotesQueryKey(chatId) });
+    queryClient.invalidateQueries({
+      queryKey: getPlanningNotesQueryKey(chatId),
+    });
   };
 
   return {
