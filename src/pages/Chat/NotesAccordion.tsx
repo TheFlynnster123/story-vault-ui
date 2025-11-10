@@ -40,7 +40,6 @@ export const NotesAccordion: React.FC<NotesAccordionProps> = ({ chatId }) => {
           control: {
             backgroundColor: "rgba(30, 30, 30, 0.95)",
             color: "#ffffff",
-            padding: "12px 16px",
             "&:hover": {
               backgroundColor: "rgba(50, 50, 50, 0.95)",
             },
