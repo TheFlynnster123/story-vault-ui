@@ -1,5 +1,5 @@
-import { d } from "../app/Dependencies/Dependencies";
-import type { Message } from "../pages/Chat/ChatMessage";
+import { d } from "../../app/Dependencies/Dependencies";
+import type { Message } from "../../pages/Chat/ChatMessage";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
 
 // Singleton instances

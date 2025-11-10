@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
-import type { Message } from "../pages/Chat/ChatMessage";
+import type { Message } from "../../pages/Chat/ChatMessage";
 
 describe("ChatHistoryReducer", () => {
   describe("reduce", () => {

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { ChatCache } from "./ChatCache";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
-import type { Message } from "../pages/Chat/ChatMessage";
-import { d } from "../app/Dependencies/Dependencies";
+import type { Message } from "../../pages/Chat/ChatMessage";
+import { d } from "../../app/Dependencies/Dependencies";
+import { ChatCache } from "./ChatCache";
 
 // Mock external dependencies
 vi.mock("./ChatHistoryReducer");

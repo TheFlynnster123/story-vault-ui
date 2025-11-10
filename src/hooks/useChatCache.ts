@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getChatCacheInstance } from "../Managers/ChatCache";
+import { getChatCacheInstance } from "../queries/chat-cache/ChatCache";
 import type { Message } from "../pages/Chat/ChatMessage";
 
 export const useChatCache = (chatId: string | null) => {
