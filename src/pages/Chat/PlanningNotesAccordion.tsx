@@ -11,11 +11,13 @@ import {
 } from "@mantine/core";
 import { usePlanningNotesCache } from "../../hooks/usePlanningNotesCache";
 
-interface NotesAccordionProps {
+interface PlanningNotesAccordionProps {
   chatId: string;
 }
 
-export const NotesAccordion: React.FC<NotesAccordionProps> = ({ chatId }) => {
+export const PlanningNotesAccordion: React.FC<PlanningNotesAccordionProps> = ({
+  chatId,
+}) => {
   const {
     planningNotes: notes,
     isLoading,
@@ -66,7 +68,7 @@ export const NotesAccordion: React.FC<NotesAccordionProps> = ({ chatId }) => {
             Notes {notes.length > 0 && `(${notes.length})`}
           </Accordion.Control>
           <Accordion.Panel>
-            <ScrollArea h={300} style={{ padding: "12px" }}>
+            <ScrollArea h="75vh" style={{ padding: "12px" }}>
               {isLoading ? (
                 <Text c="dimmed" ta="center" py="xl" fs="italic">
                   Loading notes...

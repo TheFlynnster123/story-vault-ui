@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { d } from "../app/Dependencies/Dependencies";
 import { getChatSettingsQueryKey } from "./chat-settings/ChatSettingsService";
 import { getMemoriesQueryKey } from "./memories/MemoriesService";
-import { getNotesQueryKey } from "./notes/NotesService";
+import { getPlanningNotesQueryKey } from "../app/ChatGeneration/PlanningNotesService";
 import { getChatIdsQueryKey } from "../hooks/useChats";
 
 export const useChatDeletion = () => {
@@ -20,7 +20,7 @@ export const useChatDeletion = () => {
         queryKey: getMemoriesQueryKey(chatId),
       });
       queryClient.removeQueries({
-        queryKey: getNotesQueryKey(chatId),
+        queryKey: getPlanningNotesQueryKey(chatId),
       });
 
       queryClient.invalidateQueries({

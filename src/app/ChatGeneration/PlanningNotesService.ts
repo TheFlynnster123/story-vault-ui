@@ -3,6 +3,13 @@ import type { Message } from "../../pages/Chat/ChatMessage";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
 
+const PLANNING_NOTES_BLOB_NAME = "planning-notes";
+
+export const getPlanningNotesQueryKey = (chatId: string) => [
+  "planning-notes",
+  chatId,
+];
+
 // Singleton instances
 const planningNotesCacheInstances = new Map<string, PlanningNotesService>();
 
@@ -49,12 +56,36 @@ export class PlanningNotesService {
   private async loadPlanningNotes(): Promise<void> {
     this.IsLoading = true;
     try {
-      this.PlanningNotes = await d.NotesService(this.chatId).getPlanningNotes();
+      this.PlanningNotes = await this.fetchPlanningNotes();
       this.notifySubscribers();
     } finally {
       this.IsLoading = false;
     }
   }
+
+  public fetchPlanningNotes = async (): Promise<Note[]> => {
+    return (await d.QueryClient().ensureQueryData({
+      queryKey: getPlanningNotesQueryKey(this.chatId),
+      queryFn: async () => await this.fetchPlanningNotesFromBlob(),
+    })) as Note[];
+  };
+
+  private fetchPlanningNotesFromBlob = async (): Promise<Note[]> => {
+    try {
+      const blobContent = await d
+        .BlobAPI()
+        .getBlob(this.chatId, PLANNING_NOTES_BLOB_NAME);
+
+      if (!blobContent) return [];
+
+      return JSON.parse(blobContent) as Note[];
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("Blob not found")) return [];
+
+      d.ErrorService().log("Failed to fetch planning notes", e);
+      return [];
+    }
+  };
 
   public getPlanningNotes(): Note[] {
     return this.PlanningNotes;
@@ -68,14 +99,18 @@ export class PlanningNotesService {
     }
   }
 
-  public async savePlanningNotes(): Promise<void> {
+  public async savePlanningNotes(notes?: Note[]): Promise<void> {
     this.IsLoading = true;
     try {
-      const allNotes = await d.NotesService(this.chatId).getAllNotes();
-      const nonPlanningNotes = allNotes.filter((n) => n.type !== "planning");
-      const updatedNotes = [...nonPlanningNotes, ...this.PlanningNotes];
+      const notesToSave = notes ?? this.PlanningNotes;
+      const blobContent = JSON.stringify(notesToSave);
+      await d
+        .BlobAPI()
+        .saveBlob(this.chatId, PLANNING_NOTES_BLOB_NAME, blobContent);
 
-      await d.NotesService(this.chatId).save(updatedNotes);
+      if (notes) {
+        this.PlanningNotes = notes;
+      }
       this.notifySubscribers();
     } finally {
       this.IsLoading = false;

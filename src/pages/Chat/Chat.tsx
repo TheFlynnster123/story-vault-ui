@@ -4,7 +4,7 @@ import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
-import { NotesAccordion } from "./NotesAccordion";
+import { PlanningNotesAccordion } from "./PlanningNotesAccordion";
 import { useChatCache } from "../../hooks/useChatCache";
 import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
 
@@ -30,7 +30,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
 
       <ChatMessageList chatId={chatId} />
 
-      <NotesAccordion chatId={chatId} />
+      <PlanningNotesAccordion chatId={chatId} />
 
       <ChatInput ref={inputRef} chatId={chatId} />
     </ChatContainer>

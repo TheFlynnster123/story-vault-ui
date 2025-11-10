@@ -16,7 +16,7 @@ export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
     return chatGeneration.subscribe(() => forceUpdate({}));
   }, [chatGeneration]);
 
-  const { addMessage, getMessagesForLLM } = useChatCache(chatId);
+  const { addMessage } = useChatCache(chatId);
 
   const generateResponse = useCallback(
     async (userInput: string): Promise<string> => {
@@ -51,23 +51,11 @@ export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
 
   const generateImage = useCallback(async () => {
     try {
-      const messageList = await getMessagesForLLM();
-
-      const generatedPrompt = await d
-        .ImageGenerator()
-        .generatePrompt(messageList);
-
-      const jobId = await d.ImageGenerator().triggerJob(generatedPrompt);
-
-      await addMessage({
-        id: `civit-job-${Date.now()}`,
-        role: "civit-job",
-        content: JSON.stringify({ jobId }),
-      });
+      await chatGeneration.generateImage();
     } catch (e) {
       d.ErrorService().log("Failed to generate image", e);
     }
-  }, [getMessagesForLLM, addMessage]);
+  }, [chatGeneration]);
 
   return {
     generateResponse,
