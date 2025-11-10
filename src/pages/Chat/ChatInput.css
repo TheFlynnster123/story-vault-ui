@@ -1,65 +1,4 @@
-.chat-input-form {
-  display: flex;
-  padding: 10px;
-  position: relative;
-  z-index: 10; /* Ensure input stays above other elements */
-  background-color: inherit; /* Match parent background */
-  align-items: center; /* Center items vertically */
-}
-
-/* Mobile-specific adjustments */
-@media screen and (max-width: 768px) {
-  .chat-input-form {
-    position: sticky;
-    bottom: 0;
-    transform: translateZ(0);
-    will-change: transform;
-  }
-}
-
-.chat-input-field {
-  flex-grow: 1;
-  padding: 10px;
-  margin-right: 10px;
-  border-radius: 5px;
-  border: none;
-  outline: none;
-  color: black;
-  background-color: #f0f0f0;
-  min-height: 70px; /* Height for approximately 3 lines */
-  resize: none; /* Prevent user resizing */
-  font-family: inherit; /* Maintain consistent font */
-  line-height: 1.5; /* Comfortable line spacing */
-  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5); /* Example values */
-}
-
-.chat-input-button {
-  margin: 2px;
-  padding: 8px;
-  border-radius: 50%;
-  border: none;
-  background-color: #0d6efd; /* Brighter blue */
-  color: #ffffff; /* Pure white */
-  cursor: pointer;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Add subtle shadow for depth */
-}
-
-.chat-input-button:hover {
-  background-color: #0b5ed7; /* Slightly darker on hover */
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25); /* Enhanced shadow on hover */
-}
-
-.chat-input-button svg {
-  filter: brightness(1.2); /* Make icons brighter */
-}
-
-.chat-input-button .spinning {
+.spinning {
   animation: spin 1s infinite linear;
 }
 
@@ -70,9 +9,4 @@
   100% {
     transform: rotate(360deg);
   }
-}
-
-.chat-input-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
 }

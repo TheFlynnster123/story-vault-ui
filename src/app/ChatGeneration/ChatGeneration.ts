@@ -73,6 +73,34 @@ export class ChatGeneration {
     }
   }
 
+  async generateImage(): Promise<void> {
+    this.setIsLoading(true);
+
+    try {
+      this.setStatus("Generating image prompt...");
+      const messageList = d.ChatCache(this.chatId).getMessagesForLLM();
+      const generatedPrompt = await d
+        .ImageGenerator()
+        .generatePrompt(messageList);
+
+      this.setStatus("Triggering image generation...");
+      const jobId = await d.ImageGenerator().triggerJob(generatedPrompt);
+
+      this.setStatus("Saving job...");
+      await d.ChatCache(this.chatId).addMessage({
+        id: `civit-job-${Date.now()}`,
+        role: "civit-job",
+        content: JSON.stringify({ jobId }),
+      });
+    } catch (e) {
+      d.ErrorService().log("Failed to generate image", e);
+      throw e;
+    } finally {
+      this.setIsLoading(false);
+      this.setStatus();
+    }
+  }
+
   async regenerateResponse(
     messageId: string,
     feedback?: string
