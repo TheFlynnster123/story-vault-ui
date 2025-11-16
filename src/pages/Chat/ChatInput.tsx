@@ -2,11 +2,13 @@ import { useState, type FormEvent, forwardRef } from "react";
 import { IoCamera, IoSend, IoSync } from "react-icons/io5";
 import { Textarea, ActionIcon, Group, Box, Stack } from "@mantine/core";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
+import { useExpandableTextarea } from "./useExpandableTextarea";
 import "./ChatInput.css";
 
 export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ({ chatId }, ref) => {
     const [inputValue, setInputValue] = useState("");
+    const { isExpanded, handleFocus, handleBlur } = useExpandableTextarea();
     const { generateImage, generateResponse, isLoading, status } =
       useChatGeneration({ chatId });
 
@@ -35,10 +37,14 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             onChange={setInputValue}
             placeholder={status ?? "Type your message here..."}
             disabled={isLoading}
+            isExpanded={isExpanded}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
           />
           <ActionButtons
             isLoading={isLoading}
             onGenerateImage={generateImage}
+            isExpanded={isExpanded}
           />
         </Group>
       </Box>
@@ -86,41 +92,55 @@ const MessageTextarea = forwardRef<
     onChange: (value: string) => void;
     placeholder: string;
     disabled: boolean;
+    isExpanded: boolean;
+    onFocus: () => void;
+    onBlur: () => void;
   }
->(({ value, onChange, placeholder, disabled }, ref) => (
-  <Textarea
-    ref={ref}
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    placeholder={placeholder}
-    disabled={disabled}
-    minRows={5}
-    autosize
-    maxRows={10}
-    style={{ flex: 1 }}
-    styles={TEXTAREA_STYLES}
-  />
-));
+>(
+  (
+    { value, onChange, placeholder, disabled, isExpanded, onFocus, onBlur },
+    ref
+  ) => (
+    <Textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      disabled={disabled}
+      minRows={isExpanded ? 5 : 1}
+      autosize
+      maxRows={10}
+      style={{ flex: 1 }}
+      styles={TEXTAREA_STYLES}
+      onFocus={onFocus}
+      onBlur={onBlur}
+    />
+  )
+);
 
 const ActionButtons = ({
   isLoading,
   onGenerateImage,
+  isExpanded,
 }: {
   isLoading: boolean;
   onGenerateImage: () => void;
+  isExpanded: boolean;
 }) => (
   <Stack style={{ alignSelf: "center" }} justify="center">
-    <ActionIcon
-      size="input-md"
-      radius="xl"
-      variant="filled"
-      color="blue"
-      onClick={onGenerateImage}
-      disabled={isLoading}
-      aria-label="Generate Image"
-    >
-      <InputIcon isLoading={isLoading} icon={IoCamera} />
-    </ActionIcon>
+    {isExpanded && (
+      <ActionIcon
+        size="input-md"
+        radius="xl"
+        variant="filled"
+        color="blue"
+        onClick={onGenerateImage}
+        disabled={isLoading}
+        aria-label="Generate Image"
+      >
+        <InputIcon isLoading={isLoading} icon={IoCamera} />
+      </ActionIcon>
+    )}
     <ActionIcon
       size="input-md"
       radius="xl"

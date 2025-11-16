@@ -13,13 +13,8 @@ interface ChatProps {
 }
 
 export const Chat: React.FC<ChatProps> = ({ chatId }) => {
-  const { isLoading } = useChatCache(chatId);
   const { chatSettings } = useChatSettings(chatId);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!isLoading) inputRef.current?.focus();
-  }, [isLoading]);
 
   return (
     <ChatContainer
