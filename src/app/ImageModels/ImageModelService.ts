@@ -156,7 +156,6 @@ export class ImageModelService {
           return null;
         }
       },
-      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
   }
 
@@ -183,10 +182,10 @@ export class ImageModelService {
         JSON.stringify(userImageModels)
       );
 
-    // Invalidate the cache so next fetch gets fresh data
-    d.QueryClient().invalidateQueries({
-      queryKey: USER_IMAGE_MODELS_QUERY_KEY,
-    });
+    d.QueryClient().setQueryData(
+      USER_IMAGE_MODELS_QUERY_KEY,
+      JSON.stringify(userImageModels)
+    );
   }
 
   modelExists = (models: ImageModel[], model: ImageModel): boolean =>

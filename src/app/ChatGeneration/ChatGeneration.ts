@@ -90,7 +90,7 @@ export class ChatGeneration {
       await d.ChatCache(this.chatId).addMessage({
         id: `civit-job-${Date.now()}`,
         role: "civit-job",
-        content: JSON.stringify({ jobId }),
+        content: JSON.stringify({ jobId, prompt: generatedPrompt }),
       });
     } catch (e) {
       d.ErrorService().log("Failed to generate image", e);

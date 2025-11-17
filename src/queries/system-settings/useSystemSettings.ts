@@ -30,9 +30,6 @@ export const useSystemSettings = (): UseSystemSettingsResult => {
         SYSTEM_SETTINGS_QUERY_KEY,
         variables.systemSettings
       );
-      d.QueryClient().invalidateQueries({
-        queryKey: SYSTEM_SETTINGS_QUERY_KEY,
-      });
     },
   });
 

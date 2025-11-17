@@ -99,6 +99,33 @@ export class PlanningNotesService {
     }
   }
 
+  public updateNoteDefinition(
+    noteId: string,
+    field: keyof Note,
+    value: string
+  ): void {
+    const note = this.PlanningNotes.find((n) => n.id === noteId);
+    if (note) {
+      (note[field] as string) = value;
+      this.notifySubscribers();
+    }
+  }
+
+  public addNote(note: Note): void {
+    this.PlanningNotes.push(note);
+    this.notifySubscribers();
+  }
+
+  public removeNote(noteId: string): void {
+    this.PlanningNotes = this.PlanningNotes.filter((n) => n.id !== noteId);
+    this.notifySubscribers();
+  }
+
+  public setAllNotes(notes: Note[]): void {
+    this.PlanningNotes = notes;
+    this.notifySubscribers();
+  }
+
   public async savePlanningNotes(notes?: Note[]): Promise<void> {
     this.IsLoading = true;
     try {
@@ -111,6 +138,12 @@ export class PlanningNotesService {
       if (notes) {
         this.PlanningNotes = notes;
       }
+
+      d.QueryClient().setQueryData(
+        getPlanningNotesQueryKey(this.chatId),
+        notesToSave
+      );
+
       this.notifySubscribers();
     } finally {
       this.IsLoading = false;

@@ -21,6 +21,8 @@ export class MemoriesService {
   save = async (memories: Memory[]): Promise<void> => {
     const blobContent = JSON.stringify(memories);
     await d.BlobAPI().saveBlob(this.chatId, MEMORIES_BLOB_NAME, blobContent);
+
+    d.QueryClient().setQueryData(getMemoriesQueryKey(this.chatId), memories);
   };
 
   fetchMemories = async (): Promise<Memory[]> => {

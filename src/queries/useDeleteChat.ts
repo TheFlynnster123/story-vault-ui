@@ -22,8 +22,7 @@ export const useChatDeletion = () => {
       queryClient.removeQueries({
         queryKey: getPlanningNotesQueryKey(chatId),
       });
-
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: getChatIdsQueryKey(),
       });
     },

@@ -1,15 +1,3 @@
-export interface Message {
-  id: string;
-  role:
-    | "user"
-    | "system"
-    | "assistant"
-    | "civit-job"
-    | "story-photo"
-    | "delete";
-  content: string;
-}
-
 import "./ChatMessage.css";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -21,6 +9,21 @@ import {
 } from "react-icons/ri";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
 import { useChatCache } from "../../hooks/useChatCache";
+
+export interface Message {
+  id: string;
+  role: "user" | "system" | "assistant" | "civit-job" | "delete";
+  content: string;
+}
+
+export interface CivitJobMessage {
+  id: string;
+  role: "user" | "system" | "assistant" | "civit-job" | "delete";
+  content: {
+    jobId: string;
+    prompt: string;
+  };
+}
 
 export interface MessageItemProps {
   chatId: string;

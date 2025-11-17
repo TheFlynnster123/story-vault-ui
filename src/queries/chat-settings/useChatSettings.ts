@@ -37,10 +37,7 @@ export const useChatSettings = (
         getChatSettingsQueryKey(chatId),
         variables.chatSettings
       );
-      queryClient.invalidateQueries({
-        queryKey: getChatSettingsQueryKey(chatId),
-      });
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({
         queryKey: getChatIdsQueryKey(),
       });
     },

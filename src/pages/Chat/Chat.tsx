@@ -1,11 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import styled from "styled-components";
 import { ChatInput } from "./ChatInput";
 import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
 import { PlanningNotesAccordion } from "./PlanningNotesAccordion";
-import { useChatCache } from "../../hooks/useChatCache";
 import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
 
 interface ChatProps {
@@ -13,13 +12,7 @@ interface ChatProps {
 }
 
 export const Chat: React.FC<ChatProps> = ({ chatId }) => {
-  const { isLoading } = useChatCache(chatId);
   const { chatSettings } = useChatSettings(chatId);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!isLoading) inputRef.current?.focus();
-  }, [isLoading]);
 
   return (
     <ChatContainer
@@ -32,7 +25,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
 
       <PlanningNotesAccordion chatId={chatId} />
 
-      <ChatInput ref={inputRef} chatId={chatId} />
+      <ChatInput chatId={chatId} />
     </ChatContainer>
   );
 };

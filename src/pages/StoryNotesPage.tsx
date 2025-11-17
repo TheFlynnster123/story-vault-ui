@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RiArrowLeftLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 import {
@@ -14,33 +14,22 @@ import {
   Text,
 } from "@mantine/core";
 import type { Note } from "../models/Note";
-import { usePlanningNotes } from "../hooks/usePlanningNotes";
+import { usePlanningNotesCache } from "../hooks/usePlanningNotesCache";
 import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
-import isEqual from "lodash.isequal";
 
 export const StoryNotesPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
   const {
-    notes: initialNotes,
-    saveNotes,
-    isLoading,
-  } = usePlanningNotes(chatId!);
-  const [localNotes, setLocalNotes] = useState<Note[]>([]);
+    planningNotes,
+    updateNoteDefinition,
+    addNote,
+    removeNote,
+    savePlanningNotes,
+  } = usePlanningNotesCache(chatId!);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
-
-  useEffect(() => {
-    if (!isLoading) {
-      setLocalNotes([...initialNotes]);
-    }
-  }, [isLoading]);
-
-  useEffect(() => {
-    setIsDirty(!isEqual(initialNotes, localNotes));
-  }, [localNotes, initialNotes]);
 
   const handleAddNote = (type: Note["type"]) => {
     const newNote: Note = {
@@ -49,13 +38,11 @@ export const StoryNotesPage: React.FC = () => {
       name: `New Note`,
       prompt: "Write a list of key points relevant to the story:",
     };
-    setLocalNotes([...localNotes, newNote]);
+    addNote?.(newNote);
   };
 
   const handleNoteChange = (id: string, field: keyof Note, value: string) => {
-    setLocalNotes((prev) =>
-      prev.map((note) => (note.id === id ? { ...note, [field]: value } : note))
-    );
+    updateNoteDefinition?.(id, field, value);
   };
 
   const handleRemoveNote = (id: string) => {
@@ -65,14 +52,14 @@ export const StoryNotesPage: React.FC = () => {
 
   const confirmRemoveNote = () => {
     if (noteToDelete) {
-      setLocalNotes((prev) => prev.filter((note) => note.id !== noteToDelete));
+      removeNote?.(noteToDelete);
     }
     setIsConfirmModalOpen(false);
     setNoteToDelete(null);
   };
 
   const handleSave = async () => {
-    await saveNotes(localNotes);
+    await savePlanningNotes?.();
     navigate(`/chat/${chatId}`);
   };
 
@@ -81,7 +68,7 @@ export const StoryNotesPage: React.FC = () => {
   };
 
   const getNotesByType = (type: Note["type"]) =>
-    localNotes.filter((note) => note.type === type);
+    planningNotes.filter((note) => note.type === type);
 
   return (
     <Container size="md" miw="70vw" my="xl">
@@ -92,7 +79,7 @@ export const StoryNotesPage: React.FC = () => {
           handleSave();
         }}
       >
-        <StoryNotesHeader onGoBack={handleGoBack} isDirty={isDirty} />
+        <StoryNotesHeader onGoBack={handleGoBack} />
 
         <Stack>
           <NoteSection
@@ -119,13 +106,9 @@ export const StoryNotesPage: React.FC = () => {
 
 interface StoryNotesHeaderProps {
   onGoBack: () => void;
-  isDirty: boolean;
 }
 
-const StoryNotesHeader: React.FC<StoryNotesHeaderProps> = ({
-  onGoBack,
-  isDirty,
-}) => (
+const StoryNotesHeader: React.FC<StoryNotesHeaderProps> = ({ onGoBack }) => (
   <Group justify="space-between" align="center" mb="xl">
     <Group>
       <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
@@ -133,9 +116,7 @@ const StoryNotesHeader: React.FC<StoryNotesHeaderProps> = ({
       </ActionIcon>
       <Title order={2}>Story Notes</Title>
     </Group>
-    <Button type="submit" disabled={!isDirty}>
-      Save Changes
-    </Button>
+    <Button type="submit">Save Changes</Button>
   </Group>
 );
 

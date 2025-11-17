@@ -27,6 +27,11 @@ export class ChatSettingsService {
     await d
       .BlobAPI()
       .saveBlob(this.chatId, CHAT_SETTINGS_BLOB_NAME, blobContent);
+
+    d.QueryClient().setQueryData(
+      getChatSettingsQueryKey(this.chatId),
+      chatSettings
+    );
   };
 
   delete = async (): Promise<void> => {
