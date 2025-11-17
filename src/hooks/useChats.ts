@@ -1,11 +1,9 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { d } from "../app/Dependencies/Dependencies";
 
 export const getChatIdsQueryKey = () => ["chat-ids"];
 
 export const useChats = () => {
-  const queryClient = useQueryClient();
-
   const {
     data: chatIds = [],
     isLoading: isLoadingChats,
@@ -20,13 +18,8 @@ export const useChats = () => {
     refetchOnWindowFocus: false,
   });
 
-  const refreshChats = () => {
-    queryClient.invalidateQueries({ queryKey: ["chat-ids"] });
-  };
-
   return {
     chatIds,
-    refreshChats,
     isLoading: isLoadingChats,
     error: chatError,
   };

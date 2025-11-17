@@ -7,7 +7,6 @@ export interface UseMemoriesResult {
   memories: Memory[];
   isLoading: boolean;
   saveMemories: (memories: Memory[]) => Promise<void>;
-  refreshMemories: () => void;
 }
 
 export const useMemories = (chatId: string): UseMemoriesResult => {
@@ -31,12 +30,7 @@ export const useMemories = (chatId: string): UseMemoriesResult => {
       return memories;
     },
     onSuccess: (memories) => {
-      // Update cache immediately
       queryClient.setQueryData(getMemoriesQueryKey(chatId), memories);
-      // Invalidate to ensure consistency
-      queryClient.invalidateQueries({
-        queryKey: getMemoriesQueryKey(chatId),
-      });
     },
   });
 
@@ -44,14 +38,9 @@ export const useMemories = (chatId: string): UseMemoriesResult => {
     await saveMemoriesMutation.mutateAsync(memories);
   };
 
-  const refreshMemories = () => {
-    queryClient.invalidateQueries({ queryKey: getMemoriesQueryKey(chatId) });
-  };
-
   return {
     memories,
     isLoading,
     saveMemories,
-    refreshMemories,
   };
 };

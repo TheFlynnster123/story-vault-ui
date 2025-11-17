@@ -22,6 +22,8 @@ export class SystemSettingsService {
       SYSTEM_SETTINGS_BLOB_NAME,
       blobContent
     );
+
+    d.QueryClient().setQueryData(SYSTEM_SETTINGS_QUERY_KEY, systemSettings);
   };
 
   fetchSystemSettings = async (): Promise<SystemSettings | undefined> => {
