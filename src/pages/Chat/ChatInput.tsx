@@ -1,13 +1,15 @@
-import { useState, type FormEvent, forwardRef } from "react";
+import { type FormEvent, forwardRef } from "react";
 import { IoCamera, IoSend, IoSync } from "react-icons/io5";
 import { Textarea, ActionIcon, Group, Box, Stack } from "@mantine/core";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
+import { useChatInputCache } from "../../hooks/useChatInputCache";
 import { useExpandableTextarea } from "./useExpandableTextarea";
 import "./ChatInput.css";
 
 export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ({ chatId }, ref) => {
-    const [inputValue, setInputValue] = useState("");
+    const { inputValue, setInputValue, clearInputValue } =
+      useChatInputCache(chatId);
     const { isExpanded, handleFocus, handleBlur } = useExpandableTextarea();
     const { generateImage, generateResponse, isLoading, status } =
       useChatGeneration({ chatId });
@@ -17,7 +19,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       if (!inputValue.trim() || isLoading) return;
 
       generateResponse(inputValue);
-      setInputValue("");
+      clearInputValue();
     };
 
     return (
