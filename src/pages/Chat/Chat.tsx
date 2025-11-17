@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React from "react";
 import styled from "styled-components";
 import { ChatInput } from "./ChatInput";
 import "./Chat.css";
@@ -13,7 +13,6 @@ interface ChatProps {
 
 export const Chat: React.FC<ChatProps> = ({ chatId }) => {
   const { chatSettings } = useChatSettings(chatId);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   return (
     <ChatContainer
@@ -26,7 +25,7 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
 
       <PlanningNotesAccordion chatId={chatId} />
 
-      <ChatInput ref={inputRef} chatId={chatId} />
+      <ChatInput chatId={chatId} />
     </ChatContainer>
   );
 };

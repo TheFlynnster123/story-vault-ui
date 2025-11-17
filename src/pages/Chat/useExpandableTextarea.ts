@@ -1,23 +1,26 @@
 import { useState, useCallback } from "react";
 
 /**
- * Custom hook to manage expandable textarea state
- * Textarea collapses to single line when not focused, expands when clicked
+ * Custom hook to manage chat input expansion state
+ * Chat input expands when focused, collapses when focus leaves or action is taken
  */
-export const useExpandableTextarea = () => {
+export const useChatInputExpansion = () => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleFocus = useCallback(() => {
+  const expand = useCallback(() => {
     setIsExpanded(true);
   }, []);
 
-  const handleBlur = useCallback(() => {
+  const minimize = useCallback(() => {
     setIsExpanded(false);
   }, []);
 
   return {
     isExpanded,
-    handleFocus,
-    handleBlur,
+    expand,
+    minimize,
   };
 };
+
+// Keep the old export for backwards compatibility temporarily
+export const useExpandableTextarea = useChatInputExpansion;
