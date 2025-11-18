@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getChatCacheInstance } from "../queries/chat-cache/ChatCache";
-import type { Message } from "../pages/Chat/ChatMessage";
+import type { Message } from "../models/ChatMessages/Messages";
 
 export const useChatCache = (chatId: string | null) => {
   const [, forceUpdate] = useState({});

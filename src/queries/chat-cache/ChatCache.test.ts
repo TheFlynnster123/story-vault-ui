@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
-import type { Message } from "../../pages/Chat/ChatMessage";
 import { d } from "../../app/Dependencies/Dependencies";
 import { ChatCache } from "./ChatCache";
+import type { Message } from "../../models/ChatMessages/Messages";
+import { DeleteMessageUtil } from "../../models/ChatMessages/DeleteMessageUtil";
 
 // Mock external dependencies
 vi.mock("./ChatHistoryReducer");
@@ -550,11 +551,7 @@ describe("ChatCache", () => {
   }
 
   function createDeleteCommand(messageId: string): Message {
-    return {
-      id: `delete-${messageId}`,
-      role: "system",
-      content: `DELETE:${messageId}`,
-    };
+    return DeleteMessageUtil.create(messageId);
   }
 
   function createStandardMessages(): Message[] {
@@ -621,7 +618,10 @@ describe("ChatCache", () => {
   function expectApiCalledToAddMessage(chatId: string, message: Message): void {
     expect(mockChatHistoryApi.addChatMessage).toHaveBeenCalledWith(
       chatId,
-      message
+      expect.objectContaining({
+        role: message.role,
+        content: message.content,
+      })
     );
   }
 
@@ -633,16 +633,24 @@ describe("ChatCache", () => {
   }
 
   function expectApiCalledWith(chatId: string, commands: Message[]): void {
-    expect(mockChatHistoryApi.addChatMessages).toHaveBeenCalledWith(
-      chatId,
-      commands
-    );
+    const call = mockChatHistoryApi.addChatMessages.mock.calls[0];
+    expect(call[0]).toBe(chatId);
+    expect(call[1]).toHaveLength(commands.length);
+
+    commands.forEach((expectedCmd, index) => {
+      expect(call[1][index]).toMatchObject({
+        role: expectedCmd.role,
+        content: expectedCmd.content,
+      });
+    });
   }
 
   function expectDeleteCommandCreatedFor(messageId: string): void {
-    expect(mockChatHistoryReducer.createDeleteCommand).toHaveBeenCalledWith(
-      messageId
-    );
+    const call = mockChatHistoryApi.addChatMessage.mock.calls[0];
+    expect(call[1]).toMatchObject({
+      role: "delete",
+      content: JSON.stringify({ messageId }),
+    });
   }
 
   function expectMessageInCache(cache: ChatCache, message: Message): void {

@@ -1,5 +1,5 @@
 import type { ChatSettings, Note } from "../../models";
-import type { Message } from "../../pages/Chat/ChatMessage";
+import type { Message } from "../../models/ChatMessages/Messages";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
-import type { Message } from "../../pages/Chat/ChatMessage";
+import { type Message } from "../../models/ChatMessages/Messages";
+import { DeleteMessageUtil } from "../../models/ChatMessages/DeleteMessageUtil";
 
 describe("ChatHistoryReducer", () => {
   describe("reduce", () => {
@@ -103,15 +104,13 @@ describe("ChatHistoryReducer", () => {
   describe("createDeleteCommand", () => {
     it("should create valid delete command message", () => {
       const messageId = "test-id";
-      const command = ChatHistoryReducer.createDeleteCommand(messageId);
+      const command = DeleteMessageUtil.create(messageId);
 
       expect(command.role).toBe("delete");
       expect(command.id).toBeDefined();
 
       const parsedContent = JSON.parse(command.content);
-      expect(parsedContent.type).toBe("delete");
       expect(parsedContent.messageId).toBe(messageId);
-      expect(parsedContent.timestamp).toBeDefined();
     });
   });
 });

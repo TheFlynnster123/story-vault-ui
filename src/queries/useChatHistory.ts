@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Message } from "../pages/Chat/ChatMessage";
 import { d } from "../app/Dependencies/Dependencies";
+import type { Message } from "../models/ChatMessages/Messages";
 
 export const useChatHistory = (chatId: string | null) => {
   return useQuery<Message[]>({

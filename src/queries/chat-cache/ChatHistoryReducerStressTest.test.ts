@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
-import type { Message } from "../../pages/Chat/ChatMessage";
+import { type Message } from "../../models/ChatMessages/Messages";
+import { DeleteMessageUtil } from "../../models/ChatMessages/DeleteMessageUtil";
 
 describe("ChatHistoryReducer Stress Test", () => {
   it("should reduce 10,000 messages with 50% delete operations in less than 3 seconds", () => {
@@ -206,7 +207,7 @@ function generateRandomContent(size: number): string {
 }
 
 function createDeleteCommandMessage(messageId: string): Message {
-  return ChatHistoryReducer.createDeleteCommand(messageId);
+  return DeleteMessageUtil.create(messageId);
 }
 
 function countDeleteCommands(messages: Message[]): number {

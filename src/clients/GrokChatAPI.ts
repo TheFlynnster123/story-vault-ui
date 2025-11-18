@@ -1,7 +1,7 @@
 import { d } from "../app/Dependencies/Dependencies";
 import config from "../Config";
 import { EncryptionManager } from "../Managers/EncryptionManager";
-import type { Message } from "../pages/Chat/ChatMessage";
+import type { Message } from "../models/ChatMessages/Messages";
 import { AuthAPI } from "./AuthAPI";
 
 interface PostChatRequest {
