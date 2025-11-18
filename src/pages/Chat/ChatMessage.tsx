@@ -9,21 +9,7 @@ import {
 } from "react-icons/ri";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
 import { useChatCache } from "../../hooks/useChatCache";
-
-export interface Message {
-  id: string;
-  role: "user" | "system" | "assistant" | "civit-job" | "delete";
-  content: string;
-}
-
-export interface CivitJobMessage {
-  id: string;
-  role: "user" | "system" | "assistant" | "civit-job" | "delete";
-  content: {
-    jobId: string;
-    prompt: string;
-  };
-}
+import type { Message } from "../../models/ChatMessages/Messages";
 
 export interface MessageItemProps {
   chatId: string;

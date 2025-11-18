@@ -1,6 +1,6 @@
 import type { ChatSettings, Note } from "../../models";
 import type { Memory } from "../../models/Memory";
-import type { Message } from "../../pages/Chat/ChatMessage";
+import type { Message } from "../../models/ChatMessages/Messages";
 import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";

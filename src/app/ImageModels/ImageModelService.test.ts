@@ -10,6 +10,7 @@ const mockLog = vi.fn();
 const mockMapToSchedulerName = vi.fn();
 const mockEnsureQueryData = vi.fn();
 const mockInvalidateQueries = vi.fn();
+const mockSetQueryData = vi.fn();
 
 const GLOBAL_CHAT_ID = "GLOBAL_CHAT_ID";
 
@@ -30,6 +31,7 @@ vi.mock("../Dependencies/Dependencies", () => ({
     QueryClient: vi.fn(() => ({
       ensureQueryData: mockEnsureQueryData,
       invalidateQueries: mockInvalidateQueries,
+      setQueryData: mockSetQueryData,
     })),
   },
 }));

@@ -1,5 +1,6 @@
 import { d } from "../../app/Dependencies/Dependencies";
-import type { Message } from "../../pages/Chat/ChatMessage";
+import { DeleteMessageUtil } from "../../models/ChatMessages/DeleteMessageUtil";
+import { type Message } from "../../models/ChatMessages/Messages";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
 
 // Singleton instances
@@ -81,7 +82,7 @@ export class ChatCache {
     this.applyLocalDeletion(messageId);
     this.notifySubscribers();
 
-    const deleteCommand = ChatHistoryReducer.createDeleteCommand(messageId);
+    const deleteCommand = DeleteMessageUtil.create(messageId);
     await this.withLoading(() =>
       d.ChatHistoryApi().addChatMessage(this.chatId, deleteCommand)
     );
@@ -124,7 +125,7 @@ export class ChatCache {
   }
 
   private createDeleteCommands(messageIds: string[]): Message[] {
-    return messageIds.map((id) => ChatHistoryReducer.createDeleteCommand(id));
+    return messageIds.map((messageId) => DeleteMessageUtil.create(messageId));
   }
 
   private applyLocalDeletion(messageId: string): void {

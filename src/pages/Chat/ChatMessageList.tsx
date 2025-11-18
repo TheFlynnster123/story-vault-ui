@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { ChatMessage, type Message } from "./ChatMessage";
+import { ChatMessage } from "./ChatMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
 import { useChatCache } from "../../hooks/useChatCache";
+import type { Message } from "../../models/ChatMessages/Messages";
 
 interface ChatMessageListProps {
   chatId: string;

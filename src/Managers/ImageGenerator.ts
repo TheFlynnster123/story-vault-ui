@@ -1,8 +1,8 @@
 import { toSystemMessage } from "../utils/messageUtils";
-import type { Message } from "../pages/Chat/ChatMessage";
 import { ImageGenerationPrompt } from "../templates/ImageGenerationPromptTemplate";
 import { d } from "../app/Dependencies/Dependencies";
 import type { ImageModel } from "../app/ImageModels/ImageModel";
+import type { Message } from "../models/ChatMessages/Messages";
 
 export class ImageGenerator {
   public async generatePrompt(messages: Message[]): Promise<string> {
