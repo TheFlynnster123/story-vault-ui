@@ -1,6 +1,15 @@
 export interface Message {
+  role:
+    | "user"
+    | "system"
+    | "assistant"
+    | "civit-job"
+    | "delete"
+    | "edit"
+    | "chapter"
+    | "chapter-edit";
+
   id: string;
-  role: "user" | "system" | "assistant" | "civit-job" | "delete";
   content: string;
 }
 
@@ -21,4 +30,14 @@ export interface DeleteMessage extends Message {
 
 export interface DeleteMessageContent {
   messageId: string;
+}
+
+export interface EditMessage extends Message {
+  role: "edit";
+  content: string;
+}
+
+export interface EditMessageContent {
+  messageId: string;
+  newContent: string;
 }
