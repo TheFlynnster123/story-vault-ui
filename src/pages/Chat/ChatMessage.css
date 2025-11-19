@@ -21,13 +21,40 @@
   text-align: left;
 }
 
+.message-content-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 85%;
+}
+
 .message-text {
   padding: 8px 12px;
   border-radius: 10px;
   display: inline-block;
-  max-width: 85%;
-  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5); /* Example values */
+  width: 100%;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5);
   white-space: pre-wrap;
+  cursor: default;
+  box-sizing: border-box;
+  /* Smooth transition when expanding */
+  transition: min-height 0.2s ease, min-width 0.2s ease, opacity 0.2s ease;
+}
+
+/* Expand message when overlay is active to fit buttons */
+.message-content-wrapper:has(.message-overlay) {
+  min-width: 280px;
+}
+
+.message-content-wrapper:has(.message-overlay) .message-text {
+  min-height: 220px;
+}
+
+.message-text.clickable {
+  cursor: pointer;
+}
+
+.message-text.clickable:hover {
+  opacity: 0.95;
 }
 
 .message-text.user {
@@ -117,18 +144,6 @@
   transform: scale(1.05);
 }
 
-.delete-single {
-  /* Single delete button styles */
-}
-
-.delete-from-here {
-  /* Bulk delete button styles */
-}
-
-.regenerate-response {
-  /* Regenerate button specific styles */
-}
-
 .regenerate-response:hover {
   background: #007bff;
   color: white;
@@ -213,5 +228,50 @@
   .delete-button {
     padding: 6px 8px;
     font-size: 14px;
+  }
+
+  .message-content-wrapper {
+    max-width: 90%;
+  }
+
+  /* Expand for overlay on tablets */
+  .message-content-wrapper:has(.message-overlay) {
+    min-width: 240px;
+  }
+
+  .message-content-wrapper:has(.message-overlay) .message-text {
+    min-height: 200px;
+  }
+}
+
+/* For very small screens */
+@media (max-width: 480px) {
+  .message-content-wrapper {
+    max-width: 95%;
+  }
+
+  .message-text {
+    padding: 6px 10px;
+  }
+
+  /* Expand for overlay on mobile */
+  .message-content-wrapper:has(.message-overlay) {
+    min-width: 200px;
+  }
+
+  .message-content-wrapper:has(.message-overlay) .message-text {
+    min-height: 180px;
+  }
+}
+
+/* For larger screens, allow more width */
+@media (min-width: 1200px) {
+  /* Expand for overlay on large screens */
+  .message-content-wrapper:has(.message-overlay) {
+    min-width: 320px;
+  }
+
+  .message-content-wrapper:has(.message-overlay) .message-text {
+    min-height: 240px;
   }
 }

@@ -1,5 +1,6 @@
 import { d } from "../../app/Dependencies/Dependencies";
 import { DeleteMessageUtil } from "../../models/ChatMessages/DeleteMessageUtil";
+import { EditMessageUtil } from "../../models/ChatMessages/EditMessageUtil";
 import { type Message } from "../../models/ChatMessages/Messages";
 import { ChatHistoryReducer } from "./ChatHistoryReducer";
 
@@ -82,9 +83,22 @@ export class ChatCache {
     this.applyLocalDeletion(messageId);
     this.notifySubscribers();
 
-    const deleteCommand = DeleteMessageUtil.create(messageId);
+    const deleteMessage = DeleteMessageUtil.create(messageId);
     await this.withLoading(() =>
-      d.ChatHistoryApi().addChatMessage(this.chatId, deleteCommand)
+      d.ChatHistoryApi().addChatMessage(this.chatId, deleteMessage)
+    );
+  }
+
+  public async editMessage(
+    messageId: string,
+    newContent: string
+  ): Promise<void> {
+    this.applyLocalEdit(messageId, newContent);
+    this.notifySubscribers();
+
+    const editMessage = EditMessageUtil.create(messageId, newContent);
+    await this.withLoading(() =>
+      d.ChatHistoryApi().addChatMessage(this.chatId, editMessage)
     );
   }
 
@@ -94,10 +108,10 @@ export class ChatCache {
     this.applyLocalDeletionFromIndex(messageId);
     this.notifySubscribers();
 
-    const deleteCommands = this.createDeleteCommands(messageIdsToDelete);
+    const deleteMessages = this.createDeleteMessages(messageIdsToDelete);
 
     await this.withLoading(() =>
-      d.ChatHistoryApi().addChatMessages(this.chatId, deleteCommands)
+      d.ChatHistoryApi().addChatMessages(this.chatId, deleteMessages)
     );
   }
 
@@ -124,7 +138,7 @@ export class ChatCache {
     return this.Messages.slice(index).map((msg) => msg.id);
   }
 
-  private createDeleteCommands(messageIds: string[]): Message[] {
+  private createDeleteMessages(messageIds: string[]): Message[] {
     return messageIds.map((messageId) => DeleteMessageUtil.create(messageId));
   }
 
@@ -135,8 +149,16 @@ export class ChatCache {
     }
   }
 
+  private applyLocalEdit(messageId: string, newContent: string): void {
+    const index = this.Messages.findIndex((msg) => msg.id === messageId);
+    if (index !== -1) {
+      this.Messages[index].content = newContent;
+    }
+  }
+
   private applyLocalDeletionFromIndex(messageId: string): void {
     const index = this.Messages.findIndex((msg) => msg.id === messageId);
+
     if (index !== -1) {
       this.Messages.splice(index);
     }

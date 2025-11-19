@@ -4,6 +4,7 @@ import { d } from "../../app/Dependencies/Dependencies";
 import { ChatCache } from "./ChatCache";
 import type { Message } from "../../models/ChatMessages/Messages";
 import { DeleteMessageUtil } from "../../models/ChatMessages/DeleteMessageUtil";
+import { EditMessageUtil } from "../../models/ChatMessages/EditMessageUtil";
 
 // Mock external dependencies
 vi.mock("./ChatHistoryReducer");
@@ -502,6 +503,98 @@ describe("ChatCache", () => {
     });
   });
 
+  describe("Editing Single Message", () => {
+    it("should update the content of the message with matching id", async () => {
+      setupSuccessfulEditMessage();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
+
+      await cache.editMessage("3", "Updated content");
+
+      const editedMessage = cache.getMessage("3");
+      expect(editedMessage?.content).toBe("Updated content");
+      expect(cache.getMessages()).toHaveLength(messages.length);
+    });
+
+    it("should do nothing when message id does not exist", async () => {
+      setupSuccessfulEditMessage();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
+      const originalMessages = [...messages];
+
+      await cache.editMessage("nonexistent", "New content");
+
+      expect(cache.getMessages()).toEqual(originalMessages);
+    });
+
+    it("should maintain order of messages after edit", async () => {
+      setupSuccessfulEditMessage();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
+
+      await cache.editMessage("3", "Updated content");
+
+      const allMessages = cache.getMessages();
+      expect(allMessages[0].id).toBe("1");
+      expect(allMessages[1].id).toBe("2");
+      expect(allMessages[2].id).toBe("3");
+      expect(allMessages[2].content).toBe("Updated content");
+      expect(allMessages[3].id).toBe("4");
+      expect(allMessages[4].id).toBe("5");
+    });
+
+    it("should notify subscribers after local edit", async () => {
+      setupSuccessfulEditMessage();
+      const cache = createCacheWithMessages(createStandardMessages());
+      const callback = vi.fn();
+      cache.subscribe(callback);
+
+      await cache.editMessage("3", "Updated content");
+
+      expect(callback).toHaveBeenCalled();
+    });
+
+    it("should call ChatHistoryAPI with edit command", async () => {
+      setupSuccessfulEditMessage();
+      const cache = createCacheWithMessages(createStandardMessages());
+
+      await cache.editMessage("3", "Updated content");
+
+      expectApiCalledToAddMessage(
+        mockChatId,
+        createEditCommand("3", "Updated content")
+      );
+    });
+
+    it("should set IsLoading during API call", async () => {
+      const cache = createCacheWithMessages(createStandardMessages());
+      let loadingDuringCall = false;
+      mockChatHistoryApi.addChatMessage = vi.fn(async () => {
+        loadingDuringCall = cache.IsLoading;
+        return true;
+      });
+
+      await cache.editMessage("3", "Updated content");
+
+      expect(loadingDuringCall).toBe(true);
+      expect(cache.IsLoading).toBe(false);
+    });
+
+    it("should preserve other message properties when editing content", async () => {
+      setupSuccessfulEditMessage();
+      const messages = createStandardMessages();
+      const cache = createCacheWithMessages([...messages]);
+      const originalMessage = cache.getMessage("3")!;
+
+      await cache.editMessage("3", "Updated content");
+
+      const editedMessage = cache.getMessage("3")!;
+      expect(editedMessage.id).toBe(originalMessage.id);
+      expect(editedMessage.role).toBe(originalMessage.role);
+      expect(editedMessage.content).toBe("Updated content");
+    });
+  });
+
   describe("Utility Methods", () => {
     it("should return the chat id provided during construction", () => {
       const testChatId = "my-special-chat";
@@ -554,6 +647,10 @@ describe("ChatCache", () => {
     return DeleteMessageUtil.create(messageId);
   }
 
+  function createEditCommand(messageId: string, newContent: string): Message {
+    return EditMessageUtil.create(messageId, newContent);
+  }
+
   function createStandardMessages(): Message[] {
     return [
       createUserMessage("Hello", "1"),
@@ -601,6 +698,10 @@ describe("ChatCache", () => {
 
   function setupSuccessfulDeleteMessages(): void {
     mockChatHistoryApi.addChatMessages = vi.fn().mockResolvedValue(true);
+  }
+
+  function setupSuccessfulEditMessage(): void {
+    mockChatHistoryApi.addChatMessage = vi.fn().mockResolvedValue(true);
   }
 
   async function waitForInitialization(): Promise<void> {
