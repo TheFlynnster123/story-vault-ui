@@ -1,4 +1,4 @@
-import { Modal, Stack, Text, Textarea, Button, Group } from "@mantine/core";
+import { Modal, Stack, Textarea, Button, Group } from "@mantine/core";
 
 interface EditMessageModalProps {
   opened: boolean;
