@@ -22,6 +22,7 @@
 }
 
 .message-content-wrapper {
+  margin-top: 1rem;
   position: relative;
   display: inline-block;
   max-width: 85%;
@@ -53,10 +54,6 @@
   cursor: pointer;
 }
 
-.message-text.clickable:hover {
-  opacity: 0.95;
-}
-
 .message-text.user {
   background-color: rgba(0, 195, 255, 0.726);
   color: white;
@@ -64,7 +61,6 @@
 
 .message-text.system {
   background-color: rgba(0, 2, 126, 0.733);
-  color: whute;
 }
 
 /* Styling for quoted text */
@@ -105,10 +101,6 @@
 
 .message-text.clickable {
   cursor: pointer;
-}
-
-.message-text.clickable:hover {
-  opacity: 0.8;
 }
 
 .message-delete-buttons {
@@ -256,11 +248,11 @@
 
   /* Expand for overlay on mobile */
   .message-content-wrapper:has(.message-overlay) {
-    min-width: 200px;
+    min-width: 240px;
   }
 
   .message-content-wrapper:has(.message-overlay) .message-text {
-    min-height: 180px;
+    min-height: 240px;
   }
 }
 
