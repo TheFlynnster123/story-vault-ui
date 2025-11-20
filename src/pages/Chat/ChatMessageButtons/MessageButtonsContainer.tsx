@@ -1,6 +1,7 @@
 import { Stack } from "@mantine/core";
 import { RegenerateButton } from "./RegenerateButton";
 import { RegenerateWithFeedbackButton } from "./RegenerateWithFeedbackButton";
+import { EditButton } from "./EditButton";
 import { DeleteButton } from "./DeleteButton";
 import { DeleteAllBelowButton } from "./DeleteAllBelowButton";
 
@@ -21,6 +22,7 @@ export const MessageButtonsContainer: React.FC<
           <RegenerateWithFeedbackButton chatId={chatId} messageId={messageId} />
         </>
       )}
+      <EditButton chatId={chatId} messageId={messageId} />
       <DeleteButton chatId={chatId} messageId={messageId} />
       <DeleteAllBelowButton chatId={chatId} messageId={messageId} />
     </Stack>

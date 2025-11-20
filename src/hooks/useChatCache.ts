@@ -21,6 +21,8 @@ export const useChatCache = (chatId: string | null) => {
       chatCache?.getDeletePreview(messageId) || { messageCount: 0 },
     addMessage: async (message: Message) =>
       await chatCache?.addMessage(message),
+    editMessage: async (messageId: string, newContent: string) =>
+      await chatCache?.editMessage(messageId, newContent),
     deleteMessage: async (messageId: string) =>
       await chatCache?.deleteMessage(messageId),
     deleteMessagesAfterIndex: async (messageId: string) =>

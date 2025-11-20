@@ -16,18 +16,20 @@ export const RegenerateFeedbackModal: React.FC<
       opened={opened}
       onClose={onCancel}
       title="Regenerate with Feedback"
-      size="md"
+      size="xl"
+      style={{ height: "100%" }}
     >
       <Stack>
         <Text size="sm" c="dimmed">
-          Provide feedback to guide the regeneration. If left blank, the
-          response will be regenerated without additional context.
+          Automatically regenerate this response with your feedback.
         </Text>
+
         <Textarea
           placeholder="Enter your feedback here..."
           value={feedback}
           onChange={(e) => onFeedbackChange(e.currentTarget.value)}
-          minRows={4}
+          minRows={12}
+          autosize
           autoFocus
         />
         <Group justify="flex-end" mt="md">
