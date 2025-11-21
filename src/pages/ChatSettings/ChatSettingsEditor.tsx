@@ -8,6 +8,7 @@ import { RiCheckboxCircleLine } from "react-icons/ri";
 const MODEL_OPTIONS = [
   { value: "", label: "Default" },
   { value: "grok-4-0709", label: "grok-4-0709" },
+  { value: "grok-4-1-fast-reasoning", label: "grok-4-1-fast-reasoning" },
   { value: "grok-4-fast-non-reasoning", label: "grok-4-fast-non-reasoning" },
   {
     value: "grok-4-fast-reasoning",
