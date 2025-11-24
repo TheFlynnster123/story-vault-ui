@@ -10,7 +10,7 @@ export const useChatDeletion = () => {
 
   const mutation = useMutation({
     mutationFn: async (chatId: string) => {
-      await d.ChatHistoryApi().deleteChat(chatId);
+      await d.ChatAPI().deleteChat(chatId);
     },
     onSuccess: (_, chatId) => {
       queryClient.removeQueries({

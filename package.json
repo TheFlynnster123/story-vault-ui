@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "test-skip-performance": "vitest run --exclude='**/*.Performance.test.ts'",
     "analyze": "vite build && npx vite-bundle-analyzer dist"
   },
   "dependencies": {

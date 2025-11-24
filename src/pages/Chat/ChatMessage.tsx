@@ -1,13 +1,13 @@
 import "./ChatMessage.css";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import type { Message } from "../../models/ChatMessages/Messages";
 import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
 import { MessageButtonsContainer } from "./ChatMessageButtons/MessageButtonsContainer";
+import type { UserChatMessage } from "../../cqrs/UserChatProjection";
 
 export interface MessageItemProps {
   chatId: string;
-  message: Message;
+  message: UserChatMessage;
   isLastMessage: boolean;
 }
 
@@ -19,9 +19,10 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
   const [showButtons, setShowButtons] = useState(false);
 
   const messageClass =
-    message.role === "user" ? "message-user" : "message-system";
+    message.type === "user-message" ? "message-user" : "message-system";
 
-  const messageTextStyle = `message-text ${message.role}`;
+  const messageTextType = message.type === "user-message" ? "user" : "system";
+  const messageTextStyle = `message-text ${messageTextType}`;
 
   const toggleButtons = () => setShowButtons(!showButtons);
 

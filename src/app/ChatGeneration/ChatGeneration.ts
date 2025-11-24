@@ -1,9 +1,9 @@
 import type { ChatSettings, Note } from "../../models";
 import type { Memory } from "../../models/Memory";
-import type { Message } from "../../models/ChatMessages/Messages";
 import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
+import type { LLMMessage } from "../../cqrs/LLMChatProjection";
 
 const RESPONSE_PROMPT: string =
   "Consider the above notes, write a response to the conversation. Provide your response directly without a preamble.";
@@ -64,7 +64,7 @@ export class ChatGeneration {
       const response = await d.GrokChatAPI().postChat(requestMessages);
 
       this.setStatus("Saving...");
-      await d.ChatCache(chatId).addMessage(toSystemMessage(response));
+      await d.ChatService(chatId).AddSystemMessage(response);
 
       return response;
     } finally {
@@ -78,7 +78,7 @@ export class ChatGeneration {
 
     try {
       this.setStatus("Generating image prompt...");
-      const messageList = d.ChatCache(this.chatId).getMessagesForLLM();
+      const messageList = d.LLMChatProjection(this.chatId).GetMessages();
       const generatedPrompt = await d
         .ImageGenerator()
         .generatePrompt(messageList);
@@ -87,11 +87,7 @@ export class ChatGeneration {
       const jobId = await d.ImageGenerator().triggerJob(generatedPrompt);
 
       this.setStatus("Saving job...");
-      await d.ChatCache(this.chatId).addMessage({
-        id: `civit-job-${Date.now()}`,
-        role: "civit-job",
-        content: JSON.stringify({ jobId, prompt: generatedPrompt }),
-      });
+      await d.ChatService(this.chatId).CreateCivitJob(jobId, generatedPrompt);
     } catch (e) {
       d.ErrorService().log("Failed to generate image", e);
       throw e;
@@ -105,7 +101,7 @@ export class ChatGeneration {
     messageId: string,
     feedback?: string
   ): Promise<string | undefined> {
-    const message = d.ChatCache(this.chatId).getMessage(messageId);
+    const message = d.LLMChatProjection(this.chatId).GetMessage(messageId);
 
     if (!message) {
       console.warn(`Message with id ${messageId} not found`);
@@ -119,7 +115,7 @@ export class ChatGeneration {
     try {
       const originalContent = message.content;
 
-      await d.ChatCache(chatId).deleteMessage(messageId);
+      await d.ChatService(chatId).DeleteMessage(messageId);
 
       const requestMessages = await this.buildRegenerationRequestMessages(
         originalContent,
@@ -130,7 +126,7 @@ export class ChatGeneration {
       const response = await d.GrokChatAPI().postChat(requestMessages);
 
       this.setStatus("Saving...");
-      await d.ChatCache(chatId).addMessage(toSystemMessage(response));
+      await d.ChatService(chatId).AddSystemMessage(response);
 
       return response;
     } finally {
@@ -148,11 +144,11 @@ export class ChatGeneration {
 
   buildGenerationRequestMessages = async (
     includeResponsePrompt: boolean = true
-  ): Promise<Message[]> => {
+  ): Promise<LLMMessage[]> => {
     const chatSettings = await d.ChatSettingsService(this.chatId).get();
 
     const storyPrompt = this.getStoryPrompt(chatSettings);
-    const chatMessages = d.ChatCache(this.chatId).getMessagesForLLM();
+    const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
 
     this.setStatus("Planning...");
     const planningNotesService = d.PlanningNotesService(this.chatId);
@@ -162,7 +158,7 @@ export class ChatGeneration {
     this.setStatus("Fetching memories...");
     const memories = await d.MemoriesService(this.chatId).get();
 
-    const messages: Message[] = [];
+    const messages: LLMMessage[] = [];
     messages.push(toSystemMessage(storyPrompt));
     messages.push(...this.buildStoryMessages(chatSettings));
     messages.push(...chatMessages);
@@ -200,7 +196,7 @@ export class ChatGeneration {
   buildRegenerationRequestMessages = async (
     originalContent: string,
     feedback?: string
-  ): Promise<Message[]> => {
+  ): Promise<LLMMessage[]> => {
     const temporaryFeedbackMessage = this.buildTemporaryFeedbackMessage(
       originalContent,
       feedback

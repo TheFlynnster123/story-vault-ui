@@ -11,7 +11,7 @@ export const useChats = () => {
   } = useQuery({
     queryKey: getChatIdsQueryKey(),
     queryFn: async () => {
-      return await d.ChatHistoryApi().getChatIds();
+      return await d.ChatAPI().getChatIds();
     },
     refetchOnReconnect: false,
     refetchOnMount: false,

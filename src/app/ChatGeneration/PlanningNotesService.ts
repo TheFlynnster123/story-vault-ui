@@ -1,5 +1,5 @@
+import type { LLMMessage } from "../../cqrs/LLMChatProjection";
 import type { ChatSettings, Note } from "../../models";
-import type { Message } from "../../models/ChatMessages/Messages";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
 
@@ -155,7 +155,7 @@ export class PlanningNotesService {
   }
 
   public generateUpdatedPlanningNotes = async (
-    chatMessages: Message[]
+    chatMessages: LLMMessage[]
   ): Promise<void> => {
     this.IsLoading = true;
     try {
@@ -173,11 +173,11 @@ export class PlanningNotesService {
 
   private generatePlanningNoteContent = async (
     note: Note,
-    chatMessages: Message[]
+    chatMessages: LLMMessage[]
   ) => {
     const chatSettings = await d.ChatSettingsService(this.chatId).get();
 
-    const promptMessages: Message[] = [
+    const promptMessages: LLMMessage[] = [
       ...this.buildStoryMessages(chatSettings),
       ...chatMessages,
       toSystemMessage(

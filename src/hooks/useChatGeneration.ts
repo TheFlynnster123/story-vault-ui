@@ -1,7 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
-import { toUserMessage } from "../utils/messageUtils";
 import { d } from "../app/Dependencies/Dependencies";
-import { useChatCache } from "./useChatCache";
 
 export interface IUseChatGenerationProps {
   chatId: string;
@@ -16,15 +14,13 @@ export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
     return chatGeneration.subscribe(() => forceUpdate({}));
   }, [chatGeneration]);
 
-  const { addMessage } = useChatCache(chatId);
-
   const generateResponse = useCallback(
     async (userInput: string): Promise<string> => {
-      await addMessage(toUserMessage(userInput));
+      await d.ChatService(chatId).AddUserMessage(userInput);
 
       return (await chatGeneration.generateResponse()) ?? "";
     },
-    [chatGeneration, addMessage]
+    [chatGeneration]
   );
 
   const regenerateResponse = useCallback(

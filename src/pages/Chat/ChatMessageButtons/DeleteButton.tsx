@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@mantine/core";
 import { RiDeleteBinLine } from "react-icons/ri";
-import { useChatCache } from "../../../hooks/useChatCache";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
+import { d } from "../../../app/Dependencies/Dependencies";
 
 interface DeleteButtonProps {
   chatId: string;
@@ -14,10 +14,9 @@ export const DeleteButton: React.FC<DeleteButtonProps> = ({
   messageId,
 }) => {
   const [showConfirm, setShowConfirm] = useState(false);
-  const { deleteMessage } = useChatCache(chatId);
 
   const handleConfirm = () => {
-    deleteMessage(messageId);
+    d.ChatService(chatId).DeleteMessage(messageId);
     setShowConfirm(false);
   };
 
@@ -44,7 +43,6 @@ export const DeleteButton: React.FC<DeleteButtonProps> = ({
       <DeleteConfirmModal
         opened={showConfirm}
         deleteType="single"
-        messageCount={1}
         onConfirm={handleConfirm}
         onCancel={() => setShowConfirm(false)}
       />

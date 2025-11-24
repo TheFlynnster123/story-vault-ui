@@ -1,11 +1,11 @@
-import { toSystemMessage } from "../utils/messageUtils";
 import { ImageGenerationPrompt } from "../templates/ImageGenerationPromptTemplate";
 import { d } from "../app/Dependencies/Dependencies";
 import type { ImageModel } from "../app/ImageModels/ImageModel";
-import type { Message } from "../models/ChatMessages/Messages";
+import type { LLMMessage } from "../cqrs/LLMChatProjection";
+import { toSystemMessage } from "../utils/messageUtils";
 
 export class ImageGenerator {
-  public async generatePrompt(messages: Message[]): Promise<string> {
+  public async generatePrompt(messages: LLMMessage[]): Promise<string> {
     const promptMessages = [
       ...messages,
       toSystemMessage(ImageGenerationPrompt),

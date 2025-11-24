@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@mantine/core";
 import { RiEdit2Line } from "react-icons/ri";
-import { useChatCache } from "../../../hooks/useChatCache";
 import { EditMessageModal } from "./EditMessageModal";
+import { d } from "../../../app/Dependencies/Dependencies";
 
 interface EditButtonProps {
   chatId: string;
@@ -15,10 +15,9 @@ export const EditButton: React.FC<EditButtonProps> = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [editedContent, setEditedContent] = useState("");
-  const { getMessage, editMessage } = useChatCache(chatId);
 
-  const handleOpenModal = () => {
-    const message = getMessage(messageId);
+  const handleOpenModal = async () => {
+    const message = d.UserChatProjection(chatId).GetMessage(messageId);
 
     if (message) {
       setEditedContent(message.content);
@@ -28,7 +27,7 @@ export const EditButton: React.FC<EditButtonProps> = ({
 
   const handleSubmit = () => {
     if (editedContent.trim()) {
-      editMessage(messageId, editedContent);
+      d.ChatService(chatId).EditMessage(messageId, editedContent);
     }
     setShowModal(false);
   };
