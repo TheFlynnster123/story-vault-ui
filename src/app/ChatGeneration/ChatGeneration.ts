@@ -135,6 +135,25 @@ export class ChatGeneration {
     }
   }
 
+  async generateChapterSummary(): Promise<string | undefined> {
+    this.setIsLoading(true);
+
+    try {
+      const requestMessages = await this.buildChapterSummaryRequestMessages();
+
+      this.setStatus("Generating chapter summary...");
+      const summary = await d.GrokChatAPI().postChat(requestMessages);
+
+      return summary;
+    } catch (e) {
+      d.ErrorService().log("Failed to generate chapter summary", e);
+      throw e;
+    } finally {
+      this.setIsLoading(false);
+      this.setStatus();
+    }
+  }
+
   getStoryPrompt = (chatSettings: ChatSettings) => {
     if (chatSettings?.promptType == "Manual" && chatSettings?.customPrompt)
       return chatSettings.customPrompt;
@@ -209,6 +228,18 @@ export class ChatGeneration {
 
     return messages;
   };
+
+  buildChapterSummaryRequestMessages = async (): Promise<LLMMessage[]> => {
+    const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
+
+    const summaryPrompt = this.buildChapterSummaryPrompt();
+
+    return [...chatMessages, toSystemMessage(summaryPrompt)];
+  };
+
+  private buildChapterSummaryPrompt(): string {
+    return `Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without a preamble.`;
+  }
 
   private buildTemporaryFeedbackMessage(
     originalContent: string | undefined,

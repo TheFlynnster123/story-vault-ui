@@ -8,13 +8,15 @@ export class ChapterCreatedEventUtil {
   public static Create(
     title: string,
     summary: string,
-    coveredMessageIds: string[]
+    coveredMessageIds: string[],
+    nextChapterDirection?: string
   ): ChapterCreatedEvent {
     return {
       type: "ChapterCreated",
       chapterId: this.generateChapterId(),
       title,
       summary,
+      nextChapterDirection,
       coveredMessageIds,
     };
   }
@@ -30,13 +32,15 @@ export class ChapterEditedEventUtil {
   public static Create(
     chapterId: string,
     title: string,
-    summary: string
+    summary: string,
+    nextChapterDirection?: string
   ): ChapterEditedEvent {
     return {
       type: "ChapterEdited",
       chapterId,
       title,
       summary,
+      nextChapterDirection,
     };
   }
 }

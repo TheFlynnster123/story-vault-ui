@@ -61,7 +61,11 @@ export class ChatService {
   }
 
   // ---- Chapter Operations ----
-  public async AddChapter(title: string, summary: string): Promise<void> {
+  public async AddChapter(
+    title: string,
+    summary: string,
+    nextChapterDirection?: string
+  ): Promise<void> {
     const allMessages = d.UserChatProjection(this.chatId).GetMessages();
     const coveredMessageIds = allMessages
       .filter((m) => m.type !== "chapter" && !m.deleted)
@@ -70,7 +74,8 @@ export class ChatService {
     const event = ChapterCreatedEventUtil.Create(
       title,
       summary,
-      coveredMessageIds
+      coveredMessageIds,
+      nextChapterDirection
     );
 
     await d.ChatEventService(this.chatId).AddChatEvent(event);
@@ -79,9 +84,15 @@ export class ChatService {
   public async EditChapter(
     chapterId: string,
     title: string,
-    summary: string
+    summary: string,
+    nextChapterDirection?: string
   ): Promise<void> {
-    const event = ChapterEditedEventUtil.Create(chapterId, title, summary);
+    const event = ChapterEditedEventUtil.Create(
+      chapterId,
+      title,
+      summary,
+      nextChapterDirection
+    );
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 

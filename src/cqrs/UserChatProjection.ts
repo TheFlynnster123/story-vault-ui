@@ -139,16 +139,22 @@ export class UserChatProjection {
       content: event.summary,
       hiddenByChapterId: undefined,
       deleted: false,
-      data: { coveredMessageIds: [...event.coveredMessageIds] },
+      data: {
+        title: event.title,
+        nextChapterDirection: event.nextChapterDirection,
+        coveredMessageIds: [...event.coveredMessageIds],
+      },
     });
   }
 
   private processChapterEdited(event: ChapterEditedEvent) {
     const chapter = this.Messages.find(
       (m) => m.id === event.chapterId && m.type === "chapter"
-    );
+    ) as ChapterChatMessage;
     if (chapter) {
       chapter.content = event.summary;
+      chapter.data.title = event.title;
+      chapter.data.nextChapterDirection = event.nextChapterDirection;
     }
   }
 
@@ -202,7 +208,11 @@ export interface CivitJobChatMessage extends UserChatMessage {
 }
 
 export interface ChapterChatMessage extends UserChatMessage {
-  data: { coveredMessageIds: string[] };
+  data: {
+    title: string;
+    nextChapterDirection?: string;
+    coveredMessageIds: string[];
+  };
 }
 
 function toType(

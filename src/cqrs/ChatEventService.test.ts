@@ -59,6 +59,29 @@ describe("ChatEventService", () => {
       expect(mockChatEventStore.getChatEvents).toHaveBeenCalledTimes(1);
     });
 
+    it("should handle concurrent initialization calls without race conditions", async () => {
+      const events = createMockEvents(3);
+      mockChatEventStore.getChatEvents.mockResolvedValue(events);
+
+      const service = new ChatEventService(testChatId);
+
+      // Call Initialize() multiple times concurrently (simulating React's behavior)
+      const promises = [
+        service.Initialize(),
+        service.Initialize(),
+        service.Initialize(),
+      ];
+
+      await Promise.all(promises);
+
+      // Should only fetch events once
+      expect(mockChatEventStore.getChatEvents).toHaveBeenCalledTimes(1);
+
+      // Should only process events once (not duplicate)
+      expect(mockUserChatProjection.process).toHaveBeenCalledTimes(3);
+      expect(mockLLMChatProjection.process).toHaveBeenCalledTimes(3);
+    });
+
     it("should replay all events to UserChatProjection during initialization", async () => {
       const events = createMockEvents(5);
       mockChatEventStore.getChatEvents.mockResolvedValue(events);

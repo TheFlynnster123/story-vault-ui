@@ -1,7 +1,6 @@
 import type { LLMMessage } from "../cqrs/LLMChatProjection";
-import type { Message } from "../models/ChatMessages/Messages";
 
-export function toUserMessage(userMessageText: string): Message {
+export function toUserMessage(userMessageText: string): LLMMessage {
   return {
     id: `user-${Date.now()}`,
     role: "user",

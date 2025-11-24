@@ -18,6 +18,7 @@ export const getChatEventServiceInstance = (
 export class ChatEventService {
   private chatId: string;
   private Initialized: boolean = false;
+  private InitializePromise: Promise<void> | null = null;
 
   public Events: ChatEvent[] | undefined = undefined;
 
@@ -27,12 +28,20 @@ export class ChatEventService {
 
   // ---- Public Methods ----
   public async Initialize(): Promise<void> {
+    // Return existing initialization promise if already in progress
+    if (this.InitializePromise) return this.InitializePromise;
+
     if (this.Initialized) return;
 
-    this.Initialized = true;
-    this.Events = await d.ChatEventStore().getChatEvents(this.chatId);
+    // Store the promise to prevent race conditions
+    this.InitializePromise = this.doInitialize();
+    await this.InitializePromise;
+  }
 
+  private async doInitialize(): Promise<void> {
+    this.Events = await d.ChatEventStore().getChatEvents(this.chatId);
     this.initializeProjections();
+    this.Initialized = true;
   }
 
   public async AddChatEvent(chatEvent: ChatEvent): Promise<void> {

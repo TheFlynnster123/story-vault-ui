@@ -36,6 +36,7 @@ export interface ChapterCreatedEvent {
   chapterId: string;
   title: string;
   summary: string;
+  nextChapterDirection?: string;
   coveredMessageIds: string[];
 }
 
@@ -44,6 +45,7 @@ export interface ChapterEditedEvent {
   chapterId: string;
   title: string;
   summary: string;
+  nextChapterDirection?: string;
 }
 
 export interface ChapterDeletedEvent {

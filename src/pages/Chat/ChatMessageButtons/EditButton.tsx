@@ -20,7 +20,7 @@ export const EditButton: React.FC<EditButtonProps> = ({
     const message = d.UserChatProjection(chatId).GetMessage(messageId);
 
     if (message) {
-      setEditedContent(message.content);
+      setEditedContent(message.content ?? "");
       setShowModal(true);
     }
   };
