@@ -1,11 +1,11 @@
 import { d } from "../app/Dependencies/Dependencies";
 import config from "../Config";
+import type { LLMMessage } from "../cqrs/LLMChatProjection";
 import { EncryptionManager } from "../Managers/EncryptionManager";
-import type { Message } from "../models/ChatMessages/Messages";
 import { AuthAPI } from "./AuthAPI";
 
 interface PostChatRequest {
-  messages: Message[];
+  messages: LLMMessage[];
   model?: string;
 }
 
@@ -22,7 +22,7 @@ export class GrokChatAPI {
     this.encryptionManager = new EncryptionManager();
   }
 
-  public async postChat(messages: Message[]): Promise<string> {
+  public async postChat(messages: LLMMessage[]): Promise<string> {
     await this.encryptionManager.ensureKeysInitialized();
 
     const headers: Record<string, string> = {

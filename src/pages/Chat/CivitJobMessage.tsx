@@ -1,7 +1,6 @@
 import { d } from "../../app/Dependencies/Dependencies";
-import { useChatCache } from "../../hooks/useChatCache";
+import type { CivitJobChatMessage } from "../../cqrs/UserChatProjection";
 import { useCivitJob } from "../../hooks/useCivitJob";
-import type { MessageItemProps } from "./ChatMessage";
 import "./ChatMessage.css";
 import { useState } from "react";
 import styled from "styled-components";
@@ -23,20 +22,19 @@ const LoadingBubble = styled.div`
   text-align: center;
 `;
 
-export const CivitJobMessage: React.FC<MessageItemProps> = ({
-  chatId,
-  message,
-}) => {
+export interface CivitJobMessageProps {
+  chatId: string;
+  message: CivitJobChatMessage;
+}
+
+export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
-  const { getDeletePreview, deleteMessage, deleteMessagesAfterIndex } =
-    useChatCache(chatId);
 
   let jobId: string;
   try {
-    const contentJson = JSON.parse(message.content);
-    jobId = contentJson.jobId;
+    jobId = message?.data?.jobId;
   } catch (e) {
     d.ErrorService().log("Failed to parse jobId from message content", e);
     jobId = "";
@@ -63,9 +61,9 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
 
   const handleConfirmDelete = () => {
     if (deleteType === "single") {
-      deleteMessage(message.id);
+      d.ChatService(chatId).DeleteMessage(message.id);
     } else if (deleteType === "fromHere") {
-      deleteMessagesAfterIndex(message.id);
+      d.ChatService(chatId).DeleteMessageAndAllBelow(message.id);
     }
     setShowDeleteConfirm(false);
   };
@@ -78,10 +76,7 @@ export const CivitJobMessage: React.FC<MessageItemProps> = ({
     if (deleteType === "single") {
       return "Are you sure you want to delete this message?";
     } else {
-      const preview = getDeletePreview
-        ? getDeletePreview(message.id)
-        : { messageCount: 0 };
-      return `Are you sure you want to delete this message and all messages below it? This will delete ${preview.messageCount} messages.`;
+      return `Are you sure you want to delete this message and all messages below it?`;
     }
   };
 

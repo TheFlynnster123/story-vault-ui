@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@mantine/core";
 import { RiDeleteBin6Line } from "react-icons/ri";
-import { useChatCache } from "../../../hooks/useChatCache";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
+import { d } from "../../../app/Dependencies/Dependencies";
 
 interface DeleteAllBelowButtonProps {
   chatId: string;
@@ -14,14 +14,9 @@ export const DeleteAllBelowButton: React.FC<DeleteAllBelowButtonProps> = ({
   messageId,
 }) => {
   const [showConfirm, setShowConfirm] = useState(false);
-  const { getDeletePreview, deleteMessagesAfterIndex } = useChatCache(chatId);
-
-  const getMessageCount = () => {
-    return getDeletePreview ? getDeletePreview(messageId).messageCount : 0;
-  };
 
   const handleConfirm = () => {
-    deleteMessagesAfterIndex(messageId);
+    d.ChatService(chatId).DeleteMessageAndAllBelow(messageId);
     setShowConfirm(false);
   };
 
@@ -48,7 +43,6 @@ export const DeleteAllBelowButton: React.FC<DeleteAllBelowButtonProps> = ({
       <DeleteConfirmModal
         opened={showConfirm}
         deleteType="fromHere"
-        messageCount={getMessageCount()}
         onConfirm={handleConfirm}
         onCancel={() => setShowConfirm(false)}
       />

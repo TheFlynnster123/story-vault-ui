@@ -8,6 +8,7 @@ import { LuBrain } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { ActionIcon, Stack } from "@mantine/core";
 import styled from "styled-components";
+import { AddChapterButton } from "./AddChapterButton";
 
 interface ChatControlsProps {
   chatId: string;
@@ -54,6 +55,8 @@ export const ChatControls: React.FC<ChatControlsProps> = ({ chatId }) => {
         >
           <LuBrain />
         </ActionIcon>
+
+        <AddChapterButton chatId={chatId} />
       </Stack>
     </ControlsContainer>
   );

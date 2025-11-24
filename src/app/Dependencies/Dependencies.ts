@@ -1,5 +1,4 @@
 import { BlobAPI } from "../../clients/BlobAPI";
-import { ChatHistoryAPI } from "../../clients/ChatHistoryAPI";
 import { ErrorService } from "../ErrorHandling/ErrorService";
 import { GeneratedImageQuery } from "../ImageModels/GeneratedImageQuery";
 import { ImageIdExtractor } from "../ImageModels/ImageIdExtractor";
@@ -21,21 +20,36 @@ import {
   ChatGeneration,
   getChatGenerationInstance,
 } from "../ChatGeneration/ChatGeneration";
-import {
-  ChatCache,
-  getChatCacheInstance,
-} from "../../queries/chat-cache/ChatCache";
 import { ImageGenerator } from "../../Managers/ImageGenerator";
+import {
+  UserChatProjection,
+  getUserChatProjectionInstance,
+} from "../../cqrs/UserChatProjection";
+import {
+  LLMChatProjection,
+  getLLMChatProjectionInstance,
+} from "../../cqrs/LLMChatProjection";
+import {
+  ChatEventService,
+  getChatEventServiceInstance,
+} from "../../cqrs/ChatEventService";
+import { ChatEventStore } from "../../clients/ChatEventStore";
+import { ChatService } from "../../cqrs/ChatService";
+import { ChatAPI } from "../../clients/ChatAPI";
 
 export class Dependencies {
+  ChatAPI() {
+    return new ChatAPI();
+  }
+  ChatEventStore(): ChatEventStore {
+    return new ChatEventStore();
+  }
+
   MemoriesService(chatId: string) {
     return new MemoriesService(chatId);
   }
   ImageGenerator() {
     return new ImageGenerator();
-  }
-  ChatCache(chatId: string) {
-    return getChatCacheInstance(chatId) as ChatCache;
   }
   ChatGenerationService(chatId: string) {
     return getChatGenerationInstance(chatId) as ChatGeneration;
@@ -91,11 +105,20 @@ export class Dependencies {
     return new ImageModelMapper();
   }
 
-  _chatHistoryApi: ChatHistoryAPI | undefined;
+  UserChatProjection(chatId: string) {
+    return getUserChatProjectionInstance(chatId) as UserChatProjection;
+  }
 
-  ChatHistoryApi() {
-    if (!this._chatHistoryApi) this._chatHistoryApi = new ChatHistoryAPI();
-    return this._chatHistoryApi;
+  LLMChatProjection(chatId: string) {
+    return getLLMChatProjectionInstance(chatId) as LLMChatProjection;
+  }
+
+  ChatEventService(chatId: string) {
+    return getChatEventServiceInstance(chatId) as ChatEventService;
+  }
+
+  ChatService(chatId: string) {
+    return new ChatService(chatId);
   }
 }
 

@@ -3,7 +3,6 @@ import { Modal, Text, Button, Group } from "@mantine/core";
 interface DeleteConfirmModalProps {
   opened: boolean;
   deleteType: "single" | "fromHere";
-  messageCount?: number;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -11,15 +10,14 @@ interface DeleteConfirmModalProps {
 export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   opened,
   deleteType,
-  messageCount = 0,
   onConfirm,
   onCancel,
 }) => {
-  const getMessage = () => {
+  const getDeleteConfirmText = () => {
     if (deleteType === "single") {
       return "Are you sure you want to delete this message?";
     }
-    return `Are you sure you want to delete this message and all messages below it? This will delete ${messageCount} messages.`;
+    return `Are you sure you want to delete this message and all messages below it?`;
   };
 
   return (
@@ -29,7 +27,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
       title="Confirm Deletion"
       size="sm"
     >
-      <Text>{getMessage()}</Text>
+      <Text>{getDeleteConfirmText()}</Text>
       <Group justify="flex-end" mt="md">
         <Button variant="default" onClick={onCancel}>
           Cancel

@@ -6,12 +6,15 @@ import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
 import { PlanningNotesAccordion } from "./PlanningNotesAccordion";
 import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
+import { useEnsureChatInitialization } from "../../hooks/useEnsureChatInitialization";
 
 interface ChatProps {
   chatId: string;
 }
 
 export const Chat: React.FC<ChatProps> = ({ chatId }) => {
+  useEnsureChatInitialization(chatId);
+
   const { chatSettings } = useChatSettings(chatId);
 
   return (

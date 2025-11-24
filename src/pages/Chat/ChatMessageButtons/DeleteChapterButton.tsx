@@ -1,22 +1,21 @@
 import { useState } from "react";
-import { Button } from "@mantine/core";
+import { Button, Modal, Text, Group } from "@mantine/core";
 import { RiDeleteBinLine } from "react-icons/ri";
-import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { d } from "../../../app/Dependencies/Dependencies";
 
-interface DeleteButtonProps {
+interface DeleteChapterButtonProps {
   chatId: string;
-  messageId: string;
+  chapterId: string;
 }
 
-export const DeleteButton: React.FC<DeleteButtonProps> = ({
+export const DeleteChapterButton: React.FC<DeleteChapterButtonProps> = ({
   chatId,
-  messageId,
+  chapterId,
 }) => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleConfirm = () => {
-    d.ChatService(chatId).DeleteMessage(messageId);
+    d.ChatService(chatId).DeleteChapter(chapterId);
     setShowConfirm(false);
   };
 
@@ -40,12 +39,25 @@ export const DeleteButton: React.FC<DeleteButtonProps> = ({
         Delete
       </Button>
 
-      <DeleteConfirmModal
+      <Modal
         opened={showConfirm}
-        deleteType="single"
-        onConfirm={handleConfirm}
-        onCancel={() => setShowConfirm(false)}
-      />
+        onClose={() => setShowConfirm(false)}
+        title="Confirm Deletion"
+        size="sm"
+      >
+        <Text>
+          Are you sure you want to delete this chapter? The covered messages
+          will be restored.
+        </Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={() => setShowConfirm(false)}>
+            Cancel
+          </Button>
+          <Button color="red" onClick={handleConfirm}>
+            Delete
+          </Button>
+        </Group>
+      </Modal>
     </>
   );
 };
