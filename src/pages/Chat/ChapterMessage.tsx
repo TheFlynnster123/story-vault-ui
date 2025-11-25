@@ -8,7 +8,6 @@ import { ChapterContent } from "./ChapterContent";
 import { ChapterExpandedDetails } from "./ChapterExpandedMessages";
 
 const MessageContainer = styled.div`
-  cursor: pointer;
   padding: 1rem;
   background: linear-gradient(
     135deg,
@@ -45,26 +44,19 @@ export const ChapterMessage: React.FC<ChapterMessageProps> = ({
   message,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showDeleteButtons, setShowDeleteButtons] = useState(false);
 
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsExpanded(!isExpanded);
   };
 
-  const handleMessageClick = () => {
-    setShowDeleteButtons(!showDeleteButtons);
-  };
-
   return (
     <div className="message-item">
-      <MessageContainer onClick={handleMessageClick}>
+      <MessageContainer>
         <ChapterHeader>📖 {message.data.title}</ChapterHeader>
 
         <ChapterContent
-          chatId={chatId}
           message={message}
-          showDeleteButtons={showDeleteButtons}
         />
 
         <ExpandButtonContainer>

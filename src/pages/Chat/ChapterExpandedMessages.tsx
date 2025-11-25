@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { Loader } from "@mantine/core";
 import { d } from "../../app/Dependencies/Dependencies";
 import { ChatMessage } from "./ChatMessage";
+import { ChapterMessageButtons } from "./ChatMessageButtons/ChapterMessageButtons";
 
 const DetailsContainer = styled.div`
   margin-top: 1rem;
@@ -45,6 +46,12 @@ const LoadingContainer = styled.div`
   display: flex;
   justify-content: center;
   padding: 2rem;
+`;
+
+const ActionsSection = styled.div`
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 interface ChapterExpandedDetailsProps {
@@ -112,6 +119,10 @@ export const ChapterExpandedDetails: React.FC<ChapterExpandedDetailsProps> = ({
           ))
         )}
       </MessagesSection>
+
+      <ActionsSection>
+        <ChapterMessageButtons chatId={chatId} chapterId={chapterId} />
+      </ActionsSection>
     </DetailsContainer>
   );
 };
