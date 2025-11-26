@@ -76,83 +76,75 @@ export class LLMChatProjection {
 
   // ---- LLM Message Retrieval ----
   public GetMessages(): LLMMessage[] {
-    const visibleMessages = this.getVisibleMessages();
     const lastChapter = this.getLastChapter();
-    if (!lastChapter) return visibleMessages.map((m) => this.toLLMMessage(m));
+    if (!lastChapter) return this.getVisibleMessages();
 
-    const messagesSinceChapter = visibleMessages.filter(
-      (m) => this.getMessageIndex(m.id) > this.getMessageIndex(lastChapter.id)
-    );
+    const messagesSinceChapter = this.getMessagesSinceChapter(lastChapter);
 
-    if (messagesSinceChapter.length >= this.numberOfPreviousChapterMessages) {
-      return visibleMessages.map((m) => this.toLLMMessage(m));
+    if (!this.shouldIncludePreviousChapterBuffer(messagesSinceChapter)) {
+      return [
+        ...this.getPreviousChapterBufferMessages(lastChapter),
+        ...this.getVisibleMessages(),
+      ];
     }
 
-    const bufferMessages = this.getPreviousChapterBuffer(lastChapter);
-    return [
-      ...bufferMessages.map((m) => this.toLLMMessage(m)),
-      ...visibleMessages.map((m) => this.toLLMMessage(m)),
-    ];
+    return this.getVisibleMessages();
   }
 
   public GetMessage(id: string): LLMMessage | null {
     const msg = this.getMessage(id);
 
     if (!msg || msg.deleted) return null;
-    return this.toLLMMessage(msg);
+    return msg;
   }
 
   // ---- Event Handlers ----
-  private processMessageCreated(event: MessageCreatedEvent) {
+  processMessageCreated(event: MessageCreatedEvent) {
     this.messages.push(
-      this.createMessageState(event.messageId, event.role, event.content)
+      this.createMessageState(
+        event.messageId,
+        "message",
+        event.role,
+        event.content
+      )
     );
 
-    // Update last chapter format based on message count
     this.updateLastChapterFormat();
   }
 
-  private processMessageEdited(event: MessageEditedEvent) {
+  processMessageEdited(event: MessageEditedEvent) {
     const msg = this.getMessage(event.messageId);
     if (msg && !msg.deleted) msg.content = event.newContent;
   }
 
-  private processMessageDeleted(event: MessageDeletedEvent) {
+  processMessageDeleted(event: MessageDeletedEvent) {
     const msg = this.getMessage(event.messageId);
     if (msg) msg.deleted = true;
   }
 
-  private processMessagesDeleted(event: MessagesDeletedEvent) {
+  processMessagesDeleted(event: MessagesDeletedEvent) {
     event.messageIds.forEach((id) => {
       const msg = this.getMessage(id);
       if (msg) msg.deleted = true;
     });
   }
 
-  private processChapterCreated(event: ChapterCreatedEvent) {
-    // Mark covered messages as hidden
-    event.coveredMessageIds.forEach((id) => {
-      const msg = this.getMessage(id);
-      if (msg) msg.hiddenByChapterId = event.chapterId;
-    });
+  processChapterCreated(event: ChapterCreatedEvent) {
+    this.hideMessages(event.chapterId, event.coveredMessageIds);
 
-    // Downgrade previous last chapter to simple format (if exists)
     const previousLastChapter = this.getLastChapter();
-    if (previousLastChapter?.data) {
-      const { title, summary } = previousLastChapter.data;
-      this.updateChapterToSimpleFormat(previousLastChapter.id, title, summary);
-    }
+    if (!!previousLastChapter)
+      this.updateChapterToSimpleFormat(previousLastChapter.id);
 
-    // Create new chapter with full format (since it's now the last chapter)
     const chapterContent = this.formatChapterContentFull(
       event.title,
       event.summary,
-      event.nextChapterDirection,
-      event.coveredMessageIds
+      event.nextChapterDirection
     );
 
     const chapterMessage = this.createMessageState(
       event.chapterId,
+      "chapter",
       "system",
       chapterContent,
       event.coveredMessageIds
@@ -168,7 +160,14 @@ export class LLMChatProjection {
     this.messages.push(chapterMessage);
   }
 
-  private processChapterEdited(event: ChapterEditedEvent) {
+  hideMessages(chapterId: string, messageIds: string[]) {
+    messageIds.forEach((id) => {
+      const msg = this.getMessage(id);
+      if (msg) msg.hiddenByChapterId = chapterId;
+    });
+  }
+
+  processChapterEdited(event: ChapterEditedEvent) {
     const chapter = this.getMessage(event.chapterId);
     if (!chapter || !chapter.coveredMessageIds) return;
 
@@ -183,25 +182,13 @@ export class LLMChatProjection {
     const isLastChapter = this.getLastChapter()?.id === event.chapterId;
 
     if (isLastChapter) {
-      // Use full format for last chapter
-      this.updateChapterToFullFormat(
-        event.chapterId,
-        event.title,
-        event.summary,
-        event.nextChapterDirection,
-        chapter.coveredMessageIds
-      );
+      this.updateChapterToFullFormat(event.chapterId);
     } else {
-      // Use simple format for previous chapters
-      this.updateChapterToSimpleFormat(
-        event.chapterId,
-        event.title,
-        event.summary
-      );
+      this.updateChapterToSimpleFormat(event.chapterId);
     }
   }
 
-  private processChapterDeleted(event: ChapterDeletedEvent) {
+  processChapterDeleted(event: ChapterDeletedEvent) {
     const chapter = this.getMessage(event.chapterId);
     if (!chapter) return;
 
@@ -214,116 +201,115 @@ export class LLMChatProjection {
   }
 
   // ---- Helpers ----
-  private getMessage(id: string): MessageState | undefined {
-    return this.messages.find((m) => m.id === id);
-  }
+  getMessagesSinceChapter = (lastChapter: MessageState) =>
+    this.getVisibleMessages().filter(
+      (m) => this.getMessageIndex(m.id) > this.getMessageIndex(lastChapter.id)
+    );
 
-  private getMessageIndex(id: string): number {
-    return this.messages.findIndex((m) => m.id === id);
-  }
+  getVisibleChapterMessages = (chapter: MessageState) => {
+    if (!chapter.coveredMessageIds) return [];
+    return chapter.coveredMessageIds
+      .map((id) => this.getMessage(id))
+      .filter((msg) => msg !== undefined && !msg.deleted) as MessageState[];
+  };
 
-  private getVisibleMessages(): MessageState[] {
-    return this.messages.filter((m) => !m.hiddenByChapterId && !m.deleted);
-  }
+  shouldIncludePreviousChapterBuffer = (messagesSinceChapter: MessageState[]) =>
+    messagesSinceChapter.length >= this.numberOfPreviousChapterMessages;
 
-  private getLastChapter(): MessageState | null {
+  getMessage = (id: string): MessageState | undefined =>
+    this.messages.find((m) => m.id === id);
+
+  getMessageIndex = (id: string): number =>
+    this.messages.findIndex((m) => m.id === id);
+
+  getVisibleMessages = (): MessageState[] =>
+    this.messages.filter((m) => !m.hiddenByChapterId && !m.deleted);
+
+  getLastChapter(): MessageState | null {
     for (let i = this.messages.length - 1; i >= 0; i--) {
       const m = this.messages[i];
-      if (m.role === "system" && m.coveredMessageIds) return m;
+      if (m.type === "chapter") return m;
     }
+
     return null;
   }
 
-  private getPreviousChapterBuffer(lastChapter: MessageState): MessageState[] {
+  getPreviousChapterBufferMessages(lastChapter: MessageState): MessageState[] {
     if (!lastChapter.coveredMessageIds) return [];
     const bufferIds = lastChapter.coveredMessageIds.slice(
       -this.numberOfPreviousChapterMessages
     );
+
     return bufferIds
       .map((id) => this.getMessage(id))
       .filter(Boolean) as MessageState[];
   }
 
-  private formatChapterContentSimple(title: string, summary: string): string {
-    return `[Previous Chapter Summary: ${title}]\n${summary}\n[End of Chapter Summary]`;
-  }
+  formatChapterContentSimple = (title?: string, summary?: string): string =>
+    `[Previous Chapter Summary: ${title ?? ""}]\n${
+      summary ?? ""
+    }\n[End of Chapter Summary]`;
 
-  private formatChapterContentWithDirection(
+  formatChapterContentWithDirection = (
     title: string,
     summary: string,
     nextChapterDirection: string | undefined
-  ): string {
+  ): string => {
     let content = `[Previous Chapter Summary: ${title}]\n${summary}\n[End of Chapter Summary]`;
 
-    if (nextChapterDirection?.trim()) {
+    if (nextChapterDirection?.trim())
       content += `\n[Directions for continuing the story:]\n${nextChapterDirection}\n`;
-    }
 
     return content;
-  }
+  };
 
-  private formatChapterContentFull(
-    title: string,
-    summary: string,
-    nextChapterDirection: string | undefined,
-    coveredMessageIds: string[]
-  ): string {
-    const lastSixMessages = this.getLastSixChapterMessages(coveredMessageIds);
-
+  formatChapterContentFull = (
+    title?: string,
+    summary?: string,
+    nextChapterDirection?: string
+  ): string => {
     let content = "";
 
-    if (lastSixMessages.length > 0) {
-      content += "[Previous Chapter Final Messages]\n";
-      content += lastSixMessages.map((msg) => msg.content).join("\n");
-      content += "\n";
-    }
+    content += `[Previous Chapter Summary: ${title ?? ""}]\n${
+      summary ?? ""
+    }\n[End of Chapter Summary]`;
 
-    content += `[Previous Chapter Summary: ${title}]\n${summary}\n[End of Chapter Summary]`;
-
-    if (nextChapterDirection?.trim()) {
+    if (nextChapterDirection?.trim())
       content += `\n[Directions for continuing the story:]\n${nextChapterDirection}\n`;
-    }
 
     return content;
-  }
+  };
 
-  private getLastSixChapterMessages(
-    coveredMessageIds: string[]
-  ): MessageState[] {
-    const lastSixIds = coveredMessageIds.slice(-6);
-    return lastSixIds
+  getLastSixChapterMessages(coveredMessageIds: string[]): MessageState[] {
+    const validMessages = coveredMessageIds
       .map((id) => this.getMessage(id))
       .filter((msg): msg is MessageState => msg !== undefined && !msg.deleted);
+
+    return validMessages.slice(-6);
   }
 
-  private updateChapterToSimpleFormat(
-    chapterId: string,
-    title: string,
-    summary: string
-  ): void {
+  updateChapterToSimpleFormat(chapterId: string): void {
     const chapter = this.getMessage(chapterId);
     if (!chapter) return;
+
+    const { title, summary } = chapter?.data || {};
+
     chapter.content = this.formatChapterContentSimple(title, summary);
   }
 
-  private updateChapterToFullFormat(
-    chapterId: string,
-    title: string,
-    summary: string,
-    nextChapterDirection: string | undefined,
-    coveredMessageIds: string[]
-  ): void {
+  updateChapterToFullFormat(chapterId: string): void {
     const chapter = this.getMessage(chapterId);
     if (!chapter) return;
+
+    const { title, summary, nextChapterDirection } = chapter.data || {};
     chapter.content = this.formatChapterContentFull(
       title,
       summary,
-      nextChapterDirection,
-      coveredMessageIds
+      nextChapterDirection
     );
   }
 
-  private updateLastChapterFormat(): void {
+  updateLastChapterFormat(): void {
     const lastChapter = this.getLastChapter();
     if (!lastChapter?.data || !lastChapter.coveredMessageIds) return;
 
@@ -348,24 +334,20 @@ export class LLMChatProjection {
       }
     } else {
       // Use full format with last 6 covered messages
-      this.updateChapterToFullFormat(
-        lastChapter.id,
-        title,
-        summary,
-        nextChapterDirection,
-        lastChapter.coveredMessageIds
-      );
+      this.updateChapterToFullFormat(lastChapter.id);
     }
   }
 
-  private createMessageState(
+  createMessageState(
     id: string,
+    type: "message" | "chapter",
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[]
   ): MessageState {
     return {
       id,
+      type,
       role,
       content,
       hiddenByChapterId: null,
@@ -373,18 +355,12 @@ export class LLMChatProjection {
       coveredMessageIds,
     };
   }
-
-  private toLLMMessage(state: MessageState): LLMMessage {
-    return {
-      role: state.role as "user" | "assistant" | "system",
-      content: state.content,
-    };
-  }
 }
 
 // ---- Types ----
 interface MessageState {
   id: string;
+  type: "message" | "chapter";
   role: "user" | "assistant" | "system";
   content: string;
   hiddenByChapterId: string | null;
