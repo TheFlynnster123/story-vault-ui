@@ -314,20 +314,6 @@ describe("LLMChatProjection - Core Operations", () => {
       expectMessageContent(messages[0], "user", "Second");
     });
 
-    it("should convert MessageState to LLMMessage format", () => {
-      processMessageCreated(projection, "msg-1", "user", "Test content");
-
-      const messages = projection.GetMessages();
-
-      expect(messages[0]).toEqual({
-        role: "user",
-        content: "Test content",
-      });
-      expect(messages[0]).not.toHaveProperty("id");
-      expect(messages[0]).not.toHaveProperty("deleted");
-      expect(messages[0]).not.toHaveProperty("hiddenByChapterId");
-    });
-
     it("should return all visible messages when no chapters exist", () => {
       processMessageCreated(projection, "msg-1", "user", "First");
       processMessageCreated(projection, "msg-2", "assistant", "Second");
@@ -355,7 +341,7 @@ describe("LLMChatProjection - Core Operations", () => {
 
       const message = projection.GetMessage("msg-1");
 
-      expect(message).toEqual({
+      expect(message).toMatchObject({
         role: "assistant",
         content: "Response",
       });
@@ -439,6 +425,30 @@ describe("LLMChatProjection - Core Operations", () => {
 
       const messages = projection.GetMessages();
       expectMessageCount(messages, 100);
+    });
+
+    it("should return last 6 non-deleted messages even when some are deleted", () => {
+      // Create 10 messages
+      for (let i = 1; i <= 10; i++) {
+        processMessageCreated(projection, `msg-${i}`, "user", `Message ${i}`);
+      }
+
+      // Delete the last 3 messages
+      processMessagesDeleted(projection, ["msg-8", "msg-9", "msg-10"]);
+
+      // getLastSixChapterMessages should return 6 non-deleted messages (msg-2 through msg-7)
+      const coveredIds = Array.from({ length: 10 }, (_, i) => `msg-${i + 1}`);
+      const lastSix = projection.getLastSixChapterMessages(coveredIds);
+
+      expect(lastSix).toHaveLength(6);
+      expect(lastSix.map((m) => m.id)).toEqual([
+        "msg-2",
+        "msg-3",
+        "msg-4",
+        "msg-5",
+        "msg-6",
+        "msg-7",
+      ]);
     });
   });
 

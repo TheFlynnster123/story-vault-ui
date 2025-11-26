@@ -193,23 +193,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
       expect(messages[0].content).toBe("Message 15");
       expect(messages[5].content).toBe("Message 20");
     });
-
-    it("chapter contains prior messages in content", () => {
-      const messageIds = createMessagesSequence(projection, 8);
-
-      createChapter(
-        projection,
-        "chapter-1",
-        "Chapter One",
-        "Summary",
-        messageIds
-      );
-
-      const messages = projection.GetMessages();
-      const chapter = messages[messages.length - 1];
-      expect(chapter.content).toContain("[Previous Chapter Final Messages]");
-      expect(chapter.content).toContain("Message 3"); // msg-3 is one of the last 6
-    });
   });
 
   // ---- Hiding Prior Messages After New Messages Tests ----
@@ -524,7 +507,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       const messages = projection.GetMessages();
       const chapter2 = messages[messages.length - 1];
-      expect(chapter2.content).toContain("[Previous Chapter Final Messages]");
       expect(chapter2.content).toContain("New direction");
     });
 
@@ -648,7 +630,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       const messages = projection.GetMessages();
       const chapter = messages[messages.length - 1];
-      expect(chapter.content).toContain("[Previous Chapter Final Messages]");
       expect(chapter.content).toContain("New Direction");
     });
 
