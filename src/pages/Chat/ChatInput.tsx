@@ -115,6 +115,7 @@ const ActionButtons = ({
 }) => {
   const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
+    e.preventDefault();
 
     onGenerateImage();
     onMinimize();
@@ -122,6 +123,7 @@ const ActionButtons = ({
 
   const handleSend = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
+    e.preventDefault();
 
     onSend();
     onMinimize();
@@ -135,8 +137,8 @@ const ActionButtons = ({
           radius="xl"
           variant="filled"
           color="blue"
-          onMouseDown={handleGenerateImage}
-          onTouchStart={handleGenerateImage}
+          onMouseUp={handleGenerateImage}
+          onTouchEnd={handleGenerateImage}
           disabled={isLoading}
           aria-label="Generate Image"
           tabIndex={0}
@@ -149,8 +151,8 @@ const ActionButtons = ({
         radius="xl"
         variant="filled"
         color="blue"
-        onMouseDown={handleSend}
-        onTouchStart={handleSend}
+        onMouseUp={handleSend}
+        onTouchEnd={handleSend}
         disabled={isLoading}
         aria-label={isLoading ? "Sending..." : "Send"}
         tabIndex={0}
