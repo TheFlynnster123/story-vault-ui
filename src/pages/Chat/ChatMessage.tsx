@@ -4,7 +4,6 @@ import ReactMarkdown from "react-markdown";
 import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
 import { MessageButtonsContainer } from "./ChatMessageButtons/MessageButtonsContainer";
 import type { UserChatMessage } from "../../cqrs/UserChatProjection";
-import styled, { keyframes } from "styled-components";
 import {
   MessageContentWrapper,
   MessageItem,

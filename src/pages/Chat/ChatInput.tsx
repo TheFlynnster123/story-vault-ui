@@ -129,12 +129,16 @@ const ActionButtons = ({
   onMinimize: () => void;
   isExpanded: boolean;
 }) => {
-  const handleGenerateImage = () => {
+  const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+
     onGenerateImage();
     onMinimize();
   };
 
-  const handleSend = () => {
+  const handleSend = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+
     onSend();
     onMinimize();
   };
