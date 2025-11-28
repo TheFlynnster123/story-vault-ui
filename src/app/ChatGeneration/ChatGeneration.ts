@@ -44,25 +44,21 @@ export class ChatGeneration {
     this.notifySubscribers();
   };
 
-  private getMessageContextService() {
-    return d.LLMMessageContextService(this.chatId);
-  }
-
   async generateResponse(): Promise<string | undefined> {
     const chatId = this.chatId;
 
     this.setIsLoading(true);
 
     try {
-      const contextService = this.getMessageContextService();
-      const requestMessages =
-        await contextService.buildGenerationRequestMessages();
+      const requestMessages = await d
+        .LLMMessageContextService(this.chatId)
+        .buildGenerationRequestMessages();
 
       this.setStatus("Generating response...");
       const response = await d.GrokChatAPI().postChat(requestMessages);
 
       this.setStatus("Saving...");
-      await d.ChatService(chatId).AddSystemMessage(response);
+      await d.ChatService(chatId).AddAssistantMessage(response);
 
       return response;
     } finally {
@@ -115,18 +111,15 @@ export class ChatGeneration {
 
       await d.ChatService(chatId).DeleteMessage(messageId);
 
-      const contextService = this.getMessageContextService();
-      const requestMessages =
-        await contextService.buildRegenerationRequestMessages(
-          originalContent,
-          feedback
-        );
+      const requestMessages = await d
+        .LLMMessageContextService(this.chatId)
+        .buildRegenerationRequestMessages(originalContent, feedback);
 
       this.setStatus("Generating response...");
       const response = await d.GrokChatAPI().postChat(requestMessages);
 
-      this.setStatus("Saving...");
-      await d.ChatService(chatId).AddSystemMessage(response);
+      this.setStatus("Saving....");
+      await d.ChatService(chatId).AddAssistantMessage(response);
 
       return response;
     } finally {
@@ -139,9 +132,9 @@ export class ChatGeneration {
     this.setIsLoading(true);
 
     try {
-      const contextService = this.getMessageContextService();
-      const requestMessages =
-        await contextService.buildChapterSummaryRequestMessages();
+      const requestMessages = await d
+        .LLMMessageContextService(this.chatId)
+        .buildChapterSummaryRequestMessages();
 
       this.setStatus("Generating chapter summary...");
       const summary = await d.GrokChatAPI().postChat(requestMessages);
