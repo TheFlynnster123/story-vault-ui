@@ -4,7 +4,7 @@ import { Textarea, ActionIcon, Group, Box, Stack } from "@mantine/core";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
 import { useChatInputCache } from "../../hooks/useChatInputCache";
 import { useChatInputExpansion } from "./useExpandableTextarea";
-import "./ChatInput.css";
+import { SpinningIcon } from "./ChatInput.styled";
 import React from "react";
 
 export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
@@ -81,7 +81,9 @@ const InputIcon = ({
   icon: typeof IoCamera;
 }) =>
   isLoading ? (
-    <IoSync className="spinning" style={ICON_STYLE} />
+    <SpinningIcon>
+      <IoSync style={ICON_STYLE} />
+    </SpinningIcon>
   ) : (
     <Icon style={ICON_STYLE} />
   );

@@ -6,7 +6,7 @@ import App from "./App.tsx";
 // core styles are required for all packages
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
-import "./index.css";
+import { GlobalStyles } from "./index.styled";
 import { Auth0Provider } from "@auth0/auth0-react";
 import config from "./Config.ts";
 import { Notifications } from "@mantine/notifications";
@@ -22,6 +22,7 @@ createRoot(document.getElementById("root")!).render(
       }}
     >
       <MantineProvider defaultColorScheme="dark">
+        <GlobalStyles />
         <Notifications />
         <App />
       </MantineProvider>

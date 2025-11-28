@@ -1,9 +1,10 @@
 import { d } from "../../app/Dependencies/Dependencies";
 import type { CivitJobChatMessage } from "../../cqrs/UserChatProjection";
 import { useCivitJob } from "../../hooks/useCivitJob";
-import "./ChatMessage.css";
+import "./ChatMessage.styled.ts";
 import { useState } from "react";
 import styled from "styled-components";
+import { MessageItem } from "./ChatMessage.styled.ts";
 
 const MessageContent = styled.div`
   max-width: 80vw;
@@ -73,11 +74,10 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
   };
 
   const getConfirmationMessage = () => {
-    if (deleteType === "single") {
+    if (deleteType === "single")
       return "Are you sure you want to delete this message?";
-    } else {
+    else
       return `Are you sure you want to delete this message and all messages below it?`;
-    }
   };
 
   const handleMessageClick = () => {
@@ -85,7 +85,7 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
   };
 
   return (
-    <div className="message-item message-system">
+    <MessageItem $type="system">
       <MessageContent onClick={handleMessageClick}>
         {getStatusMessage() && (
           <LoadingBubble>{getStatusMessage()}</LoadingBubble>
@@ -131,6 +131,6 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
           </div>
         </div>
       )}
-    </div>
+    </MessageItem>
   );
 };

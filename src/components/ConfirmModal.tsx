@@ -1,5 +1,14 @@
 import React from "react";
-import "./ConfirmModal.css";
+import {
+  Actions,
+  CancelButton,
+  CloseButton,
+  ConfirmButton,
+  Content,
+  Dialog,
+  Header,
+  Overlay,
+} from "./ConfirmModal.styled";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -19,26 +28,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="confirm-modal-overlay">
-      <div className="confirm-modal-dialog">
-        <div className="confirm-modal-header">
+    <Overlay>
+      <Dialog>
+        <Header>
           <h2>{title}</h2>
-          <button className="confirm-modal-close" onClick={onCancel}>
-            ×
-          </button>
-        </div>
-        <div className="confirm-modal-content">
+          <CloseButton onClick={onCancel}>×</CloseButton>
+        </Header>
+
+        <Content>
           <p>{message}</p>
-        </div>
-        <div className="confirm-modal-actions">
-          <button className="confirm-modal-cancel" onClick={onCancel}>
-            Cancel
-          </button>
-          <button className="confirm-modal-confirm" onClick={onConfirm}>
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
+        </Content>
+
+        <Actions>
+          <CancelButton onClick={onCancel}>Cancel</CancelButton>
+          <ConfirmButton onClick={onConfirm}>Confirm</ConfirmButton>
+        </Actions>
+      </Dialog>
+    </Overlay>
   );
 };

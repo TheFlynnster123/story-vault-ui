@@ -2,21 +2,23 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { Collapse, Button } from "@mantine/core";
 import { RiArrowDownSLine, RiArrowUpSLine } from "react-icons/ri";
-import type { ChapterChatMessage } from "../../cqrs/UserChatProjection";
-import "./ChatMessage.css";
+import type { ChapterChatMessage } from "../../../cqrs/UserChatProjection";
+import "../ChatMessage.styled.ts";
 import { ChapterContent } from "./ChapterContent";
 import { ChapterExpandedDetails } from "./ChapterExpandedMessages";
+import { NextChapterDirection } from "./NextChapterDirection";
 
 const MessageContainer = styled.div`
   padding: 1rem;
   background: linear-gradient(
     135deg,
-    rgba(99, 102, 241, 0.1) 0%,
-    rgba(168, 85, 247, 0.1) 100%
+    rgba(199, 152, 0, 0.8) 0%,
+    rgba(126, 92, 0, 0.8) 100%
   );
-  border-left: 4px solid rgba(99, 102, 241, 0.5);
-  border-radius: 8px;
-  margin: 1rem 0;
+  border-left: 4px solid rgba(97, 71, 0, 0.5);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  margin-top: 1rem;
 `;
 
 const ChapterHeader = styled.div`
@@ -25,7 +27,7 @@ const ChapterHeader = styled.div`
   gap: 0.5rem;
   font-weight: 600;
   font-size: 1.1rem;
-  color: rgba(99, 102, 241, 1);
+  color: rgba(58, 52, 1, 1);
   margin-bottom: 0.5rem;
 `;
 
@@ -35,13 +37,13 @@ const ExpandButtonContainer = styled.div`
 
 export interface ChapterMessageProps {
   chatId: string;
-  message: ChapterChatMessage;
+  chapter: ChapterChatMessage;
   isLastMessage?: boolean;
 }
 
 export const ChapterMessage: React.FC<ChapterMessageProps> = ({
   chatId,
-  message,
+  chapter,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -53,11 +55,9 @@ export const ChapterMessage: React.FC<ChapterMessageProps> = ({
   return (
     <div className="message-item">
       <MessageContainer>
-        <ChapterHeader>📖 {message.data.title}</ChapterHeader>
+        <ChapterHeader>📖 {chapter.data.title}</ChapterHeader>
 
-        <ChapterContent
-          message={message}
-        />
+        <ChapterContent chapter={chapter} />
 
         <ExpandButtonContainer>
           <Button
@@ -73,13 +73,11 @@ export const ChapterMessage: React.FC<ChapterMessageProps> = ({
         </ExpandButtonContainer>
 
         <Collapse in={isExpanded}>
-          <ChapterExpandedDetails
-            chatId={chatId}
-            chapterId={message.id}
-            nextChapterDirection={message.data.nextChapterDirection}
-          />
+          <ChapterExpandedDetails chatId={chatId} chapterId={chapter.id} />
         </Collapse>
       </MessageContainer>
+
+      <NextChapterDirection chapter={chapter} />
     </div>
   );
 };

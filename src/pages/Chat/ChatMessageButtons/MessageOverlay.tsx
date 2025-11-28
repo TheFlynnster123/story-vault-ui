@@ -1,4 +1,7 @@
-import "./MessageOverlay.css";
+import {
+  MessageOverlayContainer,
+  MessageOverlayContent,
+} from "./MessageOverlay.styled";
 import type { ReactNode } from "react";
 
 interface MessageOverlayProps {
@@ -15,13 +18,10 @@ export const MessageOverlay: React.FC<MessageOverlayProps> = ({
   if (!show) return null;
 
   return (
-    <div className="message-overlay" onClick={onBackdropClick}>
-      <div
-        className="message-overlay-content"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <MessageOverlayContainer onClick={onBackdropClick}>
+      <MessageOverlayContent onClick={(e) => e.stopPropagation()}>
         {children}
-      </div>
-    </div>
+      </MessageOverlayContent>
+    </MessageOverlayContainer>
   );
 };

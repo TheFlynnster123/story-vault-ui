@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { ChatMessage } from "./ChatMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
-import { ChapterMessage } from "./ChapterMessage";
+import { ChapterMessage } from "./Chapter/ChapterMessage";
 import { useUserChatProjection } from "../../hooks/useUserChatProjection";
 import type {
   UserChatMessage,
@@ -23,6 +23,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({ chatId }) => {
     <Virtuoso
       ref={virtuosoRef}
       data={messages}
+      style={{ height: "100%", width: "100%" }}
       followOutput={shouldFollowOutput ? "smooth" : false}
       atBottomStateChange={(atBottom) => setShouldFollowOutput(atBottom)}
       itemContent={(index, msg) =>
@@ -57,7 +58,7 @@ function renderMessageItem(
       <ChapterMessage
         chatId={chatId}
         key={msg.id}
-        message={msg as ChapterChatMessage}
+        chapter={msg as ChapterChatMessage}
       />
     );
   }

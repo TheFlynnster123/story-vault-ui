@@ -1,5 +1,9 @@
 import React from "react";
-import "./NoteItem.css";
+import {
+  NoteItemCard,
+  NoteItemHeader,
+  NoteItemContent,
+} from "./NoteItem.styled";
 import type { Note } from "../../../models";
 
 interface NoteItemProps {
@@ -8,13 +12,13 @@ interface NoteItemProps {
 
 export const NoteItem: React.FC<NoteItemProps> = ({ note }) => {
   return (
-    <div className="note-item-card">
-      <div className="note-item-header">
+    <NoteItemCard>
+      <NoteItemHeader>
         <h3>{note.name}</h3>
-      </div>
-      <div className="note-item-content">
+      </NoteItemHeader>
+      <NoteItemContent>
         <p>{note.content}</p>
-      </div>
-    </div>
+      </NoteItemContent>
+    </NoteItemCard>
   );
 };

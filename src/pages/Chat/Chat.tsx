@@ -1,7 +1,6 @@
 import React from "react";
 import styled from "styled-components";
 import { ChatInput } from "./ChatInput";
-import "./Chat.css";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
 import { PlanningNotesAccordion } from "./PlanningNotesAccordion";
@@ -44,6 +43,11 @@ const ChatContainer = styled.div.attrs<{
   display: flex;
   flex-direction: column;
   position: relative;
+  height: 100%;
+
+  flex: 1;
+  min-height: 0;
+
   background-color: ${(props) =>
     props.$backgroundPhotoBase64 ? "transparent" : "black"};
   background-image: ${(props) =>
