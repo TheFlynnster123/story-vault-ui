@@ -164,7 +164,7 @@ const ActionButtons = ({
 const ICON_STYLE = {
   width: "50%",
   height: "50%",
-  color: "rgba(20, 20, 29, 1)",
+  color: "rgba(0, 6, 31, 1)",
 };
 
 const TEXTAREA_STYLES = {

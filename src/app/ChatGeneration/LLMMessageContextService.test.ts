@@ -1,0 +1,480 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { LLMMessageContextService } from "./LLMMessageContextService";
+import { d } from "../Dependencies/Dependencies";
+import type { ChatSettings, Note } from "../../models";
+import type { Memory } from "../../models/Memory";
+import type { LLMMessage } from "../../cqrs/LLMChatProjection";
+import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
+
+vi.mock("../Dependencies/Dependencies");
+
+describe("LLMMessageContextService", () => {
+  const testChatId = "test-chat-123";
+
+  let mockChatSettingsService: any;
+  let mockLLMChatProjection: any;
+  let mockPlanningNotesService: any;
+  let mockMemoriesService: any;
+
+  beforeEach(() => {
+    mockChatSettingsService = {
+      get: vi.fn().mockResolvedValue(createDefaultChatSettings()),
+    };
+
+    mockLLMChatProjection = {
+      GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
+    };
+
+    mockPlanningNotesService = {
+      generateUpdatedPlanningNotes: vi.fn().mockResolvedValue(undefined),
+      getPlanningNotes: vi.fn().mockReturnValue([]),
+    };
+
+    mockMemoriesService = {
+      get: vi.fn().mockResolvedValue([]),
+    };
+
+    vi.mocked(d.ChatSettingsService).mockReturnValue(mockChatSettingsService);
+    vi.mocked(d.LLMChatProjection).mockReturnValue(mockLLMChatProjection);
+    vi.mocked(d.PlanningNotesService).mockReturnValue(mockPlanningNotesService);
+    vi.mocked(d.MemoriesService).mockReturnValue(mockMemoriesService);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // ---- getStoryPrompt Tests ----
+  describe("getStoryPrompt", () => {
+    it("should return custom prompt when promptType is Manual", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatSettings =
+        createChatSettingsWithCustomPrompt("My custom prompt");
+
+      const result = service.getStoryPrompt(chatSettings);
+
+      expect(result).toBe("My custom prompt");
+    });
+
+    it("should return FirstPersonCharacterPrompt when promptType is not Manual", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatSettings = createDefaultChatSettings();
+
+      const result = service.getStoryPrompt(chatSettings);
+
+      expect(result).toBe(FirstPersonCharacterPrompt);
+    });
+
+    it("should return FirstPersonCharacterPrompt when customPrompt is empty", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatSettings = createChatSettingsWithEmptyCustomPrompt();
+
+      const result = service.getStoryPrompt(chatSettings);
+
+      expect(result).toBe(FirstPersonCharacterPrompt);
+    });
+  });
+
+  // ---- buildNoteMessages Tests ----
+  describe("buildNoteMessages", () => {
+    it("should return empty array when no notes provided", () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = service.buildNoteMessages([]);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should create system message for each note", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const notes = createMockNotes();
+
+      const result = service.buildNoteMessages(notes);
+
+      expect(result).toHaveLength(2);
+      expectSystemMessage(result[0], "Note 1\nContent 1");
+      expectSystemMessage(result[1], "Note 2\nContent 2");
+    });
+
+    it("should handle notes with undefined content", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const notes = [createNoteWithUndefinedContent()];
+
+      const result = service.buildNoteMessages(notes);
+
+      expect(result).toHaveLength(1);
+      expectSystemMessage(result[0], "Empty Note\n");
+    });
+  });
+
+  // ---- buildMemoryMessages Tests ----
+  describe("buildMemoryMessages", () => {
+    it("should return empty array when no memories provided", () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = service.buildMemoryMessages([]);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should combine memories into single system message", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const memories = createMockMemories();
+
+      const result = service.buildMemoryMessages(memories);
+
+      expect(result).toHaveLength(1);
+      expectSystemMessage(
+        result[0],
+        "# Memories\r\nMemory content 1\r\nMemory content 2"
+      );
+    });
+
+    it("should filter out empty memory content", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const memories = createMemoriesWithEmptyContent();
+
+      const result = service.buildMemoryMessages(memories);
+
+      expect(result).toHaveLength(1);
+      expectSystemMessage(result[0], "# Memories\r\nValid content");
+    });
+
+    it("should return empty array when all memories have empty content", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const memories = createAllEmptyMemories();
+
+      const result = service.buildMemoryMessages(memories);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ---- buildStoryMessages Tests ----
+  describe("buildStoryMessages", () => {
+    it("should return empty array when story is undefined", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatSettings = createChatSettingsWithoutStory();
+
+      const result = service.buildStoryMessages(chatSettings);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should return empty array when story is empty", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatSettings = createChatSettingsWithEmptyStory();
+
+      const result = service.buildStoryMessages(chatSettings);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should create system message with story content", () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatSettings = createChatSettingsWithStory("My story content");
+
+      const result = service.buildStoryMessages(chatSettings);
+
+      expect(result).toHaveLength(1);
+      expectSystemMessage(result[0], "# Story\r\nMy story content");
+    });
+  });
+
+  // ---- buildGenerationRequestMessages Tests ----
+  describe("buildGenerationRequestMessages", () => {
+    it("should fetch chat settings for the correct chatId", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      await service.buildGenerationRequestMessages();
+
+      expect(d.ChatSettingsService).toHaveBeenCalledWith(testChatId);
+    });
+
+    it("should get chat messages from LLMChatProjection", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      await service.buildGenerationRequestMessages();
+
+      expect(d.LLMChatProjection).toHaveBeenCalledWith(testChatId);
+      expect(mockLLMChatProjection.GetMessages).toHaveBeenCalled();
+    });
+
+    it("should generate updated planning notes", async () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatMessages = createMockChatMessages();
+      mockLLMChatProjection.GetMessages.mockReturnValue(chatMessages);
+
+      await service.buildGenerationRequestMessages();
+
+      expect(
+        mockPlanningNotesService.generateUpdatedPlanningNotes
+      ).toHaveBeenCalledWith(chatMessages);
+    });
+
+    it("should fetch memories", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      await service.buildGenerationRequestMessages();
+
+      expect(d.MemoriesService).toHaveBeenCalledWith(testChatId);
+      expect(mockMemoriesService.get).toHaveBeenCalled();
+    });
+
+    it("should include response prompt by default", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.content).toContain("Consider the above notes");
+    });
+
+    it("should exclude response prompt when includeResponsePrompt is false", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(false);
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).not.toContain("Consider the above notes");
+    });
+
+    it("should build messages in correct order", async () => {
+      const service = new LLMMessageContextService(testChatId);
+      mockChatSettingsService.get.mockResolvedValue(
+        createChatSettingsWithStory("Story")
+      );
+      mockPlanningNotesService.getPlanningNotes.mockReturnValue(
+        createMockNotes()
+      );
+      mockMemoriesService.get.mockResolvedValue(createMockMemories());
+
+      const result = await service.buildGenerationRequestMessages();
+
+      expectFirstMessageIsStoryPrompt(result);
+      expectMessagesContainStory(result, "# Story\r\nStory");
+      expectMessagesContainChatMessages(result);
+      expectMessagesContainNotes(result);
+      expectMessagesContainMemories(result);
+    });
+  });
+
+  // ---- buildRegenerationRequestMessages Tests ----
+  describe("buildRegenerationRequestMessages", () => {
+    it("should include feedback message when feedback is provided", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildRegenerationRequestMessages(
+        "Original content",
+        "Make it shorter"
+      );
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toContain("Original content");
+      expect(lastMessage.content).toContain("Make it shorter");
+    });
+
+    it("should not include feedback message when feedback is undefined", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildRegenerationRequestMessages(
+        "Original content"
+      );
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).not.toContain("Original content");
+    });
+
+    it("should not include feedback message when feedback is empty", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildRegenerationRequestMessages(
+        "Original content",
+        "   "
+      );
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).not.toContain("Please regenerate");
+    });
+
+    it("should not include response prompt", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildRegenerationRequestMessages(
+        "Original",
+        "Feedback"
+      );
+
+      const hasResponsePrompt = result.some((m) =>
+        m.content.includes("Consider the above notes")
+      );
+      expect(hasResponsePrompt).toBe(false);
+    });
+  });
+
+  // ---- buildChapterSummaryRequestMessages Tests ----
+  describe("buildChapterSummaryRequestMessages", () => {
+    it("should include chat messages", async () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatMessages = createMockChatMessages();
+      mockLLMChatProjection.GetMessages.mockReturnValue(chatMessages);
+
+      const result = await service.buildChapterSummaryRequestMessages();
+
+      expect(result.slice(0, -1)).toEqual(chatMessages);
+    });
+
+    it("should include chapter summary prompt", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildChapterSummaryRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.content).toContain("generate a brief summary");
+    });
+  });
+
+  // ---- Helper Functions ----
+  function createDefaultChatSettings(): ChatSettings {
+    return {
+      timestampCreatedUtcMs: Date.now(),
+      chatTitle: "Test Chat",
+      promptType: "First Person Character",
+    };
+  }
+
+  function createChatSettingsWithCustomPrompt(
+    customPrompt: string
+  ): ChatSettings {
+    return {
+      ...createDefaultChatSettings(),
+      promptType: "Manual",
+      customPrompt,
+    };
+  }
+
+  function createChatSettingsWithEmptyCustomPrompt(): ChatSettings {
+    return {
+      ...createDefaultChatSettings(),
+      promptType: "Manual",
+      customPrompt: "",
+    };
+  }
+
+  function createChatSettingsWithStory(story: string): ChatSettings {
+    return {
+      ...createDefaultChatSettings(),
+      story,
+    };
+  }
+
+  function createChatSettingsWithoutStory(): ChatSettings {
+    return createDefaultChatSettings();
+  }
+
+  function createChatSettingsWithEmptyStory(): ChatSettings {
+    return {
+      ...createDefaultChatSettings(),
+      story: "   ",
+    };
+  }
+
+  function createMockChatMessages(): LLMMessage[] {
+    return [
+      { id: "msg-1", role: "user", content: "Hello" },
+      { id: "msg-2", role: "assistant", content: "Hi there!" },
+    ];
+  }
+
+  function createMockNotes(): Note[] {
+    return [
+      {
+        id: "note-1",
+        type: "planning",
+        name: "Note 1",
+        prompt: "Prompt 1",
+        content: "Content 1",
+      },
+      {
+        id: "note-2",
+        type: "planning",
+        name: "Note 2",
+        prompt: "Prompt 2",
+        content: "Content 2",
+      },
+    ];
+  }
+
+  function createNoteWithUndefinedContent(): Note {
+    return {
+      id: "note-empty",
+      type: "planning",
+      name: "Empty Note",
+      prompt: "Prompt",
+    };
+  }
+
+  function createMockMemories(): Memory[] {
+    return [
+      { id: "mem-1", content: "Memory content 1" },
+      { id: "mem-2", content: "Memory content 2" },
+    ];
+  }
+
+  function createMemoriesWithEmptyContent(): Memory[] {
+    return [
+      { id: "mem-1", content: "" },
+      { id: "mem-2", content: "Valid content" },
+      { id: "mem-3", content: "   " },
+    ];
+  }
+
+  function createAllEmptyMemories(): Memory[] {
+    return [
+      { id: "mem-1", content: "" },
+      { id: "mem-2", content: "   " },
+    ];
+  }
+
+  function expectSystemMessage(
+    message: LLMMessage,
+    expectedContent: string
+  ): void {
+    expect(message.role).toBe("system");
+    expect(message.content).toBe(expectedContent);
+  }
+
+  function expectFirstMessageIsStoryPrompt(messages: LLMMessage[]): void {
+    expect(messages[0].role).toBe("system");
+    expect(messages[0].content).toBe(FirstPersonCharacterPrompt);
+  }
+
+  function expectMessagesContainStory(
+    messages: LLMMessage[],
+    storyContent: string
+  ): void {
+    const storyMessage = messages.find((m) => m.content === storyContent);
+    expect(storyMessage).toBeDefined();
+  }
+
+  function expectMessagesContainChatMessages(messages: LLMMessage[]): void {
+    const userMessage = messages.find((m) => m.content === "Hello");
+    const assistantMessage = messages.find((m) => m.content === "Hi there!");
+    expect(userMessage).toBeDefined();
+    expect(assistantMessage).toBeDefined();
+  }
+
+  function expectMessagesContainNotes(messages: LLMMessage[]): void {
+    const noteMessage = messages.find((m) => m.content.includes("Note 1"));
+    expect(noteMessage).toBeDefined();
+  }
+
+  function expectMessagesContainMemories(messages: LLMMessage[]): void {
+    const memoryMessage = messages.find((m) =>
+      m.content.includes("# Memories")
+    );
+    expect(memoryMessage).toBeDefined();
+  }
+});

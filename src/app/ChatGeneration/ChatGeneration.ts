@@ -1,12 +1,4 @@
-import type { ChatSettings, Note } from "../../models";
-import type { Memory } from "../../models/Memory";
-import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
-import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
-import type { LLMMessage } from "../../cqrs/LLMChatProjection";
-
-const RESPONSE_PROMPT: string =
-  "Consider the above notes, write a response to the conversation. Provide your response directly without a preamble.";
 
 // Singleton instances
 const chatGenerationInstances = new Map<string, ChatGeneration>();
@@ -52,13 +44,19 @@ export class ChatGeneration {
     this.notifySubscribers();
   };
 
+  private getMessageContextService() {
+    return d.LLMMessageContextService(this.chatId);
+  }
+
   async generateResponse(): Promise<string | undefined> {
     const chatId = this.chatId;
 
     this.setIsLoading(true);
 
     try {
-      const requestMessages = await this.buildGenerationRequestMessages();
+      const contextService = this.getMessageContextService();
+      const requestMessages =
+        await contextService.buildGenerationRequestMessages();
 
       this.setStatus("Generating response...");
       const response = await d.GrokChatAPI().postChat(requestMessages);
@@ -117,10 +115,12 @@ export class ChatGeneration {
 
       await d.ChatService(chatId).DeleteMessage(messageId);
 
-      const requestMessages = await this.buildRegenerationRequestMessages(
-        originalContent,
-        feedback
-      );
+      const contextService = this.getMessageContextService();
+      const requestMessages =
+        await contextService.buildRegenerationRequestMessages(
+          originalContent,
+          feedback
+        );
 
       this.setStatus("Generating response...");
       const response = await d.GrokChatAPI().postChat(requestMessages);
@@ -139,7 +139,9 @@ export class ChatGeneration {
     this.setIsLoading(true);
 
     try {
-      const requestMessages = await this.buildChapterSummaryRequestMessages();
+      const contextService = this.getMessageContextService();
+      const requestMessages =
+        await contextService.buildChapterSummaryRequestMessages();
 
       this.setStatus("Generating chapter summary...");
       const summary = await d.GrokChatAPI().postChat(requestMessages);
@@ -152,105 +154,5 @@ export class ChatGeneration {
       this.setIsLoading(false);
       this.setStatus();
     }
-  }
-
-  getStoryPrompt = (chatSettings: ChatSettings) => {
-    if (chatSettings?.promptType == "Manual" && chatSettings?.customPrompt)
-      return chatSettings.customPrompt;
-
-    return FirstPersonCharacterPrompt;
-  };
-
-  buildGenerationRequestMessages = async (
-    includeResponsePrompt: boolean = true
-  ): Promise<LLMMessage[]> => {
-    const chatSettings = await d.ChatSettingsService(this.chatId).get();
-
-    const storyPrompt = this.getStoryPrompt(chatSettings);
-    const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
-
-    this.setStatus("Planning...");
-    const planningNotesService = d.PlanningNotesService(this.chatId);
-    await planningNotesService.generateUpdatedPlanningNotes(chatMessages);
-    const notes = planningNotesService.getPlanningNotes();
-
-    this.setStatus("Fetching memories...");
-    const memories = await d.MemoriesService(this.chatId).get();
-
-    const messages: LLMMessage[] = [];
-    messages.push(toSystemMessage(storyPrompt));
-    messages.push(...this.buildStoryMessages(chatSettings));
-    messages.push(...chatMessages);
-    messages.push(...this.buildNoteMessages(notes));
-    messages.push(...this.buildMemoryMessages(memories));
-    if (includeResponsePrompt) messages.push(toSystemMessage(RESPONSE_PROMPT));
-
-    return messages;
-  };
-
-  buildNoteMessages = (updatedPlanningNotes: Note[]) => {
-    return updatedPlanningNotes.map((note) =>
-      toSystemMessage(`${note.name}\n${note.content ?? ""}`)
-    );
-  };
-
-  buildMemoryMessages = (memories: Memory[]) => {
-    if (memories.length === 0) return [];
-
-    const memoryContent = memories
-      .map((memory) => memory.content)
-      .filter((content) => content.trim().length > 0)
-      .join("\r\n");
-
-    if (memoryContent.trim().length === 0) return [];
-
-    return [toSystemMessage(`# Memories\r\n${memoryContent}`)];
-  };
-
-  buildStoryMessages = (chatSettings: ChatSettings) => {
-    if (!chatSettings?.story?.trim()) return [];
-    return [toSystemMessage(`# Story\r\n${chatSettings.story}`)];
-  };
-
-  buildRegenerationRequestMessages = async (
-    originalContent: string,
-    feedback?: string
-  ): Promise<LLMMessage[]> => {
-    const temporaryFeedbackMessage = this.buildTemporaryFeedbackMessage(
-      originalContent,
-      feedback
-    );
-
-    const messages = await this.buildGenerationRequestMessages(false);
-
-    if (temporaryFeedbackMessage)
-      messages.push(toSystemMessage(temporaryFeedbackMessage));
-
-    return messages;
-  };
-
-  buildChapterSummaryRequestMessages = async (): Promise<LLMMessage[]> => {
-    const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
-
-    const summaryPrompt = this.buildChapterSummaryPrompt();
-
-    return [...chatMessages, toSystemMessage(summaryPrompt)];
-  };
-
-  private buildChapterSummaryPrompt(): string {
-    return `Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without a preamble.`;
-  }
-
-  private buildTemporaryFeedbackMessage(
-    originalContent: string | undefined,
-    feedback?: string
-  ) {
-    if (feedback === undefined) return undefined;
-
-    let temporaryFeedbackMessage: string | undefined;
-    if (feedback && feedback.trim()) {
-      temporaryFeedbackMessage = `The previous response was: "${originalContent}"\n\nPlease regenerate with this feedback: ${feedback}`;
-    }
-    return temporaryFeedbackMessage;
   }
 }

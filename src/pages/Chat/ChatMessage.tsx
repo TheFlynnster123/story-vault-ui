@@ -31,7 +31,7 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
     <MessageItem $type={messageTextType}>
       <MessageContentWrapper>
         <MessageText
-          className={isLastMessage ? "clickable" : ""}
+          className={`message-text ${isLastMessage ? "clickable" : ""}`}
           $type={messageTextType}
           onClick={toggle}
         >

@@ -4,10 +4,19 @@ import { useCivitJob } from "../../hooks/useCivitJob";
 import "./ChatMessage.styled.ts";
 import { useState } from "react";
 import styled from "styled-components";
-import { MessageItem } from "./ChatMessage.styled.ts";
+import { MessageItem, MessageContentWrapper } from "./ChatMessage.styled.ts";
+import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
+import { Stack, Button } from "@mantine/core";
+import { RiDeleteBinLine } from "react-icons/ri";
+import { DeleteConfirmModal } from "./ChatMessageButtons/DeleteConfirmModal";
 
 const MessageContent = styled.div`
   max-width: 80vw;
+  cursor: pointer;
+
+  &.message-text {
+    transition: min-height 0.2s ease;
+  }
 `;
 
 const StoryPhoto = styled.img`
@@ -29,9 +38,9 @@ export interface CivitJobMessageProps {
 }
 
 export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
+  const [showButtons, setShowButtons] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
-  const [showDeleteButtons, setShowDeleteButtons] = useState(false);
 
   let jobId: string;
   try {
@@ -69,68 +78,64 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
     setShowDeleteConfirm(false);
   };
 
-  const handleCancelDelete = () => {
-    setShowDeleteConfirm(false);
-  };
-
-  const getConfirmationMessage = () => {
-    if (deleteType === "single")
-      return "Are you sure you want to delete this message?";
-    else
-      return `Are you sure you want to delete this message and all messages below it?`;
-  };
-
-  const handleMessageClick = () => {
-    setShowDeleteButtons(!showDeleteButtons);
-  };
+  const toggle = () => setShowButtons(!showButtons);
 
   return (
     <MessageItem $type="system">
-      <MessageContent onClick={handleMessageClick}>
-        {getStatusMessage() && (
-          <LoadingBubble>{getStatusMessage()}</LoadingBubble>
-        )}
-        {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
-      </MessageContent>
-      {showDeleteButtons && (
-        <div className="message-delete-buttons">
-          <button
-            className="delete-button delete-single"
-            onClick={() => handleDeleteClick("single")}
-            title="Delete this message"
-          >
-            🗑️
-          </button>
-          <button
-            className="delete-button delete-from-here"
-            onClick={() => handleDeleteClick("fromHere")}
-            title="Delete this message and all below"
-          >
-            🗑️↓
-          </button>
-        </div>
-      )}
-      {showDeleteConfirm && (
-        <div className="delete-confirmation-overlay">
-          <div className="delete-confirmation-dialog">
-            <p>{getConfirmationMessage()}</p>
-            <div className="delete-confirmation-buttons">
-              <button
-                className="confirm-delete-button"
-                onClick={handleConfirmDelete}
-              >
-                Delete
-              </button>
-              <button
-                className="cancel-delete-button"
-                onClick={handleCancelDelete}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <MessageContentWrapper>
+        <MessageContent className="message-text" onClick={toggle}>
+          {getStatusMessage() && (
+            <LoadingBubble>{getStatusMessage()}</LoadingBubble>
+          )}
+          {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
+        </MessageContent>
+
+        <MessageOverlay show={showButtons} onBackdropClick={toggle}>
+          <Stack gap="xs" justify="center">
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              leftSection={<RiDeleteBinLine size={14} />}
+              onClick={() => handleDeleteClick("single")}
+              styles={{
+                root: {
+                  backgroundColor: "rgba(250, 82, 82, 0.25)",
+                  "&:hover": {
+                    backgroundColor: "rgba(250, 82, 82, 0.35)",
+                  },
+                },
+              }}
+            >
+              Delete
+            </Button>
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              leftSection={<RiDeleteBinLine size={14} />}
+              onClick={() => handleDeleteClick("fromHere")}
+              styles={{
+                root: {
+                  backgroundColor: "rgba(250, 82, 82, 0.25)",
+                  "&:hover": {
+                    backgroundColor: "rgba(250, 82, 82, 0.35)",
+                  },
+                },
+              }}
+            >
+              Delete All Below
+            </Button>
+          </Stack>
+        </MessageOverlay>
+
+        <DeleteConfirmModal
+          opened={showDeleteConfirm}
+          deleteType={deleteType}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      </MessageContentWrapper>
     </MessageItem>
   );
 };

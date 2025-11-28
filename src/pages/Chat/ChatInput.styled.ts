@@ -12,4 +12,8 @@ const spin = keyframes`
 export const SpinningIcon = styled.span`
   animation: ${spin} 1s infinite linear;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 `;

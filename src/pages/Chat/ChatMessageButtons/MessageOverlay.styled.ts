@@ -20,7 +20,9 @@ const popIn = keyframes`
   }
 `;
 
-export const MessageOverlayContainer = styled.div`
+export const MessageOverlayContainer = styled.div.attrs({
+  className: "message-overlay",
+})`
   position: absolute;
   top: 0;
   left: 0;

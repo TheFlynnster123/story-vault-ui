@@ -20,6 +20,10 @@ import {
   ChatGeneration,
   getChatGenerationInstance,
 } from "../ChatGeneration/ChatGeneration";
+import {
+  LLMMessageContextService,
+  getLLMMessageContextServiceInstance,
+} from "../ChatGeneration/LLMMessageContextService";
 import { ImageGenerator } from "../../Managers/ImageGenerator";
 import {
   UserChatProjection,
@@ -56,6 +60,11 @@ export class Dependencies {
   }
   PlanningNotesService(chatId: string) {
     return getPlanningNotesCacheInstance(chatId) as PlanningNotesService;
+  }
+  LLMMessageContextService(chatId: string) {
+    return getLLMMessageContextServiceInstance(
+      chatId
+    ) as LLMMessageContextService;
   }
   GrokChatAPI() {
     return new GrokChatAPI();
