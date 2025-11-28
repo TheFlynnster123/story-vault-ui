@@ -6,8 +6,8 @@ import { useState } from "react";
 import styled from "styled-components";
 import { MessageItem, MessageContentWrapper } from "./ChatMessage.styled.ts";
 import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
-import { Stack, Button } from "@mantine/core";
-import { RiDeleteBinLine } from "react-icons/ri";
+import { Stack, Button, Loader, Group } from "@mantine/core";
+import { RiDeleteBinLine, RiImageLine } from "react-icons/ri";
 import { DeleteConfirmModal } from "./ChatMessageButtons/DeleteConfirmModal";
 
 const MessageContent = styled.div`
@@ -31,6 +31,22 @@ const LoadingBubble = styled.div`
   border-radius: 20px;
   text-align: center;
 `;
+
+const LoadingImageIndicator = () => (
+  <LoadingBubble style={{ marginBottom: "8px" }}>
+    <Group
+      gap="md"
+      justify="center"
+      style={{ flexDirection: "column", padding: "40px 20px" }}
+    >
+      <RiImageLine size={120} />
+      <Group gap="sm">
+        <Loader size="sm" color="white" />
+        <span>Image is being generated</span>
+      </Group>
+    </Group>
+  </LoadingBubble>
+);
 
 export interface CivitJobMessageProps {
   chatId: string;
@@ -56,11 +72,12 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
     jobStatus,
   } = useCivitJob(chatId, jobId);
 
-  const getStatusMessage = () => {
-    if (isLoading) return "Loading...";
+  const shouldShowLoadingIndicator = () => isLoading || jobStatus?.isScheduled;
+
+  const getErrorMessage = () => {
     if (jobStatus?.error) return "Failed to load photo";
-    if (jobStatus?.isScheduled) return "Image is being generated...";
-    if (!photoBase64) return "No photo available";
+    if (!photoBase64 && !shouldShowLoadingIndicator())
+      return "No photo available";
     return null;
   };
 
@@ -84,8 +101,9 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
     <MessageItem $type="system">
       <MessageContentWrapper>
         <MessageContent className="message-text" onClick={toggle}>
-          {getStatusMessage() && (
-            <LoadingBubble>{getStatusMessage()}</LoadingBubble>
+          {shouldShowLoadingIndicator() && <LoadingImageIndicator />}
+          {getErrorMessage() && (
+            <LoadingBubble>{getErrorMessage()}</LoadingBubble>
           )}
           {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
         </MessageContent>

@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
-import { PlanningNotesAccordion } from "./PlanningNotesAccordion";
+import { FlowAccordion } from "./PlanningNotesAccordion";
 import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
 import { useEnsureChatInitialization } from "../../hooks/useEnsureChatInitialization";
 
@@ -21,11 +21,11 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
       $chatId={chatId}
       $backgroundPhotoBase64={chatSettings?.backgroundPhotoBase64}
     >
-      <ChatControls chatId={chatId} />
+      <ChatControls />
 
       <ChatMessageList chatId={chatId} />
 
-      <PlanningNotesAccordion chatId={chatId} />
+      <FlowAccordion chatId={chatId} />
 
       <ChatInput chatId={chatId} />
     </ChatContainer>

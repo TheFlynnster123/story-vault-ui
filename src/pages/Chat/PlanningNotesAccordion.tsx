@@ -1,28 +1,62 @@
 import React from "react";
+import { Accordion, Text, Stack, Box, Button, Group } from "@mantine/core";
+import { useNavigate } from "react-router-dom";
 import {
-  Accordion,
-  Text,
-  Stack,
-  Badge,
-  Group,
-  Box,
-  ScrollArea,
-  Textarea,
-} from "@mantine/core";
-import { usePlanningNotesCache } from "../../hooks/usePlanningNotesCache";
+  RiChatSettingsLine,
+  RiFileList2Line,
+  RiBookOpenLine,
+} from "react-icons/ri";
+import { LuBrain } from "react-icons/lu";
+import { ChapterModal } from "./ChatControls/ChapterModal";
+import { useAddChapter } from "./ChatControls/useAddChapter";
 
-interface PlanningNotesAccordionProps {
+interface FlowAccordionProps {
   chatId: string;
 }
 
-export const PlanningNotesAccordion: React.FC<PlanningNotesAccordionProps> = ({
-  chatId,
-}) => {
+export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
+  const navigate = useNavigate();
   const {
-    planningNotes: notes,
-    isLoading,
-    updateNoteContent,
-  } = usePlanningNotesCache(chatId);
+    showModal,
+    title,
+    summary,
+    nextChapterDirection,
+    isGenerating,
+    setTitle,
+    setSummary,
+    setNextChapterDirection,
+    handleOpenModal,
+    handleCloseModal,
+    handleGenerateSummary,
+    handleSubmit,
+  } = useAddChapter({ chatId });
+
+  const flowSections = [
+    {
+      key: "settings",
+      title: "Chat Settings",
+      icon: <RiChatSettingsLine size={18} />,
+      onClick: () => navigate(`/chat/${chatId}/edit`),
+    },
+    {
+      key: "notes",
+      title: "Story Notes",
+      icon: <RiFileList2Line size={18} />,
+      onClick: () => navigate(`/chat/${chatId}/notes`),
+    },
+    {
+      key: "memories",
+      title: "Memories",
+      icon: <LuBrain size={18} />,
+      onClick: () => navigate(`/chat/${chatId}/memories`),
+    },
+    {
+      key: "chapter",
+      title: "Add Chapter",
+      icon: <RiBookOpenLine size={18} />,
+      onClick: handleOpenModal,
+    },
+  ];
 
   return (
     <Box
@@ -63,114 +97,54 @@ export const PlanningNotesAccordion: React.FC<PlanningNotesAccordionProps> = ({
           },
         }}
       >
-        <Accordion.Item value="notes">
-          <Accordion.Control>
-            Notes {notes.length > 0 && `(${notes.length})`}
-          </Accordion.Control>
+        <Accordion.Item value="flow">
+          <Accordion.Control>Flow</Accordion.Control>
           <Accordion.Panel>
-            <ScrollArea h="75vh" style={{ padding: "12px" }}>
-              {isLoading ? (
-                <Text c="dimmed" ta="center" py="xl" fs="italic">
-                  Loading notes...
-                </Text>
-              ) : notes.length === 0 ? (
-                <Text c="dimmed" ta="center" py="xl" fs="italic">
-                  No notes available
-                </Text>
-              ) : (
-                <Stack gap="md">
-                  {notes.map((note) => (
-                    <Box
-                      key={note.id}
-                      p="md"
-                      style={{
-                        backgroundColor: "rgba(40, 40, 40, 0.8)",
-                        borderRadius: "8px",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                      }}
-                    >
-                      <Group justify="space-between" mb="xs">
-                        <Text fw={600} size="md" c="#ffffff">
-                          {note.name}
-                        </Text>
-                        <Badge
-                          size="sm"
-                          variant="light"
-                          color="blue"
-                          tt="capitalize"
-                        >
-                          {note.type}
-                        </Badge>
-                      </Group>
-
-                      {note.prompt && (
-                        <Box mt="xs">
-                          <Text
-                            size="xs"
-                            fw={600}
-                            c="dimmed"
-                            tt="uppercase"
-                            mb={4}
-                            style={{ letterSpacing: "0.5px" }}
-                          >
-                            Prompt:
-                          </Text>
-                          <Text
-                            size="sm"
-                            p="xs"
-                            c="#e0e0e0"
-                            style={{
-                              backgroundColor: "rgba(0, 0, 0, 0.3)",
-                              borderRadius: "4px",
-                              whiteSpace: "pre-wrap",
-                              wordWrap: "break-word",
-                            }}
-                          >
-                            {note.prompt}
-                          </Text>
-                        </Box>
-                      )}
-
-                      <Box mt="xs">
-                        <Text
-                          size="xs"
-                          fw={600}
-                          c="dimmed"
-                          tt="uppercase"
-                          mb={4}
-                          style={{ letterSpacing: "0.5px" }}
-                        >
-                          Content:
-                        </Text>
-                        <Textarea
-                          value={note.content || ""}
-                          onChange={(e) =>
-                            updateNoteContent(note.id, e.currentTarget.value)
-                          }
-                          placeholder="Note content will appear here..."
-                          autosize
-                          minRows={3}
-                          maxRows={10}
-                          styles={{
-                            input: {
-                              backgroundColor: "rgba(0, 0, 0, 0.3)",
-                              color: "#e0e0e0",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
-                              "&:focus": {
-                                borderColor: "rgba(13, 110, 253, 0.5)",
-                              },
-                            },
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </ScrollArea>
+            <Stack gap="xs" p="md">
+              {flowSections.map((section) => (
+                <Button
+                  key={section.key}
+                  variant="subtle"
+                  color="gray"
+                  fullWidth
+                  justify="flex-start"
+                  leftSection={section.icon}
+                  onClick={section.onClick}
+                  styles={{
+                    root: {
+                      backgroundColor: "rgba(40, 40, 40, 0.6)",
+                      color: "#ffffff",
+                      "&:hover": {
+                        backgroundColor: "rgba(60, 60, 60, 0.8)",
+                      },
+                    },
+                  }}
+                >
+                  <Group gap="xs">
+                    <Text size="sm" fw={500}>
+                      {section.title}
+                    </Text>
+                  </Group>
+                </Button>
+              ))}
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
+
+      <ChapterModal
+        opened={showModal}
+        title={title}
+        summary={summary}
+        nextChapterDirection={nextChapterDirection}
+        isGenerating={isGenerating}
+        onTitleChange={setTitle}
+        onSummaryChange={setSummary}
+        onNextChapterDirectionChange={setNextChapterDirection}
+        onGenerateSummary={handleGenerateSummary}
+        onSubmit={handleSubmit}
+        onCancel={handleCloseModal}
+      />
     </Box>
   );
 };
