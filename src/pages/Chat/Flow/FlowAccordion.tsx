@@ -7,8 +7,9 @@ import {
   RiBookOpenLine,
 } from "react-icons/ri";
 import { LuBrain } from "react-icons/lu";
-import { ChapterModal } from "./ChatControls/ChapterModal";
-import { useAddChapter } from "./ChatControls/useAddChapter";
+import { ChapterModal } from "../ChatControls/ChapterModal";
+import { useAddChapter } from "../ChatControls/useAddChapter";
+import { chatTheme } from "../../../theme/chatTheme";
 
 interface FlowAccordionProps {
   chatId: string;
@@ -50,19 +51,13 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
       icon: <LuBrain size={18} />,
       onClick: () => navigate(`/chat/${chatId}/memories`),
     },
-    {
-      key: "chapter",
-      title: "Add Chapter",
-      icon: <RiBookOpenLine size={18} />,
-      onClick: handleOpenModal,
-    },
   ];
 
   return (
     <Box
       style={{
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
-        borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+        backgroundColor: chatTheme.flow.background,
+        borderTop: `1px solid ${chatTheme.flow.border}`,
         position: "relative",
         zIndex: 10,
       }}
@@ -74,10 +69,10 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
             backgroundColor: "transparent",
           },
           control: {
-            backgroundColor: "rgba(30, 30, 30, 0.95)",
-            color: "#ffffff",
+            backgroundColor: chatTheme.flow.controlBackground,
+            color: chatTheme.flow.text,
             "&:hover": {
-              backgroundColor: "rgba(50, 50, 50, 0.95)",
+              backgroundColor: chatTheme.flow.controlHover,
             },
           },
           label: {
@@ -85,15 +80,15 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
             fontWeight: 600,
           },
           content: {
-            backgroundColor: "rgba(20, 20, 20, 0.95)",
+            backgroundColor: chatTheme.flow.contentBackground,
             padding: 0,
           },
           item: {
             border: "none",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+            borderBottom: `1px solid ${chatTheme.flow.border}`,
           },
           chevron: {
-            color: "#ffffff",
+            color: chatTheme.flow.text,
           },
         }}
       >
@@ -101,6 +96,33 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
           <Accordion.Control>Flow</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="xs" p="md">
+              {/* Compress to Chapter button - prominent at top */}
+              <Button
+                variant="subtle"
+                color="gray"
+                fullWidth
+                justify="flex-start"
+                leftSection={<RiBookOpenLine size={18} />}
+                onClick={handleOpenModal}
+                styles={{
+                  root: {
+                    backgroundColor: chatTheme.flow.buttonBackground,
+                    color: chatTheme.flow.text,
+                    border: `2px solid ${chatTheme.chapter.primary}`,
+                    "&:hover": {
+                      backgroundColor: chatTheme.flow.buttonHover,
+                    },
+                  },
+                }}
+              >
+                <Group gap="xs">
+                  <Text size="sm" fw={500}>
+                    Compress to Chapter
+                  </Text>
+                </Group>
+              </Button>
+
+              {/* Other flow sections */}
               {flowSections.map((section) => (
                 <Button
                   key={section.key}
@@ -112,10 +134,10 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
                   onClick={section.onClick}
                   styles={{
                     root: {
-                      backgroundColor: "rgba(40, 40, 40, 0.6)",
-                      color: "#ffffff",
+                      backgroundColor: chatTheme.flow.buttonBackground,
+                      color: chatTheme.flow.text,
                       "&:hover": {
-                        backgroundColor: "rgba(60, 60, 60, 0.8)",
+                        backgroundColor: chatTheme.flow.buttonHover,
                       },
                     },
                   }}

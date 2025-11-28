@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
-import { FlowAccordion } from "./PlanningNotesAccordion";
+import { FlowAccordion } from "./Flow/FlowAccordion";
 import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
 import { useEnsureChatInitialization } from "../../hooks/useEnsureChatInitialization";
 

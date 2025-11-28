@@ -7,15 +7,16 @@ import "../ChatMessage.styled.ts";
 import { ChapterContent } from "./ChapterContent";
 import { ChapterExpandedDetails } from "./ChapterExpandedMessages";
 import { NextChapterDirection } from "./NextChapterDirection";
+import { chatTheme } from "../../../theme/chatTheme";
 
 const MessageContainer = styled.div`
   padding: 1rem;
   background: linear-gradient(
     135deg,
-    rgba(199, 152, 0, 0.8) 0%,
-    rgba(126, 92, 0, 0.8) 100%
+    ${chatTheme.chapter.backgroundPrimary} 0%,
+    ${chatTheme.chapter.backgroundSecondary} 100%
   );
-  border-left: 4px solid rgba(97, 71, 0, 0.5);
+  border-left: 4px solid ${chatTheme.chapter.border};
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   margin-top: 1rem;
@@ -27,7 +28,7 @@ const ChapterHeader = styled.div`
   gap: 0.5rem;
   font-weight: 600;
   font-size: 1.1rem;
-  color: rgba(58, 52, 1, 1);
+  color: ${chatTheme.chapter.headerText};
   margin-bottom: 0.5rem;
 `;
 
