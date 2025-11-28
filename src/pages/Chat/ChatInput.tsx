@@ -57,22 +57,6 @@ export interface ChatInputProps {
   chatId: string;
 }
 
-const ICON_STYLE = {
-  width: "50%",
-  height: "50%",
-  color: "rgba(20, 20, 29, 1)",
-};
-
-const TEXTAREA_STYLES = {
-  input: {
-    padding: "12px",
-    backgroundColor: "#0f0f0f",
-    color: "#ffffff",
-    border: "none",
-    boxShadow: "5px 5px 5px rgba(0, 0, 0, 0.5)",
-  },
-};
-
 const InputIcon = ({
   isLoading,
   icon: Icon,
@@ -175,4 +159,20 @@ const ActionButtons = ({
       </ActionIcon>
     </Stack>
   );
+};
+
+const ICON_STYLE = {
+  width: "50%",
+  height: "50%",
+  color: "rgba(20, 20, 29, 1)",
+};
+
+const TEXTAREA_STYLES = {
+  input: {
+    padding: "12px",
+    backgroundColor: "#0f0f0f",
+    color: "#ffffff",
+    border: "none",
+    boxShadow: "5px 5px 5px rgba(0, 0, 0, 0.5)",
+  },
 };
