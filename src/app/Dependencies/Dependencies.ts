@@ -40,6 +40,10 @@ import {
 import { ChatEventStore } from "../../clients/ChatEventStore";
 import { ChatService } from "../../cqrs/ChatService";
 import { ChatAPI } from "../../clients/ChatAPI";
+import {
+  RecentChatsService,
+  getRecentChatsServiceInstance,
+} from "../../services/RecentChatsService";
 
 export class Dependencies {
   ChatAPI() {
@@ -128,6 +132,10 @@ export class Dependencies {
 
   ChatService(chatId: string) {
     return new ChatService(chatId);
+  }
+
+  RecentChatsService() {
+    return getRecentChatsServiceInstance() as RecentChatsService;
   }
 }
 
