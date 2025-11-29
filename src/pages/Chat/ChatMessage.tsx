@@ -1,9 +1,14 @@
-import "./ChatMessage.css";
+import "./ChatMessage.styled.ts";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
 import { MessageButtonsContainer } from "./ChatMessageButtons/MessageButtonsContainer";
 import type { UserChatMessage } from "../../cqrs/UserChatProjection";
+import {
+  MessageContentWrapper,
+  MessageItem,
+  MessageText,
+} from "./ChatMessage.styled.ts";
 
 export interface MessageItemProps {
   chatId: string;
@@ -18,32 +23,29 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
 }) => {
   const [showButtons, setShowButtons] = useState(false);
 
-  const messageClass =
-    message.type === "user-message" ? "message-user" : "message-system";
-
   const messageTextType = message.type === "user-message" ? "user" : "system";
-  const messageTextStyle = `message-text ${messageTextType}`;
 
-  const toggleButtons = () => setShowButtons(!showButtons);
+  const toggle = () => setShowButtons(!showButtons);
 
   return (
-    <div className={`message-item ${messageClass}`}>
-      <div className="message-content-wrapper">
-        <div
-          className={`${messageTextStyle} ${isLastMessage ? "clickable" : ""}`}
-          onClick={toggleButtons}
+    <MessageItem $type={messageTextType}>
+      <MessageContentWrapper>
+        <MessageText
+          className={`message-text ${isLastMessage ? "clickable" : ""}`}
+          $type={messageTextType}
+          onClick={toggle}
         >
           <ReactMarkdown>{message.content}</ReactMarkdown>
-        </div>
+        </MessageText>
 
-        <MessageOverlay show={showButtons} onBackdropClick={toggleButtons}>
+        <MessageOverlay show={showButtons} onBackdropClick={toggle}>
           <MessageButtonsContainer
             chatId={chatId}
             messageId={message.id}
             isLastMessage={isLastMessage}
           />
         </MessageOverlay>
-      </div>
-    </div>
+      </MessageContentWrapper>
+    </MessageItem>
   );
 };

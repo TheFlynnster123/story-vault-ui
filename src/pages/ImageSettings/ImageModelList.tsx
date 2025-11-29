@@ -30,25 +30,24 @@ export const ImageModelList: React.FC<{
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set());
 
   const createNewModel = (): ImageModel => ({
-    id: `model_${Date.now()}`,
-    name: "Default",
+    id: "default-image-model",
+    name: "Default Image Model",
     timestampUtcMs: Date.now(),
     input: {
-      model: "urn:air:sd1:checkpoint:civitai:4384@128713",
+      model: "urn:air:sdxl:checkpoint:civitai:257749@290640",
       params: {
-        prompt:
-          "(masterpiece), (extremely intricate:1.3), (realistic), portrait of a girl, the most beautiful in the world, (medieval armor), metal reflections, upper body, outdoors, intense sunlight, far away castle, professional photograph of a stunning woman detailed, sharp focus, dramatic, award winning, cinematic lighting, octane render  unreal engine,  volumetrics dtx, (film grain, blurry background, blurry foreground, bokeh, depth of field, sunset, motion blur:1.3), chainmail",
-        negativePrompt: "BadDream, (UnrealisticDream:1.3)",
-        scheduler: "DPM++ SDE Karras",
-        steps: 30,
-        cfgScale: 9,
-        width: 1120,
-        height: 1824,
+        prompt: "score_9, score_8_up, score_7_up, score_6_up, source_anime",
+        negativePrompt:
+          "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad hands, jpeg artifacts",
+        scheduler: "DPM2Karras",
+        steps: 20,
+        cfgScale: 7,
+        width: 1024,
+        height: 1024,
         clipSkip: 2,
       },
       additionalNetworks: {},
     },
-    sampleImageId: undefined,
   });
 
   const handleToggleExpanded = (modelId: string) => {

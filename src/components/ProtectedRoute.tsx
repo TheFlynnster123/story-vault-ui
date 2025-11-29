@@ -9,26 +9,28 @@ interface ProtectedRouteProps {
   requireGrokKey?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requireGrokKey = true 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requireGrokKey = true,
 }) => {
   const { isLoading, isAuthenticated } = useAuth0();
   const { hasValidGrokKey } = useGrokKey();
   const location = useLocation();
-  
+
   useAuth0Setup();
 
   if (isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#0f0f0f',
-        color: 'white'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          backgroundColor: "#0f0f0f",
+          color: "white",
+        }}
+      >
         Loading...
       </div>
     );
@@ -40,14 +42,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (requireGrokKey && hasValidGrokKey === undefined) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#0f0f0f',
-        color: 'white'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          backgroundColor: "#0f0f0f",
+          color: "white",
+        }}
+      >
         Loading Grok Key status...
       </div>
     );

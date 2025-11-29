@@ -20,6 +20,10 @@ import {
   ChatGeneration,
   getChatGenerationInstance,
 } from "../ChatGeneration/ChatGeneration";
+import {
+  LLMMessageContextService,
+  getLLMMessageContextServiceInstance,
+} from "../ChatGeneration/LLMMessageContextService";
 import { ImageGenerator } from "../../Managers/ImageGenerator";
 import {
   UserChatProjection,
@@ -36,6 +40,10 @@ import {
 import { ChatEventStore } from "../../clients/ChatEventStore";
 import { ChatService } from "../../cqrs/ChatService";
 import { ChatAPI } from "../../clients/ChatAPI";
+import {
+  RecentChatsService,
+  getRecentChatsServiceInstance,
+} from "../../services/RecentChatsService";
 
 export class Dependencies {
   ChatAPI() {
@@ -56,6 +64,11 @@ export class Dependencies {
   }
   PlanningNotesService(chatId: string) {
     return getPlanningNotesCacheInstance(chatId) as PlanningNotesService;
+  }
+  LLMMessageContextService(chatId: string) {
+    return getLLMMessageContextServiceInstance(
+      chatId
+    ) as LLMMessageContextService;
   }
   GrokChatAPI() {
     return new GrokChatAPI();
@@ -119,6 +132,10 @@ export class Dependencies {
 
   ChatService(chatId: string) {
     return new ChatService(chatId);
+  }
+
+  RecentChatsService() {
+    return getRecentChatsServiceInstance() as RecentChatsService;
   }
 }
 

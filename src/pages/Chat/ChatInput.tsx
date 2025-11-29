@@ -4,7 +4,7 @@ import { Textarea, ActionIcon, Group, Box, Stack } from "@mantine/core";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
 import { useChatInputCache } from "../../hooks/useChatInputCache";
 import { useChatInputExpansion } from "./useExpandableTextarea";
-import "./ChatInput.css";
+import { SpinningIcon } from "./ChatInput.styled";
 import React from "react";
 
 export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
@@ -57,22 +57,6 @@ export interface ChatInputProps {
   chatId: string;
 }
 
-const ICON_STYLE = {
-  width: "50%",
-  height: "50%",
-  color: "rgba(20, 20, 29, 1)",
-};
-
-const TEXTAREA_STYLES = {
-  input: {
-    padding: "12px",
-    backgroundColor: "#0f0f0f",
-    color: "#ffffff",
-    border: "none",
-    boxShadow: "5px 5px 5px rgba(0, 0, 0, 0.5)",
-  },
-};
-
 const InputIcon = ({
   isLoading,
   icon: Icon,
@@ -81,7 +65,9 @@ const InputIcon = ({
   icon: typeof IoCamera;
 }) =>
   isLoading ? (
-    <IoSync className="spinning" style={ICON_STYLE} />
+    <SpinningIcon>
+      <IoSync style={ICON_STYLE} />
+    </SpinningIcon>
   ) : (
     <Icon style={ICON_STYLE} />
   );
@@ -127,12 +113,18 @@ const ActionButtons = ({
   onMinimize: () => void;
   isExpanded: boolean;
 }) => {
-  const handleGenerateImage = () => {
+  const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
     onGenerateImage();
     onMinimize();
   };
 
-  const handleSend = () => {
+  const handleSend = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
     onSend();
     onMinimize();
   };
@@ -145,8 +137,8 @@ const ActionButtons = ({
           radius="xl"
           variant="filled"
           color="blue"
-          onMouseDown={handleGenerateImage}
-          onTouchStart={handleGenerateImage}
+          onMouseUp={handleGenerateImage}
+          onTouchEnd={handleGenerateImage}
           disabled={isLoading}
           aria-label="Generate Image"
           tabIndex={0}
@@ -159,8 +151,8 @@ const ActionButtons = ({
         radius="xl"
         variant="filled"
         color="blue"
-        onMouseDown={handleSend}
-        onTouchStart={handleSend}
+        onMouseUp={handleSend}
+        onTouchEnd={handleSend}
         disabled={isLoading}
         aria-label={isLoading ? "Sending..." : "Send"}
         tabIndex={0}
@@ -169,4 +161,20 @@ const ActionButtons = ({
       </ActionIcon>
     </Stack>
   );
+};
+
+const ICON_STYLE = {
+  width: "50%",
+  height: "50%",
+  color: "rgba(0, 6, 31, 1)",
+};
+
+const TEXTAREA_STYLES = {
+  input: {
+    padding: "12px",
+    backgroundColor: "#0f0f0f",
+    color: "#ffffff",
+    border: "none",
+    boxShadow: "5px 5px 5px rgba(0, 0, 0, 0.5)",
+  },
 };

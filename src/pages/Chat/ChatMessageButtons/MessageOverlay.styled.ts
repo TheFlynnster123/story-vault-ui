@@ -1,0 +1,60 @@
+import styled, { keyframes } from "styled-components";
+
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+`;
+
+const popIn = keyframes`
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+`;
+
+export const MessageOverlayContainer = styled.div.attrs({
+  className: "message-overlay",
+})`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 10px;
+  backdrop-filter: blur(2px);
+  animation: ${fadeIn} 0.2s ease-out;
+`;
+
+export const MessageOverlayContent = styled.div`
+  z-index: 11;
+  animation: ${popIn} 0.2s ease-out;
+  /* Ensure buttons have space and don't overflow */
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 8px;
+
+  @media (max-width: 768px) {
+    padding: 6px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 4px;
+  }
+
+  @media (min-width: 1200px) {
+    padding: 10px;
+  }
+`;

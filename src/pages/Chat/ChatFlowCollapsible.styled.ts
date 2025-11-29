@@ -1,19 +1,21 @@
-.chat-flow-collapsible {
+import styled from 'styled-components';
+
+export const ChatFlowCollapsible = styled.div`
   margin: 16px 10px;
   border-radius: 8px;
   background-color: #f9fafb;
   border: 1px solid #e5e7eb;
   overflow: hidden;
-}
+`;
 
-.chat-flow-header {
+export const ChatFlowHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   background-color: #fff;
-}
+`;
 
-.chat-flow-toggle {
+export const ChatFlowToggle = styled.button`
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -26,13 +28,13 @@
   font-weight: 600;
   color: #374151;
   transition: background-color 0.2s ease;
-}
 
-.chat-flow-toggle:hover {
-  background-color: #f3f4f6;
-}
+  &:hover {
+    background-color: #f3f4f6;
+  }
+`;
 
-.delete-notes-button {
+export const DeleteNotesButton = styled.button`
   padding: 8px 12px;
   margin-right: 8px;
   background-color: transparent;
@@ -44,35 +46,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
 
-.delete-notes-button:hover:not(:disabled) {
-  background-color: #fee2e2;
-  border-color: #fca5a5;
-}
+  &:hover:not(:disabled) {
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+  }
 
-.delete-notes-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
-.chat-flow-history {
+export const ChatFlowHistory = styled.div`
   padding: 16px;
   background-color: #fff;
-}
+`;
 
-.chat-flow-step {
+export const ChatFlowStep = styled.div`
   margin-bottom: 16px;
   padding-left: 16px;
   border-left-width: 4px;
   border-left-style: solid;
-}
 
-.chat-flow-step:last-child {
-  margin-bottom: 0;
-}
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
 
-.chat-flow-step-header {
+export const ChatFlowStepHeader = styled.div`
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -80,25 +82,24 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
+`;
 
-.step-timestamp {
+export const StepTimestamp = styled.span`
   font-size: 10px;
   font-weight: 400;
   text-transform: none;
   opacity: 0.6;
   margin-left: 8px;
-}
+`;
 
-.chat-flow-step-content {
+export const ChatFlowStepContent = styled.div`
   font-size: 14px;
   line-height: 1.6;
   color: #4b5563;
   white-space: pre-wrap;
-}
+`;
 
-/* Delete Confirmation Dialog */
-.delete-confirm-overlay {
+export const DeleteConfirmOverlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
@@ -109,9 +110,9 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-}
+`;
 
-.delete-confirm-dialog {
+export const DeleteConfirmDialog = styled.div`
   background-color: #fff;
   border-radius: 8px;
   padding: 24px;
@@ -119,62 +120,67 @@
   width: 90%;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
 
-.delete-confirm-dialog h3 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #374151;
-}
+  h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #374151;
+  }
 
-.delete-confirm-dialog p {
-  margin: 0 0 24px 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #6b7280;
-}
+  p {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #6b7280;
+  }
+`;
 
-.delete-confirm-buttons {
+export const DeleteConfirmButtons = styled.div`
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-}
+`;
 
-.delete-confirm-cancel,
-.delete-confirm-delete {
+export const DeleteConfirmCancel = styled.button`
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid;
-}
-
-.delete-confirm-cancel {
+  border: 1px solid #d1d5db;
   background-color: #fff;
   color: #374151;
-  border-color: #d1d5db;
-}
 
-.delete-confirm-cancel:hover:not(:disabled) {
-  background-color: #f9fafb;
-}
+  &:hover:not(:disabled) {
+    background-color: #f9fafb;
+  }
 
-.delete-confirm-delete {
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+export const DeleteConfirmDelete = styled.button`
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #dc2626;
   background-color: #dc2626;
   color: #fff;
-  border-color: #dc2626;
-}
 
-.delete-confirm-delete:hover:not(:disabled) {
-  background-color: #b91c1c;
-  border-color: #b91c1c;
-}
+  &:hover:not(:disabled) {
+    background-color: #b91c1c;
+    border-color: #b91c1c;
+  }
 
-.delete-confirm-cancel:disabled,
-.delete-confirm-delete:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;

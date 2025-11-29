@@ -1,71 +1,29 @@
 import React from "react";
-import {
-  RiArrowGoBackLine,
-  RiChatSettingsLine,
-  RiFileList2Line,
-} from "react-icons/ri";
-import { LuBrain } from "react-icons/lu";
+import { RiArrowGoBackLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
-import { ActionIcon, Stack } from "@mantine/core";
+import { ActionIcon } from "@mantine/core";
 import styled from "styled-components";
-import { AddChapterButton } from "./AddChapterButton";
 
-interface ChatControlsProps {
-  chatId: string;
-}
-
-export const ChatControls: React.FC<ChatControlsProps> = ({ chatId }) => {
+export const ChatControls: React.FC = () => {
   const navigate = useNavigate();
 
   return (
     <ControlsContainer>
-      <Stack>
-        <ActionIcon
-          onClick={() => navigate("/chat")}
-          variant="gradient"
-          title="Back to Menu"
-          size="xl"
-        >
-          <RiArrowGoBackLine />
-        </ActionIcon>
-
-        <ActionIcon
-          onClick={() => navigate(`/chat/${chatId}/edit`)}
-          variant="gradient"
-          title="Chat Settings"
-          size="xl"
-        >
-          <RiChatSettingsLine />
-        </ActionIcon>
-
-        <ActionIcon
-          onClick={() => navigate(`/chat/${chatId}/notes`)}
-          variant="gradient"
-          title="Story Notes"
-          size="xl"
-        >
-          <RiFileList2Line />
-        </ActionIcon>
-
-        <ActionIcon
-          onClick={() => navigate(`/chat/${chatId}/memories`)}
-          variant="gradient"
-          title="Memories"
-          size="xl"
-        >
-          <LuBrain />
-        </ActionIcon>
-
-        <AddChapterButton chatId={chatId} />
-      </Stack>
+      <ActionIcon
+        onClick={() => navigate("../")}
+        variant="gradient"
+        title="Back"
+        size="xl"
+      >
+        <RiArrowGoBackLine />
+      </ActionIcon>
     </ControlsContainer>
   );
 };
 
 const ControlsContainer = styled.div`
   position: fixed;
-  top: 1rem;
-  right: 1rem;
+  top: 0.5rem;
+  left: 0.5rem;
   z-index: 1000;
-  margin: 0.5rem;
 `;

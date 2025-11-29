@@ -1,12 +1,30 @@
 import { d } from "../../app/Dependencies/Dependencies";
 import type { CivitJobChatMessage } from "../../cqrs/UserChatProjection";
 import { useCivitJob } from "../../hooks/useCivitJob";
-import "./ChatMessage.css";
+import "./ChatMessage.styled.ts";
 import { useState } from "react";
 import styled from "styled-components";
+import { MessageItem, MessageContentWrapper } from "./ChatMessage.styled.ts";
+import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
+import { Stack, Button, Loader, Group, Divider } from "@mantine/core";
+import {
+  RiDeleteBinLine,
+  RiImageLine,
+  RiEyeLine,
+  RiRefreshLine,
+  RiChat3Line,
+} from "react-icons/ri";
+import { DeleteConfirmModal } from "./ChatMessageButtons/DeleteConfirmModal";
+import { ViewPromptModal } from "./ChatMessageButtons/ViewPromptModal";
+import { RegenerateFeedbackModal } from "./ChatMessageButtons/RegenerateFeedbackModal";
 
 const MessageContent = styled.div`
   max-width: 80vw;
+  cursor: pointer;
+
+  &.message-text {
+    transition: min-height 0.2s ease;
+  }
 `;
 
 const StoryPhoto = styled.img`
@@ -22,15 +40,39 @@ const LoadingBubble = styled.div`
   text-align: center;
 `;
 
+const LoadingImageIndicator = () => (
+  <LoadingBubble style={{ marginBottom: "8px" }}>
+    <Group
+      gap="md"
+      justify="center"
+      style={{ flexDirection: "column", padding: "40px 20px" }}
+    >
+      <RiImageLine size={120} />
+      <Group gap="sm">
+        <Loader size="sm" color="white" />
+        <span>Image is being generated</span>
+      </Group>
+    </Group>
+  </LoadingBubble>
+);
+
 export interface CivitJobMessageProps {
   chatId: string;
   message: CivitJobChatMessage;
+  isLastMessage: boolean;
 }
 
-export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
+export const CivitJobMessage = ({
+  chatId,
+  message,
+  isLastMessage,
+}: CivitJobMessageProps) => {
+  const [showButtons, setShowButtons] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
-  const [showDeleteButtons, setShowDeleteButtons] = useState(false);
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedback, setFeedback] = useState("");
 
   let jobId: string;
   try {
@@ -46,11 +88,13 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
     jobStatus,
   } = useCivitJob(chatId, jobId);
 
-  const getStatusMessage = () => {
-    if (isLoading) return "Loading...";
+  const shouldShowLoadingIndicator = () => isLoading || jobStatus?.isScheduled;
+  const isImageGenerated = () => !!photoBase64;
+
+  const getErrorMessage = () => {
     if (jobStatus?.error) return "Failed to load photo";
-    if (jobStatus?.isScheduled) return "Image is being generated...";
-    if (!photoBase64) return "No photo available";
+    if (!photoBase64 && !shouldShowLoadingIndicator())
+      return "No photo available";
     return null;
   };
 
@@ -68,69 +112,127 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
     setShowDeleteConfirm(false);
   };
 
-  const handleCancelDelete = () => {
-    setShowDeleteConfirm(false);
+  const handleRegenerate = () => {
+    setShowButtons(false);
+    d.ChatGenerationService(chatId)?.regenerateImage(jobId);
   };
 
-  const getConfirmationMessage = () => {
-    if (deleteType === "single") {
-      return "Are you sure you want to delete this message?";
-    } else {
-      return `Are you sure you want to delete this message and all messages below it?`;
-    }
+  const handleRegenerateWithFeedback = () => {
+    setShowButtons(false);
+    setShowFeedbackModal(false);
+    d.ChatGenerationService(chatId)?.regenerateImage(jobId, feedback);
+    setFeedback("");
   };
 
-  const handleMessageClick = () => {
-    setShowDeleteButtons(!showDeleteButtons);
-  };
+  const toggle = () => setShowButtons(!showButtons);
 
   return (
-    <div className="message-item message-system">
-      <MessageContent onClick={handleMessageClick}>
-        {getStatusMessage() && (
-          <LoadingBubble>{getStatusMessage()}</LoadingBubble>
-        )}
-        {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
-      </MessageContent>
-      {showDeleteButtons && (
-        <div className="message-delete-buttons">
-          <button
-            className="delete-button delete-single"
-            onClick={() => handleDeleteClick("single")}
-            title="Delete this message"
-          >
-            🗑️
-          </button>
-          <button
-            className="delete-button delete-from-here"
-            onClick={() => handleDeleteClick("fromHere")}
-            title="Delete this message and all below"
-          >
-            🗑️↓
-          </button>
-        </div>
-      )}
-      {showDeleteConfirm && (
-        <div className="delete-confirmation-overlay">
-          <div className="delete-confirmation-dialog">
-            <p>{getConfirmationMessage()}</p>
-            <div className="delete-confirmation-buttons">
-              <button
-                className="confirm-delete-button"
-                onClick={handleConfirmDelete}
-              >
-                Delete
-              </button>
-              <button
-                className="cancel-delete-button"
-                onClick={handleCancelDelete}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    <MessageItem $type="system">
+      <MessageContentWrapper>
+        <MessageContent className="message-text" onClick={toggle}>
+          {shouldShowLoadingIndicator() && <LoadingImageIndicator />}
+          {getErrorMessage() && (
+            <LoadingBubble>{getErrorMessage()}</LoadingBubble>
+          )}
+          {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
+        </MessageContent>
+
+        <MessageOverlay show={showButtons} onBackdropClick={toggle}>
+          <Stack gap="xs" justify="center">
+            {isImageGenerated() && (
+              <>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="blue"
+                  leftSection={<RiEyeLine size={14} />}
+                  onClick={() => setShowPromptModal(true)}
+                >
+                  View Prompt
+                </Button>
+                {isLastMessage && (
+                  <>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="blue"
+                      leftSection={<RiRefreshLine size={14} />}
+                      onClick={handleRegenerate}
+                    >
+                      Regenerate
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="blue"
+                      leftSection={<RiChat3Line size={14} />}
+                      onClick={() => setShowFeedbackModal(true)}
+                    >
+                      Regenerate with Feedback
+                    </Button>
+                  </>
+                )}
+                <Divider my="xs" />
+              </>
+            )}
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              leftSection={<RiDeleteBinLine size={14} />}
+              onClick={() => handleDeleteClick("single")}
+              styles={{
+                root: {
+                  backgroundColor: "rgba(250, 82, 82, 0.25)",
+                  "&:hover": {
+                    backgroundColor: "rgba(250, 82, 82, 0.35)",
+                  },
+                },
+              }}
+            >
+              Delete
+            </Button>
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              leftSection={<RiDeleteBinLine size={14} />}
+              onClick={() => handleDeleteClick("fromHere")}
+              styles={{
+                root: {
+                  backgroundColor: "rgba(250, 82, 82, 0.25)",
+                  "&:hover": {
+                    backgroundColor: "rgba(250, 82, 82, 0.35)",
+                  },
+                },
+              }}
+            >
+              Delete All Below
+            </Button>
+          </Stack>
+        </MessageOverlay>
+
+        <DeleteConfirmModal
+          opened={showDeleteConfirm}
+          deleteType={deleteType}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+
+        <ViewPromptModal
+          opened={showPromptModal}
+          prompt={message.data?.prompt ?? ""}
+          onClose={() => setShowPromptModal(false)}
+        />
+
+        <RegenerateFeedbackModal
+          opened={showFeedbackModal}
+          feedback={feedback}
+          onFeedbackChange={setFeedback}
+          onSubmit={handleRegenerateWithFeedback}
+          onCancel={() => setShowFeedbackModal(false)}
+        />
+      </MessageContentWrapper>
+    </MessageItem>
   );
 };

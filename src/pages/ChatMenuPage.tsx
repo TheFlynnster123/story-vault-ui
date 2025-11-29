@@ -5,14 +5,27 @@ import { CreateChatButton } from "./ChatMenu/CreateChatButton";
 import { ChatList } from "./ChatMenu/ChatList";
 import styled from "styled-components";
 import { useChats } from "../hooks/useChats";
+import { useEffect, useState } from "react";
+import { d } from "../app/Dependencies/Dependencies";
 
 const ChatMenuPage = () => {
   const navigate = useNavigate();
-  const { chatIds } = useChats();
+  const { chatIds, isLoading: isLoadingChats } = useChats();
+  const [sortedChatIds, setSortedChatIds] = useState<string[]>([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
+
+  useEffect(() => {
+    if (isLoadingChats) return;
+
+    loadAndSortChats(chatIds, setSortedChatIds, setIsLoadingRecent);
+  }, [chatIds, isLoadingChats]);
 
   const handleSelectChat = (id: string) => {
+    d.RecentChatsService().recordNavigation(id);
     navigate(`/chat/${id}`);
   };
+
+  const isLoading = isLoadingChats || isLoadingRecent;
 
   return (
     <>
@@ -25,10 +38,33 @@ const ChatMenuPage = () => {
           </SystemSettingsContainer>
         </ChatMenuHeader>
         <CreateChatButton />
-        <ChatList chatIds={chatIds} handleSelectChat={handleSelectChat} />
+        {isLoading ? (
+          <LoadingText>Loading chats...</LoadingText>
+        ) : (
+          <ChatList
+            chatIds={sortedChatIds}
+            handleSelectChat={handleSelectChat}
+          />
+        )}
       </ChatMenuContainer>
     </>
   );
+};
+
+const loadAndSortChats = async (
+  chatIds: string[],
+  setSortedChatIds: (ids: string[]) => void,
+  setIsLoadingRecent: (loading: boolean) => void
+) => {
+  try {
+    setIsLoadingRecent(true);
+    setSortedChatIds(await d.RecentChatsService().sortByRecency(chatIds));
+  } catch (error) {
+    d.ErrorService().log("Failed to load recent chats:", error);
+    setSortedChatIds(chatIds);
+  } finally {
+    setIsLoadingRecent(false);
+  }
 };
 
 const ChatMenuContainer = styled.div`
@@ -65,6 +101,12 @@ const SystemSettingsContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+`;
+
+const LoadingText = styled.p`
+  color: white;
+  font-size: 1em;
+  margin-top: 20px;
 `;
 
 export default ChatMenuPage;
