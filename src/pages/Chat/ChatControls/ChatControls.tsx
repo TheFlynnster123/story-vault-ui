@@ -10,7 +10,7 @@ export const ChatControls: React.FC = () => {
   return (
     <ControlsContainer>
       <ActionIcon
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("../")}
         variant="gradient"
         title="Back"
         size="xl"
