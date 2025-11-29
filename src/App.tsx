@@ -8,7 +8,7 @@ import ChatSettingsPage from "./pages/ChatSettingsPage";
 import ImageSettingsPage from "./pages/ImageSettingsPage";
 import { ChatEditorPage } from "./pages/ChatEditorPage";
 import ChatPage from "./pages/ChatPage";
-import { StoryNotesPage } from "./pages/StoryNotesPage";
+import { PlanPage } from "./pages/PlanPage";
 import { MemoriesPage } from "./pages/MemoriesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -47,10 +47,10 @@ const App: React.FC<AppProps> = () => {
             }
           />
           <Route
-            path="/chat/:chatId/notes"
+            path="/chat/:chatId/plan"
             element={
               <ProtectedRoute>
-                <StoryNotesPage />
+                <PlanPage />
               </ProtectedRoute>
             }
           />

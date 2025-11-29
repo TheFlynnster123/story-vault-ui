@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { LLMMessageContextService } from "./LLMMessageContextService";
 import { d } from "../Dependencies/Dependencies";
-import type { ChatSettings, Note } from "../../models";
+import type { ChatSettings, Plan } from "../../models";
 import type { Memory } from "../../models/Memory";
 import type { LLMMessage } from "../../cqrs/LLMChatProjection";
 import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
@@ -13,7 +13,7 @@ describe("LLMMessageContextService", () => {
 
   let mockChatSettingsService: any;
   let mockLLMChatProjection: any;
-  let mockPlanningNotesService: any;
+  let mockPlanService: any;
   let mockMemoriesService: any;
 
   beforeEach(() => {
@@ -25,9 +25,9 @@ describe("LLMMessageContextService", () => {
       GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
     };
 
-    mockPlanningNotesService = {
-      generateUpdatedPlanningNotes: vi.fn().mockResolvedValue(undefined),
-      getPlanningNotes: vi.fn().mockReturnValue([]),
+    mockPlanService = {
+      generateUpdatedPlans: vi.fn().mockResolvedValue(undefined),
+      getPlans: vi.fn().mockReturnValue([]),
     };
 
     mockMemoriesService = {
@@ -36,7 +36,7 @@ describe("LLMMessageContextService", () => {
 
     vi.mocked(d.ChatSettingsService).mockReturnValue(mockChatSettingsService);
     vi.mocked(d.LLMChatProjection).mockReturnValue(mockLLMChatProjection);
-    vi.mocked(d.PlanningNotesService).mockReturnValue(mockPlanningNotesService);
+    vi.mocked(d.PlanService).mockReturnValue(mockPlanService);
     vi.mocked(d.MemoriesService).mockReturnValue(mockMemoriesService);
   });
 
@@ -75,35 +75,35 @@ describe("LLMMessageContextService", () => {
     });
   });
 
-  // ---- buildNoteMessages Tests ----
-  describe("buildNoteMessages", () => {
-    it("should return empty array when no notes provided", () => {
+  // ---- buildPlanMessages Tests ----
+  describe("buildPlanMessages", () => {
+    it("should return empty array when no plans provided", () => {
       const service = new LLMMessageContextService(testChatId);
 
-      const result = service.buildNoteMessages([]);
+      const result = service.buildPlanMessages([]);
 
       expect(result).toEqual([]);
     });
 
-    it("should create system message for each note", () => {
+    it("should create system message for each plan", () => {
       const service = new LLMMessageContextService(testChatId);
-      const notes = createMockNotes();
+      const plans = createMockPlans();
 
-      const result = service.buildNoteMessages(notes);
+      const result = service.buildPlanMessages(plans);
 
       expect(result).toHaveLength(2);
-      expectSystemMessage(result[0], "Note 1\nContent 1");
-      expectSystemMessage(result[1], "Note 2\nContent 2");
+      expectSystemMessage(result[0], "Plan 1\nContent 1");
+      expectSystemMessage(result[1], "Plan 2\nContent 2");
     });
 
-    it("should handle notes with undefined content", () => {
+    it("should handle plans with undefined content", () => {
       const service = new LLMMessageContextService(testChatId);
-      const notes = [createNoteWithUndefinedContent()];
+      const plans = [createPlanWithUndefinedContent()];
 
-      const result = service.buildNoteMessages(notes);
+      const result = service.buildPlanMessages(plans);
 
       expect(result).toHaveLength(1);
-      expectSystemMessage(result[0], "Empty Note\n");
+      expectSystemMessage(result[0], "Empty Plan\n");
     });
   });
 
@@ -200,16 +200,16 @@ describe("LLMMessageContextService", () => {
       expect(mockLLMChatProjection.GetMessages).toHaveBeenCalled();
     });
 
-    it("should generate updated planning notes", async () => {
+    it("should generate updated plans", async () => {
       const service = new LLMMessageContextService(testChatId);
       const chatMessages = createMockChatMessages();
       mockLLMChatProjection.GetMessages.mockReturnValue(chatMessages);
 
       await service.buildGenerationRequestMessages();
 
-      expect(
-        mockPlanningNotesService.generateUpdatedPlanningNotes
-      ).toHaveBeenCalledWith(chatMessages);
+      expect(mockPlanService.generateUpdatedPlans).toHaveBeenCalledWith(
+        chatMessages
+      );
     });
 
     it("should fetch memories", async () => {
@@ -245,9 +245,7 @@ describe("LLMMessageContextService", () => {
       mockChatSettingsService.get.mockResolvedValue(
         createChatSettingsWithStory("Story")
       );
-      mockPlanningNotesService.getPlanningNotes.mockReturnValue(
-        createMockNotes()
-      );
+      mockPlanService.getPlans.mockReturnValue(createMockPlans());
       mockMemoriesService.get.mockResolvedValue(createMockMemories());
 
       const result = await service.buildGenerationRequestMessages();
@@ -255,7 +253,7 @@ describe("LLMMessageContextService", () => {
       expectFirstMessageIsStoryPrompt(result);
       expectMessagesContainStory(result, "# Story\r\nStory");
       expectMessagesContainChatMessages(result);
-      expectMessagesContainNotes(result);
+      expectMessagesContainPlans(result);
       expectMessagesContainMemories(result);
     });
   });
@@ -388,30 +386,30 @@ describe("LLMMessageContextService", () => {
     ];
   }
 
-  function createMockNotes(): Note[] {
+  function createMockPlans(): Plan[] {
     return [
       {
-        id: "note-1",
+        id: "plan-1",
         type: "planning",
-        name: "Note 1",
+        name: "Plan 1",
         prompt: "Prompt 1",
         content: "Content 1",
       },
       {
-        id: "note-2",
+        id: "plan-2",
         type: "planning",
-        name: "Note 2",
+        name: "Plan 2",
         prompt: "Prompt 2",
         content: "Content 2",
       },
     ];
   }
 
-  function createNoteWithUndefinedContent(): Note {
+  function createPlanWithUndefinedContent(): Plan {
     return {
-      id: "note-empty",
+      id: "plan-empty",
       type: "planning",
-      name: "Empty Note",
+      name: "Empty Plan",
       prompt: "Prompt",
     };
   }
@@ -466,9 +464,9 @@ describe("LLMMessageContextService", () => {
     expect(assistantMessage).toBeDefined();
   }
 
-  function expectMessagesContainNotes(messages: LLMMessage[]): void {
-    const noteMessage = messages.find((m) => m.content.includes("Note 1"));
-    expect(noteMessage).toBeDefined();
+  function expectMessagesContainPlans(messages: LLMMessage[]): void {
+    const planMessage = messages.find((m) => m.content.includes("Plan 1"));
+    expect(planMessage).toBeDefined();
   }
 
   function expectMessagesContainMemories(messages: LLMMessage[]): void {

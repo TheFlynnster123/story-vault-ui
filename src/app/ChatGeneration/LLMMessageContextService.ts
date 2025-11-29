@@ -1,4 +1,4 @@
-import type { ChatSettings, Note } from "../../models";
+import type { ChatSettings, Plan } from "../../models";
 import type { Memory } from "../../models/Memory";
 import type { LLMMessage } from "../../cqrs/LLMChatProjection";
 import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
@@ -45,13 +45,13 @@ export class LLMMessageContextService {
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     const chatMessages = this.getChatMessages();
-    const notes = await this.fetchUpdatedPlanningNotes(chatMessages);
+    const plans = await this.fetchUpdatedPlans(chatMessages);
     const memories = await this.fetchMemories();
 
     return this.assembleGenerationMessages(
       chatSettings,
       chatMessages,
-      notes,
+      plans,
       memories,
       includeResponsePrompt
     );
@@ -75,8 +75,8 @@ export class LLMMessageContextService {
     return FirstPersonCharacterPrompt;
   }
 
-  buildNoteMessages(notes: Note[]): LLMMessage[] {
-    return notes.map((note) => this.noteToSystemMessage(note));
+  buildPlanMessages(plans: Plan[]): LLMMessage[] {
+    return plans.map((plan) => this.planToSystemMessage(plan));
   }
 
   buildMemoryMessages(memories: Memory[]): LLMMessage[] {
@@ -101,12 +101,10 @@ export class LLMMessageContextService {
     return d.LLMChatProjection(this.chatId).GetMessages();
   }
 
-  private async fetchUpdatedPlanningNotes(
-    chatMessages: LLMMessage[]
-  ): Promise<Note[]> {
-    const service = d.PlanningNotesService(this.chatId);
-    await service.generateUpdatedPlanningNotes(chatMessages);
-    return service.getPlanningNotes();
+  private async fetchUpdatedPlans(chatMessages: LLMMessage[]): Promise<Plan[]> {
+    const service = d.PlanService(this.chatId);
+    await service.generateUpdatedPlans(chatMessages);
+    return service.getPlans();
   }
 
   private async fetchMemories(): Promise<Memory[]> {
@@ -118,7 +116,7 @@ export class LLMMessageContextService {
   private assembleGenerationMessages(
     chatSettings: ChatSettings,
     chatMessages: LLMMessage[],
-    notes: Note[],
+    plans: Plan[],
     memories: Memory[],
     includeResponsePrompt: boolean
   ): LLMMessage[] {
@@ -126,7 +124,7 @@ export class LLMMessageContextService {
       this.createStoryPromptMessage(chatSettings),
       ...this.buildStoryMessages(chatSettings),
       ...chatMessages,
-      ...this.buildNoteMessages(notes),
+      ...this.buildPlanMessages(plans),
       ...this.buildMemoryMessages(memories),
     ];
 
@@ -169,8 +167,8 @@ export class LLMMessageContextService {
     return toSystemMessage(CHAPTER_SUMMARY_PROMPT);
   }
 
-  private noteToSystemMessage(note: Note): LLMMessage {
-    return toSystemMessage(`${note.name}\n${note.content ?? ""}`);
+  private planToSystemMessage(plan: Plan): LLMMessage {
+    return toSystemMessage(`${plan.name}\n${plan.content ?? ""}`);
   }
 
   // ---- Private: Helpers ----

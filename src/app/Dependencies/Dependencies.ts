@@ -13,9 +13,9 @@ import { MemoriesService } from "../../queries/memories/MemoriesService";
 import { CivitJobAPI } from "../../clients/CivitJobAPI";
 import { GrokChatAPI } from "../../clients/GrokChatAPI";
 import {
-  PlanningNotesService,
-  getPlanningNotesCacheInstance,
-} from "../ChatGeneration/PlanningNotesService";
+  PlanService,
+  getPlanServiceInstance,
+} from "../ChatGeneration/PlanService";
 import {
   ChatGeneration,
   getChatGenerationInstance,
@@ -62,8 +62,8 @@ export class Dependencies {
   ChatGenerationService(chatId: string) {
     return getChatGenerationInstance(chatId) as ChatGeneration;
   }
-  PlanningNotesService(chatId: string) {
-    return getPlanningNotesCacheInstance(chatId) as PlanningNotesService;
+  PlanService(chatId: string) {
+    return getPlanServiceInstance(chatId) as PlanService;
   }
   LLMMessageContextService(chatId: string) {
     return getLLMMessageContextServiceInstance(

@@ -13,53 +13,48 @@ import {
   Textarea,
   Text,
 } from "@mantine/core";
-import type { Note } from "../models/Note";
-import { usePlanningNotesCache } from "../hooks/usePlanningNotesCache";
+import type { Plan } from "../models/Plan";
+import { usePlanCache } from "../hooks/usePlanCache";
 import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
 
-export const StoryNotesPage: React.FC = () => {
+export const PlanPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const {
-    planningNotes,
-    updateNoteDefinition,
-    addNote,
-    removeNote,
-    savePlanningNotes,
-  } = usePlanningNotesCache(chatId!);
+  const { plans, updatePlanDefinition, addPlan, removePlan, savePlans } =
+    usePlanCache(chatId!);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
 
-  const handleAddNote = (type: Note["type"]) => {
-    const newNote: Note = {
+  const handleAddPlan = (type: Plan["type"]) => {
+    const newPlan: Plan = {
       id: uuidv4(),
       type,
-      name: `New Note`,
+      name: `Basic Plan`,
       prompt: "Write a list of key points relevant to the story:",
     };
-    addNote?.(newNote);
+    addPlan?.(newPlan);
   };
 
-  const handleNoteChange = (id: string, field: keyof Note, value: string) => {
-    updateNoteDefinition?.(id, field, value);
+  const handlePlanChange = (id: string, field: keyof Plan, value: string) => {
+    updatePlanDefinition?.(id, field, value);
   };
 
-  const handleRemoveNote = (id: string) => {
-    setNoteToDelete(id);
+  const handleRemovePlan = (id: string) => {
+    setPlanToDelete(id);
     setIsConfirmModalOpen(true);
   };
 
-  const confirmRemoveNote = () => {
-    if (noteToDelete) {
-      removeNote?.(noteToDelete);
+  const confirmRemovePlan = () => {
+    if (planToDelete) {
+      removePlan?.(planToDelete);
     }
     setIsConfirmModalOpen(false);
-    setNoteToDelete(null);
+    setPlanToDelete(null);
   };
 
   const handleSave = async () => {
-    await savePlanningNotes?.();
+    await savePlans?.();
     navigate(`/chat/${chatId}`);
   };
 
@@ -67,8 +62,8 @@ export const StoryNotesPage: React.FC = () => {
     navigate(`/chat/${chatId}`);
   };
 
-  const getNotesByType = (type: Note["type"]) =>
-    planningNotes.filter((note) => note.type === type);
+  const getPlansByType = (type: Plan["type"]) =>
+    plans.filter((plan) => plan.type === type);
 
   return (
     <Container size="md" miw="70vw" my="xl">
@@ -79,16 +74,16 @@ export const StoryNotesPage: React.FC = () => {
           handleSave();
         }}
       >
-        <StoryNotesHeader onGoBack={handleGoBack} />
+        <PlanHeader onGoBack={handleGoBack} />
 
         <Stack>
-          <NoteSection
-            title="Planning Notes"
+          <PlanSection
+            title="Plans"
             type="planning"
-            notes={getNotesByType("planning")}
-            onAdd={handleAddNote}
-            onChange={handleNoteChange}
-            onRemove={handleRemoveNote}
+            plans={getPlansByType("planning")}
+            onAdd={handleAddPlan}
+            onChange={handlePlanChange}
+            onRemove={handleRemovePlan}
           />
         </Stack>
       </Paper>
@@ -96,43 +91,43 @@ export const StoryNotesPage: React.FC = () => {
       <ConfirmModal
         isOpen={isConfirmModalOpen}
         onCancel={() => setIsConfirmModalOpen(false)}
-        onConfirm={confirmRemoveNote}
+        onConfirm={confirmRemovePlan}
         title="Confirm Deletion"
-        message="Are you sure you want to delete this note?"
+        message="Are you sure you want to delete this plan?"
       />
     </Container>
   );
 };
 
-interface StoryNotesHeaderProps {
+interface PlanHeaderProps {
   onGoBack: () => void;
 }
 
-const StoryNotesHeader: React.FC<StoryNotesHeaderProps> = ({ onGoBack }) => (
+const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
   <Group justify="space-between" align="center" mb="xl">
     <Group>
       <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
         <RiArrowLeftLine />
       </ActionIcon>
-      <Title order={2}>Story Notes</Title>
+      <Title order={2}>Plan</Title>
     </Group>
     <Button type="submit">Save Changes</Button>
   </Group>
 );
 
-interface NoteSectionProps {
+interface PlanSectionProps {
   title: string;
-  type: Note["type"];
-  notes: Note[];
-  onAdd: (type: Note["type"]) => void;
-  onChange: (id: string, field: keyof Note, value: string) => void;
+  type: Plan["type"];
+  plans: Plan[];
+  onAdd: (type: Plan["type"]) => void;
+  onChange: (id: string, field: keyof Plan, value: string) => void;
   onRemove: (id: string) => void;
 }
 
-const NoteSection: React.FC<NoteSectionProps> = ({
+const PlanSection: React.FC<PlanSectionProps> = ({
   title,
   type,
-  notes,
+  plans,
   onAdd,
   onChange,
   onRemove,
@@ -141,29 +136,29 @@ const NoteSection: React.FC<NoteSectionProps> = ({
     <Group justify="space-between">
       <Text fw={500}>{title}</Text>
       <Button variant="subtle" onClick={() => onAdd(type)}>
-        <RiAddLine /> Add Note
+        <RiAddLine /> Add Plan
       </Button>
     </Group>
-    {notes.map((note) => (
-      <Paper key={note.id} withBorder p="md">
+    {plans.map((plan) => (
+      <Paper key={plan.id} withBorder p="md">
         <TextInput
           label="Name"
-          value={note.name}
-          onChange={(e) => onChange(note.id, "name", e.currentTarget.value)}
+          value={plan.name}
+          onChange={(e) => onChange(plan.id, "name", e.currentTarget.value)}
         />
         <Textarea
-          label="Note Prompt"
-          value={note.prompt}
-          onChange={(e) => onChange(note.id, "prompt", e.currentTarget.value)}
+          label="Plan Prompt"
+          value={plan.prompt}
+          onChange={(e) => onChange(plan.id, "prompt", e.currentTarget.value)}
           minRows={5}
         />
         <Button
           variant="outline"
           color="red"
-          onClick={() => onRemove(note.id)}
+          onClick={() => onRemove(plan.id)}
           mt="sm"
         >
-          <RiDeleteBinLine /> Delete Note
+          <RiDeleteBinLine /> Delete Plan
         </Button>
       </Paper>
     ))}
