@@ -148,4 +148,41 @@ export class ChatGeneration {
       this.setStatus();
     }
   }
+
+  async regenerateImage(jobId: string, feedback?: string): Promise<void> {
+    const message = d.UserChatProjection(this.chatId).GetMessage(jobId);
+
+    if (!message || message.type !== "civit-job") {
+      console.warn(`CivitJob with id ${jobId} not found`);
+      return;
+    }
+
+    this.setIsLoading(true);
+
+    try {
+      const originalPrompt = message.data?.prompt;
+
+      await d.ChatService(this.chatId).DeleteMessage(jobId);
+
+      this.setStatus("Generating image prompt...");
+      const messageList = d.LLMChatProjection(this.chatId).GetMessages();
+      const generatedPrompt = await d
+        .ImageGenerator()
+        .generatePromptWithFeedback(messageList, originalPrompt, feedback);
+
+      this.setStatus("Triggering image generation...");
+      const newJobId = await d.ImageGenerator().triggerJob(generatedPrompt);
+
+      this.setStatus("Saving job...");
+      await d
+        .ChatService(this.chatId)
+        .CreateCivitJob(newJobId, generatedPrompt);
+    } catch (e) {
+      d.ErrorService().log("Failed to regenerate image", e);
+      throw e;
+    } finally {
+      this.setIsLoading(false);
+      this.setStatus();
+    }
+  }
 }

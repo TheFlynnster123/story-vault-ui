@@ -24,6 +24,7 @@ export const ChatEntry: React.FC<ChatEntryProps> = ({
       <CivitJobMessage
         chatId={chatId}
         message={message as CivitJobChatMessage}
+        isLastMessage={isLastMessage}
       />
     );
   }

@@ -6,9 +6,17 @@ import { useState } from "react";
 import styled from "styled-components";
 import { MessageItem, MessageContentWrapper } from "./ChatMessage.styled.ts";
 import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
-import { Stack, Button, Loader, Group } from "@mantine/core";
-import { RiDeleteBinLine, RiImageLine } from "react-icons/ri";
+import { Stack, Button, Loader, Group, Divider } from "@mantine/core";
+import {
+  RiDeleteBinLine,
+  RiImageLine,
+  RiEyeLine,
+  RiRefreshLine,
+  RiChat3Line,
+} from "react-icons/ri";
 import { DeleteConfirmModal } from "./ChatMessageButtons/DeleteConfirmModal";
+import { ViewPromptModal } from "./ChatMessageButtons/ViewPromptModal";
+import { RegenerateFeedbackModal } from "./ChatMessageButtons/RegenerateFeedbackModal";
 
 const MessageContent = styled.div`
   max-width: 80vw;
@@ -51,12 +59,20 @@ const LoadingImageIndicator = () => (
 export interface CivitJobMessageProps {
   chatId: string;
   message: CivitJobChatMessage;
+  isLastMessage: boolean;
 }
 
-export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
+export const CivitJobMessage = ({
+  chatId,
+  message,
+  isLastMessage,
+}: CivitJobMessageProps) => {
   const [showButtons, setShowButtons] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedback, setFeedback] = useState("");
 
   let jobId: string;
   try {
@@ -73,6 +89,7 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
   } = useCivitJob(chatId, jobId);
 
   const shouldShowLoadingIndicator = () => isLoading || jobStatus?.isScheduled;
+  const isImageGenerated = () => !!photoBase64;
 
   const getErrorMessage = () => {
     if (jobStatus?.error) return "Failed to load photo";
@@ -95,6 +112,18 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
     setShowDeleteConfirm(false);
   };
 
+  const handleRegenerate = () => {
+    setShowButtons(false);
+    d.ChatGenerationService(chatId)?.regenerateImage(jobId);
+  };
+
+  const handleRegenerateWithFeedback = () => {
+    setShowButtons(false);
+    setShowFeedbackModal(false);
+    d.ChatGenerationService(chatId)?.regenerateImage(jobId, feedback);
+    setFeedback("");
+  };
+
   const toggle = () => setShowButtons(!showButtons);
 
   return (
@@ -110,6 +139,42 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
 
         <MessageOverlay show={showButtons} onBackdropClick={toggle}>
           <Stack gap="xs" justify="center">
+            {isImageGenerated() && (
+              <>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="blue"
+                  leftSection={<RiEyeLine size={14} />}
+                  onClick={() => setShowPromptModal(true)}
+                >
+                  View Prompt
+                </Button>
+                {isLastMessage && (
+                  <>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="blue"
+                      leftSection={<RiRefreshLine size={14} />}
+                      onClick={handleRegenerate}
+                    >
+                      Regenerate
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="blue"
+                      leftSection={<RiChat3Line size={14} />}
+                      onClick={() => setShowFeedbackModal(true)}
+                    >
+                      Regenerate with Feedback
+                    </Button>
+                  </>
+                )}
+                <Divider my="xs" />
+              </>
+            )}
             <Button
               size="xs"
               variant="light"
@@ -152,6 +217,20 @@ export const CivitJobMessage = ({ chatId, message }: CivitJobMessageProps) => {
           deleteType={deleteType}
           onConfirm={handleConfirmDelete}
           onCancel={() => setShowDeleteConfirm(false)}
+        />
+
+        <ViewPromptModal
+          opened={showPromptModal}
+          prompt={message.data?.prompt ?? ""}
+          onClose={() => setShowPromptModal(false)}
+        />
+
+        <RegenerateFeedbackModal
+          opened={showFeedbackModal}
+          feedback={feedback}
+          onFeedbackChange={setFeedback}
+          onSubmit={handleRegenerateWithFeedback}
+          onCancel={() => setShowFeedbackModal(false)}
         />
       </MessageContentWrapper>
     </MessageItem>
