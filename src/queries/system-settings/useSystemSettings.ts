@@ -3,7 +3,7 @@ import type { SystemSettings } from "../../models";
 import { d } from "../../app/Dependencies/Dependencies";
 import { SYSTEM_SETTINGS_QUERY_KEY } from "./SystemSettingsService";
 
-export interface UseSystemSettingsResult {
+interface UseSystemSettingsResult {
   systemSettings: SystemSettings | undefined;
   isLoading: boolean;
   saveSystemSettings: (systemSettings: SystemSettings) => void;

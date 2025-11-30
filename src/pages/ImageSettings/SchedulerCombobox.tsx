@@ -2,7 +2,7 @@ import { useCombobox, Combobox, InputBase } from "@mantine/core";
 import type React from "react";
 import { d } from "../../app/Dependencies/Dependencies";
 
-export interface SchedulerComboboxProps {
+interface SchedulerComboboxProps {
   value: string;
   onChange: (value: string) => void;
 }

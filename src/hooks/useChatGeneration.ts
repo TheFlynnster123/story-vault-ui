@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { d } from "../app/Dependencies/Dependencies";
 
-export interface IUseChatGenerationProps {
+interface IUseChatGenerationProps {
   chatId: string;
 }
 

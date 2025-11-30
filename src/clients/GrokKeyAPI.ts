@@ -1,7 +1,7 @@
 import config from "../Config";
 import { AuthAPI } from "./AuthAPI";
 
-export interface IGrokKeyAPI {
+interface IGrokKeyAPI {
   hasValidGrokKey(): Promise<boolean>;
 }
 

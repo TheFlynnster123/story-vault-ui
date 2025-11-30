@@ -58,4 +58,32 @@ export class ChatSettingsService {
       return undefined;
     }
   };
+
+  /**
+   * Sets the background photo from a base64 string and clears any CivitJob background.
+   */
+  setBackgroundPhotoBase64 = async (
+    base64: string | undefined
+  ): Promise<void> => {
+    const currentSettings = await this.get();
+    await this.save({
+      ...currentSettings,
+      backgroundPhotoBase64: base64,
+      backgroundPhotoCivitJobId: undefined,
+    });
+  };
+
+  /**
+   * Sets the background photo from a CivitJob ID and clears any uploaded background.
+   */
+  setBackgroundPhotoCivitJobId = async (
+    jobId: string | undefined
+  ): Promise<void> => {
+    const currentSettings = await this.get();
+    await this.save({
+      ...currentSettings,
+      backgroundPhotoBase64: undefined,
+      backgroundPhotoCivitJobId: jobId,
+    });
+  };
 }

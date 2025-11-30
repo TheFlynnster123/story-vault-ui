@@ -3,7 +3,7 @@ import type { Memory } from "../models/Memory";
 import { d } from "../app/Dependencies/Dependencies";
 import { getMemoriesQueryKey } from "../queries/memories/MemoriesService";
 
-export interface UseMemoriesResult {
+interface UseMemoriesResult {
   memories: Memory[];
   isLoading: boolean;
   saveMemories: (memories: Memory[]) => Promise<void>;

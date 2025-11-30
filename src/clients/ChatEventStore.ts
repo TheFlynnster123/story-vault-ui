@@ -3,7 +3,7 @@ import { EncryptionManager } from "../Managers/EncryptionManager";
 import type { ChatEvent } from "../cqrs/events/ChatEvent";
 import { AuthAPI } from "./AuthAPI";
 
-export interface ChatEventDTO {
+interface ChatEventDTO {
   id: string;
   content: string; // JSON-serialized, encrypted event
 }

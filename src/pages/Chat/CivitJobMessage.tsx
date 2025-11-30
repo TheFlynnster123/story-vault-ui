@@ -13,10 +13,12 @@ import {
   RiEyeLine,
   RiRefreshLine,
   RiChat3Line,
+  RiImageEditLine,
 } from "react-icons/ri";
 import { DeleteConfirmModal } from "./ChatMessageButtons/DeleteConfirmModal";
 import { ViewPromptModal } from "./ChatMessageButtons/ViewPromptModal";
 import { RegenerateFeedbackModal } from "./ChatMessageButtons/RegenerateFeedbackModal";
+import { ChatTheme } from "../../theme/chatTheme";
 
 const MessageContent = styled.div`
   max-width: 80vw;
@@ -33,7 +35,7 @@ const StoryPhoto = styled.img`
 `;
 
 const LoadingBubble = styled.div`
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, ${ChatTheme.chatEntry.transparency});
   color: white;
   padding: 10px 20px;
   border-radius: 20px;
@@ -56,7 +58,7 @@ const LoadingImageIndicator = () => (
   </LoadingBubble>
 );
 
-export interface CivitJobMessageProps {
+interface CivitJobMessageProps {
   chatId: string;
   message: CivitJobChatMessage;
   isLastMessage: boolean;
@@ -117,6 +119,11 @@ export const CivitJobMessage = ({
     d.ChatGenerationService(chatId)?.regenerateImage(jobId);
   };
 
+  const handleSetAsBackground = async () => {
+    setShowButtons(false);
+    await d.ChatSettingsService(chatId).setBackgroundPhotoCivitJobId(jobId);
+  };
+
   const handleRegenerateWithFeedback = () => {
     setShowButtons(false);
     setShowFeedbackModal(false);
@@ -172,6 +179,15 @@ export const CivitJobMessage = ({
                     </Button>
                   </>
                 )}
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="teal"
+                  leftSection={<RiImageEditLine size={14} />}
+                  onClick={handleSetAsBackground}
+                >
+                  Set as Chat Background
+                </Button>
                 <Divider my="xs" />
               </>
             )}

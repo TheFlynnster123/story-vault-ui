@@ -1,6 +1,5 @@
 import styled, { css } from "styled-components";
 import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
-import type { ChatSettings } from "../../models";
 
 interface IChatListItemProps {
   chatId: string;
@@ -8,8 +7,10 @@ interface IChatListItemProps {
 }
 
 export const ChatListItem = ({ chatId, onClick }: IChatListItemProps) => {
-  const { chatSettings, isLoading } = useChatSettings(chatId);
-  const hasBackgroundImage = !!chatSettings?.backgroundPhotoBase64;
+  const { chatSettings, backgroundPhotoBase64, isLoading } =
+    useChatSettings(chatId);
+
+  const hasBackgroundImage = !!backgroundPhotoBase64;
   const title = chatSettings?.chatTitle ?? chatId;
 
   if (isLoading) {
@@ -26,7 +27,9 @@ export const ChatListItem = ({ chatId, onClick }: IChatListItemProps) => {
       hasBackgroundImage={hasBackgroundImage}
       onClick={() => onClick()}
       style={
-        hasBackgroundImage ? getBackgroundImageStyles(chatSettings) : undefined
+        backgroundPhotoBase64
+          ? getBackgroundImageStyles(backgroundPhotoBase64)
+          : undefined
       }
     >
       <StyledChatListItemTitle>{title}</StyledChatListItemTitle>
@@ -34,8 +37,8 @@ export const ChatListItem = ({ chatId, onClick }: IChatListItemProps) => {
   );
 };
 
-const getBackgroundImageStyles = (currentChatSettings: ChatSettings) => ({
-  backgroundImage: `url(${currentChatSettings.backgroundPhotoBase64})`,
+const getBackgroundImageStyles = (backgroundPhotoBase64: string) => ({
+  backgroundImage: `url(${backgroundPhotoBase64})`,
   backgroundSize: "cover",
   backgroundPosition: "center",
   backgroundRepeat: "no-repeat",
@@ -52,7 +55,9 @@ const StyledChatListItemTitle = styled.div`
   max-width: none;
 `;
 
-const StyledChatListItem = styled.div<{ hasBackgroundImage?: boolean }>`
+const StyledChatListItem = styled.div<{
+  hasBackgroundImage?: boolean;
+}>`
   padding: 10px 15px;
   margin-bottom: 1rem;
   border-radius: 5px;
@@ -65,6 +70,7 @@ const StyledChatListItem = styled.div<{ hasBackgroundImage?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 
   &:hover {
     background-color: black;
@@ -74,7 +80,6 @@ const StyledChatListItem = styled.div<{ hasBackgroundImage?: boolean }>`
     props.hasBackgroundImage &&
     css`
       padding: 0;
-      overflow: hidden;
       aspect-ratio: 1;
       margin: 0 auto 16px auto;
       width: 67vw;
@@ -100,6 +105,7 @@ const StyledChatListItem = styled.div<{ hasBackgroundImage?: boolean }>`
         transform: translateX(-50%);
         max-width: calc(100% - 20px);
         word-wrap: break-word;
+        z-index: 1;
       }
 
       &:hover ${StyledChatListItemTitle} {

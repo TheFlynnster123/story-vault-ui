@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { RiArrowLeftLine } from "react-icons/ri";
+import { RiArrowLeftLine, RiChatSettingsLine } from "react-icons/ri";
 import {
   Title,
   TextInput,
@@ -11,6 +11,7 @@ import {
   ActionIcon,
   Stack,
   Select,
+  Divider,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { ChatSettings } from "../models/ChatSettings";
@@ -19,6 +20,7 @@ import { ChatDeleteControl } from "./ChatEditor/ChatDeleteControl";
 import { BackgroundPhotoUploader } from "./ChatEditor/BackgroundPhotoUploader";
 import { Page } from "./Page";
 import { useChatSettings } from "../queries/chat-settings/useChatSettings";
+import { ChatTheme } from "../theme/chatTheme";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
@@ -28,13 +30,23 @@ export const ChatEditorPage: React.FC = () => {
     form,
     handlePhotoUpload,
     removePhoto,
+    handleCivitJobIdChange,
     handleSubmit,
     handleGoBack,
   } = useChatEditor(chatIdFromParams);
 
   return (
     <Page>
-      <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} p={30}>
+      <Paper
+        component="form"
+        onSubmit={form.onSubmit(handleSubmit)}
+        p={30}
+        style={{
+          background: ChatTheme.page.paperBackground,
+          backdropFilter: ChatTheme.page.backdropBlur,
+          color: ChatTheme.page.text,
+        }}
+      >
         <ChatEditorHeader
           isEditMode={isEditMode}
           onGoBack={handleGoBack}
@@ -45,9 +57,12 @@ export const ChatEditorPage: React.FC = () => {
           <ChatFormFields form={form} />
 
           <BackgroundPhotoUploader
+            chatId={chatId}
             backgroundPhotoBase64={form.values.backgroundPhotoBase64}
+            backgroundPhotoCivitJobId={form.values.backgroundPhotoCivitJobId}
             onPhotoUpload={handlePhotoUpload}
             onRemovePhoto={removePhoto}
+            onCivitJobIdChange={handleCivitJobIdChange}
           />
         </Stack>
 
@@ -68,17 +83,27 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
   onGoBack,
   isFormDirty,
 }) => (
-  <Group justify="space-between" align="center" mb="xl">
-    <Group>
-      <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
-        <RiArrowLeftLine />
-      </ActionIcon>
-      <Title order={2}>{isEditMode ? "Edit Chat" : "Create New Chat"}</Title>
+  <>
+    <Group justify="space-between" align="center" mb="md">
+      <Group>
+        <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
+          <RiArrowLeftLine color={ChatTheme.page.text} />
+        </ActionIcon>
+        <RiChatSettingsLine size={24} color={ChatTheme.chatSettings.primary} />
+        <Title
+          order={2}
+          fw={400}
+          style={{ color: ChatTheme.chatSettings.primary }}
+        >
+          {isEditMode ? "Edit Chat" : "Create New Chat"}
+        </Title>
+      </Group>
+      <Button type="submit" disabled={!isFormDirty}>
+        {isEditMode ? "Save Changes" : "Create Chat"}
+      </Button>
     </Group>
-    <Button type="submit" disabled={!isFormDirty}>
-      {isEditMode ? "Save Changes" : "Create Chat"}
-    </Button>
-  </Group>
+    <Divider mb="xl" style={{ borderColor: ChatTheme.chatSettings.border }} />
+  </>
 );
 
 const useChatEditor = (chatIdFromParams: string | undefined) => {
@@ -96,6 +121,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       timestampCreatedUtcMs: Date.now(),
       chatTitle: "",
       backgroundPhotoBase64: undefined as string | undefined,
+      backgroundPhotoCivitJobId: undefined as string | undefined,
       promptType: "First Person Character",
       customPrompt: "",
       story: "",
@@ -112,6 +138,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
         timestampCreatedUtcMs: Date.now(),
         chatTitle: chatSettings.chatTitle || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
+        backgroundPhotoCivitJobId: chatSettings.backgroundPhotoCivitJobId,
         promptType: chatSettings.promptType || "First Person Character",
         customPrompt: chatSettings.customPrompt || "",
         story: chatSettings.story || "",
@@ -128,6 +155,8 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       reader.onload = (event) => {
         const base64String = event.target?.result as string;
         form.setFieldValue("backgroundPhotoBase64", base64String);
+        // Clear CivitJob when uploading a new photo
+        form.setFieldValue("backgroundPhotoCivitJobId", undefined);
       };
       reader.readAsDataURL(file);
     }
@@ -135,6 +164,15 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
 
   const removePhoto = () => {
     form.setFieldValue("backgroundPhotoBase64", undefined);
+    form.setFieldValue("backgroundPhotoCivitJobId", undefined);
+  };
+
+  const handleCivitJobIdChange = (jobId: string | undefined) => {
+    form.setFieldValue("backgroundPhotoCivitJobId", jobId);
+    // Clear uploaded photo when setting CivitJob
+    if (jobId) {
+      form.setFieldValue("backgroundPhotoBase64", undefined);
+    }
   };
 
   const handleSubmit = async (values: typeof form.values) => {
@@ -161,6 +199,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     form,
     handlePhotoUpload,
     removePhoto,
+    handleCivitJobIdChange,
     handleSubmit,
     handleGoBack,
     handleDeleteSuccess,

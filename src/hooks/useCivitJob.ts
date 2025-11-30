@@ -2,7 +2,7 @@ import { Query, useQuery } from "@tanstack/react-query";
 import { CivitJobOrchestrator } from "../services/CivitJobOrchestrator";
 import type { CivitJobResult } from "../types/CivitJob";
 
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 5000;
 
 export const useCivitJob = (chatId: string, jobId: string) => {
   const queryResult = useQuery<CivitJobResult>({
@@ -14,6 +14,9 @@ export const useCivitJob = (chatId: string, jobId: string) => {
       await new CivitJobOrchestrator().getOrPollPhoto(chatId, jobId),
 
     refetchInterval: (query) => shouldPoll(query),
+
+    // Once we have a photo cached, it never goes stale - serve from cache immediately
+    staleTime: Infinity,
 
     // Don't retry on errors, let the orchestrator handle error states.
     // Once we have a photo, we're home free.

@@ -1,9 +1,9 @@
-export interface Note {
+export interface Plan {
   id: string;
-  type: NoteType;
+  type: PlanType;
   name: string;
   prompt: string;
   content?: string;
 }
 
-type NoteType = "planning";
+type PlanType = "planning";

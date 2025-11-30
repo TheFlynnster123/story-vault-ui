@@ -2,7 +2,7 @@ import React from "react";
 import { Image, Text, Box, Loader, Group } from "@mantine/core";
 import { useCivitJob } from "../../hooks/useCivitJob";
 
-const EMULATED_CHAT_ID = "SAMPLE_IMAGE_GENERATOR";
+export const GLOBAL_IMAGE_CHAT_ID = "SAMPLE_IMAGE_GENERATOR";
 
 interface ModelSampleImageProps {
   sampleImageJobId?: string;
@@ -29,7 +29,7 @@ export const ModelSampleImage: React.FC<ModelSampleImageProps> = ({
   showLabel = false,
 }) => {
   const { photoBase64, isLoading } = useCivitJob(
-    EMULATED_CHAT_ID,
+    GLOBAL_IMAGE_CHAT_ID,
     sampleImageJobId || ""
   );
   const sizeStyles = getSizeStyles(size);

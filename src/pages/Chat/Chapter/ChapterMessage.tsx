@@ -7,16 +7,16 @@ import "../ChatMessage.styled.ts";
 import { ChapterContent } from "./ChapterContent";
 import { ChapterExpandedDetails } from "./ChapterExpandedMessages";
 import { NextChapterDirection } from "./NextChapterDirection";
-import { chatTheme } from "../../../theme/chatTheme";
+import { ChatTheme } from "../../../theme/chatTheme";
 
 const MessageContainer = styled.div`
   padding: 1rem;
   background: linear-gradient(
     135deg,
-    ${chatTheme.chapter.backgroundPrimary} 0%,
-    ${chatTheme.chapter.backgroundSecondary} 100%
+    ${ChatTheme.chapter.backgroundPrimary} 0%,
+    ${ChatTheme.chapter.backgroundSecondary} 100%
   );
-  border-left: 4px solid ${chatTheme.chapter.border};
+  border-left: 4px solid ${ChatTheme.chapter.border};
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   margin-top: 1rem;
@@ -28,7 +28,7 @@ const ChapterHeader = styled.div`
   gap: 0.5rem;
   font-weight: 600;
   font-size: 1.1rem;
-  color: ${chatTheme.chapter.headerText};
+  color: ${ChatTheme.chapter.headerText};
   margin-bottom: 0.5rem;
 `;
 
@@ -36,7 +36,7 @@ const ExpandButtonContainer = styled.div`
   margin-top: 0.5rem;
 `;
 
-export interface ChapterMessageProps {
+interface ChapterMessageProps {
   chatId: string;
   chapter: ChapterChatMessage;
   isLastMessage?: boolean;

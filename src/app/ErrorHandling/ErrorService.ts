@@ -1,10 +1,5 @@
 import { notifications } from "@mantine/notifications";
 
-export interface ErrorNotificationOptions {
-  message: string;
-  title?: string;
-  autoClose?: number | false;
-}
 export interface IErrorService {
   log: (message: string, error?: any) => void;
 }

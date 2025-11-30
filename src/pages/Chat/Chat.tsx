@@ -14,12 +14,12 @@ interface ChatProps {
 export const Chat: React.FC<ChatProps> = ({ chatId }) => {
   useEnsureChatInitialization(chatId);
 
-  const { chatSettings } = useChatSettings(chatId);
+  const { backgroundPhotoBase64 } = useChatSettings(chatId);
 
   return (
     <ChatContainer
       $chatId={chatId}
-      $backgroundPhotoBase64={chatSettings?.backgroundPhotoBase64}
+      $backgroundPhotoBase64={backgroundPhotoBase64}
     >
       <ChatControls />
 
