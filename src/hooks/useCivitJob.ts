@@ -2,7 +2,7 @@ import { Query, useQuery } from "@tanstack/react-query";
 import { CivitJobOrchestrator } from "../services/CivitJobOrchestrator";
 import type { CivitJobResult } from "../types/CivitJob";
 
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 5000;
 
 export const useCivitJob = (chatId: string, jobId: string) => {
   const queryResult = useQuery<CivitJobResult>({

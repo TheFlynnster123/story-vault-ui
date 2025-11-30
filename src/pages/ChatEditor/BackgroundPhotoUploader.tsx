@@ -46,7 +46,9 @@ export const BackgroundPhotoUploader: React.FC<
 
   const isLoadingCivitJob =
     backgroundPhotoCivitJobId && !civitJobPhoto && jobStatus?.isScheduled;
+
   const displayPhoto = civitJobPhoto || backgroundPhotoBase64;
+
   const hasPhoto = !!displayPhoto || isLoadingCivitJob;
 
   const handleGenerateBackground = async () => {
@@ -112,7 +114,7 @@ export const BackgroundPhotoUploader: React.FC<
           </Button>
         </Paper>
       ) : (
-        <Stack mt="xs" gap="md">
+        <Stack my="lg" gap="md">
           <Group justify="center">
             <FileButton
               onChange={(file) =>
@@ -134,7 +136,7 @@ export const BackgroundPhotoUploader: React.FC<
             or
           </Text>
 
-          <Stack gap="xs">
+          <Stack>
             <TextInput
               placeholder="e.g., A cozy medieval tavern with warm firelight"
               label="Generate with AI"

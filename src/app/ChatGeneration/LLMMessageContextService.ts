@@ -1,12 +1,8 @@
-import type { ChatSettings, Plan } from "../../models";
+import { ChatSettingsUtils, type ChatSettings, type Plan } from "../../models";
 import type { Memory } from "../../models/Memory";
 import type { LLMMessage } from "../../cqrs/LLMChatProjection";
-import { FirstPersonCharacterPrompt } from "../../templates/FirstPersonCharacterTemplate";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
-
-const RESPONSE_PROMPT: string =
-  "Consider the above notes, write a response to the conversation. Provide your response directly without a preamble.";
 
 const CHAPTER_SUMMARY_PROMPT: string =
   "Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without a preamble.";
@@ -70,11 +66,6 @@ export class LLMMessageContextService {
     return this.assembleChapterSummaryMessages(chatMessages);
   }
 
-  getStoryPrompt(chatSettings: ChatSettings): string {
-    if (this.hasCustomPrompt(chatSettings)) return chatSettings.customPrompt!;
-    return FirstPersonCharacterPrompt;
-  }
-
   buildPlanMessages(plans: Plan[]): LLMMessage[] {
     return plans.map((plan) => this.planToSystemMessage(plan));
   }
@@ -118,18 +109,17 @@ export class LLMMessageContextService {
     chatMessages: LLMMessage[],
     plans: Plan[],
     memories: Memory[],
-    includeResponsePrompt: boolean
+    includeStoryPrompt: boolean
   ): LLMMessage[] {
     const messages: LLMMessage[] = [
-      this.createStoryPromptMessage(chatSettings),
       ...this.buildStoryMessages(chatSettings),
       ...chatMessages,
       ...this.buildPlanMessages(plans),
       ...this.buildMemoryMessages(memories),
     ];
 
-    if (includeResponsePrompt)
-      messages.push(this.createResponsePromptMessage());
+    if (includeStoryPrompt)
+      messages.push(this.createStoryPromptMessage(chatSettings));
 
     return messages;
   }
@@ -156,11 +146,7 @@ export class LLMMessageContextService {
   // ---- Private: Message Creators ----
 
   private createStoryPromptMessage(chatSettings: ChatSettings): LLMMessage {
-    return toSystemMessage(this.getStoryPrompt(chatSettings));
-  }
-
-  private createResponsePromptMessage(): LLMMessage {
-    return toSystemMessage(RESPONSE_PROMPT);
+    return toSystemMessage(ChatSettingsUtils.getStoryPrompt(chatSettings));
   }
 
   private createChapterSummaryPromptMessage(): LLMMessage {
@@ -172,12 +158,6 @@ export class LLMMessageContextService {
   }
 
   // ---- Private: Helpers ----
-
-  private hasCustomPrompt(chatSettings: ChatSettings): boolean {
-    return (
-      chatSettings?.promptType === "Manual" && !!chatSettings?.customPrompt
-    );
-  }
 
   private hasStoryContent(chatSettings: ChatSettings): boolean {
     return !!chatSettings?.story?.trim();
