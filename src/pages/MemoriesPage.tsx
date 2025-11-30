@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RiArrowLeftLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
+import { LuBrain } from "react-icons/lu";
 import {
   Title,
   Button,
@@ -10,6 +11,7 @@ import {
   Stack,
   Textarea,
   Text,
+  Divider,
 } from "@mantine/core";
 import type { Memory } from "../models/Memory";
 import { useMemories } from "../hooks/useMemories";
@@ -17,6 +19,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
 import isEqual from "lodash.isequal";
 import { Page } from "./Page";
+import { ChatTheme } from "../theme/chatTheme";
 
 const createEmptyMemory = (): Memory => ({
   id: uuidv4(),
@@ -85,23 +88,31 @@ export const MemoriesPage: React.FC = () => {
           e.preventDefault();
           handleSave();
         }}
-        withBorder
         shadow="md"
         p={30}
         mt={30}
         radius="md"
+        style={{
+          background: ChatTheme.page.paperBackground,
+          backdropFilter: ChatTheme.page.backdropBlur,
+          color: ChatTheme.page.text,
+        }}
       >
         <MemoriesHeader onGoBack={handleGoBack} isDirty={hasChanges} />
 
         <Stack>
           <Group justify="space-between">
             <Text fw={500}>Memories</Text>
-            <Button variant="subtle" onClick={handleAddMemory}>
+            <Button
+              variant="subtle"
+              onClick={handleAddMemory}
+              style={{ color: ChatTheme.memories.primary }}
+            >
               <RiAddLine /> Add Memory
             </Button>
           </Group>
           {formMemories.map((memory) => (
-            <Paper key={memory.id} withBorder p="md">
+            <Stack key={memory.id} gap="sm">
               <Textarea
                 placeholder="Enter your memory here..."
                 value={memory.content}
@@ -110,16 +121,27 @@ export const MemoriesPage: React.FC = () => {
                 }
                 minRows={3}
                 autosize
+                styles={{
+                  input: {
+                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                    borderColor: ChatTheme.memories.border,
+                    color: ChatTheme.page.text,
+                  },
+                }}
               />
               <Button
                 variant="outline"
                 color="red"
                 onClick={() => handleRemoveMemory(memory.id)}
-                mt="sm"
+                style={{ alignSelf: "flex-start" }}
               >
                 <RiDeleteBinLine /> Delete Memory
               </Button>
-            </Paper>
+              <Divider
+                my="sm"
+                style={{ borderColor: ChatTheme.memories.border }}
+              />
+            </Stack>
           ))}
         </Stack>
       </Paper>
@@ -144,15 +166,21 @@ const MemoriesHeader: React.FC<MemoriesHeaderProps> = ({
   onGoBack,
   isDirty,
 }) => (
-  <Group justify="space-between" align="center" mb="xl">
-    <Group>
-      <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
-        <RiArrowLeftLine />
-      </ActionIcon>
-      <Title order={2}>Memories</Title>
+  <>
+    <Group justify="space-between" align="center" mb="md">
+      <Group>
+        <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
+          <RiArrowLeftLine color={ChatTheme.page.text} />
+        </ActionIcon>
+        <LuBrain size={24} color={ChatTheme.memories.primary} />
+        <Title order={2} fw={400} style={{ color: ChatTheme.memories.primary }}>
+          Memories
+        </Title>
+      </Group>
+      <Button type="submit" disabled={!isDirty}>
+        Save Changes
+      </Button>
     </Group>
-    <Button type="submit" disabled={!isDirty}>
-      Save Changes
-    </Button>
-  </Group>
+    <Divider mb="xl" style={{ borderColor: ChatTheme.memories.border }} />
+  </>
 );

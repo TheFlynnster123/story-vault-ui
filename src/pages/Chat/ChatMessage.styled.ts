@@ -1,4 +1,26 @@
 import styled, { keyframes } from "styled-components";
+import { ChatTheme } from "../../theme/chatTheme";
+
+/* ========================= */
+/* Helper Functions          */
+/* ========================= */
+/**
+ * Applies transparency to an rgba color string
+ * @param color - rgba color string like "rgba(r, g, b, a)"
+ * @param transparency - transparency value (0-1) to multiply with existing alpha
+ * @returns modified rgba string with adjusted alpha
+ */
+const applyTransparency = (color: string, transparency: number): string => {
+  const match = color.match(
+    /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/
+  );
+  if (match) {
+    const [, r, g, b, a = "1"] = match;
+    const newAlpha = parseFloat(a) * transparency;
+    return `rgba(${r}, ${g}, ${b}, ${newAlpha})`;
+  }
+  return color;
+};
 
 /* ========================= */
 /* Animations                */
@@ -90,12 +112,18 @@ export const MessageText = styled.div<{ $type: "user" | "system" }>`
   ${({ $type }) =>
     $type === "user"
       ? `
-    background-color: rgba(0, 195, 255, 0.726);
-    color: white;
+    background-color: ${applyTransparency(
+      ChatTheme.messages.user.background,
+      ChatTheme.chatEntry.transparency
+    )};
+    color: ${ChatTheme.messages.user.text};
   `
       : `
-    background-color: rgba(0, 2, 126, 0.733);
-    color: white;
+    background-color: ${applyTransparency(
+      ChatTheme.messages.assistant.background,
+      ChatTheme.chatEntry.transparency
+    )};
+    color: ${ChatTheme.messages.assistant.text};
   `}
 
   &.clickable {

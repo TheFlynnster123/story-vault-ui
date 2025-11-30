@@ -11,11 +11,23 @@ import { ChapterModal } from "../ChatControls/ChapterModal";
 import { useAddChapter } from "../ChatControls/useAddChapter";
 import { usePlanCache } from "../../../hooks/usePlanCache";
 import { useMemories } from "../../../hooks/useMemories";
-import { chatTheme } from "../../../theme/chatTheme";
+import { ChatTheme } from "../../../theme/chatTheme";
 import { PreviewItem } from "./PreviewItem";
 import { ContentPreview } from "./ContentPreview";
 import type { Plan } from "../../../models/Plan";
 import type { Memory } from "../../../models/Memory";
+
+/** Flow accordion specific styles */
+const FlowStyles = {
+  background: "rgba(0, 0, 0, 0.8)",
+  controlBackground: "rgba(30, 30, 30, 0.95)",
+  controlHover: "rgba(50, 50, 50, 0.95)",
+  contentBackground: "rgba(20, 20, 20, 0.95)",
+  buttonBackground: "rgba(40, 40, 40, 0.6)",
+  buttonHover: "rgba(60, 60, 60, 0.8)",
+  border: "rgba(255, 255, 255, 0.1)",
+  text: "#ffffff",
+} as const;
 
 interface FlowAccordionProps {
   chatId: string;
@@ -65,8 +77,8 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
   return (
     <Box
       style={{
-        backgroundColor: chatTheme.flow.background,
-        borderTop: `1px solid ${chatTheme.flow.border}`,
+        backgroundColor: FlowStyles.background,
+        borderTop: `1px solid ${FlowStyles.border}`,
         position: "relative",
         zIndex: 10,
       }}
@@ -78,10 +90,10 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
             backgroundColor: "transparent",
           },
           control: {
-            backgroundColor: chatTheme.flow.controlBackground,
-            color: chatTheme.flow.text,
+            backgroundColor: FlowStyles.controlBackground,
+            color: FlowStyles.text,
             "&:hover": {
-              backgroundColor: chatTheme.flow.controlHover,
+              backgroundColor: FlowStyles.controlHover,
             },
           },
           label: {
@@ -89,15 +101,15 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
             fontWeight: 600,
           },
           content: {
-            backgroundColor: chatTheme.flow.contentBackground,
+            backgroundColor: FlowStyles.contentBackground,
             padding: 0,
           },
           item: {
             border: "none",
-            borderBottom: `1px solid ${chatTheme.flow.border}`,
+            borderBottom: `1px solid ${FlowStyles.border}`,
           },
           chevron: {
-            color: chatTheme.flow.text,
+            color: FlowStyles.text,
           },
         }}
       >
@@ -111,15 +123,16 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
                 color="gray"
                 fullWidth
                 justify="flex-start"
-                leftSection={<RiBookOpenLine size={18} />}
+                leftSection={
+                  <RiBookOpenLine size={18} color={ChatTheme.chapter.primary} />
+                }
                 onClick={handleOpenModal}
                 styles={{
                   root: {
-                    backgroundColor: chatTheme.flow.buttonBackground,
-                    color: chatTheme.flow.text,
-                    border: `2px solid ${chatTheme.chapter.primary}`,
+                    backgroundColor: FlowStyles.buttonBackground,
+                    color: FlowStyles.text,
                     "&:hover": {
-                      backgroundColor: chatTheme.flow.buttonHover,
+                      backgroundColor: FlowStyles.buttonHover,
                     },
                   },
                 }}
@@ -137,14 +150,19 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
                 color="gray"
                 fullWidth
                 justify="flex-start"
-                leftSection={<RiChatSettingsLine size={18} />}
+                leftSection={
+                  <RiChatSettingsLine
+                    size={18}
+                    color={ChatTheme.chatSettings.primary}
+                  />
+                }
                 onClick={() => navigate(`/chat/${chatId}/edit`)}
                 styles={{
                   root: {
-                    backgroundColor: chatTheme.flow.buttonBackground,
-                    color: chatTheme.flow.text,
+                    backgroundColor: FlowStyles.buttonBackground,
+                    color: FlowStyles.text,
                     "&:hover": {
-                      backgroundColor: chatTheme.flow.buttonHover,
+                      backgroundColor: FlowStyles.buttonHover,
                     },
                   },
                 }}
@@ -163,14 +181,16 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
                   color="gray"
                   fullWidth
                   justify="flex-start"
-                  leftSection={<RiFileList2Line size={18} />}
+                  leftSection={
+                    <RiFileList2Line size={18} color={ChatTheme.plan.primary} />
+                  }
                   onClick={() => navigate(`/chat/${chatId}/plan`)}
                   styles={{
                     root: {
-                      backgroundColor: chatTheme.flow.buttonBackground,
-                      color: chatTheme.flow.text,
+                      backgroundColor: FlowStyles.buttonBackground,
+                      color: FlowStyles.text,
                       "&:hover": {
-                        backgroundColor: chatTheme.flow.buttonHover,
+                        backgroundColor: FlowStyles.buttonHover,
                       },
                     },
                   }}
@@ -200,14 +220,16 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
                   color="gray"
                   fullWidth
                   justify="flex-start"
-                  leftSection={<LuBrain size={18} />}
+                  leftSection={
+                    <LuBrain size={18} color={ChatTheme.memories.primary} />
+                  }
                   onClick={() => navigate(`/chat/${chatId}/memories`)}
                   styles={{
                     root: {
-                      backgroundColor: chatTheme.flow.buttonBackground,
-                      color: chatTheme.flow.text,
+                      backgroundColor: FlowStyles.buttonBackground,
+                      color: FlowStyles.text,
                       "&:hover": {
-                        backgroundColor: chatTheme.flow.buttonHover,
+                        backgroundColor: FlowStyles.buttonHover,
                       },
                     },
                   }}

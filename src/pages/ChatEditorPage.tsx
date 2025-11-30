@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { RiArrowLeftLine } from "react-icons/ri";
+import { RiArrowLeftLine, RiChatSettingsLine } from "react-icons/ri";
 import {
   Title,
   TextInput,
@@ -11,6 +11,7 @@ import {
   ActionIcon,
   Stack,
   Select,
+  Divider,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { ChatSettings } from "../models/ChatSettings";
@@ -19,6 +20,7 @@ import { ChatDeleteControl } from "./ChatEditor/ChatDeleteControl";
 import { BackgroundPhotoUploader } from "./ChatEditor/BackgroundPhotoUploader";
 import { Page } from "./Page";
 import { useChatSettings } from "../queries/chat-settings/useChatSettings";
+import { ChatTheme } from "../theme/chatTheme";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
@@ -34,7 +36,16 @@ export const ChatEditorPage: React.FC = () => {
 
   return (
     <Page>
-      <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} p={30}>
+      <Paper
+        component="form"
+        onSubmit={form.onSubmit(handleSubmit)}
+        p={30}
+        style={{
+          background: ChatTheme.page.paperBackground,
+          backdropFilter: ChatTheme.page.backdropBlur,
+          color: ChatTheme.page.text,
+        }}
+      >
         <ChatEditorHeader
           isEditMode={isEditMode}
           onGoBack={handleGoBack}
@@ -68,17 +79,27 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
   onGoBack,
   isFormDirty,
 }) => (
-  <Group justify="space-between" align="center" mb="xl">
-    <Group>
-      <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
-        <RiArrowLeftLine />
-      </ActionIcon>
-      <Title order={2}>{isEditMode ? "Edit Chat" : "Create New Chat"}</Title>
+  <>
+    <Group justify="space-between" align="center" mb="md">
+      <Group>
+        <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
+          <RiArrowLeftLine color={ChatTheme.page.text} />
+        </ActionIcon>
+        <RiChatSettingsLine size={24} color={ChatTheme.chatSettings.primary} />
+        <Title
+          order={2}
+          fw={400}
+          style={{ color: ChatTheme.chatSettings.primary }}
+        >
+          {isEditMode ? "Edit Chat" : "Create New Chat"}
+        </Title>
+      </Group>
+      <Button type="submit" disabled={!isFormDirty}>
+        {isEditMode ? "Save Changes" : "Create Chat"}
+      </Button>
     </Group>
-    <Button type="submit" disabled={!isFormDirty}>
-      {isEditMode ? "Save Changes" : "Create Chat"}
-    </Button>
-  </Group>
+    <Divider mb="xl" style={{ borderColor: ChatTheme.chatSettings.border }} />
+  </>
 );
 
 const useChatEditor = (chatIdFromParams: string | undefined) => {

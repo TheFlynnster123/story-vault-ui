@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { RiArrowLeftLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
+import {
+  RiArrowLeftLine,
+  RiAddLine,
+  RiDeleteBinLine,
+  RiFileList2Line,
+} from "react-icons/ri";
 import {
   Container,
   Title,
@@ -12,11 +17,13 @@ import {
   TextInput,
   Textarea,
   Text,
+  Divider,
 } from "@mantine/core";
 import type { Plan } from "../models/Plan";
 import { usePlanCache } from "../hooks/usePlanCache";
 import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { ChatTheme } from "../theme/chatTheme";
 
 export const PlanPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -73,6 +80,12 @@ export const PlanPage: React.FC = () => {
           e.preventDefault();
           handleSave();
         }}
+        p="xl"
+        style={{
+          background: ChatTheme.page.paperBackground,
+          backdropFilter: ChatTheme.page.backdropBlur,
+          color: ChatTheme.page.text,
+        }}
       >
         <PlanHeader onGoBack={handleGoBack} />
 
@@ -104,15 +117,21 @@ interface PlanHeaderProps {
 }
 
 const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
-  <Group justify="space-between" align="center" mb="xl">
-    <Group>
-      <ActionIcon onClick={onGoBack} variant="gradient" size="lg">
-        <RiArrowLeftLine />
-      </ActionIcon>
-      <Title order={2}>Plan</Title>
+  <>
+    <Group justify="space-between" align="center" mb="md">
+      <Group>
+        <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
+          <RiArrowLeftLine color={ChatTheme.page.text} />
+        </ActionIcon>
+        <RiFileList2Line size={24} color={ChatTheme.plan.primary} />
+        <Title order={2} fw={400} style={{ color: ChatTheme.plan.primary }}>
+          Plan
+        </Title>
+      </Group>
+      <Button type="submit">Save Changes</Button>
     </Group>
-    <Button type="submit">Save Changes</Button>
-  </Group>
+    <Divider mb="xl" style={{ borderColor: ChatTheme.plan.border }} />
+  </>
 );
 
 interface PlanSectionProps {
@@ -135,32 +154,53 @@ const PlanSection: React.FC<PlanSectionProps> = ({
   <Stack>
     <Group justify="space-between">
       <Text fw={500}>{title}</Text>
-      <Button variant="subtle" onClick={() => onAdd(type)}>
+      <Button
+        variant="subtle"
+        onClick={() => onAdd(type)}
+        style={{ color: ChatTheme.plan.primary }}
+      >
         <RiAddLine /> Add Plan
       </Button>
     </Group>
     {plans.map((plan) => (
-      <Paper key={plan.id} withBorder p="md">
+      <Stack key={plan.id} gap="sm">
         <TextInput
           label="Name"
           value={plan.name}
           onChange={(e) => onChange(plan.id, "name", e.currentTarget.value)}
+          styles={{
+            label: { color: ChatTheme.page.text },
+            input: {
+              backgroundColor: "rgba(0, 0, 0, 0.3)",
+              borderColor: ChatTheme.plan.border,
+              color: ChatTheme.page.text,
+            },
+          }}
         />
         <Textarea
           label="Plan Prompt"
           value={plan.prompt}
           onChange={(e) => onChange(plan.id, "prompt", e.currentTarget.value)}
           minRows={5}
+          styles={{
+            label: { color: ChatTheme.page.text },
+            input: {
+              backgroundColor: "rgba(0, 0, 0, 0.3)",
+              borderColor: ChatTheme.plan.border,
+              color: ChatTheme.page.text,
+            },
+          }}
         />
         <Button
           variant="outline"
           color="red"
           onClick={() => onRemove(plan.id)}
-          mt="sm"
+          style={{ alignSelf: "flex-start" }}
         >
           <RiDeleteBinLine /> Delete Plan
         </Button>
-      </Paper>
+        <Divider my="sm" style={{ borderColor: ChatTheme.plan.border }} />
+      </Stack>
     ))}
   </Stack>
 );

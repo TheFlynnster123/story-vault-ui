@@ -1,10 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
-import { RiArrowLeftLine } from "react-icons/ri";
+import { RiArrowLeftLine, RiChatSettingsLine } from "react-icons/ri";
 import { GrokKeyManager } from "./ChatSettings/GrokKeyManager";
 import { ChatSettingsEditor } from "./ChatSettings/ChatSettingsEditor";
 import { Page } from "./Page";
+import { ChatTheme } from "../theme/chatTheme";
 
 interface SettingsSectionProps {
   title: string;
@@ -39,10 +40,23 @@ const SettingsSection: React.FC<SettingsSectionProps> = ({
   children,
 }) => (
   <Grid.Col span={{ base: 12, md: 6 }}>
-    <Paper withBorder p="xl" radius="md">
-      <Title order={2} mb="lg">
+    <Paper
+      p="xl"
+      radius="md"
+      style={{
+        background: ChatTheme.page.paperBackground,
+        backdropFilter: ChatTheme.page.backdropBlur,
+        color: ChatTheme.page.text,
+      }}
+    >
+      <Title
+        order={3}
+        mb="md"
+        style={{ color: ChatTheme.chatSettings.primary }}
+      >
         {title}
       </Title>
+      <Divider mb="lg" style={{ borderColor: ChatTheme.chatSettings.border }} />
       {children}
     </Paper>
   </Grid.Col>
@@ -50,13 +64,20 @@ const SettingsSection: React.FC<SettingsSectionProps> = ({
 
 const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <>
-    <Group>
-      <ActionIcon onClick={onBack} size="lg" variant="gradient">
-        <RiArrowLeftLine />
+    <Group mb="md">
+      <ActionIcon onClick={onBack} size="lg" variant="subtle">
+        <RiArrowLeftLine color={ChatTheme.page.text} />
       </ActionIcon>
-      <Title order={1}>Chat Settings</Title>
+      <RiChatSettingsLine size={28} color={ChatTheme.chatSettings.primary} />
+      <Title
+        order={1}
+        fw={400}
+        style={{ color: ChatTheme.chatSettings.primary }}
+      >
+        Chat Settings
+      </Title>
     </Group>
-    <Divider my="xl" />
+    <Divider mb="xl" style={{ borderColor: ChatTheme.chatSettings.border }} />
   </>
 );
 
