@@ -15,6 +15,9 @@ export const useCivitJob = (chatId: string, jobId: string) => {
 
     refetchInterval: (query) => shouldPoll(query),
 
+    // Once we have a photo cached, it never goes stale - serve from cache immediately
+    staleTime: Infinity,
+
     // Don't retry on errors, let the orchestrator handle error states.
     // Once we have a photo, we're home free.
     retry: false,

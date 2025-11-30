@@ -30,6 +30,7 @@ export const ChatEditorPage: React.FC = () => {
     form,
     handlePhotoUpload,
     removePhoto,
+    handleCivitJobIdChange,
     handleSubmit,
     handleGoBack,
   } = useChatEditor(chatIdFromParams);
@@ -56,9 +57,12 @@ export const ChatEditorPage: React.FC = () => {
           <ChatFormFields form={form} />
 
           <BackgroundPhotoUploader
+            chatId={chatId}
             backgroundPhotoBase64={form.values.backgroundPhotoBase64}
+            backgroundPhotoCivitJobId={form.values.backgroundPhotoCivitJobId}
             onPhotoUpload={handlePhotoUpload}
             onRemovePhoto={removePhoto}
+            onCivitJobIdChange={handleCivitJobIdChange}
           />
         </Stack>
 
@@ -117,6 +121,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       timestampCreatedUtcMs: Date.now(),
       chatTitle: "",
       backgroundPhotoBase64: undefined as string | undefined,
+      backgroundPhotoCivitJobId: undefined as string | undefined,
       promptType: "First Person Character",
       customPrompt: "",
       story: "",
@@ -133,6 +138,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
         timestampCreatedUtcMs: Date.now(),
         chatTitle: chatSettings.chatTitle || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
+        backgroundPhotoCivitJobId: chatSettings.backgroundPhotoCivitJobId,
         promptType: chatSettings.promptType || "First Person Character",
         customPrompt: chatSettings.customPrompt || "",
         story: chatSettings.story || "",
@@ -149,6 +155,8 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       reader.onload = (event) => {
         const base64String = event.target?.result as string;
         form.setFieldValue("backgroundPhotoBase64", base64String);
+        // Clear CivitJob when uploading a new photo
+        form.setFieldValue("backgroundPhotoCivitJobId", undefined);
       };
       reader.readAsDataURL(file);
     }
@@ -156,6 +164,15 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
 
   const removePhoto = () => {
     form.setFieldValue("backgroundPhotoBase64", undefined);
+    form.setFieldValue("backgroundPhotoCivitJobId", undefined);
+  };
+
+  const handleCivitJobIdChange = (jobId: string | undefined) => {
+    form.setFieldValue("backgroundPhotoCivitJobId", jobId);
+    // Clear uploaded photo when setting CivitJob
+    if (jobId) {
+      form.setFieldValue("backgroundPhotoBase64", undefined);
+    }
   };
 
   const handleSubmit = async (values: typeof form.values) => {
@@ -182,6 +199,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     form,
     handlePhotoUpload,
     removePhoto,
+    handleCivitJobIdChange,
     handleSubmit,
     handleGoBack,
     handleDeleteSuccess,
