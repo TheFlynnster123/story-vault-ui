@@ -1,7 +1,7 @@
 import Config from "../Config";
 import { AuthAPI } from "./AuthAPI";
 
-export interface ICivitaiAPI {
+interface ICivitaiAPI {
   hasValidCivitaiKey(): Promise<boolean>;
   saveCivitaiKey(encryptedCivitaiKey: string): Promise<void>;
 }

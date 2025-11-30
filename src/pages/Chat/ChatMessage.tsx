@@ -10,7 +10,7 @@ import {
   MessageText,
 } from "./ChatMessage.styled.ts";
 
-export interface MessageItemProps {
+interface MessageItemProps {
   chatId: string;
   message: UserChatMessage;
   isLastMessage: boolean;

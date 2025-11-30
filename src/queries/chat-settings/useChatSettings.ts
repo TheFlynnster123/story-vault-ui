@@ -4,7 +4,7 @@ import { d } from "../../app/Dependencies/Dependencies";
 import { getChatSettingsQueryKey } from "./ChatSettingsService";
 import { getChatIdsQueryKey } from "../../hooks/useChats";
 
-export interface UseChatSettingsResult {
+interface UseChatSettingsResult {
   chatSettings: ChatSettings | undefined;
   isLoading: boolean;
   saveChatSettings: (chatSettings: ChatSettings) => void;

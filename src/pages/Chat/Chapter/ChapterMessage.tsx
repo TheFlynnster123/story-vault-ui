@@ -36,7 +36,7 @@ const ExpandButtonContainer = styled.div`
   margin-top: 0.5rem;
 `;
 
-export interface ChapterMessageProps {
+interface ChapterMessageProps {
   chatId: string;
   chapter: ChapterChatMessage;
   isLastMessage?: boolean;

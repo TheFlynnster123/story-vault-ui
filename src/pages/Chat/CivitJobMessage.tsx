@@ -57,7 +57,7 @@ const LoadingImageIndicator = () => (
   </LoadingBubble>
 );
 
-export interface CivitJobMessageProps {
+interface CivitJobMessageProps {
   chatId: string;
   message: CivitJobChatMessage;
   isLastMessage: boolean;

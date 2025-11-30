@@ -1,7 +1,7 @@
 import { d } from "../Dependencies/Dependencies";
 import type { ImageModel } from "./ImageModel";
 
-export const USER_IMAGE_MODELS_QUERY_KEY = ["user-image-models"];
+const USER_IMAGE_MODELS_QUERY_KEY = ["user-image-models"];
 
 export class ImageModelService {
   readonly USER_IMAGE_MODELS = "UserImageModels";

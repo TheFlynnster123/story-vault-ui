@@ -2,7 +2,7 @@
  * LEGACY model sent to CivitAI via the API for image generation.
  */
 
-export interface AdditionalNetwork {
+interface AdditionalNetwork {
   strength: number;
 }
 
@@ -12,7 +12,7 @@ export interface ImageGenerationSettings {
   additionalNetworks: Record<string, AdditionalNetwork>;
 }
 
-export interface ImageGenerationParams {
+interface ImageGenerationParams {
   prompt: string;
   negativePrompt: string;
   scheduler: string;

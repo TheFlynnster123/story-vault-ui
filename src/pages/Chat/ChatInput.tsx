@@ -53,7 +53,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
   );
 };
 
-export interface ChatInputProps {
+interface ChatInputProps {
   chatId: string;
 }
 

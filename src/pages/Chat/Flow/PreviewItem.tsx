@@ -8,7 +8,7 @@ const truncateContent = (content: string, maxLength: number): string => {
   return content.substring(0, maxLength).trim() + "...";
 };
 
-export interface PreviewItemProps {
+interface PreviewItemProps {
   name?: string;
   description?: string;
   content?: string;

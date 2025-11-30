@@ -1,11 +1,10 @@
 import React from "react";
 import { Box, Text, Paper, Button } from "@mantine/core";
 import { RiArrowDownSLine, RiArrowUpSLine } from "react-icons/ri";
-import { ChatTheme } from "../../../theme/chatTheme";
 
 const PREVIEW_LIMIT = 2;
 
-export interface ContentPreviewProps<T> {
+interface ContentPreviewProps<T> {
   items: T[];
   isExpanded: boolean;
   onToggle: () => void;
@@ -57,7 +56,7 @@ export function ContentPreview<T>({
           }
           styles={{
             root: {
-              color: ChatTheme.flow.text,
+              color: "#ffffff",
               padding: "2px 8px",
               "&:hover": {
                 backgroundColor: "rgba(255, 255, 255, 0.1)",
