@@ -149,6 +149,27 @@ export class ChatGeneration {
     }
   }
 
+  async generateChapterTitle(): Promise<string | undefined> {
+    this.setIsLoading(true);
+
+    try {
+      const requestMessages = await d
+        .LLMMessageContextService(this.chatId)
+        .buildChapterTitleRequestMessages();
+
+      this.setStatus("Generating chapter title...");
+      const title = await d.GrokChatAPI().postChat(requestMessages);
+
+      return title;
+    } catch (e) {
+      d.ErrorService().log("Failed to generate chapter title", e);
+      throw e;
+    } finally {
+      this.setIsLoading(false);
+      this.setStatus();
+    }
+  }
+
   async regenerateImage(jobId: string, feedback?: string): Promise<void> {
     const message = d.UserChatProjection(this.chatId).GetMessage(jobId);
 

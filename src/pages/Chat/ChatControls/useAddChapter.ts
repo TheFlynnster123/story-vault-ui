@@ -13,8 +13,20 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
   const [nextChapterDirection, setNextChapterDirection] = useState("");
   const chatGeneration = useChatGeneration({ chatId });
 
-  const handleOpenModal = () => {
+  const handleOpenModal = async () => {
     setShowModal(true);
+
+    // Automatically generate title when modal opens
+    try {
+      const generatedTitle = await d
+        .ChatGenerationService(chatId)
+        .generateChapterTitle();
+      if (generatedTitle) {
+        setTitle(generatedTitle);
+      }
+    } catch (error) {
+      d.ErrorService().log("Failed to generate chapter title", error);
+    }
   };
 
   const handleCloseModal = () => {

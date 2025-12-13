@@ -117,7 +117,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
           <Accordion.Control>Flow</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="xs" p="md">
-              {/* Compress to Chapter button - prominent at top */}
+              {/* Compress to Chapter */}
               <Button
                 variant="subtle"
                 color="gray"
