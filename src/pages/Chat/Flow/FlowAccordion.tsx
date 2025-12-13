@@ -2,7 +2,6 @@ import React from "react";
 import { Accordion, Stack, Box } from "@mantine/core";
 import { useNavigate } from "react-router-dom";
 import { usePlanCache } from "../../../hooks/usePlanCache";
-import { useMemories } from "../../../hooks/useMemories";
 import { FlowStyles } from "./FlowStyles";
 import { ChapterSection } from "./ChapterSection";
 import { ChatSettingsButton } from "./ChatSettingsButton";
