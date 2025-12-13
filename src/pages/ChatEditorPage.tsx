@@ -37,16 +37,7 @@ export const ChatEditorPage: React.FC = () => {
 
   return (
     <Page>
-      <Paper
-        component="form"
-        onSubmit={form.onSubmit(handleSubmit)}
-        p={30}
-        style={{
-          background: ChatTheme.page.paperBackground,
-          backdropFilter: ChatTheme.page.backdropBlur,
-          color: ChatTheme.page.text,
-        }}
-      >
+      <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} mt={20}>
         <ChatEditorHeader
           isEditMode={isEditMode}
           onGoBack={handleGoBack}

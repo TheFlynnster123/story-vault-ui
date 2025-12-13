@@ -5,7 +5,10 @@ import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
 
 const CHAPTER_SUMMARY_PROMPT: string =
-  "Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without a preamble.";
+  "Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without formatting or a preamble.";
+
+const CHAPTER_TITLE_PROMPT: string =
+  "Review the conversation above and generate a concise, engaging title for the current chapter. The title should capture the essence of what happened. Keep it short (3-7 words). Provide only the title without formatting or any preamble.";
 
 // ---- Singleton instances ----
 const llmMessageContextServiceInstances = new Map<
@@ -64,6 +67,11 @@ export class LLMMessageContextService {
   async buildChapterSummaryRequestMessages(): Promise<LLMMessage[]> {
     const chatMessages = this.getChatMessages();
     return this.assembleChapterSummaryMessages(chatMessages);
+  }
+
+  async buildChapterTitleRequestMessages(): Promise<LLMMessage[]> {
+    const chatMessages = this.getChatMessages();
+    return this.assembleChapterTitleMessages(chatMessages);
   }
 
   buildPlanMessages(plans: Plan[]): LLMMessage[] {
@@ -130,6 +138,12 @@ export class LLMMessageContextService {
     return [...chatMessages, this.createChapterSummaryPromptMessage()];
   }
 
+  private assembleChapterTitleMessages(
+    chatMessages: LLMMessage[]
+  ): LLMMessage[] {
+    return [...chatMessages, this.createChapterTitlePromptMessage()];
+  }
+
   private appendFeedbackMessage(
     messages: LLMMessage[],
     originalContent: string,
@@ -151,6 +165,10 @@ export class LLMMessageContextService {
 
   private createChapterSummaryPromptMessage(): LLMMessage {
     return toSystemMessage(CHAPTER_SUMMARY_PROMPT);
+  }
+
+  private createChapterTitlePromptMessage(): LLMMessage {
+    return toSystemMessage(CHAPTER_TITLE_PROMPT);
   }
 
   private planToSystemMessage(plan: Plan): LLMMessage {

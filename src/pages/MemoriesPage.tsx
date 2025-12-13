@@ -88,15 +88,7 @@ export const MemoriesPage: React.FC = () => {
           e.preventDefault();
           handleSave();
         }}
-        shadow="md"
-        p={30}
-        mt={30}
-        radius="md"
-        style={{
-          background: ChatTheme.page.paperBackground,
-          backdropFilter: ChatTheme.page.backdropBlur,
-          color: ChatTheme.page.text,
-        }}
+        mt={20}
       >
         <MemoriesHeader onGoBack={handleGoBack} isDirty={hasChanges} />
 

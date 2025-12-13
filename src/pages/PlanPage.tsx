@@ -7,7 +7,6 @@ import {
   RiFileList2Line,
 } from "react-icons/ri";
 import {
-  Container,
   Title,
   Button,
   Group,
@@ -24,6 +23,7 @@ import { usePlanCache } from "../hooks/usePlanCache";
 import { v4 as uuidv4 } from "uuid";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { ChatTheme } from "../theme/chatTheme";
+import { Page } from "./Page";
 
 export const PlanPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -73,19 +73,14 @@ export const PlanPage: React.FC = () => {
     plans.filter((plan) => plan.type === type);
 
   return (
-    <Container size="md" miw="70vw" my="xl">
+    <Page>
       <Paper
         component="form"
         onSubmit={(e) => {
           e.preventDefault();
           handleSave();
         }}
-        p="xl"
-        style={{
-          background: ChatTheme.page.paperBackground,
-          backdropFilter: ChatTheme.page.backdropBlur,
-          color: ChatTheme.page.text,
-        }}
+        mt={30}
       >
         <PlanHeader onGoBack={handleGoBack} />
 
@@ -108,7 +103,7 @@ export const PlanPage: React.FC = () => {
         title="Confirm Deletion"
         message="Are you sure you want to delete this plan?"
       />
-    </Container>
+    </Page>
   );
 };
 

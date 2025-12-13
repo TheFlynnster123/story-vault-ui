@@ -1,22 +1,43 @@
 import { useEffect, useState } from "react";
 import { GrokKeyAPI } from "../clients/GrokKeyAPI";
 
+// Singleton to store the key status across all hook instances
+let grokKeyStatusSingleton: boolean | undefined = undefined;
+const listeners = new Set<(status: boolean | undefined) => void>();
+
+const notifyListeners = () => {
+  listeners.forEach((listener) => listener(grokKeyStatusSingleton));
+};
+
+const fetchGrokKeyStatus = async () => {
+  const api = new GrokKeyAPI();
+  const isValid = await api.hasValidGrokKey();
+  grokKeyStatusSingleton = isValid;
+  notifyListeners();
+};
+
 export const useGrokKey = () => {
   const [hasValidGrokKey, setHasValidGrokKey] = useState<boolean | undefined>(
-    undefined // Initialize as undefined to represent loading state
+    grokKeyStatusSingleton
   );
 
   const refreshGrokKeyStatus = async () => {
-    const isValid = await new GrokKeyAPI().hasValidGrokKey();
-    setHasValidGrokKey(isValid);
+    await fetchGrokKeyStatus();
   };
 
   useEffect(() => {
-    const checkGrokKey = async () => {
-      refreshGrokKeyStatus();
-    };
+    // Register listener
+    listeners.add(setHasValidGrokKey);
 
-    checkGrokKey();
+    // Only fetch if status is undefined (not yet initialized)
+    if (grokKeyStatusSingleton === undefined) {
+      fetchGrokKeyStatus();
+    }
+
+    // Cleanup listener on unmount
+    return () => {
+      listeners.delete(setHasValidGrokKey);
+    };
   }, []);
 
   return { hasValidGrokKey, refreshGrokKeyStatus };
