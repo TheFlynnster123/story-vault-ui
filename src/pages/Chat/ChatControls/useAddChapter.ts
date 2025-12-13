@@ -16,16 +16,21 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
   const handleOpenModal = async () => {
     setShowModal(true);
 
-    // Automatically generate title when modal opens
+    // Automatically generate title and summary when modal opens
     try {
-      const generatedTitle = await d
-        .ChatGenerationService(chatId)
-        .generateChapterTitle();
+      const [generatedTitle, generatedSummary] = await Promise.all([
+        d.ChatGenerationService(chatId).generateChapterTitle(),
+        d.ChatGenerationService(chatId).generateChapterSummary(),
+      ]);
+
       if (generatedTitle) {
         setTitle(generatedTitle);
       }
+      if (generatedSummary) {
+        setSummary(generatedSummary);
+      }
     } catch (error) {
-      d.ErrorService().log("Failed to generate chapter title", error);
+      d.ErrorService().log("Failed to generate chapter title/summary", error);
     }
   };
 
