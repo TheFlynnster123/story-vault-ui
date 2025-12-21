@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "../../test-utils";
 import { screen, waitFor } from "@testing-library/react";
-import { ChatSettingsEditor } from "./ChatSettingsEditor";
+import { SystemSettingsEditor } from "./SystemSettingsEditor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock the useSystemSettings hook
@@ -19,7 +19,7 @@ vi.mock("@mantine/notifications", () => ({
   },
 }));
 
-describe("ChatSettingsEditor", () => {
+describe("SystemSettingsEditor", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -50,7 +50,7 @@ describe("ChatSettingsEditor", () => {
   };
 
   it("should render model select with all model options including grok-4-1-fast-reasoning", async () => {
-    renderWithQueryClient(<ChatSettingsEditor />);
+    renderWithQueryClient(<SystemSettingsEditor />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
@@ -64,17 +64,19 @@ describe("ChatSettingsEditor", () => {
     await waitFor(() => {
       const dropdown = document.querySelector('[role="listbox"]');
       expect(dropdown).toBeInTheDocument();
-      
+
       // Check that the dropdown contains the new model option
-      const options = Array.from(dropdown?.querySelectorAll('[role="option"]') || []);
+      const options = Array.from(
+        dropdown?.querySelectorAll('[role="option"]') || []
+      );
       const optionTexts = options.map((opt) => opt.textContent);
-      
+
       expect(optionTexts).toContain("grok-4-1-fast-reasoning");
     });
   });
 
   it("should include grok-4-1-fast-reasoning in the correct position in model options", async () => {
-    renderWithQueryClient(<ChatSettingsEditor />);
+    renderWithQueryClient(<SystemSettingsEditor />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
@@ -88,17 +90,25 @@ describe("ChatSettingsEditor", () => {
     await waitFor(() => {
       const dropdown = document.querySelector('[role="listbox"]');
       expect(dropdown).toBeInTheDocument();
-      
-      const options = Array.from(dropdown?.querySelectorAll('[role="option"]') || []);
+
+      const options = Array.from(
+        dropdown?.querySelectorAll('[role="option"]') || []
+      );
       const optionTexts = options.map((opt) => opt.textContent);
-      
+
       // Verify the new model appears after grok-4-0709 and before grok-4-fast-non-reasoning
       const grok4_0709Index = optionTexts.indexOf("grok-4-0709");
-      const grok4_1_fastReasoningIndex = optionTexts.indexOf("grok-4-1-fast-reasoning");
-      const grok4_fastNonReasoningIndex = optionTexts.indexOf("grok-4-fast-non-reasoning");
-      
+      const grok4_1_fastReasoningIndex = optionTexts.indexOf(
+        "grok-4-1-fast-reasoning"
+      );
+      const grok4_fastNonReasoningIndex = optionTexts.indexOf(
+        "grok-4-fast-non-reasoning"
+      );
+
       expect(grok4_1_fastReasoningIndex).toBeGreaterThan(grok4_0709Index);
-      expect(grok4_1_fastReasoningIndex).toBeLessThan(grok4_fastNonReasoningIndex);
+      expect(grok4_1_fastReasoningIndex).toBeLessThan(
+        grok4_fastNonReasoningIndex
+      );
     });
   });
 });

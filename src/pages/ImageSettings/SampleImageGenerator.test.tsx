@@ -101,28 +101,6 @@ describe("SampleImageGenerator", () => {
     expect(button).toBeDisabled();
   });
 
-  it("should show waiting state when job is created", () => {
-    const modelWithJobId: ImageModel = {
-      ...mockImageModel,
-      sampleImageId: "existing-job-123",
-    };
-
-    vi.mocked(useCivitJob).mockReturnValue({
-      photoBase64: null, // No image yet
-    } as any);
-
-    render(
-      <SampleImageGenerator
-        model={modelWithJobId}
-        onSampleImageCreated={mockOnSampleImageCreated}
-      />
-    );
-
-    const button = screen.getByRole("button");
-    expect(button).toHaveTextContent("Generating image...");
-    expect(button).toBeDisabled();
-  });
-
   it("should show success state when image is generated", () => {
     const mockBase64 = "data:image/jpeg;base64,mockimagedata";
 

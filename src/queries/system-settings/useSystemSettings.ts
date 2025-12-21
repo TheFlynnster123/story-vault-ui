@@ -36,8 +36,8 @@ export const useSystemSettings = (): UseSystemSettingsResult => {
   return {
     systemSettings,
     isLoading,
-    saveSystemSettings: (systemSettings) =>
-      saveSystemSettingsMutation.mutateAsync({
+    saveSystemSettings: async (systemSettings) =>
+      await saveSystemSettingsMutation.mutateAsync({
         systemSettings,
       }),
   };
