@@ -28,7 +28,7 @@ export const SystemMessage: React.FC<SystemMessageProps> = ({
     <MessageItem $type="system">
       <MessageContentWrapper>
         <MessageText
-          className={`message-text clickable`}
+          className="message-text clickable"
           $type="system"
           onClick={toggle}
         >

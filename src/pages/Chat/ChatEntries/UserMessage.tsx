@@ -28,7 +28,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({
     <MessageItem $type="user">
       <MessageContentWrapper>
         <MessageText
-          className={`message-text clickable`}
+          className="message-text clickable"
           $type="user"
           onClick={toggle}
         >
