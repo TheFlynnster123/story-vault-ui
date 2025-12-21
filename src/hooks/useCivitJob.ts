@@ -18,6 +18,9 @@ export const useCivitJob = (chatId: string, jobId: string) => {
     // Once we have a photo cached, it never goes stale - serve from cache immediately
     staleTime: Infinity,
 
+    // Keep the photo in cache indefinitely, even when component unmounts
+    gcTime: Infinity,
+
     // Don't retry on errors, let the orchestrator handle error states.
     // Once we have a photo, we're home free.
     retry: false,
