@@ -1,5 +1,6 @@
 import React from "react";
-import { ChatMessage } from "./ChatMessage";
+import { UserMessage } from "./UserMessage";
+import { SystemMessage } from "./SystemMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
 import { ChapterMessage } from "./ChapterMessage";
 import type {
@@ -35,8 +36,19 @@ export const ChatEntry: React.FC<ChatEntryProps> = ({
     );
   }
 
+  if (message.type === "user-message") {
+    return (
+      <UserMessage
+        chatId={chatId}
+        message={message}
+        isLastMessage={isLastMessage}
+      />
+    );
+  }
+
+  // Default to SystemMessage for all other types (system-message, assistant, etc.)
   return (
-    <ChatMessage
+    <SystemMessage
       chatId={chatId}
       message={message}
       isLastMessage={isLastMessage}
