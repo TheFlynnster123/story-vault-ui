@@ -10,7 +10,7 @@ export interface CivitJobStatus {
 
 export interface CivitJobResult {
   photoBase64: string | null;
-  isScheduled: boolean;
+  scheduled: boolean;
   isLoading: boolean;
   error: Error | null;
 }

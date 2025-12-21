@@ -42,10 +42,10 @@ const shouldPoll = (
   const data = query.state.data;
 
   // Stop polling if we have a photo, there's an error, or job is not scheduled
-  if (data?.photoBase64 || data?.error || !data?.isScheduled) {
+  if (data?.photoBase64 || data?.error || !data?.scheduled) {
     return false;
   }
 
   // Only continue polling if job is explicitly scheduled
-  return data?.isScheduled ? POLL_INTERVAL_MS : false;
+  return data?.scheduled ? POLL_INTERVAL_MS : false;
 };

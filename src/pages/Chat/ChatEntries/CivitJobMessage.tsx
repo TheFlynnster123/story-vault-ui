@@ -90,7 +90,7 @@ export const CivitJobMessage = ({
     jobStatus,
   } = useCivitJob(chatId, jobId);
 
-  const shouldShowLoadingIndicator = () => isLoading || jobStatus?.isScheduled;
+  const shouldShowLoadingIndicator = () => isLoading || jobStatus?.scheduled;
   const isImageGenerated = () => !!photoBase64;
 
   const getErrorMessage = () => {

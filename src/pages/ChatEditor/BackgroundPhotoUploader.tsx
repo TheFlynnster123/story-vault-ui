@@ -45,7 +45,7 @@ export const BackgroundPhotoUploader: React.FC<
   );
 
   const isLoadingCivitJob =
-    backgroundPhotoCivitJobId && !civitJobPhoto && jobStatus?.isScheduled;
+    backgroundPhotoCivitJobId && !civitJobPhoto && jobStatus?.scheduled;
 
   const displayPhoto = civitJobPhoto || backgroundPhotoBase64;
 
