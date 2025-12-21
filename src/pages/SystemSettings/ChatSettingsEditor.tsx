@@ -86,11 +86,18 @@ const ModelSelect: React.FC<{
   value: string | null;
   onChange: (value: string | null) => void;
 }> = ({ value, onChange }) => (
-  <Select
-    label="Model"
-    value={value}
-    onChange={onChange}
-    data={MODEL_OPTIONS}
-    clearable
-  />
+  <Stack gap="xs">
+    <Select
+      label="Model"
+      value={value}
+      onChange={onChange}
+      data={MODEL_OPTIONS}
+      clearable
+    />
+    <Text size="sm" c="dimmed">
+      Select which Grok model to use for chat generation. Different models offer
+      varying levels of speed and reasoning capabilities. Leave empty to use the
+      default model.
+    </Text>
+  </Stack>
 );

@@ -56,7 +56,6 @@ Reference: `.github/instructions/CodingPractices.md` for detailed examples.
 
 - **Styled Components**: Use `.styled.ts` files colocated with components
 - **Mantine UI**: Primary component library (`@mantine/core`, `@mantine/hooks`)
-- **Theme Access**: Use `ChatTheme` from `src/theme/chatTheme` for colors/spacing
 - **Naming**: Use `$` prefix for transient props (e.g., `$type`, `$isActive`)
 
 ```typescript

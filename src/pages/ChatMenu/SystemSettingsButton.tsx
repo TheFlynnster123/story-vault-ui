@@ -1,17 +1,17 @@
-import { RiMessage3Fill } from "react-icons/ri";
+import { RiSettings3Line } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
-export const ChatSettingsButton = () => {
+export const SystemSettingsButton = () => {
   const navigate = useNavigate();
 
   return (
     <StyledButton
-      onClick={() => navigate("/chat-settings")}
-      aria-label="Open chat settings"
-      title="Chat Settings"
+      onClick={() => navigate("/system-settings")}
+      aria-label="Open system settings"
+      title="System Settings"
     >
-      <RiMessage3Fill />
+      <RiSettings3Line />
     </StyledButton>
   );
 };
