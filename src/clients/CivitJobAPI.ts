@@ -107,8 +107,6 @@ export class CivitJobAPI {
 
     const response = await fetch(`${this.URL}/api/GenerateImage`, requestInit);
 
-    console.log("Yo");
-
     if (response.ok) {
       return response.json();
     } else {

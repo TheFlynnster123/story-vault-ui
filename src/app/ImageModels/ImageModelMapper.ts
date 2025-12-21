@@ -2,15 +2,10 @@ import type { ImageModel } from "./ImageModel";
 import type { GeneratedImage } from "./GeneratedImage";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { v4 as uuidv4 } from "uuid";
-import { BaseModelMapper } from "./BaseModelMapper";
+import { d } from "../Dependencies/Dependencies";
 
 export class ImageModelMapper {
   private readonly MAX_DIMENSION = 1024;
-  private baseModelMapper: BaseModelMapper;
-
-  constructor(baseModelMapper?: BaseModelMapper) {
-    this.baseModelMapper = baseModelMapper || new BaseModelMapper();
-  }
 
   FromGeneratedImage = (generatedData: GeneratedImage): ImageModel => ({
     id: uuidv4().toString(),
@@ -43,7 +38,7 @@ export class ImageModelMapper {
     const modelAir = isCheckpoint
       ? primaryResource.air
       : firstResourceBaseModel
-      ? this.baseModelMapper.toAIR(firstResourceBaseModel)
+      ? d.BaseModelMapper().toAIR(firstResourceBaseModel)
       : "";
 
     return {
@@ -51,7 +46,9 @@ export class ImageModelMapper {
       params: {
         prompt: generatedData.params.prompt,
         negativePrompt: generatedData.params.negativePrompt,
-        scheduler: generatedData.params.sampler,
+        scheduler: d
+          .SchedulerMapper()
+          .MapToSchedulerName(generatedData.params.sampler),
         steps: generatedData.params.steps,
         cfgScale: generatedData.params.cfgScale,
         width: this.truncateDimension(generatedData.params.width),
