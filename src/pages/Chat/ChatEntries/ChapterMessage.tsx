@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { Collapse, Button } from "@mantine/core";
 import { RiArrowDownSLine, RiArrowUpSLine } from "react-icons/ri";
-import type { ChapterChatMessage } from "../../../cqrs/UserChatProjection";
+import type { ChapterChatMessage } from "../../../cqrs/UserChatProjection.ts";
 import "../ChatMessage.styled.ts";
-import { ChapterContent } from "./ChapterContent";
-import { ChapterExpandedDetails } from "./ChapterExpandedMessages";
-import { NextChapterDirection } from "./NextChapterDirection";
-import { ChatTheme } from "../../../theme/chatTheme";
+import { ChapterContent } from "../Chapter/ChapterContent.tsx";
+import { ChapterExpandedDetails } from "../Chapter/ChapterExpandedMessages.tsx";
+import { NextChapterDirection } from "../Chapter/NextChapterDirection.tsx";
+import { ChatTheme } from "../../../theme/chatTheme.ts";
 
 const MessageContainer = styled.div`
   padding: 1rem;

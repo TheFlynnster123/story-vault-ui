@@ -1,12 +1,12 @@
 import React from "react";
 import { ChatMessage } from "./ChatMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
-import { ChapterMessage } from "./Chapter/ChapterMessage";
+import { ChapterMessage } from "./ChapterMessage";
 import type {
   UserChatMessage,
   CivitJobChatMessage,
   ChapterChatMessage,
-} from "../../cqrs/UserChatProjection";
+} from "../../../cqrs/UserChatProjection";
 
 interface ChatEntryProps {
   chatId: string;

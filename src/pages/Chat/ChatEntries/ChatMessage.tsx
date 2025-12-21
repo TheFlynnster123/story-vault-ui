@@ -1,14 +1,14 @@
-import "./ChatMessage.styled.ts";
+import "../ChatMessage.styled.ts";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
-import { MessageButtonsContainer } from "./ChatMessageButtons/MessageButtonsContainer";
-import type { UserChatMessage } from "../../cqrs/UserChatProjection";
+import { MessageOverlay } from "../ChatMessageButtons/MessageOverlay.tsx";
+import { MessageButtonsContainer } from "../ChatMessageButtons/MessageButtonsContainer.tsx";
+import type { UserChatMessage } from "../../../cqrs/UserChatProjection.ts";
 import {
   MessageContentWrapper,
   MessageItem,
   MessageText,
-} from "./ChatMessage.styled.ts";
+} from "../ChatMessage.styled.ts";
 
 interface MessageItemProps {
   chatId: string;
