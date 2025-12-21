@@ -4,6 +4,7 @@ import { AuthAPI } from "./AuthAPI";
 import type { ImageGenerationSettings } from "../models/ImageGenerationSettings";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { d } from "../app/Dependencies/Dependencies";
+import type { CivitJobStatus } from "../types/CivitJob";
 
 export class CivitJobAPI {
   public URL: string;
@@ -65,9 +66,7 @@ export class CivitJobAPI {
     }
   }
 
-  public async getJobStatus(
-    jobId: string
-  ): Promise<{ result?: Array<{ available: boolean; blobUrl: string }> }> {
+  public async getJobStatus(jobId: string): Promise<CivitJobStatus> {
     const accessToken = await this.authAPI.getAccessToken();
     await this.encryptionManager.ensureKeysInitialized();
 

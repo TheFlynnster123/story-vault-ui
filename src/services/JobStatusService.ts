@@ -16,11 +16,10 @@ export class JobStatusService {
       const response = await this.civitJobAPI.getJobStatus(jobId);
 
       return {
-        scheduled: !response.result?.length || !response.result[0]?.available,
+        scheduled: response.scheduled,
         result: response.result || [],
       };
     } catch (error) {
-      // If we can't get job status, assume it's no longer scheduled
       return {
         scheduled: false,
         result: [],
