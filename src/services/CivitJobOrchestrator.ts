@@ -56,7 +56,7 @@ export class CivitJobOrchestrator {
   private scheduledJobResponse(): CivitJobResult {
     return {
       photoBase64: null,
-      isScheduled: true,
+      scheduled: true,
       isLoading: false,
       error: null,
     };
@@ -65,7 +65,7 @@ export class CivitJobOrchestrator {
   private storedPhotoResponse(photoBase64: string): CivitJobResult {
     return {
       photoBase64,
-      isScheduled: false,
+      scheduled: false,
       isLoading: false,
       error: null,
     };
@@ -84,7 +84,7 @@ export class CivitJobOrchestrator {
 
     return {
       photoBase64,
-      isScheduled: false,
+      scheduled: false,
       isLoading: false,
       error: null,
     };
@@ -93,7 +93,7 @@ export class CivitJobOrchestrator {
   private noPhotoAvailableResponse(): CivitJobResult {
     return {
       photoBase64: null,
-      isScheduled: false,
+      scheduled: false,
       isLoading: false,
       error: null,
     };
@@ -102,7 +102,7 @@ export class CivitJobOrchestrator {
   private errorResponse(error: unknown): CivitJobResult {
     return {
       photoBase64: null,
-      isScheduled: false,
+      scheduled: false,
       isLoading: false,
       error:
         error instanceof Error ? error : new Error("Unknown error occurred"),

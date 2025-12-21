@@ -1,11 +1,11 @@
-import { d } from "../../app/Dependencies/Dependencies";
-import type { CivitJobChatMessage } from "../../cqrs/UserChatProjection";
-import { useCivitJob } from "../../hooks/useCivitJob";
-import "./ChatMessage.styled.ts";
+import { d } from "../../../app/Dependencies/Dependencies.ts";
+import type { CivitJobChatMessage } from "../../../cqrs/UserChatProjection.ts";
+import { useCivitJob } from "../../../hooks/useCivitJob.ts";
+import "../ChatMessage.styled.ts";
 import { useState } from "react";
 import styled from "styled-components";
-import { MessageItem, MessageContentWrapper } from "./ChatMessage.styled.ts";
-import { MessageOverlay } from "./ChatMessageButtons/MessageOverlay";
+import { MessageItem, MessageContentWrapper } from "../ChatMessage.styled.ts";
+import { MessageOverlay } from "../ChatMessageButtons/MessageOverlay.tsx";
 import { Stack, Button, Loader, Group, Divider } from "@mantine/core";
 import {
   RiDeleteBinLine,
@@ -15,10 +15,10 @@ import {
   RiChat3Line,
   RiImageEditLine,
 } from "react-icons/ri";
-import { DeleteConfirmModal } from "./ChatMessageButtons/DeleteConfirmModal";
-import { ViewPromptModal } from "./ChatMessageButtons/ViewPromptModal";
-import { RegenerateFeedbackModal } from "./ChatMessageButtons/RegenerateFeedbackModal";
-import { ChatTheme } from "../../theme/chatTheme";
+import { DeleteConfirmModal } from "../ChatMessageButtons/DeleteConfirmModal.tsx";
+import { ViewPromptModal } from "../ChatMessageButtons/ViewPromptModal.tsx";
+import { RegenerateFeedbackModal } from "../ChatMessageButtons/RegenerateFeedbackModal.tsx";
+import { ChatTheme } from "../../../theme/chatTheme.ts";
 
 const MessageContent = styled.div`
   max-width: 80vw;
@@ -90,7 +90,7 @@ export const CivitJobMessage = ({
     jobStatus,
   } = useCivitJob(chatId, jobId);
 
-  const shouldShowLoadingIndicator = () => isLoading || jobStatus?.isScheduled;
+  const shouldShowLoadingIndicator = () => isLoading || jobStatus?.scheduled;
   const isImageGenerated = () => !!photoBase64;
 
   const getErrorMessage = () => {

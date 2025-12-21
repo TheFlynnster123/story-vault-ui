@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { ImageModelMapper } from "./ImageModelMapper";
-import { BaseModelMapper } from "./BaseModelMapper";
+import { d } from "../Dependencies/Dependencies";
 import type {
   GeneratedImage,
   GeneratedImageResource,
@@ -9,7 +9,8 @@ import type {
 
 describe("ImageModelMapper", () => {
   let mapper: ImageModelMapper;
-  let mockBaseModelMapper: BaseModelMapper;
+  let BaseModelMapper: ReturnType<typeof vi.fn>;
+  let SchedulerMapper: ReturnType<typeof vi.fn>;
 
   const createMockGeneratedImageParams = (): GeneratedImageParams => ({
     prompt: "beautiful landscape",
@@ -59,10 +60,22 @@ describe("ImageModelMapper", () => {
   });
 
   beforeEach(() => {
-    mockBaseModelMapper = {
-      toAIR: vi.fn(),
-    } as any;
-    mapper = new ImageModelMapper(mockBaseModelMapper);
+    BaseModelMapper = vi.fn();
+    SchedulerMapper = vi.fn((displayName: string) => displayName) as any;
+
+    vi.spyOn(d, "BaseModelMapper").mockReturnValue({
+      toAIR: BaseModelMapper,
+    } as any);
+
+    vi.spyOn(d, "SchedulerMapper").mockReturnValue({
+      MapToSchedulerName: SchedulerMapper,
+    } as any);
+
+    mapper = new ImageModelMapper();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("Primary Resource Selection", () => {
@@ -230,6 +243,40 @@ describe("ImageModelMapper", () => {
       expect(result.params.scheduler).toBe("Euler a");
     });
 
+    it("should map scheduler display name to scheduler name", () => {
+      SchedulerMapper.mockReturnValue("DPM2M");
+      const params = {
+        ...createMockGeneratedImageParams(),
+        sampler: "DPM++ 2M" as any,
+      };
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params
+      );
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(SchedulerMapper).toHaveBeenCalledWith("DPM++ 2M");
+      expect(result.params.scheduler).toBe("DPM2M");
+    });
+
+    it("should map Euler a display name to EulerA scheduler name", () => {
+      SchedulerMapper.mockReturnValue("EulerA");
+      const params = {
+        ...createMockGeneratedImageParams(),
+        sampler: "Euler a" as any,
+      };
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params
+      );
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(SchedulerMapper).toHaveBeenCalledWith("Euler a");
+      expect(result.params.scheduler).toBe("EulerA");
+    });
+
     it("should map model from primary resource", () => {
       const checkpointResource = createMockCheckpointResource();
       const generatedImage = createMockGeneratedImage([checkpointResource]);
@@ -266,9 +313,7 @@ describe("ImageModelMapper", () => {
 
     it("should use BaseModelMapper when no CHECKPOINT resource available", () => {
       const mockMappedBaseModelAIR = "urn:air:mock:checkpoint:test:123@456";
-      (mockBaseModelMapper.toAIR as any).mockReturnValue(
-        mockMappedBaseModelAIR
-      );
+      BaseModelMapper.mockReturnValue(mockMappedBaseModelAIR);
 
       const loraResource = createMockLoraResource();
       loraResource.baseModel = "TestModel";
@@ -276,7 +321,7 @@ describe("ImageModelMapper", () => {
 
       const result = mapper.mapToFromTextInput(generatedImage);
 
-      expect(mockBaseModelMapper.toAIR).toHaveBeenCalledWith("TestModel");
+      expect(BaseModelMapper).toHaveBeenCalledWith("TestModel");
       expect(result.additionalNetworks).toEqual({
         [loraResource.air]: { strength: 0.8 },
       });
@@ -290,7 +335,7 @@ describe("ImageModelMapper", () => {
 
       const result = mapper.mapToFromTextInput(generatedImage);
 
-      expect(mockBaseModelMapper.toAIR).not.toHaveBeenCalled();
+      expect(BaseModelMapper).not.toHaveBeenCalled();
       expect(result.model).toBe(
         "urn:air:sdxl:checkpoint:civitai:123456@789012"
       );

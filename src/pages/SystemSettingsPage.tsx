@@ -1,11 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
-import { RiArrowLeftLine } from "react-icons/ri";
-import { GrokKeyManager } from "./ChatSettings/GrokKeyManager";
-import { CivitaiKeyManager } from "./ImageSettings/CivitaiKeyManager";
-import { ChatSettingsEditor } from "./ChatSettings/ChatSettingsEditor";
-import { ImageModelList } from "./ImageSettings/ImageModelList";
+import { RiArrowLeftLine, RiSettings3Line } from "react-icons/ri";
+import { GrokKeyManager } from "./SystemSettings/GrokKeyManager";
+import { ChatSettingsEditor } from "./SystemSettings/ChatSettingsEditor";
 import { Page } from "./Page";
 
 interface SettingsSectionProps {
@@ -28,14 +26,6 @@ const SystemSettingsPage: React.FC = () => {
           <GrokKeyManager />
         </SettingsSection>
 
-        <SettingsSection title="Civitai API Configuration">
-          <CivitaiKeyManager />
-        </SettingsSection>
-
-        <SettingsSection title="Image Generation Settings">
-          <ImageModelList onSave={() => {}} />
-        </SettingsSection>
-
         <SettingsSection title="Chat Generation Settings">
           <ChatSettingsEditor onSave={() => {}} />
         </SettingsSection>
@@ -49,10 +39,11 @@ const SettingsSection: React.FC<SettingsSectionProps> = ({
   children,
 }) => (
   <Grid.Col span={{ base: 12, md: 6 }}>
-    <Paper withBorder p="xl" radius="md">
-      <Title order={2} mb="lg">
+    <Paper p="xl" radius="md">
+      <Title order={3} mb="md">
         {title}
       </Title>
+      <Divider mb="lg" />
       {children}
     </Paper>
   </Grid.Col>
@@ -60,11 +51,14 @@ const SettingsSection: React.FC<SettingsSectionProps> = ({
 
 const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <>
-    <Group>
-      <ActionIcon onClick={onBack} size="lg" variant="gradient">
+    <Group mb="md">
+      <ActionIcon onClick={onBack} size="lg" variant="subtle">
         <RiArrowLeftLine />
       </ActionIcon>
-      <Title order={1}>System Settings</Title>
+      <RiSettings3Line size={28} />
+      <Title order={1} fw={400}>
+        System Settings
+      </Title>
     </Group>
     <Divider my="xl" />
   </>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { Loader } from "@mantine/core";
 import { d } from "../../../app/Dependencies/Dependencies";
-import { ChatEntry } from "../ChatEntry";
+import { ChatEntry } from "../ChatEntries/ChatEntry";
 import { ChapterMessageButtons } from "../ChatMessageButtons/ChapterMessageButtons";
 
 const DetailsContainer = styled.div`

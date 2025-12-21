@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { ChatEntry } from "./ChatEntry";
+import { ChatEntry } from "./ChatEntries/ChatEntry";
 import { useUserChatProjection } from "../../hooks/useUserChatProjection";
 
 interface ChatMessageListProps {

@@ -6,6 +6,7 @@ import { ImageModelFromGeneratedImageService } from "../ImageModels/ImageModelFr
 import { ImageModelMapper } from "../ImageModels/ImageModelMapper";
 import { ImageModelService } from "../ImageModels/ImageModelService";
 import { SchedulerMapper } from "../ImageModels/SchedulerMapper";
+import { BaseModelMapper } from "../ImageModels/BaseModelMapper";
 import { QUERY_CLIENT } from "../../App";
 import { SystemSettingsService } from "../../queries/system-settings/SystemSettingsService";
 import { ChatSettingsService } from "../../queries/chat-settings/ChatSettingsService";
@@ -104,6 +105,10 @@ export class Dependencies {
 
   SchedulerMapper() {
     return new SchedulerMapper();
+  }
+
+  BaseModelMapper() {
+    return new BaseModelMapper();
   }
 
   GeneratedImageQuery() {

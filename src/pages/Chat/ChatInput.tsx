@@ -114,6 +114,7 @@ const ActionButtons = ({
   isExpanded: boolean;
 }) => {
   const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
+    console.log("yo");
     e.stopPropagation();
     e.preventDefault();
 
@@ -137,7 +138,7 @@ const ActionButtons = ({
           radius="xl"
           variant="filled"
           color="blue"
-          onMouseUp={handleGenerateImage}
+          onMouseDown={handleGenerateImage}
           onTouchEnd={handleGenerateImage}
           disabled={isLoading}
           aria-label="Generate Image"
@@ -151,7 +152,7 @@ const ActionButtons = ({
         radius="xl"
         variant="filled"
         color="blue"
-        onMouseUp={handleSend}
+        onMouseDown={handleSend}
         onTouchEnd={handleSend}
         disabled={isLoading}
         aria-label={isLoading ? "Sending..." : "Send"}

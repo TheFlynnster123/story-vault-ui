@@ -27,10 +27,11 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
     setJobId(model.sampleImageId || null);
   }, [model.sampleImageId]);
 
-  const { photoBase64 } = useCivitJob(EMULATED_CHAT_ID, jobId || "");
+  const { photoBase64, jobStatus } = useCivitJob(EMULATED_CHAT_ID, jobId || "");
 
   // Track if we're actively waiting for a job (either generating or polling)
-  const isWaitingForJob = !!jobId && !photoBase64 && !isGenerating && !error;
+  const isWaitingForJob =
+    !!jobId && !photoBase64 && !isGenerating && !error && jobStatus?.scheduled;
   const hasImage = !!photoBase64 && !error;
 
   const startGeneration = async () => {

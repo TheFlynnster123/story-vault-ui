@@ -3,6 +3,7 @@ import { NumberInput, Group, Stack, Title, TextInput } from "@mantine/core";
 import { SchedulerCombobox } from "../SchedulerCombobox";
 import type { ImageModel } from "../../../app/ImageModels/ImageModel";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
+import { d } from "../../../app/Dependencies/Dependencies";
 
 interface ParametersComponentProps {
   imageModel: ImageModel;
@@ -39,6 +40,11 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
     });
   };
 
+  const handleSchedulerChange = (displayName: string) => {
+    const schedulerName = d.SchedulerMapper().MapToSchedulerName(displayName);
+    handleParameterChange("scheduler", schedulerName);
+  };
+
   return (
     <Stack>
       <Title order={5}>Parameters</Title>
@@ -49,7 +55,7 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
       />
       <SchedulerCombobox
         value={imageModel.input.params.scheduler}
-        onChange={(value) => handleParameterChange("scheduler", value)}
+        onChange={handleSchedulerChange}
       />
       <Group grow>
         <NumberInput
