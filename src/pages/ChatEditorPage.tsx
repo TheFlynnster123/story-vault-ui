@@ -115,7 +115,6 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       backgroundPhotoCivitJobId: undefined as string | undefined,
       promptType: "First Person Character",
       customPrompt: "",
-      story: "",
     },
     validate: {
       chatTitle: (value: string) =>
@@ -132,7 +131,6 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
         backgroundPhotoCivitJobId: chatSettings.backgroundPhotoCivitJobId,
         promptType: chatSettings.promptType || "First Person Character",
         customPrompt: chatSettings.customPrompt || "",
-        story: chatSettings.story || "",
       };
       form.setInitialValues(values);
       form.reset();
@@ -230,14 +228,6 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({ form }) => (
         {...form.getInputProps("customPrompt")}
       />
     )}
-
-    <Textarea
-      label="Story"
-      placeholder="Enter story details..."
-      autosize
-      minRows={15}
-      {...form.getInputProps("story")}
-    />
   </Stack>
 );
 

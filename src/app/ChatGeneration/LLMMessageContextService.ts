@@ -85,11 +85,6 @@ export class LLMMessageContextService {
     return [toSystemMessage(`# Memories\r\n${content}`)];
   }
 
-  buildStoryMessages(chatSettings: ChatSettings): LLMMessage[] {
-    if (!this.hasStoryContent(chatSettings)) return [];
-    return [toSystemMessage(`# Story\r\n${chatSettings.story}`)];
-  }
-
   // ---- Private: Data Fetching ----
 
   private async fetchChatSettings(): Promise<ChatSettings> {
@@ -120,7 +115,6 @@ export class LLMMessageContextService {
     includeStoryPrompt: boolean
   ): LLMMessage[] {
     const messages: LLMMessage[] = [
-      ...this.buildStoryMessages(chatSettings),
       ...chatMessages,
       ...this.buildPlanMessages(plans),
       ...this.buildMemoryMessages(memories),
@@ -176,10 +170,6 @@ export class LLMMessageContextService {
   }
 
   // ---- Private: Helpers ----
-
-  private hasStoryContent(chatSettings: ChatSettings): boolean {
-    return !!chatSettings?.story?.trim();
-  }
 
   private combineMemoryContent(memories: Memory[]): string {
     return memories

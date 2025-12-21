@@ -7,6 +7,8 @@ import type {
   ChapterCreatedEvent,
   ChapterEditedEvent,
   ChapterDeletedEvent,
+  StoryCreatedEvent,
+  StoryEditedEvent,
 } from "./events/ChatEvent";
 
 // Singleton instances
@@ -44,6 +46,12 @@ export class UserChatProjection {
   // ---- Event Processing ----
   public process(event: ChatEvent) {
     switch (event.type) {
+      case "StoryCreated":
+        this.processStoryCreated(event);
+        break;
+      case "StoryEdited":
+        this.processStoryEdited(event);
+        break;
       case "MessageCreated":
         this.processMessageCreated(event);
         break;
@@ -95,6 +103,23 @@ export class UserChatProjection {
   }
 
   // ---- Event Handlers ----
+  private processStoryCreated(event: StoryCreatedEvent) {
+    this.Messages.unshift({
+      id: event.storyId,
+      type: "story",
+      content: event.content,
+      hiddenByChapterId: undefined,
+      deleted: false,
+    });
+  }
+
+  private processStoryEdited(event: StoryEditedEvent) {
+    const story = this.Messages.find((m) => m.id === event.storyId);
+    if (story) {
+      story.content = event.content;
+    }
+  }
+
   private processMessageCreated(event: MessageCreatedEvent) {
     this.Messages.push({
       id: event.messageId,
@@ -189,6 +214,7 @@ export class UserChatProjection {
 export interface UserChatMessage {
   id: string;
   type:
+    | "story"
     | "user-message"
     | "system-message"
     | "assistant"
@@ -213,6 +239,11 @@ export interface ChapterChatMessage extends UserChatMessage {
     nextChapterDirection?: string;
     coveredMessageIds: string[];
   };
+}
+
+export interface StoryChatMessage extends UserChatMessage {
+  type: "story";
+  content: string;
 }
 
 function toType(

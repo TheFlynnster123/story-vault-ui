@@ -3,10 +3,12 @@ import { UserMessage } from "./UserMessage";
 import { SystemMessage } from "./SystemMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
 import { ChapterMessage } from "./ChapterMessage";
+import { StoryMessage } from "./StoryMessage";
 import type {
   UserChatMessage,
   CivitJobChatMessage,
   ChapterChatMessage,
+  StoryChatMessage,
 } from "../../../cqrs/UserChatProjection";
 
 interface ChatEntryProps {
@@ -20,6 +22,12 @@ export const ChatEntry: React.FC<ChatEntryProps> = ({
   message,
   isLastMessage = false,
 }) => {
+  if (message.type === "story") {
+    return (
+      <StoryMessage chatId={chatId} message={message as StoryChatMessage} />
+    );
+  }
+
   if (message.type === "civit-job") {
     return (
       <CivitJobMessage

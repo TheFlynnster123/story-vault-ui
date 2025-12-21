@@ -7,7 +7,6 @@ export interface ChatSettings {
   backgroundPhotoCivitJobId?: string;
   promptType: "Manual" | "First Person Character";
   customPrompt?: string;
-  story?: string;
 }
 
 export const ChatSettingsUtils = {

@@ -23,7 +23,7 @@ export const ChatMessage: React.FC<MessageItemProps> = ({
 }) => {
   const [showButtons, setShowButtons] = useState(false);
 
-  const messageTextType = message.type === "user-message" ? "user" : "system";
+  const messageTextType = message.type=== "user-message" ? "user" : "system";
 
   const toggle = () => setShowButtons(!showButtons);
 

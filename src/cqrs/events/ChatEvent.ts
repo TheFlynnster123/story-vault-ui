@@ -6,7 +6,9 @@ export type ChatEvent =
   | ChapterCreatedEvent
   | ChapterEditedEvent
   | ChapterDeletedEvent
-  | CivitJobCreatedEvent;
+  | CivitJobCreatedEvent
+  | StoryCreatedEvent
+  | StoryEditedEvent;
 
 export interface MessageCreatedEvent {
   type: "MessageCreated";
@@ -57,4 +59,16 @@ export interface CivitJobCreatedEvent {
   type: "CivitJobCreated";
   jobId: string;
   prompt: string;
+}
+
+export interface StoryCreatedEvent {
+  type: "StoryCreated";
+  storyId: string;
+  content: string;
+}
+
+export interface StoryEditedEvent {
+  type: "StoryEdited";
+  storyId: string;
+  content: string;
 }

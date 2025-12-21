@@ -9,12 +9,25 @@ import {
 } from "./events/ChapterEventUtils";
 import { CivitJobCreatedEventUtil } from "./events/CivitJobCreatedEventUtil";
 import { MessagesDeletedEventUtil } from "./events/MessagesDeletedEventUtil";
+import { StoryCreatedEventUtil } from "./events/StoryCreatedEventUtil";
+import { StoryEditedEventUtil } from "./events/StoryEditedEventUtil";
 
 export class ChatService {
   chatId: string;
 
   constructor(chatId: string) {
     this.chatId = chatId;
+  }
+
+  // ---- Story Operations ----
+  public async InitializeStory(content: string): Promise<void> {
+    const event = StoryCreatedEventUtil.Create(content);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  public async EditStory(storyId: string, content: string): Promise<void> {
+    const event = StoryEditedEventUtil.Create(storyId, content);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 
   // ---- Message Operations ----
