@@ -873,4 +873,59 @@ describe("LLMChatProjection - Chapter Operations", () => {
       expect(message!.content).toBe("New message");
     });
   });
+
+  describe("Buffer Message Ordering", () => {
+    it("places buffer messages just before their chapter, not at the beginning", () => {
+      // Create messages for chapter 1
+      const chapter1MessageIds = createMessagesSequence(projection, 5);
+      createChapter(
+        projection,
+        "chapter-1",
+        "Chapter 1",
+        "Summary 1",
+        chapter1MessageIds
+      );
+
+      // Create messages for chapter 2
+      const chapter2MessageIds = createMessagesSequence(projection, 5, 6);
+      createChapter(
+        projection,
+        "chapter-2",
+        "Chapter 2",
+        "Summary 2",
+        chapter2MessageIds
+      );
+
+      // Create messages for chapter 3
+      const chapter3MessageIds = createMessagesSequence(projection, 5, 11);
+      createChapter(
+        projection,
+        "chapter-3",
+        "Chapter 3",
+        "Summary 3",
+        chapter3MessageIds
+      );
+
+      const messages = projection.GetMessages();
+
+      // Find indices
+      const chapter1Index = messages.findIndex(
+        (m) => m.role === "system" && m.content.includes("Summary 1")
+      );
+      const chapter2Index = messages.findIndex(
+        (m) => m.role === "system" && m.content.includes("Summary 2")
+      );
+      const chapter3Index = messages.findIndex(
+        (m) => m.role === "system" && m.content.includes("Summary 3")
+      );
+      const bufferMessageIndex = messages.findIndex(
+        (m) => m.content === "Message 11"
+      );
+
+      // Buffer messages from chapter 3 should come after chapter 2 but before chapter 3
+      expect(chapter1Index).toBeLessThan(chapter2Index);
+      expect(chapter2Index).toBeLessThan(bufferMessageIndex);
+      expect(bufferMessageIndex).toBeLessThan(chapter3Index);
+    });
+  });
 });

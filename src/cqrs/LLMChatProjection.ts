@@ -90,10 +90,7 @@ export class LLMChatProjection {
     const messagesSinceChapter = this.getMessagesSinceChapter(lastChapter);
 
     if (!this.shouldIncludePreviousChapterBuffer(messagesSinceChapter)) {
-      return [
-        ...this.getPreviousChapterBufferMessages(lastChapter),
-        ...this.getVisibleMessages(),
-      ];
+      return this.getVisibleMessagesWithBufferBeforeLastChapter(lastChapter);
     }
 
     return this.getVisibleMessages();
@@ -248,6 +245,28 @@ export class LLMChatProjection {
 
   getVisibleMessages = (): MessageState[] =>
     this.messages.filter((m) => !m.hiddenByChapterId && !m.deleted);
+
+  getVisibleMessagesWithBufferBeforeLastChapter(
+    lastChapter: MessageState
+  ): MessageState[] {
+    const visibleMessages = this.getVisibleMessages();
+    const bufferMessages = this.getPreviousChapterBufferMessages(lastChapter);
+
+    if (bufferMessages.length === 0) return visibleMessages;
+
+    const lastChapterIndex = visibleMessages.findIndex(
+      (m) => m.id === lastChapter.id
+    );
+
+    if (lastChapterIndex === -1) return visibleMessages;
+
+    // Insert buffer messages just before the last chapter
+    return [
+      ...visibleMessages.slice(0, lastChapterIndex),
+      ...bufferMessages,
+      ...visibleMessages.slice(lastChapterIndex),
+    ];
+  }
 
   getLastChapter(): MessageState | null {
     for (let i = this.messages.length - 1; i >= 0; i--) {
