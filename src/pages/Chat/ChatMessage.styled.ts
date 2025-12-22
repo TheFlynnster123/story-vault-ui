@@ -39,7 +39,7 @@ export const fadeIn = keyframes`
 /* ========================= */
 /* Wrappers                  */
 /* ========================= */
-export const MessageItem = styled.div<{ $type: "user" | "system" }>`
+export const MessageItem = styled.div<{ $type: "user" | "system" | "story" }>`
   animation: ${fadeIn} 0.3s ease-out forwards;
   text-align: ${({ $type }) => ($type === "user" ? "right" : "left")};
 `;
@@ -97,7 +97,7 @@ export const MessageContentWrapper = styled.div`
 /* ========================= */
 /* Message Text              */
 /* ========================= */
-export const MessageText = styled.div<{ $type: "user" | "system" }>`
+export const MessageText = styled.div<{ $type: "user" | "system" | "story" }>`
   font-size: small;
   padding: 8px 12px;
   border-radius: 10px;
@@ -117,6 +117,15 @@ export const MessageText = styled.div<{ $type: "user" | "system" }>`
       ChatTheme.chatEntry.transparency
     )};
     color: ${ChatTheme.messages.user.text};
+  `
+      : $type === "story"
+      ? `
+    background-color: ${applyTransparency(
+      ChatTheme.messages.assistant.background,
+      ChatTheme.chatEntry.transparency
+    )};
+    color: ${ChatTheme.messages.assistant.text};
+    border-left: 4px solid #7950f2;
   `
       : `
     background-color: ${applyTransparency(

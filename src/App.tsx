@@ -9,7 +9,9 @@ import { ChatEditorPage } from "./pages/ChatEditorPage";
 import ChatPage from "./pages/ChatPage";
 import { PlanPage } from "./pages/PlanPage";
 import { MemoriesPage } from "./pages/MemoriesPage";
+import { StoryEditorPage } from "./pages/StoryEditorPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { ChatCreationWizard } from "./components/ChatCreationWizard/ChatCreationWizard";
 
 export const QUERY_CLIENT = new QueryClient();
 
@@ -62,10 +64,18 @@ const App: React.FC<AppProps> = () => {
             }
           />
           <Route
+            path="/chat/:chatId/story/edit"
+            element={
+              <ProtectedRoute>
+                <StoryEditorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/chat/new"
             element={
               <ProtectedRoute>
-                <ChatEditorPage />
+                <ChatCreationWizard />
               </ProtectedRoute>
             }
           />

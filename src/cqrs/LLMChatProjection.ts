@@ -7,6 +7,8 @@ import type {
   ChapterCreatedEvent,
   ChapterEditedEvent,
   ChapterDeletedEvent,
+  StoryCreatedEvent,
+  StoryEditedEvent,
 } from "./events/ChatEvent";
 
 // Singleton instances
@@ -46,6 +48,12 @@ export class LLMChatProjection {
   // ---- Event Processing ----
   public process(event: ChatEvent) {
     switch (event.type) {
+      case "StoryCreated":
+        this.processStoryCreated(event);
+        break;
+      case "StoryEdited":
+        this.processStoryEdited(event);
+        break;
       case "MessageCreated":
         this.processMessageCreated(event);
         break;
@@ -99,6 +107,20 @@ export class LLMChatProjection {
   }
 
   // ---- Event Handlers ----
+  processStoryCreated(event: StoryCreatedEvent) {
+    const storyContent = this.formatStoryContent(event.content);
+    this.messages.unshift(
+      this.createMessageState(event.storyId, "message", "system", storyContent)
+    );
+  }
+
+  processStoryEdited(event: StoryEditedEvent) {
+    const story = this.getMessage(event.storyId);
+    if (story && !story.deleted) {
+      story.content = this.formatStoryContent(event.content);
+    }
+  }
+
   processMessageCreated(event: MessageCreatedEvent) {
     this.messages.push(
       this.createMessageState(
@@ -201,6 +223,8 @@ export class LLMChatProjection {
   }
 
   // ---- Helpers ----
+  formatStoryContent = (content: string): string => `# Story\r\n${content}`;
+
   getMessagesSinceChapter = (lastChapter: MessageState) =>
     this.getVisibleMessages().filter(
       (m) => this.getMessageIndex(m.id) > this.getMessageIndex(lastChapter.id)

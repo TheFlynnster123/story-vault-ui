@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine, RiSettings3Line } from "react-icons/ri";
 import { GrokKeyManager } from "./SystemSettings/GrokKeyManager";
-import { ChatSettingsEditor } from "./SystemSettings/ChatSettingsEditor";
+import { SystemSettingsEditor } from "./SystemSettings/SystemSettingsEditor";
 import { Page } from "./Page";
 
 interface SettingsSectionProps {
@@ -27,7 +27,7 @@ const SystemSettingsPage: React.FC = () => {
         </SettingsSection>
 
         <SettingsSection title="Chat Generation Settings">
-          <ChatSettingsEditor onSave={() => {}} />
+          <SystemSettingsEditor onSave={() => {}} />
         </SettingsSection>
       </Grid>
     </Page>

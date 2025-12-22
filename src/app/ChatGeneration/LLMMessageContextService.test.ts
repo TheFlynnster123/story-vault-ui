@@ -147,37 +147,6 @@ describe("LLMMessageContextService", () => {
     });
   });
 
-  // ---- buildStoryMessages Tests ----
-  describe("buildStoryMessages", () => {
-    it("should return empty array when story is undefined", () => {
-      const service = new LLMMessageContextService(testChatId);
-      const chatSettings = createChatSettingsWithoutStory();
-
-      const result = service.buildStoryMessages(chatSettings);
-
-      expect(result).toEqual([]);
-    });
-
-    it("should return empty array when story is empty", () => {
-      const service = new LLMMessageContextService(testChatId);
-      const chatSettings = createChatSettingsWithEmptyStory();
-
-      const result = service.buildStoryMessages(chatSettings);
-
-      expect(result).toEqual([]);
-    });
-
-    it("should create system message with story content", () => {
-      const service = new LLMMessageContextService(testChatId);
-      const chatSettings = createChatSettingsWithStory("My story content");
-
-      const result = service.buildStoryMessages(chatSettings);
-
-      expect(result).toHaveLength(1);
-      expectSystemMessage(result[0], "# Story\r\nMy story content");
-    });
-  });
-
   // ---- buildGenerationRequestMessages Tests ----
   describe("buildGenerationRequestMessages", () => {
     it("should fetch chat settings for the correct chatId", async () => {
@@ -241,15 +210,11 @@ describe("LLMMessageContextService", () => {
 
     it("should build messages in correct order", async () => {
       const service = new LLMMessageContextService(testChatId);
-      mockChatSettingsService.get.mockResolvedValue(
-        createChatSettingsWithStory("Story")
-      );
       mockPlanService.getPlans.mockReturnValue(createMockPlans());
       mockMemoriesService.get.mockResolvedValue(createMockMemories());
 
       const result = await service.buildGenerationRequestMessages();
 
-      expectMessagesContainStory(result, "# Story\r\nStory");
       expectMessagesContainChatMessages(result);
       expectMessagesContainPlans(result);
       expectMessagesContainMemories(result);
@@ -360,24 +325,6 @@ describe("LLMMessageContextService", () => {
     };
   }
 
-  function createChatSettingsWithStory(story: string): ChatSettings {
-    return {
-      ...createDefaultChatSettings(),
-      story,
-    };
-  }
-
-  function createChatSettingsWithoutStory(): ChatSettings {
-    return createDefaultChatSettings();
-  }
-
-  function createChatSettingsWithEmptyStory(): ChatSettings {
-    return {
-      ...createDefaultChatSettings(),
-      story: "   ",
-    };
-  }
-
   function createMockChatMessages(): LLMMessage[] {
     return [
       { id: "msg-1", role: "user", content: "Hello" },
@@ -447,14 +394,6 @@ describe("LLMMessageContextService", () => {
     const lastMessage = messages[messages.length - 1];
     expect(lastMessage.role).toBe("system");
     expect(lastMessage.content).toBe(FirstPersonCharacterPrompt);
-  }
-
-  function expectMessagesContainStory(
-    messages: LLMMessage[],
-    storyContent: string
-  ): void {
-    const storyMessage = messages.find((m) => m.content === storyContent);
-    expect(storyMessage).toBeDefined();
   }
 
   function expectMessagesContainChatMessages(messages: LLMMessage[]): void {

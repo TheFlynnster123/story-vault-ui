@@ -17,11 +17,11 @@ const MODEL_OPTIONS = [
   { value: "grok-3", label: "grok-3" },
 ];
 
-interface IChatSettingsEditor {
+interface ISystemSettingsEditor {
   onSave?: () => void;
 }
 
-export const ChatSettingsEditor: React.FC<IChatSettingsEditor> = ({
+export const SystemSettingsEditor: React.FC<ISystemSettingsEditor> = ({
   onSave,
 }) => {
   const { systemSettings, saveSystemSettings, isLoading } = useSystemSettings();

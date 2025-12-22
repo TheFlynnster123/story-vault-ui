@@ -1,5 +1,5 @@
 import type { LLMMessage } from "../../cqrs/LLMChatProjection";
-import type { ChatSettings, Plan } from "../../models";
+import type { Plan } from "../../models";
 import { toSystemMessage } from "../../utils/messageUtils";
 import { d } from "../Dependencies/Dependencies";
 
@@ -166,10 +166,7 @@ export class PlanService {
     plan: Plan,
     chatMessages: LLMMessage[]
   ) => {
-    const chatSettings = await d.ChatSettingsService(this.chatId).get();
-
     const promptMessages: LLMMessage[] = [
-      ...this.buildStoryMessages(chatSettings),
       ...chatMessages,
       toSystemMessage(
         `#${plan.name}\r\n
@@ -184,10 +181,5 @@ export class PlanService {
     const response = await d.GrokChatAPI().postChat(promptMessages);
 
     return { ...plan, content: response };
-  };
-
-  private buildStoryMessages = (chatSettings?: ChatSettings) => {
-    if (!chatSettings?.story?.trim()) return [];
-    return [toSystemMessage(`# Story\r\n${chatSettings.story}`)];
   };
 }
