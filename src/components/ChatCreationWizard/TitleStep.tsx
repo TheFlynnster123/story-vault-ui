@@ -18,13 +18,8 @@ export const TitleStep: React.FC<TitleStepProps> = ({
   return (
     <Stack gap="xl">
       <Stack gap="md">
-        <Text size="sm" c="dimmed">
-          Give your story a memorable title.
-        </Text>
         <TextInput
-          label="Story Title"
           placeholder="Enter a title for your story..."
-          withAsterisk
           autoFocus
           value={state.title}
           onChange={(e) => updateState({ title: e.currentTarget.value })}

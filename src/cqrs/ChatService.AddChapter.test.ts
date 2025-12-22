@@ -73,6 +73,23 @@ describe("ChatService - AddChapter", () => {
       expect(calledEvent.coveredMessageIds).toContain("msg-3");
     });
 
+    it("should filter out story messages", async () => {
+      const messages = [
+        createStory("story-1"),
+        createMessage("msg-1", "message"),
+        createMessage("msg-2", "message"),
+      ];
+      mockUserChatProjection.GetMessages.mockReturnValue(messages);
+
+      const service = new ChatService(testChatId);
+      await service.AddChapter("Chapter 1", "Summary");
+
+      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
+      expect(calledEvent.coveredMessageIds).not.toContain("story-1");
+      expect(calledEvent.coveredMessageIds).toContain("msg-1");
+      expect(calledEvent.coveredMessageIds).toContain("msg-2");
+    });
+
     it("should include all non-chapter, non-deleted messages in coveredMessageIds", async () => {
       const messages = [
         createMessage("msg-1", "message"),
@@ -323,6 +340,16 @@ describe("ChatService - AddChapter", () => {
       role: "user",
       type: "message",
       deleted: true,
+    };
+  }
+
+  function createStory(id: string) {
+    return {
+      id,
+      content: "Once upon a time...",
+      role: "system",
+      type: "story",
+      deleted: false,
     };
   }
 });

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  Container,
   Textarea,
   Button,
   Group,
@@ -13,6 +12,7 @@ import { RiArrowLeftLine } from "react-icons/ri";
 import { LuBookOpen } from "react-icons/lu";
 import { d } from "../app/Dependencies/Dependencies";
 import { ChatTheme } from "../theme/chatTheme";
+import { Page } from "./Page";
 
 export const StoryEditorPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -48,7 +48,7 @@ export const StoryEditorPage: React.FC = () => {
   if (isLoading) return null;
 
   return (
-    <Container size="md">
+    <Page>
       <Group justify="space-between" align="center" mb="md">
         <Group>
           <ActionIcon onClick={handleCancel} variant="subtle" size="lg">
@@ -82,6 +82,6 @@ export const StoryEditorPage: React.FC = () => {
           <Button onClick={handleSave}>Save Changes</Button>
         </Group>
       </Stack>
-    </Container>
+    </Page>
   );
 };

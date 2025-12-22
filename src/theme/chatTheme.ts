@@ -32,8 +32,8 @@ export const ChatTheme = {
     /** Text color for headers */
     headerText: "rgba(255, 255, 255, 1)",
     /** Transparent version for backgrounds */
-    backgroundPrimary: "rgba(138, 43, 226, 0.3)",
-    backgroundSecondary: "rgba(75, 0, 130, 0.3)",
+    backgroundPrimary: "rgba(138, 43, 226, 0.8)",
+    backgroundSecondary: "rgba(75, 0, 130, 0.8)",
   },
 
   /** Colors for plan UI elements - Teal/Cyan theme */
@@ -47,8 +47,8 @@ export const ChatTheme = {
     /** Text color for headers */
     headerText: "rgba(255, 255, 255, 1)",
     /** Transparent version for backgrounds */
-    backgroundPrimary: "rgba(0, 188, 212, 0.3)",
-    backgroundSecondary: "rgba(0, 131, 143, 0.3)",
+    backgroundPrimary: "rgba(0, 188, 212, 0.8)",
+    backgroundSecondary: "rgba(0, 131, 143, 0.8)",
   },
 
   /** Colors for memories UI elements - Rose/Pink theme */

@@ -11,8 +11,14 @@ import {
   Group,
   TextInput,
   Loader,
+  Divider,
 } from "@mantine/core";
-import { RiCheckLine, RiImageLine, RiSparklingLine } from "react-icons/ri";
+import {
+  RiCheckLine,
+  RiImageLine,
+  RiSparklingLine,
+  RiArrowLeftLine,
+} from "react-icons/ri";
 import type { ChatCreationWizardState } from "../../models/ChatCreationWizardState";
 import { useCivitJob } from "../../hooks/useCivitJob";
 import { CivitJobAPI } from "../../clients/CivitJobAPI";
@@ -23,6 +29,7 @@ interface ChatSettingsStepProps {
   state: ChatCreationWizardState;
   updateState: (updates: Partial<ChatCreationWizardState>) => void;
   onCreate: () => void;
+  onBack: () => void;
   isCreating: boolean;
 }
 
@@ -31,6 +38,7 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
   state,
   updateState,
   onCreate,
+  onBack,
   isCreating,
 }) => {
   const [prompt, setPrompt] = useState("");
@@ -123,101 +131,108 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
           />
         )}
 
-        <div>
-          <Text size="sm" fw={500} mb="xs">
-            Background Photo (Optional)
-          </Text>
-          {hasPhoto ? (
-            <Paper withBorder p="sm">
-              {isLoadingCivitJob ? (
-                <Stack align="center" p="xl" gap="md">
-                  <Loader size="lg" />
-                  <Text size="sm" c="dimmed">
-                    Generating background image...
-                  </Text>
-                </Stack>
-              ) : (
-                <Stack gap="sm">
-                  <Image
-                    src={displayPhoto}
-                    alt="Background"
-                    radius="md"
-                    fit="contain"
-                    mah={300}
-                  />
-                  <Button onClick={handleRemove} variant="light" color="red">
-                    Remove Photo
-                  </Button>
-                </Stack>
-              )}
-            </Paper>
-          ) : (
-            <Paper withBorder p="md">
-              <Stack gap="md">
+        <Divider />
+
+        <Text size="sm" fw={500} mt="xs">
+          Background Photo (Optional)
+        </Text>
+        {hasPhoto ? (
+          <Paper withBorder p="sm">
+            {isLoadingCivitJob ? (
+              <Stack align="center" p="xl" gap="md">
+                <Loader size="lg" />
                 <Text size="sm" c="dimmed">
-                  Upload an image or generate one with AI
+                  Generating background image...
                 </Text>
-
-                <Group>
-                  <FileButton onChange={handlePhotoUpload} accept="image/*">
-                    {(props) => (
-                      <Button
-                        {...props}
-                        variant="light"
-                        leftSection={<RiImageLine size={16} />}
-                      >
-                        Upload Image
-                      </Button>
-                    )}
-                  </FileButton>
-                </Group>
-
-                <Text size="xs" fw={500} tt="uppercase" c="dimmed">
-                  Or Generate with AI
-                </Text>
-
-                <TextInput
-                  placeholder="Describe the image..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.currentTarget.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleGenerateBackground();
-                    }
-                  }}
-                />
-
-                <Button
-                  onClick={handleGenerateBackground}
-                  loading={isGenerating}
-                  disabled={!prompt.trim()}
-                  leftSection={<RiSparklingLine size={16} />}
-                  variant="light"
-                >
-                  Generate Background
-                </Button>
-
-                {error && (
-                  <Text size="sm" c="red">
-                    {error}
-                  </Text>
-                )}
               </Stack>
-            </Paper>
-          )}
-        </div>
+            ) : (
+              <Stack gap="sm">
+                <Image
+                  src={displayPhoto}
+                  alt="Background"
+                  radius="md"
+                  fit="contain"
+                  mah={300}
+                />
+                <Button onClick={handleRemove} variant="light" color="red">
+                  Remove Photo
+                </Button>
+              </Stack>
+            )}
+          </Paper>
+        ) : (
+          <Stack gap="md">
+            <Text size="sm" c="dimmed">
+              Upload an image or generate one with AI
+            </Text>
+
+            <Group>
+              <FileButton onChange={handlePhotoUpload} accept="image/*">
+                {(props) => (
+                  <Button
+                    {...props}
+                    variant="light"
+                    leftSection={<RiImageLine size={16} />}
+                  >
+                    Upload Image
+                  </Button>
+                )}
+              </FileButton>
+            </Group>
+
+            <Text size="xs" fw={500} c="dimmed">
+              Or Generate with AI
+            </Text>
+
+            <TextInput
+              placeholder="Describe the image..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleGenerateBackground();
+                }
+              }}
+            />
+
+            <Button
+              onClick={handleGenerateBackground}
+              loading={isGenerating}
+              disabled={!prompt.trim()}
+              leftSection={<RiSparklingLine size={16} />}
+              variant="light"
+            >
+              Generate Background
+            </Button>
+
+            {error && (
+              <Text size="sm" c="red">
+                {error}
+              </Text>
+            )}
+          </Stack>
+        )}
       </Stack>
 
-      <Button
-        onClick={onCreate}
-        loading={isCreating}
-        leftSection={<RiCheckLine size={18} />}
-        size="md"
-        style={{ alignSelf: "center" }}
-      >
-        Create Chat
-      </Button>
+      <Group justify="center" gap="md">
+        <Button
+          onClick={onBack}
+          variant="default"
+          leftSection={<RiArrowLeftLine size={18} />}
+          size="md"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={onCreate}
+          loading={isCreating}
+          leftSection={<RiCheckLine size={18} />}
+          size="md"
+        >
+          Create Chat
+        </Button>
+      </Group>
     </Stack>
   );
 };

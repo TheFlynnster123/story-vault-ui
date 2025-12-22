@@ -8,9 +8,7 @@ export const StoryMessageContainer = styled.div`
     ${ChatTheme.chatSettings.backgroundPrimary} 0%,
     ${ChatTheme.chatSettings.backgroundSecondary} 100%
   );
-  border-left: 4px solid ${ChatTheme.chatSettings.border};
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  border-radius: 8px;
   margin-top: 1rem;
 `;
 

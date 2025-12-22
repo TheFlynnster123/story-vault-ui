@@ -4,6 +4,7 @@ import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatControls } from "./ChatControls/ChatControls";
 import { FlowAccordion } from "./Flow/FlowAccordion";
+import { StoryMessageChecker } from "./StoryMessageChecker";
 import { useChatSettings } from "../../queries/chat-settings/useChatSettings";
 import { useEnsureChatInitialization } from "../../hooks/useEnsureChatInitialization";
 
@@ -21,6 +22,8 @@ export const Chat: React.FC<ChatProps> = ({ chatId }) => {
       $chatId={chatId}
       $backgroundPhotoBase64={backgroundPhotoBase64}
     >
+      <StoryMessageChecker chatId={chatId} />
+
       <ChatControls />
 
       <ChatMessageList chatId={chatId} />
