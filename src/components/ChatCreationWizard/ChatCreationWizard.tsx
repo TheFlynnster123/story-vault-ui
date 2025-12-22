@@ -8,12 +8,7 @@ import {
   Group,
   ActionIcon,
 } from "@mantine/core";
-import {
-  RiArrowLeftLine,
-  RiPencilFill,
-  RiSettings4Line,
-  RiText,
-} from "react-icons/ri";
+import { RiArrowLeftLine, RiPencilFill, RiSettings4Line } from "react-icons/ri";
 import { LuBookOpen } from "react-icons/lu";
 import { v4 as uuidv4 } from "uuid";
 import type { ChatCreationWizardState } from "../../models/ChatCreationWizardState";

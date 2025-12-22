@@ -1,4 +1,4 @@
-import { TextInput, Stack, Button, Text } from "@mantine/core";
+import { TextInput, Stack, Button } from "@mantine/core";
 import { RiArrowRightLine } from "react-icons/ri";
 import type { ChatCreationWizardState } from "../../models/ChatCreationWizardState";
 
