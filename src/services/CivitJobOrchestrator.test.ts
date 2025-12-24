@@ -6,7 +6,7 @@ import type { CivitJobStatus } from "../types/CivitJob";
 vi.mock("../app/Dependencies/Dependencies");
 
 describe("CivitJobOrchestrator", () => {
-  let mockJobStatusService: any;
+  let mockCivitJobAPI: any;
   let mockPhotoStorageService: any;
 
   const chatId = "test-chat-id";
@@ -15,7 +15,7 @@ describe("CivitJobOrchestrator", () => {
   const mockBlobUrl = "https://example.com/photo.png";
 
   beforeEach(() => {
-    mockJobStatusService = {
+    mockCivitJobAPI = {
       getJobStatus: vi.fn(),
     };
 
@@ -24,7 +24,7 @@ describe("CivitJobOrchestrator", () => {
       downloadAndSavePhoto: vi.fn(),
     };
 
-    vi.mocked(d.JobStatusService).mockReturnValue(mockJobStatusService);
+    vi.mocked(d.CivitJobAPI).mockReturnValue(mockCivitJobAPI);
     vi.mocked(d.PhotoStorageService).mockReturnValue(mockPhotoStorageService);
   });
 
@@ -54,7 +54,7 @@ describe("CivitJobOrchestrator", () => {
 
   describe("getOrPollPhoto", () => {
     it("should return isLoading when job is still scheduled", async () => {
-      mockJobStatusService.getJobStatus.mockResolvedValue(
+      mockCivitJobAPI.getJobStatus.mockResolvedValue(
         createScheduledJobStatus()
       );
 
@@ -66,7 +66,7 @@ describe("CivitJobOrchestrator", () => {
     });
 
     it("should return stored photo when available in database", async () => {
-      mockJobStatusService.getJobStatus.mockResolvedValue(
+      mockCivitJobAPI.getJobStatus.mockResolvedValue(
         createEmptyResultJobStatus()
       );
       mockPhotoStorageService.getStoredPhoto.mockResolvedValue(mockPhotoBase64);
@@ -82,7 +82,7 @@ describe("CivitJobOrchestrator", () => {
     });
 
     it("should download and return photo when job complete but not stored", async () => {
-      mockJobStatusService.getJobStatus.mockResolvedValue(
+      mockCivitJobAPI.getJobStatus.mockResolvedValue(
         createCompletedJobStatus(mockBlobUrl)
       );
       mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
@@ -101,7 +101,7 @@ describe("CivitJobOrchestrator", () => {
     });
 
     it("should return error when photo is not available", async () => {
-      mockJobStatusService.getJobStatus.mockResolvedValue(
+      mockCivitJobAPI.getJobStatus.mockResolvedValue(
         createUnavailablePhotoJobStatus()
       );
       mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
@@ -117,7 +117,7 @@ describe("CivitJobOrchestrator", () => {
     });
 
     it("should return error when result array is empty", async () => {
-      mockJobStatusService.getJobStatus.mockResolvedValue(
+      mockCivitJobAPI.getJobStatus.mockResolvedValue(
         createEmptyResultJobStatus()
       );
       mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
@@ -134,9 +134,7 @@ describe("CivitJobOrchestrator", () => {
 
     it("should return error message when Error is thrown", async () => {
       const errorMessage = "Network connection failed";
-      mockJobStatusService.getJobStatus.mockRejectedValue(
-        new Error(errorMessage)
-      );
+      mockCivitJobAPI.getJobStatus.mockRejectedValue(new Error(errorMessage));
 
       const orchestrator = new CivitJobOrchestrator();
       const result = await orchestrator.getOrPollPhoto(chatId, jobId);
@@ -150,7 +148,7 @@ describe("CivitJobOrchestrator", () => {
 
     it("should return string error when string is thrown", async () => {
       const errorString = "Something went wrong";
-      mockJobStatusService.getJobStatus.mockRejectedValue(errorString);
+      mockCivitJobAPI.getJobStatus.mockRejectedValue(errorString);
 
       const orchestrator = new CivitJobOrchestrator();
       const result = await orchestrator.getOrPollPhoto(chatId, jobId);

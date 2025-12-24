@@ -75,8 +75,8 @@ export class CivitJobAPI {
     if (response.ok) {
       return response.json();
     } else {
-      console.error("Failed to get job status:", response.statusText);
-      throw new Error(`Error fetching job status: ${response.statusText}`);
+      d.ErrorService().log("Failed to get job status:", response.statusText);
+      return { scheduled: false, result: [] };
     }
   }
 

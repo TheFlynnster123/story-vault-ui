@@ -45,7 +45,6 @@ import {
   RecentChatsService,
   getRecentChatsServiceInstance,
 } from "../../services/RecentChatsService";
-import { JobStatusService } from "../../services/JobStatusService";
 import { PhotoStorageService } from "../../services/PhotoStorageService";
 import { getAuthApiSingleton } from "../../clients/AuthAPI";
 import { getEncryptionManagerSingleton } from "../../Managers/EncryptionManager";
@@ -76,10 +75,6 @@ export class Dependencies {
 
   PhotoStorageService() {
     return new PhotoStorageService();
-  }
-
-  JobStatusService() {
-    return new JobStatusService();
   }
 
   ChatAPI() {

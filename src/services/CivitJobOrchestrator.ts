@@ -7,7 +7,7 @@ import { d } from "../app/Dependencies/Dependencies";
 export class CivitJobOrchestrator {
   async getOrPollPhoto(chatId: string, jobId: string): Promise<CivitJobResult> {
     try {
-      const jobStatus = await d.JobStatusService().getJobStatus(jobId);
+      const jobStatus = await d.CivitJobAPI().getJobStatus(jobId);
 
       if (jobStatus.scheduled) return this.scheduledJobResponse();
 
