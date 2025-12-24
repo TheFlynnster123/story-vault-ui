@@ -9,10 +9,9 @@ export interface CivitJobStatus {
 }
 
 export interface CivitJobResult {
-  photoBase64: string | null;
-  scheduled: boolean;
+  photoBase64?: string | undefined;
   isLoading: boolean;
-  error: Error | null;
+  error?: string | undefined;
 }
 
 export interface PhotoData {

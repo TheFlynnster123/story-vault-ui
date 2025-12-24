@@ -30,7 +30,8 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
 
   // Track if we're actively waiting for a job (either generating or polling)
   const isWaitingForJob =
-    !!jobId && !photoBase64 && !isGenerating && !error && jobStatus?.scheduled;
+    !!jobId && !photoBase64 && !isGenerating && !error && jobStatus?.isLoading;
+
   const hasImage = !!photoBase64 && !error;
 
   const startGeneration = async () => {

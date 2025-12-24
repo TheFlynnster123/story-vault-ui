@@ -52,7 +52,7 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
   );
 
   const isLoadingCivitJob =
-    state.backgroundPhotoCivitJobId && !civitJobPhoto && jobStatus?.scheduled;
+    state.backgroundPhotoCivitJobId && !civitJobPhoto && jobStatus?.isLoading;
 
   const displayPhoto = civitJobPhoto || state.backgroundPhotoBase64;
 
