@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { EncryptionManager } from "./Managers/EncryptionManager";
-import { GrokKeyAPI } from "./clients/GrokKeyAPI";
 import { d } from "./app/Dependencies/Dependencies";
 
 interface IGrokKeyInput {
@@ -12,15 +10,11 @@ export const GrokKeyInput: React.FC<IGrokKeyInput> = ({ onGrokKeyUpdated }) => {
 
   const saveGrokKey = async () => {
     try {
-      const encryptionManager = new EncryptionManager();
-      await encryptionManager.ensureKeysInitialized();
+      const encryptedKey = await d
+        .EncryptionManager()
+        .encryptString("grok", grokKey);
 
-      const encryptedKey = await encryptionManager.encryptString(
-        encryptionManager.grokEncryptionKey as string,
-        grokKey
-      );
-
-      await new GrokKeyAPI().saveGrokKey(encryptedKey);
+      await d.GrokKeyAPI().saveGrokKey(encryptedKey);
 
       onGrokKeyUpdated();
     } catch (e) {

@@ -1,7 +1,6 @@
 import config from "../Config";
-import { EncryptionManager } from "../Managers/EncryptionManager";
+import { d } from "../app/Dependencies/Dependencies";
 import type { ChatEvent } from "../cqrs/events/ChatEvent";
-import { AuthAPI } from "./AuthAPI";
 
 interface ChatEventDTO {
   id: string;
@@ -10,21 +9,15 @@ interface ChatEventDTO {
 
 export class ChatEventStore {
   public URL: string;
-  public encryptionManager: EncryptionManager;
-
-  authAPI: AuthAPI;
 
   constructor() {
     this.URL = config.storyVaultAPIURL;
-
-    this.authAPI = new AuthAPI();
-    this.encryptionManager = new EncryptionManager();
   }
 
   // ---- Public Chat Event Operations ----
 
   public async getChatEvents(chatId: string): Promise<ChatEvent[]> {
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
     const response = await fetch(
       `${this.URL}/api/GetChatEvents`,
@@ -44,7 +37,7 @@ export class ChatEventStore {
     chatId: string,
     event: ChatEvent
   ): Promise<boolean> {
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
     const eventDTO = await this.encryptEvent(event);
 
     const response = await fetch(
@@ -64,7 +57,7 @@ export class ChatEventStore {
     chatId: string,
     events: ChatEvent[]
   ): Promise<boolean> {
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
     const eventDTOs = await Promise.all(
       events.map((event) => this.encryptEvent(event))
     );
@@ -85,12 +78,10 @@ export class ChatEventStore {
   // ---- Encryption / Decryption ----
 
   private async encryptEvent(event: ChatEvent): Promise<ChatEventDTO> {
-    await this.encryptionManager.ensureKeysInitialized();
     const eventJson = JSON.stringify(event);
-    const encryptedContent = await this.encryptionManager.encryptString(
-      this.encryptionManager.chatEncryptionKey!,
-      eventJson
-    );
+    const encryptedContent = await d
+      .EncryptionManager()
+      .encryptString("chat", eventJson);
 
     return {
       id: this.generateEventId(),
@@ -99,15 +90,13 @@ export class ChatEventStore {
   }
 
   async decryptEvents(dtos: ChatEventDTO[]): Promise<ChatEvent[]> {
-    await this.encryptionManager.ensureKeysInitialized();
     const events: ChatEvent[] = [];
 
     for (const dto of dtos) {
       try {
-        const decryptedContent = await this.encryptionManager.decryptString(
-          this.encryptionManager.chatEncryptionKey!,
-          dto.content
-        );
+        const decryptedContent = await d
+          .EncryptionManager()
+          .decryptString("chat", dto.content);
         const event = JSON.parse(decryptedContent) as ChatEvent;
         events.push(event);
       } catch (error) {

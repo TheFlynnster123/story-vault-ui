@@ -1,23 +1,14 @@
-import { JobStatusService } from "./JobStatusService";
-import { PhotoStorageService } from "./PhotoStorageService";
 import type { CivitJobResult } from "../types/CivitJob";
+import { d } from "../app/Dependencies/Dependencies";
 
 /**
  * Main orchestration service for managing Civit job workflow
  */
 export class CivitJobOrchestrator {
-  private jobStatusService: JobStatusService;
-  private photoStorageService: PhotoStorageService;
-
-  constructor() {
-    this.jobStatusService = new JobStatusService();
-    this.photoStorageService = new PhotoStorageService();
-  }
-
   async getOrPollPhoto(chatId: string, jobId: string): Promise<CivitJobResult> {
     try {
       // First, check job status (free endpoint)
-      const jobStatus = await this.jobStatusService.getJobStatus(jobId);
+      const jobStatus = await d.JobStatusService().getJobStatus(jobId);
 
       // If job is still scheduled, return status without checking database
       if (jobStatus.scheduled) {
@@ -25,10 +16,10 @@ export class CivitJobOrchestrator {
       }
 
       // Job is not scheduled, check if we already have the photo in our database
-      const storedPhoto = await this.photoStorageService.getStoredPhoto(
-        chatId,
-        jobId
-      );
+      const storedPhoto = await d
+        .PhotoStorageService()
+        .getStoredPhoto(chatId, jobId);
+
       if (storedPhoto) {
         return this.storedPhotoResponse(storedPhoto);
       }
@@ -76,11 +67,9 @@ export class CivitJobOrchestrator {
     jobId: string,
     blobUrl: string
   ): Promise<CivitJobResult> {
-    const photoBase64 = await this.photoStorageService.downloadAndSavePhoto(
-      chatId,
-      jobId,
-      blobUrl
-    );
+    const photoBase64 = await d
+      .PhotoStorageService()
+      .downloadAndSavePhoto(chatId, jobId, blobUrl);
 
     return {
       photoBase64,

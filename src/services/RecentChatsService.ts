@@ -9,9 +9,8 @@ interface RecentChatsData {
 let instance: RecentChatsService | null = null;
 
 export const getRecentChatsServiceInstance = (): RecentChatsService => {
-  if (!instance) {
-    instance = new RecentChatsService();
-  }
+  if (!instance) instance = new RecentChatsService();
+
   return instance;
 };
 

@@ -1,19 +1,15 @@
+import { d } from "../app/Dependencies/Dependencies";
 import config from "../Config";
-import { AuthAPI } from "./AuthAPI";
 
 export class ChatAPI {
   public URL: string;
 
-  authAPI: AuthAPI;
-
   constructor() {
     this.URL = config.storyVaultAPIURL;
-
-    this.authAPI = new AuthAPI();
   }
 
   public async getChatIds(): Promise<string[]> {
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
     const response = await fetch(`${this.URL}/api/GetChats`, {
       method: "POST",
@@ -35,7 +31,7 @@ export class ChatAPI {
   }
 
   public async deleteChat(chatId: string): Promise<boolean> {
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
     const response = await fetch(
       `${this.URL}/api/DeleteChat`,

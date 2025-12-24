@@ -1,22 +1,16 @@
-import { CivitJobAPI } from "../clients/CivitJobAPI";
+import { d } from "../app/Dependencies/Dependencies";
 import type { PhotoData } from "../types/CivitJob";
 
 /**
  * Service responsible for managing photo storage and retrieval
  */
 export class PhotoStorageService {
-  private civitJobAPI: CivitJobAPI;
-
-  constructor() {
-    this.civitJobAPI = new CivitJobAPI();
-  }
-
   async getStoredPhoto(chatId: string, jobId: string): Promise<string | null> {
     try {
-      const photoData = (await this.civitJobAPI.getPhoto(
-        chatId,
-        jobId
-      )) as PhotoData;
+      const photoData = (await d
+        .CivitJobAPI()
+        .getPhoto(chatId, jobId)) as PhotoData;
+
       return photoData.base64;
     } catch (error) {
       // Photo not found in database
@@ -34,7 +28,7 @@ export class PhotoStorageService {
     const base64 = await this.blobToBase64(blob);
 
     const photoDataToSave: PhotoData = { base64 };
-    await this.civitJobAPI.savePhoto(chatId, jobId, photoDataToSave);
+    await d.CivitJobAPI().savePhoto(chatId, jobId, photoDataToSave);
 
     return base64;
   }

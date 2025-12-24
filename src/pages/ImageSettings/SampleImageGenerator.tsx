@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button, Group } from "@mantine/core";
 import { RiImageLine, RiErrorWarningLine, RiCheckLine } from "react-icons/ri";
-import { CivitJobAPI } from "../../clients/CivitJobAPI";
 import { useCivitJob } from "../../hooks/useCivitJob";
 import type { ImageModel } from "../../app/ImageModels/ImageModel";
 import { d } from "../../app/Dependencies/Dependencies";
@@ -40,7 +39,7 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
     setJobId(null);
 
     try {
-      const response = await new CivitJobAPI().generateImage(model.input);
+      const response = await d.CivitJobAPI().generateImage(model.input);
       const newJobId = response.jobs[0].jobId;
       setJobId(newJobId);
       onSampleImageCreated?.(newJobId);

@@ -102,7 +102,7 @@ export const ChatCreationWizard: React.FC = () => {
         </Stepper>
 
         <div style={{ minHeight: "400px" }}>
-          {state.step === 2 && (
+          {state.step === 0 && (
             <TitleStep
               state={state}
               updateState={updateState}
@@ -117,7 +117,7 @@ export const ChatCreationWizard: React.FC = () => {
               onBack={prevStep}
             />
           )}
-          {state.step === 0 && (
+          {state.step === 2 && (
             <ChatSettingsStep
               chatId={chatId}
               state={state}

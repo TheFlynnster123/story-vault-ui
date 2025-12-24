@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GrokKeyAPI } from "../clients/GrokKeyAPI";
+import { d } from "../app/Dependencies/Dependencies";
 
 // Singleton to store the key status across all hook instances
 let grokKeyStatusSingleton: boolean | undefined = undefined;
@@ -10,7 +10,7 @@ const notifyListeners = () => {
 };
 
 const fetchGrokKeyStatus = async () => {
-  const api = new GrokKeyAPI();
+  const api = d.GrokKeyAPI();
   const isValid = await api.hasValidGrokKey();
   grokKeyStatusSingleton = isValid;
   notifyListeners();

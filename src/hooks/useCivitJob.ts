@@ -1,6 +1,6 @@
 import { Query, useQuery } from "@tanstack/react-query";
-import { CivitJobOrchestrator } from "../services/CivitJobOrchestrator";
 import type { CivitJobResult } from "../types/CivitJob";
+import { d } from "../app/Dependencies/Dependencies";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -11,7 +11,7 @@ export const useCivitJob = (chatId: string, jobId: string) => {
     enabled: !!chatId && !!jobId,
 
     queryFn: async () =>
-      await new CivitJobOrchestrator().getOrPollPhoto(chatId, jobId),
+      await d.CivitJobOrchestrator().getOrPollPhoto(chatId, jobId),
 
     refetchInterval: (query) => shouldPoll(query),
 

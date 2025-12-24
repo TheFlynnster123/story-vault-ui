@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { useGrokKey } from "../../hooks/useGrokKey";
-import { EncryptionManager } from "../../Managers/EncryptionManager";
-import { GrokKeyAPI } from "../../clients/GrokKeyAPI";
 import {
   PasswordInput,
   Button,
@@ -45,15 +43,11 @@ export const GrokKeyManager: React.FC = () => {
     setIsUpdating(true);
 
     try {
-      const encryptionManager = new EncryptionManager();
-      await encryptionManager.ensureKeysInitialized();
+      const encryptedKey = await d
+        .EncryptionManager()
+        .encryptString("grok", grokKey);
 
-      const encryptedKey = await encryptionManager.encryptString(
-        encryptionManager.grokEncryptionKey as string,
-        grokKey
-      );
-
-      await new GrokKeyAPI().saveGrokKey(encryptedKey);
+      await d.GrokKeyAPI().saveGrokKey(encryptedKey);
       await refreshGrokKeyStatus();
 
       notifications.show({

@@ -1,6 +1,4 @@
 import config from "../Config";
-import { EncryptionManager } from "../Managers/EncryptionManager";
-import { AuthAPI } from "./AuthAPI";
 import type { ImageGenerationSettings } from "../models/ImageGenerationSettings";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { d } from "../app/Dependencies/Dependencies";
@@ -8,13 +6,9 @@ import type { CivitJobStatus } from "../types/CivitJob";
 
 export class CivitJobAPI {
   public URL: string;
-  public encryptionManager: EncryptionManager;
-  public authAPI: AuthAPI;
 
   constructor() {
     this.URL = config.storyVaultAPIURL;
-    this.authAPI = new AuthAPI();
-    this.encryptionManager = new EncryptionManager();
   }
 
   public async savePhoto(
@@ -22,14 +16,12 @@ export class CivitJobAPI {
     photoName: string,
     photoData: object
   ): Promise<boolean> {
-    const accessToken = await this.authAPI.getAccessToken();
-    await this.encryptionManager.ensureKeysInitialized();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
     const photoContent = JSON.stringify(photoData);
-    const encryptedContent = await this.encryptionManager.encryptString(
-      this.encryptionManager.civitaiEncryptionKey!,
-      photoContent
-    );
+    const encryptedContent = await d
+      .EncryptionManager()
+      .encryptString("civitai", photoContent);
 
     const body = { chatId, photoName, photoData: encryptedContent };
 
@@ -45,7 +37,7 @@ export class CivitJobAPI {
   }
 
   public async getPhoto(chatId: string, photoName: string): Promise<object> {
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
     const body = { chatId, photoName };
 
@@ -54,11 +46,11 @@ export class CivitJobAPI {
 
     if (response.ok) {
       const { photoData } = await response.json();
-      await this.encryptionManager.ensureKeysInitialized();
-      const decryptedContent = await this.encryptionManager.decryptString(
-        this.encryptionManager.civitaiEncryptionKey!,
-        photoData
-      );
+
+      const decryptedContent = await d
+        .EncryptionManager()
+        .decryptString("civitai", photoData);
+
       return JSON.parse(decryptedContent);
     } else {
       console.error("Failed to get photo:", response.statusText);
@@ -67,10 +59,9 @@ export class CivitJobAPI {
   }
 
   public async getJobStatus(jobId: string): Promise<CivitJobStatus> {
-    const accessToken = await this.authAPI.getAccessToken();
-    await this.encryptionManager.ensureKeysInitialized();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
-    const encryptionKey = this.encryptionManager.civitaiEncryptionKey!;
+    const encryptionKey = await d.EncryptionManager().getCivitaiEncryptionKey();
 
     const body = { jobId };
 
@@ -90,10 +81,9 @@ export class CivitJobAPI {
   }
 
   public async generateImage(input: FromTextInput): Promise<any> {
-    const accessToken = await this.authAPI.getAccessToken();
-    await this.encryptionManager.ensureKeysInitialized();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
-    const encryptionKey = this.encryptionManager.civitaiEncryptionKey!;
+    const encryptionKey = await d.EncryptionManager().getCivitaiEncryptionKey();
 
     // Convert FromTextInput to ImageGenerationSettings for API compatibility
     const settings = this.convertToImageGenerationSettings(input);

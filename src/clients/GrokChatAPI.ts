@@ -1,8 +1,6 @@
 import { d } from "../app/Dependencies/Dependencies";
 import config from "../Config";
 import type { LLMMessage } from "../cqrs/LLMChatProjection";
-import { EncryptionManager } from "../Managers/EncryptionManager";
-import { AuthAPI } from "./AuthAPI";
 
 interface PostChatRequest {
   messages: LLMMessage[];
@@ -10,23 +8,17 @@ interface PostChatRequest {
 }
 
 export class GrokChatAPI {
-  authAPI: AuthAPI;
-  encryptionManager: EncryptionManager;
-
   API_URL: string;
 
   constructor() {
     this.API_URL = config.storyVaultAPIURL;
-
-    this.authAPI = new AuthAPI();
-    this.encryptionManager = new EncryptionManager();
   }
 
   public async postChat(messages: LLMMessage[]): Promise<string> {
-    await this.encryptionManager.ensureKeysInitialized();
+    var grokEncryptionKey = await d.EncryptionManager().getGrokEncryptionKey();
 
     const headers: Record<string, string> = {
-      EncryptionKey: this.encryptionManager.grokEncryptionKey as string,
+      EncryptionKey: grokEncryptionKey,
     };
 
     const systemSettings = await d.SystemSettingsService().get();
@@ -60,7 +52,7 @@ export class GrokChatAPI {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.API_URL}${endpoint}`;
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
     const headers = this.buildHeaders(accessToken);
 

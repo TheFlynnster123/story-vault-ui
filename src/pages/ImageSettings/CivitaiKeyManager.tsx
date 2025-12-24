@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { useCivitaiKey } from "../../hooks/useCivitaiKey";
-import { EncryptionManager } from "../../Managers/EncryptionManager";
-import { CivitKeyAPI } from "../../clients/CivitKeyAPI";
 import {
   PasswordInput,
   Button,
@@ -45,15 +43,11 @@ export const CivitaiKeyManager: React.FC = () => {
     setIsUpdating(true);
 
     try {
-      const encryptionManager = new EncryptionManager();
-      await encryptionManager.ensureKeysInitialized();
+      const encryptedKey = await d
+        .EncryptionManager()
+        .encryptString("civitai", civitaiKey);
 
-      const encryptedKey = await encryptionManager.encryptString(
-        encryptionManager.civitaiEncryptionKey as string,
-        civitaiKey
-      );
-
-      await new CivitKeyAPI().saveCivitaiKey(encryptedKey);
+      await d.CivitKeyAPI().saveCivitaiKey(encryptedKey);
       await refreshCivitaiKeyStatus();
 
       notifications.show({

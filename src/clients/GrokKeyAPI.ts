@@ -1,5 +1,5 @@
+import { d } from "../app/Dependencies/Dependencies";
 import config from "../Config";
-import { AuthAPI } from "./AuthAPI";
 
 interface IGrokKeyAPI {
   hasValidGrokKey(): Promise<boolean>;
@@ -8,16 +8,12 @@ interface IGrokKeyAPI {
 export class GrokKeyAPI implements IGrokKeyAPI {
   URL: string = "";
 
-  authAPI: AuthAPI;
-
   constructor() {
     this.URL = config.storyVaultAPIURL;
-
-    this.authAPI = new AuthAPI();
   }
 
   async hasValidGrokKey(): Promise<boolean> {
-    const accesstoken = await this.authAPI.getAccessToken();
+    const accesstoken = await d.AuthAPI().getAccessToken();
 
     const response = await fetch(`${this.URL}/api/hasValidGrokKey`, {
       method: "GET",
@@ -37,7 +33,7 @@ export class GrokKeyAPI implements IGrokKeyAPI {
   }
 
   async saveGrokKey(encryptedGrokKey: string): Promise<void> {
-    const accesstoken = await this.authAPI.getAccessToken();
+    const accesstoken = await d.AuthAPI().getAccessToken();
 
     const response = await fetch(`${this.URL}/api/saveGrokKey`, {
       method: "POST",

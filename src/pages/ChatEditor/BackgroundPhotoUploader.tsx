@@ -11,7 +11,6 @@ import {
   Loader,
 } from "@mantine/core";
 import { RiImageLine, RiSparklingLine } from "react-icons/ri";
-import { CivitJobAPI } from "../../clients/CivitJobAPI";
 import { useCivitJob } from "../../hooks/useCivitJob";
 import { d } from "../../app/Dependencies/Dependencies";
 
@@ -68,7 +67,7 @@ export const BackgroundPhotoUploader: React.FC<
         ? `${modelInput.params.prompt}, ${prompt}`
         : prompt;
 
-      const response = await new CivitJobAPI().generateImage(modelInput);
+      const response = await d.CivitJobAPI().generateImage(modelInput);
       const newJobId = response.jobs[0].jobId;
       onCivitJobIdChange(newJobId);
       setPrompt("");

@@ -1,5 +1,4 @@
 import { d } from "../../app/Dependencies/Dependencies";
-import { BlobAPI } from "../../clients/BlobAPI";
 import type { SystemSettings } from "../../models";
 
 export const SYSTEM_SETTINGS_QUERY_KEY = ["system-settings"];
@@ -17,21 +16,18 @@ export class SystemSettingsService {
 
   save = async (systemSettings: SystemSettings): Promise<void> => {
     const blobContent = JSON.stringify(systemSettings);
-    await new BlobAPI().saveBlob(
-      GLOBAL_CHAT_ID,
-      SYSTEM_SETTINGS_BLOB_NAME,
-      blobContent
-    );
+    await d
+      .BlobAPI()
+      .saveBlob(GLOBAL_CHAT_ID, SYSTEM_SETTINGS_BLOB_NAME, blobContent);
 
     d.QueryClient().setQueryData(SYSTEM_SETTINGS_QUERY_KEY, systemSettings);
   };
 
   fetchSystemSettings = async (): Promise<SystemSettings | undefined> => {
     try {
-      const blobContent = await new BlobAPI().getBlob(
-        GLOBAL_CHAT_ID,
-        SYSTEM_SETTINGS_BLOB_NAME
-      );
+      const blobContent = await d
+        .BlobAPI()
+        .getBlob(GLOBAL_CHAT_ID, SYSTEM_SETTINGS_BLOB_NAME);
 
       if (!blobContent) return undefined;
 

@@ -7,6 +7,14 @@ export const setAuth0Context = (context: any) => {
   globalAuth0Context = context;
 };
 
+let authApiSingleton: AuthAPI | null = null;
+
+export function getAuthApiSingleton(): AuthAPI {
+  if (!authApiSingleton) authApiSingleton = new AuthAPI();
+
+  return authApiSingleton;
+}
+
 export interface AuthAPI {
   // User info
   getUser(): Promise<User | undefined>;
@@ -27,18 +35,7 @@ export interface AuthAPI {
 }
 
 export class AuthAPI {
-  constructor() {
-    if (!globalAuth0Context) {
-      throw new Error(
-        "Auth0 context not initialized. Make sure to call setAuth0Context first."
-      );
-    }
-  }
-
   private get auth0() {
-    if (!globalAuth0Context) {
-      throw new Error("Auth0 context not available");
-    }
     return globalAuth0Context;
   }
 

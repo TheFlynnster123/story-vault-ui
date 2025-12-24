@@ -35,7 +35,6 @@ export const StoryMessageChecker: React.FC<StoryMessageCheckerProps> = ({
       // If has messages but no story message, show the modal
       if (hasMessages && !hasStoryMessage) {
         // Pre-fill with chatSettings.story if it exists (backwards compatibility)
-        console.log(chatSettings);
         const legacyStory = (chatSettings as any)?.story;
         if (legacyStory) {
           setStoryText(legacyStory);

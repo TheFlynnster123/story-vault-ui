@@ -17,7 +17,19 @@ const ChatMenuPage = () => {
   useEffect(() => {
     if (isLoadingChats) return;
 
-    loadAndSortChats(chatIds, setSortedChatIds, setIsLoadingRecent);
+    const loadAndSortChats = async () => {
+      try {
+        setIsLoadingRecent(true);
+        setSortedChatIds(await d.RecentChatsService().sortByRecency(chatIds));
+      } catch (error) {
+        d.ErrorService().log("Failed to load recent chats:", error);
+        setSortedChatIds(chatIds);
+      } finally {
+        setIsLoadingRecent(false);
+      }
+    };
+
+    loadAndSortChats();
   }, [chatIds, isLoadingChats]);
 
   const handleSelectChat = (id: string) => {
@@ -49,22 +61,6 @@ const ChatMenuPage = () => {
       </ChatMenuContainer>
     </>
   );
-};
-
-const loadAndSortChats = async (
-  chatIds: string[],
-  setSortedChatIds: (ids: string[]) => void,
-  setIsLoadingRecent: (loading: boolean) => void
-) => {
-  try {
-    setIsLoadingRecent(true);
-    setSortedChatIds(await d.RecentChatsService().sortByRecency(chatIds));
-  } catch (error) {
-    d.ErrorService().log("Failed to load recent chats:", error);
-    setSortedChatIds(chatIds);
-  } finally {
-    setIsLoadingRecent(false);
-  }
 };
 
 const ChatMenuContainer = styled.div`

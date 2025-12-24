@@ -1,5 +1,5 @@
+import { d } from "../app/Dependencies/Dependencies";
 import Config from "../Config";
-import { AuthAPI } from "./AuthAPI";
 
 interface ICivitaiAPI {
   hasValidCivitaiKey(): Promise<boolean>;
@@ -9,16 +9,12 @@ interface ICivitaiAPI {
 export class CivitKeyAPI implements ICivitaiAPI {
   URL: string = "";
 
-  authAPI: AuthAPI;
-
   constructor() {
     this.URL = Config.storyVaultAPIURL;
-
-    this.authAPI = new AuthAPI();
   }
 
   async hasValidCivitaiKey(): Promise<boolean> {
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
     const response = await fetch(`${this.URL}/api/HasValidCivitaiKey`, {
       method: "GET",
@@ -38,7 +34,7 @@ export class CivitKeyAPI implements ICivitaiAPI {
   }
 
   async saveCivitaiKey(encryptedCivitaiKey: string): Promise<void> {
-    const accessToken = await this.authAPI.getAccessToken();
+    const accessToken = await d.AuthAPI().getAccessToken();
 
     const response = await fetch(`${this.URL}/api/SaveCivitaiKey`, {
       method: "POST",

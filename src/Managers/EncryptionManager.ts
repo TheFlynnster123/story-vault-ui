@@ -1,61 +1,57 @@
-import { AuthAPI } from "../clients/AuthAPI";
+import { d } from "../app/Dependencies/Dependencies";
+
+let encryptionManagerSingleton: EncryptionManager | null = null;
+
+export function getEncryptionManagerSingleton(): EncryptionManager {
+  if (!encryptionManagerSingleton)
+    encryptionManagerSingleton = new EncryptionManager();
+
+  return encryptionManagerSingleton;
+}
+
+export type EncryptionKeyType = "grok" | "chat" | "civitai";
 
 export class EncryptionManager {
-  grokEncryptionKey?: string;
-  chatEncryptionKey?: string;
-  civitaiEncryptionKey?: string;
-  encryptionGuid?: string;
+  //TODO: THESE SHOULD BE STORED VIA ACCESSOR, SO THEY CAN BE RETRIEVED ASYNC
+  private grokEncryptionKey?: string;
+  private chatEncryptionKey?: string;
+  private civitaiEncryptionKey?: string;
+  private encryptionGuid?: string;
 
-  authAPI: AuthAPI;
-
-  constructor() {
-    this.authAPI = new AuthAPI();
-  }
-
-  public async ensureKeysInitialized() {
-    if (!this.encryptionGuid) {
-      this.encryptionGuid = await this.authAPI.getEncryptionGuid();
-    } else {
-    }
-    await this.initializeDerivedKeys();
-  }
-
-  async initializeDerivedKeys() {
-    this.grokEncryptionKey = await this.deriveKey("grok");
-    this.chatEncryptionKey = await this.deriveKey("chat");
-    this.civitaiEncryptionKey = await this.deriveKey("civitai");
-  }
-
-  private async deriveKey(salt: string) {
-    const keyMaterial = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(this.encryptionGuid),
-      { name: "PBKDF2" },
-      false,
-      ["deriveKey"]
-    );
-
-    const derivedKey = await crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt: new TextEncoder().encode(salt),
-        iterations: 100000,
-        hash: "SHA-256",
-      },
-      keyMaterial,
-      { name: "AES-GCM", length: 256 },
-      true,
-      ["encrypt", "decrypt"]
-    );
-
-    const exportedKey = await crypto.subtle.exportKey("raw", derivedKey);
-    return Array.from(new Uint8Array(exportedKey))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-  }
-
-  async encryptString(keyHex: string, data: string) {
+  async getGrokEncryptionKey() {
     await this.ensureKeysInitialized();
+    return this.grokEncryptionKey!;
+  }
+
+  async getChatEncryptionKey() {
+    await this.ensureKeysInitialized();
+    return this.chatEncryptionKey!;
+  }
+
+  async getCivitaiEncryptionKey() {
+    await this.ensureKeysInitialized();
+    return this.civitaiEncryptionKey!;
+  }
+
+  async getEncryptionGuid() {
+    await this.ensureKeysInitialized();
+    return this.encryptionGuid!;
+  }
+
+  async ensureKeysInitialized() {
+    if (!this.encryptionGuid) {
+      this.encryptionGuid = await d.AuthAPI().getEncryptionGuid();
+
+      this.grokEncryptionKey = await this.deriveKey("grok");
+      this.chatEncryptionKey = await this.deriveKey("chat");
+      this.civitaiEncryptionKey = await this.deriveKey("civitai");
+    }
+  }
+
+  async encryptString(keyType: EncryptionKeyType, data: string) {
+    await this.ensureKeysInitialized();
+
+    const keyHex = this.getKeyHex(keyType);
 
     const keyBuffer = new Uint8Array(
       keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
@@ -87,7 +83,11 @@ export class EncryptionManager {
     return arrayBufferToBase64(combinedBuffer.buffer);
   }
 
-  async decryptString(keyHex: string, data: string) {
+  async decryptString(keyType: EncryptionKeyType, data: string) {
+    await this.ensureKeysInitialized();
+
+    const keyHex = this.getKeyHex(keyType);
+
     const keyBuffer = new Uint8Array(
       keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
     );
@@ -113,6 +113,47 @@ export class EncryptionManager {
     );
 
     return new TextDecoder().decode(decryptedData);
+  }
+
+  private async deriveKey(salt: string) {
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(this.encryptionGuid),
+      { name: "PBKDF2" },
+      false,
+      ["deriveKey"]
+    );
+
+    const derivedKey = await crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: new TextEncoder().encode(salt),
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+
+    const exportedKey = await crypto.subtle.exportKey("raw", derivedKey);
+    return Array.from(new Uint8Array(exportedKey))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  private getKeyHex(keyType: string) {
+    switch (keyType) {
+      case "grok":
+        return this.grokEncryptionKey!;
+      case "chat":
+        return this.chatEncryptionKey!;
+      case "civitai":
+        return this.civitaiEncryptionKey!;
+      default:
+        throw new Error(`Unknown key type: ${keyType}`);
+    }
   }
 }
 
