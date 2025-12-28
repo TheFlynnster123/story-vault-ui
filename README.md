@@ -13,3 +13,14 @@ When deployed, we need to make them GitHub Environment Secrets. Here's what we n
 7. Add it to GitHub Secrets for Prod
 
 Kinda involved but whatever 🤷‍♂️
+
+# Project Structure
+
+/src
+  /services - Holds Logic
+    /Image - Holds image logic
+    /Other...
+  /components - Holds UI
+    /
+  /pages - Holds Specifically Pages
+  ./ - Holds  

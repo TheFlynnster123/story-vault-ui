@@ -1,5 +1,12 @@
 # TODOs
 
+- Some sort of ManagedBlob would be nice, leveraging the BlobAPI. Ideally, this would let us have an 'in memory' object that would automatically be persisted. Utility would include:
+  - Persist a blob locally.
+  - Send notifications to all subscribers when the blob's local state is updated.
+  - Automatically lazy load the blob if not available. Allow for manually loading as well.
+  - Allow for a key, so multiple instances of a blob could be stored (one per chat, might be common)
+  - Make saving the blob async, so we can save immediately when it makes sense (user leaves edit page) or we can save as the user's editing the file.
+
 - Streamline the JobStatus returned from useCivitJob. Why's JobStatus and data returned, when they're the same object? Is there value to simplifying to using an error/loading variable?
 
 - Allow for model selection per operation - message generation, planning, image prompt generation

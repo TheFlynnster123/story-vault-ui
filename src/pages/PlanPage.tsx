@@ -18,12 +18,12 @@ import {
   Text,
   Divider,
 } from "@mantine/core";
-import type { Plan } from "../models/Plan";
-import { usePlanCache } from "../hooks/usePlanCache";
+import type { Plan } from "../services/ChatGeneration/Plan";
+import { usePlanCache } from "../components/Chat/usePlanCache";
 import { v4 as uuidv4 } from "uuid";
-import { ConfirmModal } from "../components/ConfirmModal";
-import { ChatTheme } from "../theme/chatTheme";
+import { Theme } from "../components/Common/Theme";
 import { Page } from "./Page";
+import { ConfirmModal } from "../components/Common/ConfirmModal";
 
 export const PlanPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -116,16 +116,16 @@ const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
     <Group justify="space-between" align="center" mb="md">
       <Group>
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
-          <RiArrowLeftLine color={ChatTheme.page.text} />
+          <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <RiFileList2Line size={24} color={ChatTheme.plan.primary} />
-        <Title order={2} fw={400} style={{ color: ChatTheme.plan.primary }}>
+        <RiFileList2Line size={24} color={Theme.plan.primary} />
+        <Title order={2} fw={400} style={{ color: Theme.plan.primary }}>
           Plan
         </Title>
       </Group>
       <Button type="submit">Save Changes</Button>
     </Group>
-    <Divider mb="xl" style={{ borderColor: ChatTheme.plan.border }} />
+    <Divider mb="xl" style={{ borderColor: Theme.plan.border }} />
   </>
 );
 
@@ -152,7 +152,7 @@ const PlanSection: React.FC<PlanSectionProps> = ({
       <Button
         variant="subtle"
         onClick={() => onAdd(type)}
-        style={{ color: ChatTheme.plan.primary }}
+        style={{ color: Theme.plan.primary }}
       >
         <RiAddLine /> Add Plan
       </Button>
@@ -164,11 +164,11 @@ const PlanSection: React.FC<PlanSectionProps> = ({
           value={plan.name}
           onChange={(e) => onChange(plan.id, "name", e.currentTarget.value)}
           styles={{
-            label: { color: ChatTheme.page.text },
+            label: { color: Theme.page.text },
             input: {
               backgroundColor: "rgba(0, 0, 0, 0.3)",
-              borderColor: ChatTheme.plan.border,
-              color: ChatTheme.page.text,
+              borderColor: Theme.plan.border,
+              color: Theme.page.text,
             },
           }}
         />
@@ -178,11 +178,11 @@ const PlanSection: React.FC<PlanSectionProps> = ({
           onChange={(e) => onChange(plan.id, "prompt", e.currentTarget.value)}
           minRows={5}
           styles={{
-            label: { color: ChatTheme.page.text },
+            label: { color: Theme.page.text },
             input: {
               backgroundColor: "rgba(0, 0, 0, 0.3)",
-              borderColor: ChatTheme.plan.border,
-              color: ChatTheme.page.text,
+              borderColor: Theme.plan.border,
+              color: Theme.page.text,
             },
           }}
         />
@@ -194,7 +194,7 @@ const PlanSection: React.FC<PlanSectionProps> = ({
         >
           <RiDeleteBinLine /> Delete Plan
         </Button>
-        <Divider my="sm" style={{ borderColor: ChatTheme.plan.border }} />
+        <Divider my="sm" style={{ borderColor: Theme.plan.border }} />
       </Stack>
     ))}
   </Stack>

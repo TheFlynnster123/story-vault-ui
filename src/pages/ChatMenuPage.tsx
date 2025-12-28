@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { SystemSettingsButton } from "./ChatMenu/SystemSettingsButton";
-import { ImageSettingsButton } from "./ChatMenu/ImageSettingsButton";
-import { CreateChatButton } from "./ChatMenu/CreateChatButton";
-import { ChatList } from "./ChatMenu/ChatList";
+import { SystemSettingsButton } from "../components/ChatMenuList/SystemSettingsButton";
+import { ImageSettingsButton } from "../components/ChatMenuList/ImageSettingsButton";
+import { CreateChatButton } from "../components/ChatMenuList/CreateChatButton";
+import { ChatList } from "../components/ChatMenuList/ChatList";
 import styled from "styled-components";
-import { useChats } from "../hooks/useChats";
+import { useChats } from "../components/ChatMenuList/useChats";
 import { useEffect, useState } from "react";
-import { d } from "../app/Dependencies/Dependencies";
+import { d } from "../services/Dependencies";
 
 const ChatMenuPage = () => {
   const navigate = useNavigate();

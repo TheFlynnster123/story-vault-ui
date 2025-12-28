@@ -8,17 +8,17 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import { GlobalStyles } from "./index.styled";
 import { Auth0Provider } from "@auth0/auth0-react";
-import config from "./Config.ts";
+import Config from "./components/Common/Config.ts";
 import { Notifications } from "@mantine/notifications";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Auth0Provider
-      domain={config.domain}
-      clientId={config.clientId}
+      domain={Config.domain}
+      clientId={Config.clientId}
       authorizationParams={{
         redirect_uri: window.location.origin,
-        audience: config.audience,
+        audience: Config.audience,
       }}
     >
       <MantineProvider defaultColorScheme="dark">

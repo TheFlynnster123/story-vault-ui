@@ -2,9 +2,9 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine, RiSettings3Line } from "react-icons/ri";
-import { GrokKeyManager } from "./SystemSettings/GrokKeyManager";
-import { SystemSettingsEditor } from "./SystemSettings/SystemSettingsEditor";
+import { SystemSettingsEditor } from "../components/SystemSettings/SystemSettingsEditor";
 import { Page } from "./Page";
+import { GrokKeyManager } from "../components/Grok/GrokKeyManager";
 
 interface SettingsSectionProps {
   title: string;

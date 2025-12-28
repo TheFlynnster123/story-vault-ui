@@ -1,0 +1,89 @@
+import { d } from "../Dependencies";
+import type { ChatSettings } from "./ChatSettings";
+
+const CHAT_SETTINGS_BLOB_NAME = "chat-settings";
+
+export const getChatSettingsQueryKey = (chatId: string) => [
+  "chat-settings",
+  chatId,
+];
+
+export class ChatSettingsService {
+  private chatId: string;
+
+  constructor(chatId: string) {
+    this.chatId = chatId;
+  }
+
+  get = async (): Promise<ChatSettings> =>
+    (await d.QueryClient().ensureQueryData({
+      queryKey: getChatSettingsQueryKey(this.chatId),
+      queryFn: async () => await this.fetchChatSettings(),
+      revalidateIfStale: false,
+    })) as ChatSettings;
+
+  save = async (chatSettings: ChatSettings): Promise<void> => {
+    const blobContent = JSON.stringify(chatSettings);
+    await d
+      .BlobAPI()
+      .saveBlob(this.chatId, CHAT_SETTINGS_BLOB_NAME, blobContent);
+
+    d.QueryClient().setQueryData(
+      getChatSettingsQueryKey(this.chatId),
+      chatSettings
+    );
+  };
+
+  delete = async (): Promise<void> => {
+    await d.BlobAPI().deleteBlob(this.chatId, CHAT_SETTINGS_BLOB_NAME);
+  };
+
+  fetchChatSettings = async (): Promise<ChatSettings | undefined> => {
+    try {
+      const blobContent = await d
+        .BlobAPI()
+        .getBlob(this.chatId, CHAT_SETTINGS_BLOB_NAME);
+
+      if (!blobContent) return undefined;
+
+      return JSON.parse(blobContent) as ChatSettings;
+    } catch (e) {
+      // If blob doesn't exist (404), return undefined
+      if (e instanceof Error && e.message.includes("Blob not found")) {
+        return undefined;
+      }
+
+      // For other errors, log and return undefined
+      d.ErrorService().log("Failed to fetch chat settings", e);
+      return undefined;
+    }
+  };
+
+  /**
+   * Sets the background photo from a base64 string and clears any CivitJob background.
+   */
+  setBackgroundPhotoBase64 = async (
+    base64: string | undefined
+  ): Promise<void> => {
+    const currentSettings = await this.get();
+    await this.save({
+      ...currentSettings,
+      backgroundPhotoBase64: base64,
+      backgroundPhotoCivitJobId: undefined,
+    });
+  };
+
+  /**
+   * Sets the background photo from a CivitJob ID and clears any uploaded background.
+   */
+  setBackgroundPhotoCivitJobId = async (
+    jobId: string | undefined
+  ): Promise<void> => {
+    const currentSettings = await this.get();
+    await this.save({
+      ...currentSettings,
+      backgroundPhotoBase64: undefined,
+      backgroundPhotoCivitJobId: jobId,
+    });
+  };
+}

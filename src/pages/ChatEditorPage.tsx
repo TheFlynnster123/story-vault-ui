@@ -14,13 +14,13 @@ import {
   Divider,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type { ChatSettings } from "../models/ChatSettings";
+import type { ChatSettings } from "../services/Chat/ChatSettings";
 import { v4 as uuidv4 } from "uuid";
-import { ChatDeleteControl } from "./ChatEditor/ChatDeleteControl";
-import { BackgroundPhotoUploader } from "./ChatEditor/BackgroundPhotoUploader";
+import { ChatDeleteControl } from "../components/ChatEditor/ChatDeleteControl";
+import { BackgroundPhotoUploader } from "../components/ChatEditor/BackgroundPhotoUploader";
 import { Page } from "./Page";
-import { useChatSettings } from "../queries/chat-settings/useChatSettings";
-import { ChatTheme } from "../theme/chatTheme";
+import { useChatSettings } from "../components/Chat/useChatSettings";
+import { Theme } from "../components/Common/Theme";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
@@ -78,14 +78,10 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
     <Group justify="space-between" align="center" mb="md">
       <Group>
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
-          <RiArrowLeftLine color={ChatTheme.page.text} />
+          <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <RiChatSettingsLine size={24} color={ChatTheme.chatSettings.primary} />
-        <Title
-          order={2}
-          fw={400}
-          style={{ color: ChatTheme.chatSettings.primary }}
-        >
+        <RiChatSettingsLine size={24} color={Theme.chatSettings.primary} />
+        <Title order={2} fw={400} style={{ color: Theme.chatSettings.primary }}>
           {isEditMode ? "Edit Chat" : "Create New Chat"}
         </Title>
       </Group>
@@ -93,7 +89,7 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
         {isEditMode ? "Save Changes" : "Create Chat"}
       </Button>
     </Group>
-    <Divider mb="xl" style={{ borderColor: ChatTheme.chatSettings.border }} />
+    <Divider mb="xl" style={{ borderColor: Theme.chatSettings.border }} />
   </>
 );
 

@@ -10,8 +10,8 @@ import {
 } from "@mantine/core";
 import { RiArrowLeftLine } from "react-icons/ri";
 import { LuBookOpen } from "react-icons/lu";
-import { d } from "../app/Dependencies/Dependencies";
-import { ChatTheme } from "../theme/chatTheme";
+import { d } from "../services/Dependencies";
+import { Theme } from "../components/Common/Theme";
 import { Page } from "./Page";
 
 export const StoryEditorPage: React.FC = () => {
@@ -52,13 +52,13 @@ export const StoryEditorPage: React.FC = () => {
       <Group justify="space-between" align="center" mb="md">
         <Group>
           <ActionIcon onClick={handleCancel} variant="subtle" size="lg">
-            <RiArrowLeftLine color={ChatTheme.page.text} />
+            <RiArrowLeftLine color={Theme.page.text} />
           </ActionIcon>
-          <LuBookOpen size={24} color={ChatTheme.chatSettings.primary} />
+          <LuBookOpen size={24} color={Theme.chatSettings.primary} />
           <Title
             order={2}
             fw={400}
-            style={{ color: ChatTheme.chatSettings.primary }}
+            style={{ color: Theme.chatSettings.primary }}
           >
             Edit Story
           </Title>

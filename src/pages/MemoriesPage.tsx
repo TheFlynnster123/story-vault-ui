@@ -13,13 +13,13 @@ import {
   Text,
   Divider,
 } from "@mantine/core";
-import type { Memory } from "../models/Memory";
-import { useMemories } from "../hooks/useMemories";
+import type { Memory } from "../services/ChatGeneration/Memory";
+import { useMemories } from "../components/Chat/useMemories";
 import { v4 as uuidv4 } from "uuid";
-import { ConfirmModal } from "../components/ConfirmModal";
 import isEqual from "lodash.isequal";
 import { Page } from "./Page";
-import { ChatTheme } from "../theme/chatTheme";
+import { Theme } from "../components/Common/Theme";
+import { ConfirmModal } from "../components/Common/ConfirmModal";
 
 const createEmptyMemory = (): Memory => ({
   id: uuidv4(),
@@ -98,7 +98,7 @@ export const MemoriesPage: React.FC = () => {
             <Button
               variant="subtle"
               onClick={handleAddMemory}
-              style={{ color: ChatTheme.memories.primary }}
+              style={{ color: Theme.memories.primary }}
             >
               <RiAddLine /> Add Memory
             </Button>
@@ -116,8 +116,8 @@ export const MemoriesPage: React.FC = () => {
                 styles={{
                   input: {
                     backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    borderColor: ChatTheme.memories.border,
-                    color: ChatTheme.page.text,
+                    borderColor: Theme.memories.border,
+                    color: Theme.page.text,
                   },
                 }}
               />
@@ -129,10 +129,7 @@ export const MemoriesPage: React.FC = () => {
               >
                 <RiDeleteBinLine /> Delete Memory
               </Button>
-              <Divider
-                my="sm"
-                style={{ borderColor: ChatTheme.memories.border }}
-              />
+              <Divider my="sm" style={{ borderColor: Theme.memories.border }} />
             </Stack>
           ))}
         </Stack>
@@ -162,10 +159,10 @@ const MemoriesHeader: React.FC<MemoriesHeaderProps> = ({
     <Group justify="space-between" align="center" mb="md">
       <Group>
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
-          <RiArrowLeftLine color={ChatTheme.page.text} />
+          <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <LuBrain size={24} color={ChatTheme.memories.primary} />
-        <Title order={2} fw={400} style={{ color: ChatTheme.memories.primary }}>
+        <LuBrain size={24} color={Theme.memories.primary} />
+        <Title order={2} fw={400} style={{ color: Theme.memories.primary }}>
           Memories
         </Title>
       </Group>
@@ -173,6 +170,6 @@ const MemoriesHeader: React.FC<MemoriesHeaderProps> = ({
         Save Changes
       </Button>
     </Group>
-    <Divider mb="xl" style={{ borderColor: ChatTheme.memories.border }} />
+    <Divider mb="xl" style={{ borderColor: Theme.memories.border }} />
   </>
 );
