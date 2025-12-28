@@ -21,6 +21,7 @@ import { BackgroundPhotoUploader } from "../components/ChatEditor/BackgroundPhot
 import { Page } from "./Page";
 import { useChatSettings } from "../components/Chat/useChatSettings";
 import { Theme } from "../components/Common/Theme";
+import { d } from "../services/Dependencies";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
@@ -92,7 +93,7 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
 const useChatEditor = (chatIdFromParams: string | undefined) => {
   const [chatId] = useState(chatIdFromParams ?? uuidv4());
   const navigate = useNavigate();
-  const { chatSettings, saveChatSettings } = useChatSettings(chatId);
+  const { chatSettings } = useChatSettings(chatId);
 
   const form = useForm<ChatSettings>({
     initialValues: {
@@ -157,7 +158,8 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       chatTitle: values.chatTitle.trim(),
     };
 
-    await saveChatSettings(settingsToSave);
+    await d.ChatSettingsService(chatId).save(settingsToSave);
+
     navigate(`/chat/${chatId}`);
   };
 

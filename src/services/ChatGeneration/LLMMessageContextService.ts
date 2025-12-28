@@ -88,8 +88,8 @@ export class LLMMessageContextService {
 
   // ---- Private: Data Fetching ----
 
-  private async fetchChatSettings(): Promise<ChatSettings> {
-    return d.ChatSettingsService(this.chatId).get();
+  private fetchChatSettings(): Promise<ChatSettings> {
+    return d.ChatSettingsService(this.chatId).get() as Promise<ChatSettings>;
   }
 
   private getChatMessages(): LLMMessage[] {
