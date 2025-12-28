@@ -2,7 +2,7 @@ import { BlobAPI } from "./Blob/BlobAPI";
 import { ErrorService } from "../components/Common/ErrorService";
 import { QUERY_CLIENT } from "../App";
 import { SystemSettingsService } from "./System/SystemSettingsService";
-import { ChatSettingsService } from "./Chat/ChatSettingsService";
+import { getChatSettingsServiceInstance } from "./Chat/ChatSettingsService";
 import { GrokChatAPI } from "./Grok/GrokChatAPI";
 import {
   PlanService,
@@ -112,7 +112,7 @@ export class Dependencies {
   }
 
   ChatSettingsService(chatId: string) {
-    return new ChatSettingsService(chatId);
+    return getChatSettingsServiceInstance(chatId);
   }
 
   QueryClient() {

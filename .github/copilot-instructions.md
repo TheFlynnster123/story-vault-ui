@@ -80,7 +80,7 @@ npm run debug            # Opens Chrome with debugger on port 9222
 ```bash
 npm test                      # Run all tests
 npm run test:ui              # Vitest UI
-npm run test-skip-performance # Skip *.Performance.test.ts files
+npm run test-skip-stress     # Skip *.Stress.test.ts files
 npm run test:coverage        # Coverage report
 ```
 

@@ -26,7 +26,6 @@ export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
   const {
     chatId,
-    isEditMode,
     form,
     handlePhotoUpload,
     removePhoto,
@@ -39,7 +38,6 @@ export const ChatEditorPage: React.FC = () => {
     <Page>
       <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} mt={20}>
         <ChatEditorHeader
-          isEditMode={isEditMode}
           onGoBack={handleGoBack}
           isFormDirty={form.isDirty()}
         />
@@ -57,20 +55,18 @@ export const ChatEditorPage: React.FC = () => {
           />
         </Stack>
 
-        <ChatEditorFooter chatId={chatId} isEditMode={isEditMode} />
+        <ChatEditorFooter chatId={chatId} />
       </Paper>
     </Page>
   );
 };
 
 interface ChatEditorHeaderProps {
-  isEditMode: boolean;
   onGoBack: () => void;
   isFormDirty: boolean;
 }
 
 const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
-  isEditMode,
   onGoBack,
   isFormDirty,
 }) => (
@@ -82,11 +78,11 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
         </ActionIcon>
         <RiChatSettingsLine size={24} color={Theme.chatSettings.primary} />
         <Title order={2} fw={400} style={{ color: Theme.chatSettings.primary }}>
-          {isEditMode ? "Edit Chat" : "Create New Chat"}
+          Edit Chat
         </Title>
       </Group>
       <Button type="submit" disabled={!isFormDirty}>
-        {isEditMode ? "Save Changes" : "Create Chat"}
+        Save Changes
       </Button>
     </Group>
     <Divider mb="xl" style={{ borderColor: Theme.chatSettings.border }} />
@@ -96,12 +92,7 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
 const useChatEditor = (chatIdFromParams: string | undefined) => {
   const [chatId] = useState(chatIdFromParams ?? uuidv4());
   const navigate = useNavigate();
-  const isEditMode =
-    chatIdFromParams != undefined && chatIdFromParams !== "new";
-  const { chatSettings, saveChatSettings } = useChatSettings(
-    chatId,
-    !isEditMode
-  );
+  const { chatSettings, saveChatSettings } = useChatSettings(chatId);
 
   const form = useForm<ChatSettings>({
     initialValues: {
@@ -180,7 +171,6 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
 
   return {
     chatId,
-    isEditMode,
     form,
     handlePhotoUpload,
     removePhoto,
@@ -229,14 +219,10 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({ form }) => (
 
 interface ChatEditorFooterProps {
   chatId: string;
-  isEditMode: boolean;
 }
 
-const ChatEditorFooter: React.FC<ChatEditorFooterProps> = ({
-  chatId,
-  isEditMode,
-}) => (
+const ChatEditorFooter: React.FC<ChatEditorFooterProps> = ({ chatId }) => (
   <Group justify="center" mt="xl">
-    {isEditMode && <ChatDeleteControl chatId={chatId} />}
+    <ChatDeleteControl chatId={chatId} />
   </Group>
 );
