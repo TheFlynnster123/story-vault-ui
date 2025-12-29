@@ -40,7 +40,7 @@ export const MemoriesPage: React.FC = () => {
     const newMemory: Memory = { id: uuidv4(), content: "" };
     const updatedMemories = [...formMemories, newMemory];
     setFormMemories(updatedMemories);
-    d.MemoriesService(chatId!).saveDebounced(updatedMemories);
+    d.MemoriesService(chatId!).SaveDebounced(updatedMemories);
   };
 
   const handleMemoryChange = (id: string, content: string) => {
@@ -49,7 +49,7 @@ export const MemoriesPage: React.FC = () => {
     );
     setFormMemories(updatedMemories);
 
-    d.MemoriesService(chatId!).saveDebounced(updatedMemories);
+    d.MemoriesService(chatId!).SaveDebounced(updatedMemories);
   };
 
   const onRemoveMemory = (id: string) => {
@@ -59,9 +59,9 @@ export const MemoriesPage: React.FC = () => {
 
   const onConfirmRemoveMemory = async () => {
     if (memoryToDeleteId) {
-      await d.MemoriesService(chatId!).removeMemory(memoryToDeleteId);
+      await d.MemoriesService(chatId!).RemoveMemory(memoryToDeleteId);
 
-      const updatedMemories = await d.MemoriesService(chatId!).get();
+      const updatedMemories = await d.MemoriesService(chatId!).Get();
 
       setFormMemories(updatedMemories);
     }
@@ -71,7 +71,7 @@ export const MemoriesPage: React.FC = () => {
   };
 
   const handleGoBack = async () => {
-    await d.MemoriesService(chatId!).save(formMemories);
+    await d.MemoriesService(chatId!).Save(formMemories);
     navigate(`/chat/${chatId}`);
   };
 

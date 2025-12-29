@@ -49,32 +49,32 @@ export class PlanService {
   private async loadPlans(): Promise<void> {
     this.IsLoading = true;
     try {
-      this.Plans = await this.fetchPlans();
+      this.Plans = await this.FetchPlans();
       this.notifySubscribers();
     } finally {
       this.IsLoading = false;
     }
   }
 
-  public fetchPlans = async (): Promise<Plan[]> => {
+  public FetchPlans = async (): Promise<Plan[]> => {
     const data = await d.PlansManagedBlob(this.chatId).get();
     return data ?? [];
   };
 
-  public getPlans(): Plan[] {
+  public GetPlans(): Plan[] {
     return this.Plans;
   }
 
-  public updatePlanContent(planId: string, content: string): void {
+  public UpdatePlanContent(planId: string, content: string): void {
     const plan = this.Plans.find((p) => p.id === planId);
     if (plan) {
       plan.content = content;
       this.notifySubscribers();
-      this.savePlansDebounced();
+      this.SavePlansDebounced();
     }
   }
 
-  public updatePlanDefinition(
+  public UpdatePlanDefinition(
     planId: string,
     field: keyof Plan,
     value: string
@@ -83,23 +83,27 @@ export class PlanService {
     if (plan) {
       (plan[field] as string) = value;
       this.notifySubscribers();
-      this.savePlansDebounced();
+      this.SavePlansDebounced();
     }
   }
 
-  public addPlan(plan: Plan): void {
+  public AddPlan(plan: Plan): void {
     this.Plans.push(plan);
     this.notifySubscribers();
-    this.savePlansDebounced();
+    this.SavePlansDebounced();
   }
 
-  public removePlan(planId: string): void {
+  public RemovePlan(planId: string): void {
     this.Plans = this.Plans.filter((p) => p.id !== planId);
     this.notifySubscribers();
-    this.savePlansDebounced();
+    this.SavePlansDebounced();
   }
 
-  public async savePlans(plans?: Plan[]): Promise<void> {
+  public async SavePendingChanges(): Promise<void> {
+    await d.PlansManagedBlob(this.chatId).savePendingChanges();
+  }
+
+  public async SavePlans(plans?: Plan[]): Promise<void> {
     this.IsLoading = true;
 
     try {
@@ -116,7 +120,7 @@ export class PlanService {
     }
   }
 
-  public async savePlansDebounced(plans?: Plan[]): Promise<void> {
+  public async SavePlansDebounced(plans?: Plan[]): Promise<void> {
     const plansToSave = plans ?? this.Plans;
     await d.PlansManagedBlob(this.chatId).saveDebounced(plansToSave);
 

@@ -21,7 +21,7 @@ export class GrokChatAPI {
       EncryptionKey: grokEncryptionKey,
     };
 
-    const systemSettings = await d.SystemSettingsService().get();
+    const systemSettings = await d.SystemSettingsService().Get();
 
     const requestBody: PostChatRequest = {
       messages: messages,

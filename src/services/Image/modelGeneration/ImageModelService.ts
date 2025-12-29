@@ -7,6 +7,9 @@ export class ImageModelService {
 
   private blob = () => d.ImageModelsManagedBlob();
 
+  public SavePendingChanges = async () =>
+    await this.blob().savePendingChanges();
+
   public async SaveImageModel(model: ImageModel): Promise<boolean> {
     try {
       if (!model.id) {

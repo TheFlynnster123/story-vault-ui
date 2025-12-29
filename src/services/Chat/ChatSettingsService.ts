@@ -25,6 +25,8 @@ export class ChatSettingsService {
   get = () => this.blob().get();
   save = (data: ChatSettings) => this.blob().save(data);
   saveDebounced = (data: ChatSettings) => this.blob().saveDebounced(data);
+  savePendingChanges = () => this.blob().savePendingChanges();
+
   refetch = () => this.blob().refetch();
   delete = () => this.blob().delete();
   subscribe = (callback: () => void) => this.blob().subscribe(callback);

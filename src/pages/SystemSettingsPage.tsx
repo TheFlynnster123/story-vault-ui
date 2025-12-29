@@ -5,7 +5,6 @@ import { RiArrowLeftLine, RiSettings3Line } from "react-icons/ri";
 import { SystemSettingsEditor } from "../components/SystemSettings/SystemSettingsEditor";
 import { Page } from "./Page";
 import { GrokKeyManager } from "../components/Grok/GrokKeyManager";
-import { useSystemSettings } from "../components/SystemSettings/useSystemSettings";
 import { d } from "../services/Dependencies";
 
 interface SettingsSectionProps {
@@ -15,12 +14,9 @@ interface SettingsSectionProps {
 
 const SystemSettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { systemSettings } = useSystemSettings();
 
   const handleGoBack = async () => {
-    if (systemSettings) {
-      await d.SystemSettingsService().save(systemSettings);
-    }
+    d.SystemSettingsService().SavePendingChanges();
     navigate(-1);
   };
 

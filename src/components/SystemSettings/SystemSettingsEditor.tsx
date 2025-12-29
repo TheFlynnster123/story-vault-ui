@@ -36,7 +36,7 @@ export const SystemSettingsEditor: React.FC = () => {
     const updatedSettings = { ...localSettings, ...newSettings };
     setLocalSettings(updatedSettings);
 
-    d.SystemSettingsService().saveDebounced({
+    d.SystemSettingsService().SaveDebounced({
       ...systemSettings,
       chatGenerationSettings: updatedSettings,
     });

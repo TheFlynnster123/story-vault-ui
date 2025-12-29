@@ -99,11 +99,11 @@ export class LLMMessageContextService {
   private async fetchUpdatedPlans(chatMessages: LLMMessage[]): Promise<Plan[]> {
     const service = d.PlanService(this.chatId);
     await service.generateUpdatedPlans(chatMessages);
-    return service.getPlans();
+    return service.GetPlans();
   }
 
   private async fetchMemories(): Promise<Memory[]> {
-    return d.MemoriesService(this.chatId).get();
+    return d.MemoriesService(this.chatId).Get();
   }
 
   // ---- Private: Message Assembly ----

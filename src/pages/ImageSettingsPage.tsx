@@ -11,9 +11,7 @@ const ImageSettingsPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGoBack = async () => {
-    // Save any pending changes before navigating away
-    const userImageModels = await d.ImageModelService().GetAllImageModels();
-    await d.ImageModelService().saveUserImageModels(userImageModels);
+    d.ImageModelService().SavePendingChanges();
     navigate(-1);
   };
 
