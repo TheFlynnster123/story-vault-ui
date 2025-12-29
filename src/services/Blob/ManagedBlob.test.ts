@@ -205,10 +205,10 @@ describe("ManagedBlob - Basic Functionality", () => {
   });
 
   describe("isLoading", () => {
-    it("returns false initially", () => {
+    it("returns true initially", () => {
       const blob = new TestManagedBlob(testChatId);
 
-      expect(blob.isLoading()).toBe(false);
+      expect(blob.isLoading()).toBe(true);
     });
 
     it("returns false after loading completes", async () => {
