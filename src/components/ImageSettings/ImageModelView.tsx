@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   TextInput,
-  Button,
   Group,
   Title,
   Paper,
@@ -10,6 +9,7 @@ import {
   Collapse,
   Badge,
   ThemeIcon,
+  Button,
 } from "@mantine/core";
 import {
   RiDeleteBinLine,
@@ -55,14 +55,13 @@ export const ImageModelView: React.FC<ImageModelViewProps> = ({
 
   const handleModelChange = (updatedModel: ImageModel) => {
     setImageModel(updatedModel);
+    onSave(updatedModel);
   };
 
   const handleModelNameChange = (value: string) => {
-    setImageModel((prev) => ({ ...prev, name: value }));
-  };
-
-  const handleSave = () => {
-    onSave(imageModel);
+    const updatedModel = { ...imageModel, name: value };
+    setImageModel(updatedModel);
+    onSave(updatedModel);
   };
 
   const handleDeleteClick = () => {
@@ -161,10 +160,6 @@ export const ImageModelView: React.FC<ImageModelViewProps> = ({
             imageModel={imageModel}
             onChange={handleModelChange}
           />
-
-          <Button onClick={handleSave} mt="xl">
-            Save Model
-          </Button>
         </Stack>
       </Collapse>
 

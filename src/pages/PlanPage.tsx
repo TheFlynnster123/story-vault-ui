@@ -24,14 +24,18 @@ import { v4 as uuidv4 } from "uuid";
 import { Theme } from "../components/Common/Theme";
 import { Page } from "./Page";
 import { ConfirmModal } from "../components/Common/ConfirmModal";
+import { getPlanServiceInstance } from "../services/ChatGeneration/PlanService";
 
 export const PlanPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const { plans, updatePlanDefinition, addPlan, removePlan, savePlans } =
-    usePlanCache(chatId!);
+  const { plans, updatePlanDefinition, addPlan, deletePlan } = usePlanCache(
+    chatId!
+  );
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+
+  const planService = getPlanServiceInstance(chatId!);
 
   const handleAddPlan = (type: Plan["type"]) => {
     const newPlan: Plan = {
@@ -54,18 +58,15 @@ export const PlanPage: React.FC = () => {
 
   const confirmRemovePlan = () => {
     if (planToDelete) {
-      removePlan?.(planToDelete);
+      deletePlan?.(planToDelete);
     }
+
     setIsConfirmModalOpen(false);
     setPlanToDelete(null);
   };
 
-  const handleSave = async () => {
-    await savePlans?.();
-    navigate(`/chat/${chatId}`);
-  };
-
-  const handleGoBack = () => {
+  const handleGoBack = async () => {
+    await planService?.savePlans();
     navigate(`/chat/${chatId}`);
   };
 
@@ -74,14 +75,7 @@ export const PlanPage: React.FC = () => {
 
   return (
     <Page>
-      <Paper
-        component="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSave();
-        }}
-        mt={30}
-      >
+      <Paper mt={30}>
         <PlanHeader onGoBack={handleGoBack} />
 
         <Stack>
@@ -123,7 +117,6 @@ const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
           Plan
         </Title>
       </Group>
-      <Button type="submit">Save Changes</Button>
     </Group>
     <Divider mb="xl" style={{ borderColor: Theme.plan.border }} />
   </>

@@ -13,17 +13,10 @@ export const usePlanCache = (chatId: string | null) => {
 
   return {
     plans: cache?.getPlans() || [],
-    isLoading: cache?.IsLoading || false,
-    updatePlanContent: (planId: string, content: string) =>
-      cache?.updatePlanContent(planId, content),
     updatePlanDefinition: (planId: string, field: keyof Plan, value: string) =>
       cache?.updatePlanDefinition(planId, field, value),
     addPlan: (plan: Plan) => cache?.addPlan(plan),
-    removePlan: (planId: string) => cache?.removePlan(planId),
-    setAllPlans: (plans: Plan[]) => cache?.setAllPlans(plans),
+    deletePlan: (planId: string) => cache?.removePlan(planId),
     savePlans: async () => await cache?.savePlans(),
-    refreshFromDatabase: async () => await cache?.refreshFromDatabase(),
-    generateUpdatedPlans: async (chatMessages: any[]) =>
-      await cache?.generateUpdatedPlans(chatMessages),
   };
 };

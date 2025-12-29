@@ -1,8 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { d } from "../../services/Dependencies";
-import { getPlanQueryKey } from "../../services/ChatGeneration/PlanService";
 import { getChatIdsQueryKey } from "../ChatMenuList/useChats";
-import { getMemoriesQueryKey } from "../../services/ChatGeneration/MemoriesService";
 
 export const useChatDeletion = () => {
   const queryClient = useQueryClient();
@@ -14,14 +12,10 @@ export const useChatDeletion = () => {
     onSuccess: (_, chatId) => {
       // Clear managed blob instances
       d.ChatSettingsService(chatId).delete();
+      d.MemoriesManagedBlob(chatId).delete();
+      d.PlansManagedBlob(chatId).delete();
 
-      // Clear React Query caches for non-managed data
-      queryClient.removeQueries({
-        queryKey: getMemoriesQueryKey(chatId),
-      });
-      queryClient.removeQueries({
-        queryKey: getPlanQueryKey(chatId),
-      });
+      // Refresh chat list
       queryClient.refetchQueries({
         queryKey: getChatIdsQueryKey(),
       });

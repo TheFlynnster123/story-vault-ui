@@ -11,8 +11,11 @@ const notifyListeners = () => {
 
 const fetchGrokKeyStatus = async () => {
   const api = d.GrokKeyAPI();
+
   const isValid = await api.hasValidGrokKey();
   grokKeyStatusSingleton = isValid;
+  await d.EncryptionManager().ensureKeysInitialized();
+
   notifyListeners();
 };
 

@@ -1,7 +1,5 @@
-import { ManagedBlob } from "../Blob/ManagedBlob";
+import { d } from "../Dependencies";
 import type { ChatSettings } from "./ChatSettings";
-
-const CHAT_SETTINGS_BLOB_NAME = "chat-settings";
 
 // Singleton instances per chatId
 const instances = new Map<string, ChatSettingsService>();
@@ -15,14 +13,22 @@ export const getChatSettingsServiceInstance = (
   return instances.get(chatId)!;
 };
 
-export class ChatSettingsService extends ManagedBlob<ChatSettings> {
+export class ChatSettingsService {
+  private chatId: string;
+
   constructor(chatId: string) {
-    super(chatId);
+    this.chatId = chatId;
   }
 
-  protected getBlobName(): string {
-    return CHAT_SETTINGS_BLOB_NAME;
-  }
+  private blob = () => d.ChatSettingsManagedBlob(this.chatId);
+
+  get = () => this.blob().get();
+  save = (data: ChatSettings) => this.blob().save(data);
+  saveDebounced = (data: ChatSettings) => this.blob().saveDebounced(data);
+  refetch = () => this.blob().refetch();
+  delete = () => this.blob().delete();
+  subscribe = (callback: () => void) => this.blob().subscribe(callback);
+  isLoading = () => this.blob().isLoading();
 
   /**
    * Sets the background photo from a base64 string and clears any CivitJob background.
@@ -31,7 +37,7 @@ export class ChatSettingsService extends ManagedBlob<ChatSettings> {
     const currentSettings = await this.get();
     if (!currentSettings) return;
 
-    await this.save({
+    await this.saveDebounced({
       ...currentSettings,
       backgroundPhotoBase64: base64,
       backgroundPhotoCivitJobId: undefined,
@@ -45,7 +51,7 @@ export class ChatSettingsService extends ManagedBlob<ChatSettings> {
     const currentSettings = await this.get();
     if (!currentSettings) return;
 
-    await this.save({
+    await this.saveDebounced({
       ...currentSettings,
       backgroundPhotoBase64: undefined,
       backgroundPhotoCivitJobId: jobId,

@@ -1,46 +1,53 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import type { Memory } from "../../services/ChatGeneration/Memory";
 import { d } from "../../services/Dependencies";
-import { getMemoriesQueryKey } from "../../services/ChatGeneration/MemoriesService";
 
 interface UseMemoriesResult {
   memories: Memory[];
   isLoading: boolean;
   saveMemories: (memories: Memory[]) => Promise<void>;
+  saveMemoriesDebounced: (memories: Memory[]) => Promise<void>;
 }
 
 export const useMemories = (chatId: string): UseMemoriesResult => {
-  const queryClient = useQueryClient();
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: memories = [], isLoading } = useQuery({
-    queryKey: getMemoriesQueryKey(chatId),
-    queryFn: async () => {
-      return await d.MemoriesService(chatId).fetchMemories();
-    },
-    enabled: !!chatId,
-    retry: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
+  const blob = () => d.MemoriesManagedBlob(chatId);
 
-  const saveMemoriesMutation = useMutation({
-    mutationFn: async (memories: Memory[]) => {
-      await d.MemoriesService(chatId).save(memories);
-      return memories;
-    },
-    onSuccess: (memories) => {
-      queryClient.setQueryData(getMemoriesQueryKey(chatId), memories);
-    },
-  });
+  const loadMemories = async () => {
+    const data = await blob().get();
 
-  const saveMemories = async (memories: Memory[]) => {
-    await saveMemoriesMutation.mutateAsync(memories);
+    setMemories(data ?? []);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (!chatId) return;
+
+    const unsubscribe = blob().subscribe(() => {
+      loadMemories();
+    });
+
+    loadMemories();
+
+    return () => {
+      unsubscribe();
+    };
+  }, [chatId]);
+
+  const saveMemories = async (newMemories: Memory[]) => {
+    await blob().save(newMemories);
+  };
+
+  const saveMemoriesDebounced = async (newMemories: Memory[]) => {
+    await blob().saveDebounced(newMemories);
   };
 
   return {
     memories,
     isLoading,
     saveMemories,
+    saveMemoriesDebounced,
   };
 };

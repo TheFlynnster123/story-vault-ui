@@ -3,10 +3,6 @@ import type { LLMMessage } from "../CQRS/LLMChatProjection";
 import { toSystemMessage } from "../Utils/MessageUtils";
 import type { Plan } from "./Plan";
 
-const PLAN_BLOB_NAME = "plan";
-
-export const getPlanQueryKey = (chatId: string) => ["plan", chatId];
-
 // Singleton instances
 const planServiceInstances = new Map<string, PlanService>();
 
@@ -61,27 +57,8 @@ export class PlanService {
   }
 
   public fetchPlans = async (): Promise<Plan[]> => {
-    return (await d.QueryClient().ensureQueryData({
-      queryKey: getPlanQueryKey(this.chatId),
-      queryFn: async () => await this.fetchPlansFromBlob(),
-    })) as Plan[];
-  };
-
-  private fetchPlansFromBlob = async (): Promise<Plan[]> => {
-    try {
-      const blobContent = await d
-        .BlobAPI()
-        .getBlob(this.chatId, PLAN_BLOB_NAME);
-
-      if (!blobContent) return [];
-
-      return JSON.parse(blobContent) as Plan[];
-    } catch (e) {
-      if (e instanceof Error && e.message.includes("Blob not found")) return [];
-
-      d.ErrorService().log("Failed to fetch plans", e);
-      return [];
-    }
+    const data = await d.PlansManagedBlob(this.chatId).get();
+    return data ?? [];
   };
 
   public getPlans(): Plan[] {
@@ -93,6 +70,7 @@ export class PlanService {
     if (plan) {
       plan.content = content;
       this.notifySubscribers();
+      this.savePlansDebounced();
     }
   }
 
@@ -105,36 +83,32 @@ export class PlanService {
     if (plan) {
       (plan[field] as string) = value;
       this.notifySubscribers();
+      this.savePlansDebounced();
     }
   }
 
   public addPlan(plan: Plan): void {
     this.Plans.push(plan);
     this.notifySubscribers();
+    this.savePlansDebounced();
   }
 
   public removePlan(planId: string): void {
     this.Plans = this.Plans.filter((p) => p.id !== planId);
     this.notifySubscribers();
-  }
-
-  public setAllPlans(plans: Plan[]): void {
-    this.Plans = plans;
-    this.notifySubscribers();
+    this.savePlansDebounced();
   }
 
   public async savePlans(plans?: Plan[]): Promise<void> {
     this.IsLoading = true;
+
     try {
       const plansToSave = plans ?? this.Plans;
-      const blobContent = JSON.stringify(plansToSave);
-      await d.BlobAPI().saveBlob(this.chatId, PLAN_BLOB_NAME, blobContent);
+      await d.PlansManagedBlob(this.chatId).save(plansToSave);
 
       if (plans) {
         this.Plans = plans;
       }
-
-      d.QueryClient().setQueryData(getPlanQueryKey(this.chatId), plansToSave);
 
       this.notifySubscribers();
     } finally {
@@ -142,8 +116,14 @@ export class PlanService {
     }
   }
 
-  public async refreshFromDatabase(): Promise<void> {
-    await this.loadPlans();
+  public async savePlansDebounced(plans?: Plan[]): Promise<void> {
+    const plansToSave = plans ?? this.Plans;
+    await d.PlansManagedBlob(this.chatId).saveDebounced(plansToSave);
+
+    if (plans) {
+      this.Plans = plans;
+      this.notifySubscribers();
+    }
   }
 
   public generateUpdatedPlans = async (

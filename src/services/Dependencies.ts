@@ -1,4 +1,10 @@
 import { BlobAPI } from "./Blob/BlobAPI";
+import { getChatSettingsManagedBlobInstance } from "./Blob/ChatSettingsManagedBlob";
+import { getImageModelsManagedBlobInstance } from "./Blob/ImageModelsManagedBlob";
+import { getMemoriesManagedBlobInstance } from "./Blob/MemoriesManagedBlob";
+import { getPlansManagedBlobInstance } from "./Blob/PlansManagedBlob";
+import { getRecentChatsManagedBlobInstance } from "./Blob/RecentChatsManagedBlob";
+import { getSystemSettingsManagedBlobInstance } from "./Blob/SystemSettingsManagedBlob";
 import { ErrorService } from "../components/Common/ErrorService";
 import { QUERY_CLIENT } from "../App";
 import { SystemSettingsService } from "./System/SystemSettingsService";
@@ -115,9 +121,34 @@ export class Dependencies {
     return getChatSettingsServiceInstance(chatId);
   }
 
+  ChatSettingsManagedBlob(chatId: string) {
+    return getChatSettingsManagedBlobInstance(chatId);
+  }
+
+  ImageModelsManagedBlob() {
+    return getImageModelsManagedBlobInstance();
+  }
+
+  MemoriesManagedBlob(chatId: string) {
+    return getMemoriesManagedBlobInstance(chatId);
+  }
+
+  PlansManagedBlob(chatId: string) {
+    return getPlansManagedBlobInstance(chatId);
+  }
+
+  RecentChatsManagedBlob() {
+    return getRecentChatsManagedBlobInstance();
+  }
+
+  SystemSettingsManagedBlob() {
+    return getSystemSettingsManagedBlobInstance();
+  }
+
   QueryClient() {
     return QUERY_CLIENT;
   }
+
   ImageModelFromGeneratedImageService() {
     return new ImageModelFromGeneratedImageService();
   }

@@ -1,10 +1,6 @@
 import { d } from "../Dependencies";
 import type { Memory } from "../ChatGeneration/Memory";
 
-const MEMORIES_BLOB_NAME = "memories";
-
-export const getMemoriesQueryKey = (chatId: string) => ["memories", chatId];
-
 export class MemoriesService {
   private chatId: string;
 
@@ -12,33 +8,36 @@ export class MemoriesService {
     this.chatId = chatId;
   }
 
-  get = async (): Promise<Memory[]> =>
-    (await d.QueryClient().ensureQueryData({
-      queryKey: getMemoriesQueryKey(this.chatId),
-      queryFn: async () => await this.fetchMemories(),
-    })) as Memory[];
-
-  save = async (memories: Memory[]): Promise<void> => {
-    const blobContent = JSON.stringify(memories);
-    await d.BlobAPI().saveBlob(this.chatId, MEMORIES_BLOB_NAME, blobContent);
-
-    d.QueryClient().setQueryData(getMemoriesQueryKey(this.chatId), memories);
+  subscribe = (callback: () => void): (() => void) => {
+    return d.MemoriesManagedBlob(this.chatId).subscribe(callback);
   };
 
-  fetchMemories = async (): Promise<Memory[]> => {
-    try {
-      const blobContent = await d
-        .BlobAPI()
-        .getBlob(this.chatId, MEMORIES_BLOB_NAME);
+  get = async (): Promise<Memory[]> => {
+    const data = await d.MemoriesManagedBlob(this.chatId).get();
+    return data ?? [];
+  };
 
-      if (!blobContent) return [];
+  save = async (memories: Memory[]): Promise<void> => {
+    await d.MemoriesManagedBlob(this.chatId).save(memories);
+  };
 
-      return JSON.parse(blobContent) as Memory[];
-    } catch (e) {
-      if (e instanceof Error && e.message.includes("Blob not found")) return [];
+  saveDebounced = async (memories: Memory[]): Promise<void> => {
+    await d.MemoriesManagedBlob(this.chatId).saveDebounced(memories);
+  };
 
-      d.ErrorService().log("Failed to fetch memories", e);
-      return [];
-    }
+  saveMemory = async (memory: Memory): Promise<void> => {
+    const memories = await this.get();
+    const existingIndex = memories.findIndex((m) => m.id === memory.id);
+
+    if (existingIndex >= 0) memories[existingIndex] = memory;
+    else memories.push(memory);
+
+    await this.saveDebounced(memories);
+  };
+
+  removeMemory = async (memoryId: string): Promise<void> => {
+    const memories = await this.get();
+    const filtered = memories.filter((m) => m.id !== memoryId);
+    await this.saveDebounced(filtered);
   };
 }

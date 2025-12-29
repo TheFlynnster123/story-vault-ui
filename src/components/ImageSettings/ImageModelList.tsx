@@ -14,9 +14,7 @@ import { useImageModels } from "./useImageModels";
 import { ImageModelView } from "./ImageModelView";
 import type { ImageModel } from "../../services/Image/modelGeneration/ImageModel";
 
-export const ImageModelList: React.FC<{
-  onSave?: () => void;
-}> = ({ onSave }) => {
+export const ImageModelList: React.FC = () => {
   const {
     userImageModels,
     loading,
@@ -63,31 +61,21 @@ export const ImageModelList: React.FC<{
   };
 
   const handleSaveModel = async (model: ImageModel) => {
-    const success = await saveImageModel(model);
-    if (success && onSave) {
-      onSave();
-    }
+    await saveImageModel(model);
   };
 
   const handleDeleteModel = async (modelId: string) => {
-    const success = await deleteImageModel(modelId);
-    if (success && onSave) {
-      onSave();
-    }
+    await deleteImageModel(modelId);
   };
 
   const handleSelectModel = async (modelId: string) => {
     await selectImageModel(modelId);
-    if (onSave) {
-      onSave();
-    }
   };
 
   const handleAddNewModel = async () => {
     const newModel = createNewModel();
     const success = await saveImageModel(newModel);
     if (success) {
-      if (onSave) onSave();
       // Automatically expand the new model for editing
       setExpandedModels((prev) => new Set(prev).add(newModel.id));
     }

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSystemSettings } from "./useSystemSettings";
-import { Select, Button, Stack, Text, Group, Loader } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { RiCheckboxCircleLine } from "react-icons/ri";
+import { Select, Stack, Text, Group, Loader } from "@mantine/core";
 import type { ChatGenerationSettings } from "../../services/System/SystemSettings";
+import { d } from "../../services/Dependencies";
 
 const MODEL_OPTIONS = [
   { value: "", label: "Default" },
@@ -17,18 +16,11 @@ const MODEL_OPTIONS = [
   { value: "grok-3", label: "grok-3" },
 ];
 
-interface ISystemSettingsEditor {
-  onSave?: () => void;
-}
-
-export const SystemSettingsEditor: React.FC<ISystemSettingsEditor> = ({
-  onSave,
-}) => {
-  const { systemSettings, saveSystemSettings, isLoading } = useSystemSettings();
+export const SystemSettingsEditor: React.FC = () => {
+  const { systemSettings, isLoading } = useSystemSettings();
   const [localSettings, setLocalSettings] = useState<ChatGenerationSettings>(
     {}
   );
-  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     if (systemSettings?.chatGenerationSettings) {
@@ -41,23 +33,13 @@ export const SystemSettingsEditor: React.FC<ISystemSettingsEditor> = ({
   const handleSettingChange = (
     newSettings: Partial<ChatGenerationSettings>
   ) => {
-    setLocalSettings((prev) => ({ ...prev, ...newSettings }));
-    setIsDirty(true);
-  };
+    const updatedSettings = { ...localSettings, ...newSettings };
+    setLocalSettings(updatedSettings);
 
-  const handleSave = async () => {
-    await saveSystemSettings({
+    d.SystemSettingsService().saveDebounced({
       ...systemSettings,
-      chatGenerationSettings: localSettings,
+      chatGenerationSettings: updatedSettings,
     });
-    setIsDirty(false);
-    notifications.show({
-      title: "Success",
-      message: "Chat generation settings saved!",
-      color: "green",
-      icon: <RiCheckboxCircleLine />,
-    });
-    onSave?.();
   };
 
   if (isLoading) {
@@ -70,15 +52,10 @@ export const SystemSettingsEditor: React.FC<ISystemSettingsEditor> = ({
   }
 
   return (
-    <Stack>
-      <ModelSelect
-        value={localSettings.model || ""}
-        onChange={(value) => handleSettingChange({ model: value || undefined })}
-      />
-      <Button onClick={handleSave} mt="xl" disabled={!isDirty}>
-        Save Settings
-      </Button>
-    </Stack>
+    <ModelSelect
+      value={localSettings.model || ""}
+      onChange={(value) => handleSettingChange({ model: value || undefined })}
+    />
   );
 };
 

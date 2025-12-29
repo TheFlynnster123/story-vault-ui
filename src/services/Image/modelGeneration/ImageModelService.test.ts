@@ -4,34 +4,25 @@ import type { ImageModel } from "./ImageModel";
 import { randomUUID } from "crypto";
 
 // Create mock functions that will persist across calls
-const mockGetBlob = vi.fn();
-const mockSaveBlob = vi.fn();
+const mockGet = vi.fn();
+const mockSave = vi.fn();
+const mockSaveDebounced = vi.fn();
 const mockLog = vi.fn();
 const mockMapToSchedulerName = vi.fn();
-const mockEnsureQueryData = vi.fn();
-const mockInvalidateQueries = vi.fn();
-const mockSetQueryData = vi.fn();
-
-const GLOBAL_CHAT_ID = "GLOBAL_CHAT_ID";
 
 // Mock dependencies
 vi.mock("../../Dependencies", () => ({
   d: {
-    BlobAPI: vi.fn(() => ({
-      GLOBAL_CHAT_ID: GLOBAL_CHAT_ID,
-      getBlob: mockGetBlob,
-      saveBlob: mockSaveBlob,
+    ImageModelsManagedBlob: vi.fn(() => ({
+      get: mockGet,
+      save: mockSave,
+      saveDebounced: mockSaveDebounced,
     })),
     ErrorService: vi.fn(() => ({
       log: mockLog,
     })),
     SchedulerMapper: vi.fn(() => ({
       MapToSchedulerName: mockMapToSchedulerName,
-    })),
-    QueryClient: vi.fn(() => ({
-      ensureQueryData: mockEnsureQueryData,
-      invalidateQueries: mockInvalidateQueries,
-      setQueryData: mockSetQueryData,
     })),
   },
 }));
@@ -77,12 +68,9 @@ describe("ImageModelService", () => {
 
   function setupDefaultMocks(): void {
     mockMapToSchedulerName.mockImplementation((scheduler: string) => scheduler);
-    mockEnsureQueryData.mockImplementation(
-      async ({ queryFn }: { queryFn: () => Promise<string | null> }) => {
-        return await queryFn();
-      }
-    );
-    mockInvalidateQueries.mockResolvedValue(undefined);
+    mockGet.mockResolvedValue(undefined);
+    mockSave.mockResolvedValue(undefined);
+    mockSaveDebounced.mockResolvedValue(undefined);
   }
 
   describe("SaveImageModel", () => {
@@ -90,16 +78,17 @@ describe("ImageModelService", () => {
       const mockModel = createMockImageModel("Image Model 1");
       const mockUserModels = createMockUserImageModels();
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockResolvedValue(true);
+      mockGet.mockResolvedValue(mockUserModels);
 
       const result = await service.SaveImageModel(mockModel);
 
       expect(result).toBe(true);
-      expect(mockSaveBlob).toHaveBeenCalledWith(
-        GLOBAL_CHAT_ID,
-        "UserImageModels",
-        expect.stringContaining('"id":"Image Model 1"')
+      expect(mockSaveDebounced).toHaveBeenCalledWith(
+        expect.objectContaining({
+          models: expect.arrayContaining([
+            expect.objectContaining({ id: "Image Model 1" }),
+          ]),
+        })
       );
     });
 
@@ -108,16 +97,17 @@ describe("ImageModelService", () => {
       const updatedModel = { ...existingModel, name: "Updated Model" };
       const mockUserModels = createMockUserImageModels([existingModel]);
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockResolvedValue(true);
+      mockGet.mockResolvedValue(mockUserModels);
 
       const result = await service.SaveImageModel(updatedModel);
 
       expect(result).toBe(true);
-      expect(mockSaveBlob).toHaveBeenCalledWith(
-        GLOBAL_CHAT_ID,
-        "UserImageModels",
-        expect.stringContaining('"name":"Updated Model"')
+      expect(mockSaveDebounced).toHaveBeenCalledWith(
+        expect.objectContaining({
+          models: expect.arrayContaining([
+            expect.objectContaining({ name: "Updated Model" }),
+          ]),
+        })
       );
     });
 
@@ -125,8 +115,8 @@ describe("ImageModelService", () => {
       const mockModel = createMockImageModel();
       const mockUserModels = createMockUserImageModels();
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockRejectedValue(new Error("Save Error"));
+      mockGet.mockResolvedValue(mockUserModels);
+      mockSaveDebounced.mockRejectedValue(new Error("Save Error"));
 
       const result = await service.SaveImageModel(mockModel);
 
@@ -149,8 +139,8 @@ describe("ImageModelService", () => {
         "Cannot save image model without a valid ID",
         expect.any(Error)
       );
-      expect(mockGetBlob).not.toHaveBeenCalled();
-      expect(mockSaveBlob).not.toHaveBeenCalled();
+      expect(mockGet).not.toHaveBeenCalled();
+      expect(mockSave).not.toHaveBeenCalled();
     });
 
     it("should map scheduler when saving model", async () => {
@@ -158,8 +148,7 @@ describe("ImageModelService", () => {
       mockModel.input.params.scheduler = "DPM++ 2M";
       const mockUserModels = createMockUserImageModels();
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockResolvedValue(undefined);
+      mockGet.mockResolvedValue(mockUserModels);
       mockMapToSchedulerName.mockReturnValue("DPM2M");
 
       const result = await service.SaveImageModel(mockModel);
@@ -168,8 +157,8 @@ describe("ImageModelService", () => {
       expect(mockMapToSchedulerName).toHaveBeenCalledWith("DPM++ 2M");
 
       // Verify the saved model has the mapped scheduler
-      const savedModel = JSON.parse(mockSaveBlob.mock.calls[0][2]);
-      expect(savedModel.models[0].input.params.scheduler).toBe("DPM2M");
+      const savedData = mockSaveDebounced.mock.calls[0][0] as UserImageModels;
+      expect(savedData.models[0].input.params.scheduler).toBe("DPM2M");
     });
 
     it("should preserve original scheduler when mapping fails", async () => {
@@ -177,8 +166,7 @@ describe("ImageModelService", () => {
       mockModel.input.params.scheduler = "CustomScheduler";
       const mockUserModels = createMockUserImageModels();
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockResolvedValue(undefined);
+      mockGet.mockResolvedValue(mockUserModels);
       mockMapToSchedulerName.mockReturnValue("CustomScheduler"); // No-op behavior
 
       const result = await service.SaveImageModel(mockModel);
@@ -187,8 +175,8 @@ describe("ImageModelService", () => {
       expect(mockMapToSchedulerName).toHaveBeenCalledWith("CustomScheduler");
 
       // Verify the saved model has the original scheduler
-      const savedModel = JSON.parse(mockSaveBlob.mock.calls[0][2]);
-      expect(savedModel.models[0].input.params.scheduler).toBe(
+      const savedData = mockSaveDebounced.mock.calls[0][0] as UserImageModels;
+      expect(savedData.models[0].input.params.scheduler).toBe(
         "CustomScheduler"
       );
     });
@@ -199,7 +187,7 @@ describe("ImageModelService", () => {
       const mockModels = [createMockImageModel()];
       const mockUserModels = createMockUserImageModels(mockModels);
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
+      mockGet.mockResolvedValue(mockUserModels);
 
       const result = await service.GetAllImageModels();
 
@@ -208,7 +196,7 @@ describe("ImageModelService", () => {
     });
 
     it("should return default models when blob is empty", async () => {
-      mockGetBlob.mockResolvedValue(null);
+      mockGet.mockResolvedValue(undefined);
 
       const result = await service.GetAllImageModels();
 
@@ -219,9 +207,7 @@ describe("ImageModelService", () => {
     });
 
     it("should return an empty list on error", async () => {
-      mockGetBlob.mockResolvedValue(
-        "invalid json that will cause parsing to fail in an unexpected way"
-      );
+      mockGet.mockRejectedValue(new Error("Failed to get blob"));
 
       const result = await service.GetAllImageModels();
 
@@ -230,7 +216,7 @@ describe("ImageModelService", () => {
         models: [],
       });
       expect(mockLog).toHaveBeenCalledWith(
-        "Failed to parse user image models",
+        "Failed to get image models",
         expect.any(Error)
       );
     });
@@ -238,43 +224,43 @@ describe("ImageModelService", () => {
 
   describe("DeleteImageModel", () => {
     it("should delete model successfully", async () => {
-      const modelToDelete = createMockImageModel("Image Model 1");
-      const modelToKeep = createMockImageModel("Image Model 2");
+      const modelToDelete = createMockImageModel("1");
+      const modelToKeep = createMockImageModel("2");
       const mockUserModels = createMockUserImageModels([
         modelToDelete,
         modelToKeep,
       ]);
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockResolvedValue(true);
+      mockGet.mockResolvedValue(mockUserModels);
 
       const result = await service.DeleteImageModel("1");
 
       expect(result).toBe(true);
-      expect(mockSaveBlob).toHaveBeenCalledWith(
-        GLOBAL_CHAT_ID,
-        "UserImageModels",
-        expect.not.stringContaining('"id":1')
+      expect(mockSaveDebounced).toHaveBeenCalledWith(
+        expect.objectContaining({
+          models: expect.not.arrayContaining([
+            expect.objectContaining({ id: "1" }),
+          ]),
+        })
       );
     });
 
     it("should reset selected model when deleting selected model", async () => {
-      const selectedModel = createMockImageModel("Image Model 1");
+      const selectedModel = createMockImageModel("1");
       const mockUserModels = {
         selectedModelId: "1",
         models: [selectedModel],
       };
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockResolvedValue(true);
+      mockGet.mockResolvedValue(mockUserModels);
 
       const result = await service.DeleteImageModel("1");
 
       expect(result).toBe(true);
-      expect(mockSaveBlob).toHaveBeenCalledWith(
-        GLOBAL_CHAT_ID,
-        "UserImageModels",
-        expect.stringContaining('"selectedModelId":""')
+      expect(mockSaveDebounced).toHaveBeenCalledWith(
+        expect.objectContaining({
+          selectedModelId: "",
+        })
       );
     });
 
@@ -283,8 +269,8 @@ describe("ImageModelService", () => {
         createMockImageModel(),
       ]);
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockRejectedValue(new Error("Save Error"));
+      mockGet.mockResolvedValue(mockUserModels);
+      mockSaveDebounced.mockRejectedValue(new Error("Save Error"));
 
       const result = await service.DeleteImageModel("1");
 
@@ -301,22 +287,21 @@ describe("ImageModelService", () => {
       const modelToSelect = createMockImageModel("Image Model 1");
       const mockUserModels = createMockUserImageModels([modelToSelect]);
 
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
-      mockSaveBlob.mockResolvedValue(true);
+      mockGet.mockResolvedValue(mockUserModels);
 
       const result = await service.SelectImageModel("Image Model 1");
 
       expect(result).toEqual(modelToSelect);
-      expect(mockSaveBlob).toHaveBeenCalledWith(
-        GLOBAL_CHAT_ID,
-        "UserImageModels",
-        expect.stringContaining('"selectedModelId":"Image Model 1"')
+      expect(mockSaveDebounced).toHaveBeenCalledWith(
+        expect.objectContaining({
+          selectedModelId: "Image Model 1",
+        })
       );
     });
 
     it("should throw error when model not found", async () => {
       const mockUserModels = createMockUserImageModels([]);
-      mockGetBlob.mockResolvedValue(JSON.stringify(mockUserModels));
+      mockGet.mockResolvedValue(mockUserModels);
 
       await expect(service.SelectImageModel("999")).rejects.toThrow(
         "Image model with ID 999 not found"

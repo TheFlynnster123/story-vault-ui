@@ -5,7 +5,6 @@ import {
   Title,
   TextInput,
   Textarea,
-  Button,
   Group,
   Paper,
   ActionIcon,
@@ -31,20 +30,17 @@ export const ChatEditorPage: React.FC = () => {
     handlePhotoUpload,
     removePhoto,
     handleCivitJobIdChange,
-    handleSubmit,
+    onFormUpdated,
     handleGoBack,
   } = useChatEditor(chatIdFromParams);
 
   return (
     <Page>
-      <Paper component="form" onSubmit={form.onSubmit(handleSubmit)} mt={20}>
-        <ChatEditorHeader
-          onGoBack={handleGoBack}
-          isFormDirty={form.isDirty()}
-        />
+      <Paper mt={20}>
+        <ChatEditorHeader onGoBack={handleGoBack} />
 
         <Stack>
-          <ChatFormFields form={form} />
+          <ChatFormFields form={form} onFormUpdated={onFormUpdated} />
 
           <BackgroundPhotoUploader
             chatId={chatId}
@@ -64,13 +60,9 @@ export const ChatEditorPage: React.FC = () => {
 
 interface ChatEditorHeaderProps {
   onGoBack: () => void;
-  isFormDirty: boolean;
 }
 
-const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
-  onGoBack,
-  isFormDirty,
-}) => (
+const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({ onGoBack }) => (
   <>
     <Group justify="space-between" align="center" mb="md">
       <Group>
@@ -82,9 +74,6 @@ const ChatEditorHeader: React.FC<ChatEditorHeaderProps> = ({
           Edit Chat
         </Title>
       </Group>
-      <Button type="submit" disabled={!isFormDirty}>
-        Save Changes
-      </Button>
     </Group>
     <Divider mb="xl" style={{ borderColor: Theme.chatSettings.border }} />
   </>
@@ -125,6 +114,16 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     }
   }, [chatSettings]);
 
+  const onFormUpdated = (overrides?: Partial<ChatSettings>) => {
+    const settingsToSave: ChatSettings = {
+      ...form.values,
+      ...overrides,
+      chatTitle: (overrides?.chatTitle ?? form.values.chatTitle).trim(),
+    };
+
+    d.ChatSettingsService(chatId).saveDebounced(settingsToSave);
+  };
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -134,6 +133,10 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
         form.setFieldValue("backgroundPhotoBase64", base64String);
         // Clear CivitJob when uploading a new photo
         form.setFieldValue("backgroundPhotoCivitJobId", undefined);
+        onFormUpdated({
+          backgroundPhotoBase64: base64String,
+          backgroundPhotoCivitJobId: undefined,
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -142,6 +145,10 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   const removePhoto = () => {
     form.setFieldValue("backgroundPhotoBase64", undefined);
     form.setFieldValue("backgroundPhotoCivitJobId", undefined);
+    onFormUpdated({
+      backgroundPhotoBase64: undefined,
+      backgroundPhotoCivitJobId: undefined,
+    });
   };
 
   const handleCivitJobIdChange = (jobId: string | undefined) => {
@@ -150,20 +157,20 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     if (jobId) {
       form.setFieldValue("backgroundPhotoBase64", undefined);
     }
+    onFormUpdated({
+      backgroundPhotoCivitJobId: jobId,
+      backgroundPhotoBase64: jobId
+        ? undefined
+        : form.values.backgroundPhotoBase64,
+    });
   };
 
-  const handleSubmit = async (values: typeof form.values) => {
+  const handleGoBack = async () => {
     const settingsToSave: ChatSettings = {
-      ...values,
-      chatTitle: values.chatTitle.trim(),
+      ...form.values,
+      chatTitle: form.values.chatTitle.trim(),
     };
-
     await d.ChatSettingsService(chatId).save(settingsToSave);
-
-    navigate(`/chat/${chatId}`);
-  };
-
-  const handleGoBack = () => {
     navigate(-1);
   };
 
@@ -177,7 +184,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     handlePhotoUpload,
     removePhoto,
     handleCivitJobIdChange,
-    handleSubmit,
+    onFormUpdated,
     handleGoBack,
     handleDeleteSuccess,
   };
@@ -190,9 +197,13 @@ interface ChatFormFieldsProps {
       promptType: string;
     };
   };
+  onFormUpdated: (overrides?: Partial<ChatSettings>) => void;
 }
 
-const ChatFormFields: React.FC<ChatFormFieldsProps> = ({ form }) => (
+const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
+  form,
+  onFormUpdated,
+}) => (
   <Stack>
     <TextInput
       label="Story Title"
@@ -200,12 +211,20 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({ form }) => (
       withAsterisk
       autoFocus
       {...form.getInputProps("chatTitle")}
+      onChange={(e) => {
+        form.getInputProps("chatTitle").onChange(e);
+        onFormUpdated({ chatTitle: e.currentTarget.value });
+      }}
     />
 
     <Select
       label="Prompt"
       data={["First Person Character", "Manual"]}
       {...form.getInputProps("promptType")}
+      onChange={(value) => {
+        form.getInputProps("promptType").onChange(value);
+        onFormUpdated({ promptType: value as any });
+      }}
     />
 
     {form.values.promptType === "Manual" && (
@@ -214,6 +233,10 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({ form }) => (
         placeholder="Enter your custom prompt..."
         p="10"
         {...form.getInputProps("customPrompt")}
+        onChange={(e) => {
+          form.getInputProps("customPrompt").onChange(e);
+          onFormUpdated({ customPrompt: e.currentTarget.value });
+        }}
       />
     )}
   </Stack>

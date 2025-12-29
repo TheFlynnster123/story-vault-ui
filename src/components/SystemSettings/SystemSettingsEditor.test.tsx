@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const mockSaveSystemSettings = vi.fn();
 const mockUseSystemSettings = vi.fn();
 
-vi.mock("../../queries/system-settings/useSystemSettings", () => ({
+vi.mock("./useSystemSettings", () => ({
   useSystemSettings: () => mockUseSystemSettings(),
 }));
 

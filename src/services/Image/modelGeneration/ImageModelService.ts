@@ -1,11 +1,11 @@
 import { d } from "../../Dependencies";
 import type { ImageModel } from "./ImageModel";
-
-const USER_IMAGE_MODELS_QUERY_KEY = ["user-image-models"];
+import type { UserImageModels } from "../../Blob/ImageModelsManagedBlob";
 
 export class ImageModelService {
-  readonly USER_IMAGE_MODELS = "UserImageModels";
   readonly DEFAULT_SELECTED_MODEL_ID = "";
+
+  private blob = () => d.ImageModelsManagedBlob();
 
   public async SaveImageModel(model: ImageModel): Promise<boolean> {
     try {
@@ -27,13 +27,13 @@ export class ImageModelService {
           userImageModels.models,
           modelWithMappedScheduler
         );
-        await this.saveUserImageModels({
+        await this.saveUserImageModelsDebounced({
           ...userImageModels,
           models: updatedModels,
         });
       } else {
         const newModels = [...userImageModels.models, modelWithMappedScheduler];
-        await this.saveUserImageModels({
+        await this.saveUserImageModelsDebounced({
           ...userImageModels,
           models: newModels,
         });
@@ -48,11 +48,8 @@ export class ImageModelService {
 
   public async GetAllImageModels(): Promise<UserImageModels> {
     try {
-      const content = await this.fetchUserImageModelsBlob();
-
-      return content
-        ? this.parseUserImageModels(content)
-        : this.createDefaultUserImageModels();
+      const data = await this.blob().get();
+      return data ?? this.createDefaultUserImageModels();
     } catch (error) {
       d.ErrorService().log("Failed to get image models", error);
       return this.createDefaultUserImageModels();
@@ -75,7 +72,7 @@ export class ImageModelService {
         models: filteredModels,
       };
 
-      await this.saveUserImageModels(updatedUserImageModels);
+      await this.saveUserImageModelsDebounced(updatedUserImageModels);
       return true;
     } catch (error) {
       d.ErrorService().log("Failed to delete image model", error);
@@ -96,7 +93,7 @@ export class ImageModelService {
       selectedModelId: modelId,
     };
 
-    await this.saveUserImageModels(updatedUserImageModels);
+    await this.saveUserImageModelsDebounced(updatedUserImageModels);
     return selectedModel;
   }
 
@@ -143,49 +140,19 @@ export class ImageModelService {
     };
   }
 
-  async fetchUserImageModelsBlob(): Promise<string | null> {
-    return await d.QueryClient().ensureQueryData({
-      queryKey: USER_IMAGE_MODELS_QUERY_KEY,
-      queryFn: async () => {
-        try {
-          const blob = await d
-            .BlobAPI()
-            .getBlob(d.BlobAPI().GLOBAL_CHAT_ID, this.USER_IMAGE_MODELS);
-          return blob || null;
-        } catch {
-          return null;
-        }
-      },
-    });
-  }
-
-  parseUserImageModels = (content: string): UserImageModels => {
-    try {
-      return JSON.parse(content);
-    } catch (error) {
-      d.ErrorService().log("Failed to parse user image models", error);
-      return { selectedModelId: "", models: [] };
-    }
-  };
-
   createDefaultUserImageModels = (): UserImageModels => ({
     selectedModelId: this.DEFAULT_SELECTED_MODEL_ID,
     models: [],
   });
 
   async saveUserImageModels(userImageModels: UserImageModels): Promise<void> {
-    await d
-      .BlobAPI()
-      .saveBlob(
-        d.BlobAPI().GLOBAL_CHAT_ID,
-        this.USER_IMAGE_MODELS,
-        JSON.stringify(userImageModels)
-      );
+    await this.blob().save(userImageModels);
+  }
 
-    d.QueryClient().setQueryData(
-      USER_IMAGE_MODELS_QUERY_KEY,
-      JSON.stringify(userImageModels)
-    );
+  async saveUserImageModelsDebounced(
+    userImageModels: UserImageModels
+  ): Promise<void> {
+    await this.blob().saveDebounced(userImageModels);
   }
 
   modelExists = (models: ImageModel[], model: ImageModel): boolean =>
@@ -231,7 +198,5 @@ export class ImageModelService {
   }
 }
 
-export type UserImageModels = {
-  selectedModelId: string;
-  models: ImageModel[];
-};
+// Re-export for backwards compatibility
+export type { UserImageModels } from "../../Blob/ImageModelsManagedBlob";
