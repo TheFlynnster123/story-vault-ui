@@ -2,9 +2,11 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine, RiSettings3Line } from "react-icons/ri";
-import { GrokKeyManager } from "./SystemSettings/GrokKeyManager";
-import { SystemSettingsEditor } from "./SystemSettings/SystemSettingsEditor";
+import { SystemSettingsEditor } from "../components/SystemSettings/SystemSettingsEditor";
 import { Page } from "./Page";
+import { GrokKeyManager } from "../components/Grok/GrokKeyManager";
+import { useSystemSettings } from "../components/SystemSettings/useSystemSettings";
+import { d } from "../services/Dependencies";
 
 interface SettingsSectionProps {
   title: string;
@@ -13,8 +15,12 @@ interface SettingsSectionProps {
 
 const SystemSettingsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { systemSettings } = useSystemSettings();
 
-  const handleGoBack = () => {
+  const handleGoBack = async () => {
+    if (systemSettings) {
+      await d.SystemSettingsService().save(systemSettings);
+    }
     navigate(-1);
   };
 
@@ -27,7 +33,7 @@ const SystemSettingsPage: React.FC = () => {
         </SettingsSection>
 
         <SettingsSection title="Chat Generation Settings">
-          <SystemSettingsEditor onSave={() => {}} />
+          <SystemSettingsEditor />
         </SettingsSection>
       </Grid>
     </Page>

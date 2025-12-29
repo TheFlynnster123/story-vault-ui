@@ -18,7 +18,7 @@
 **Always use `d` from Dependencies.ts** - never import services directly or create singletons:
 
 ```typescript
-import { d } from "../app/Dependencies/Dependencies";
+import { d } from "../Dependencies";
 
 // ✅ Correct
 await d.ChatService(chatId).AddUserMessage(message);
@@ -28,7 +28,7 @@ const messages = d.UserChatProjection(chatId).GetMessages();
 const chatService = new ChatService(chatId);
 ```
 
-This enables testability and centralized dependency management. See `src/app/Dependencies/Dependencies.ts` for all available services.
+This enables testability and centralized dependency management. See `src/Dependencies.ts` for all available services.
 
 ### Small, Intention-Revealing Functions
 
@@ -80,7 +80,7 @@ npm run debug            # Opens Chrome with debugger on port 9222
 ```bash
 npm test                      # Run all tests
 npm run test:ui              # Vitest UI
-npm run test-skip-performance # Skip *.Performance.test.ts files
+npm run test-skip-stress     # Skip *.Stress.test.ts files
 npm run test:coverage        # Coverage report
 ```
 

@@ -11,14 +11,14 @@ import {
 import { RiArrowLeftLine, RiPencilFill, RiSettings4Line } from "react-icons/ri";
 import { LuBookOpen } from "react-icons/lu";
 import { v4 as uuidv4 } from "uuid";
-import type { ChatCreationWizardState } from "../../models/ChatCreationWizardState";
-import { createInitialWizardState } from "../../models/ChatCreationWizardState";
+import type { ChatCreationWizardState } from "./ChatCreationWizardState";
+import { createInitialWizardState } from "./ChatCreationWizardState";
 import { TitleStep } from "./TitleStep";
 import { StoryStep } from "./StoryStep";
 import { ChatSettingsStep } from "./ChatSettingsStep";
-import { d } from "../../app/Dependencies/Dependencies";
-import type { ChatSettings } from "../../models/ChatSettings";
-import { ChatTheme } from "../../theme/chatTheme";
+import { d } from "../../services/Dependencies";
+import type { ChatSettings } from "../../services/Chat/ChatSettings";
+import { Theme } from "../Common/Theme";
 
 export const ChatCreationWizard: React.FC = () => {
   const [state, setState] = useState<ChatCreationWizardState>(
@@ -76,7 +76,7 @@ export const ChatCreationWizard: React.FC = () => {
         <Group justify="center" align="center" pos="relative">
           <ActionIcon
             onClick={goHome}
-            color={ChatTheme.chatSettings.primary}
+            color={Theme.chatSettings.primary}
             variant="subtle"
             size="lg"
             pos="absolute"
@@ -86,7 +86,7 @@ export const ChatCreationWizard: React.FC = () => {
           </ActionIcon>
           <Title
             order={1}
-            style={{ color: ChatTheme.chatSettings.primary, fontWeight: 400 }}
+            style={{ color: Theme.chatSettings.primary, fontWeight: 400 }}
           >
             Create New Chat
           </Title>
@@ -102,7 +102,7 @@ export const ChatCreationWizard: React.FC = () => {
         </Stepper>
 
         <div style={{ minHeight: "400px" }}>
-          {state.step === 2 && (
+          {state.step === 0 && (
             <TitleStep
               state={state}
               updateState={updateState}
@@ -117,7 +117,7 @@ export const ChatCreationWizard: React.FC = () => {
               onBack={prevStep}
             />
           )}
-          {state.step === 0 && (
+          {state.step === 2 && (
             <ChatSettingsStep
               chatId={chatId}
               state={state}

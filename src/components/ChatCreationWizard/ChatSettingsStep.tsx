@@ -19,10 +19,9 @@ import {
   RiSparklingLine,
   RiArrowLeftLine,
 } from "react-icons/ri";
-import type { ChatCreationWizardState } from "../../models/ChatCreationWizardState";
-import { useCivitJob } from "../../hooks/useCivitJob";
-import { CivitJobAPI } from "../../clients/CivitJobAPI";
-import { d } from "../../app/Dependencies/Dependencies";
+import type { ChatCreationWizardState } from "./ChatCreationWizardState";
+import { useCivitJob } from "../Images/hooks/useCivitJob";
+import { d } from "../../services/Dependencies";
 
 interface ChatSettingsStepProps {
   chatId: string;
@@ -52,7 +51,7 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
   );
 
   const isLoadingCivitJob =
-    state.backgroundPhotoCivitJobId && !civitJobPhoto && jobStatus?.scheduled;
+    state.backgroundPhotoCivitJobId && !civitJobPhoto && jobStatus?.isLoading;
 
   const displayPhoto = civitJobPhoto || state.backgroundPhotoBase64;
 
@@ -85,7 +84,7 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
         ? `${modelInput.params.prompt}, ${prompt}`
         : prompt;
 
-      const response = await new CivitJobAPI().generateImage(modelInput);
+      const response = await d.CivitJobAPI().generateImage(modelInput);
       const newJobId = response.jobs[0].jobId;
       updateState({ backgroundPhotoCivitJobId: newJobId });
       setPrompt("");

@@ -2,9 +2,9 @@ import React from "react";
 import styled from "styled-components";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from "react-router-dom";
-import { useGrokKey } from "../hooks/useGrokKey";
-import { GrokKeyInput } from "../GrokKeyInput";
-import { useAuth0Setup } from "../hooks/useAuth0Setup";
+import { useAuth0Setup } from "../components/Auth/useAuth0Setup";
+import { useGrokKey } from "../components/Grok/useGrokKey";
+import { GrokKeyInput } from "../components/Grok/GrokKeyInput";
 
 const LandingPage: React.FC = () => {
   const { isAuthenticated, loginWithRedirect } = useAuth0();

@@ -10,7 +10,7 @@ import ChatPage from "./pages/ChatPage";
 import { PlanPage } from "./pages/PlanPage";
 import { MemoriesPage } from "./pages/MemoriesPage";
 import { StoryEditorPage } from "./pages/StoryEditorPage";
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { ChatCreationWizard } from "./components/ChatCreationWizard/ChatCreationWizard";
 
 export const QUERY_CLIENT = new QueryClient();

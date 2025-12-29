@@ -1,6 +1,6 @@
 import { Textarea, Stack, Text, Button, Group } from "@mantine/core";
 import { RiArrowRightLine, RiArrowLeftLine } from "react-icons/ri";
-import type { ChatCreationWizardState } from "../../models/ChatCreationWizardState";
+import type { ChatCreationWizardState } from "./ChatCreationWizardState";
 
 interface StoryStepProps {
   state: ChatCreationWizardState;

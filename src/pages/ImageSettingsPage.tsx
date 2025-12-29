@@ -2,14 +2,18 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine } from "react-icons/ri";
-import { CivitaiKeyManager } from "./ImageSettings/CivitaiKeyManager";
-import { ImageModelList } from "./ImageSettings/ImageModelList";
+import { CivitaiKeyManager } from "../components/ImageSettings/CivitaiKeyManager";
+import { ImageModelList } from "../components/ImageSettings/ImageModelList";
 import { Page } from "./Page";
+import { d } from "../services/Dependencies";
 
 const ImageSettingsPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleGoBack = () => {
+  const handleGoBack = async () => {
+    // Save any pending changes before navigating away
+    const userImageModels = await d.ImageModelService().GetAllImageModels();
+    await d.ImageModelService().saveUserImageModels(userImageModels);
     navigate(-1);
   };
 
@@ -21,7 +25,7 @@ const ImageSettingsPage: React.FC = () => {
 
         <Grid.Col span={12}>
           <Paper withBorder p="xl" radius="md">
-            <ImageModelList onSave={() => {}} />
+            <ImageModelList />
           </Paper>
         </Grid.Col>
       </Grid>

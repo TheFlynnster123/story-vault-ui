@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RiArrowLeftLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 import { LuBrain } from "react-icons/lu";
+import { v4 as uuidv4 } from "uuid";
 import {
   Title,
   Button,
@@ -13,84 +14,71 @@ import {
   Text,
   Divider,
 } from "@mantine/core";
-import type { Memory } from "../models/Memory";
-import { useMemories } from "../hooks/useMemories";
-import { v4 as uuidv4 } from "uuid";
-import { ConfirmModal } from "../components/ConfirmModal";
-import isEqual from "lodash.isequal";
+import type { Memory } from "../services/ChatGeneration/Memory";
+import { useMemories } from "../components/Chat/useMemories";
 import { Page } from "./Page";
-import { ChatTheme } from "../theme/chatTheme";
-
-const createEmptyMemory = (): Memory => ({
-  id: uuidv4(),
-  content: "",
-});
+import { Theme } from "../components/Common/Theme";
+import { ConfirmModal } from "../components/Common/ConfirmModal";
+import { d } from "../services/Dependencies";
 
 export const MemoriesPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
 
-  const { memories, saveMemories, isLoading } = useMemories(chatId!);
-
+  const { memories, isLoading } = useMemories(chatId!);
   const [formMemories, setFormMemories] = useState<Memory[]>([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-
   const [memoryToDeleteId, setMemoryToDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoading) setFormMemories([...memories]);
+    if (!isLoading) {
+      setFormMemories([...memories]);
+    }
   }, [isLoading, memories]);
 
-  const hasChanges = !isEqual(memories, formMemories);
-
   const handleAddMemory = () => {
-    const newMemory = createEmptyMemory();
-    setFormMemories([...formMemories, newMemory]);
+    const newMemory: Memory = { id: uuidv4(), content: "" };
+    const updatedMemories = [...formMemories, newMemory];
+    setFormMemories(updatedMemories);
+    d.MemoriesService(chatId!).saveDebounced(updatedMemories);
   };
 
   const handleMemoryChange = (id: string, content: string) => {
-    setFormMemories((previousMemories) =>
-      previousMemories.map((memory) =>
-        memory.id === id ? { ...memory, content } : memory
-      )
+    const updatedMemories = formMemories.map((memory) =>
+      memory.id === id ? { ...memory, content } : memory
     );
+    setFormMemories(updatedMemories);
+
+    d.MemoriesService(chatId!).saveDebounced(updatedMemories);
   };
 
-  const handleRemoveMemory = (id: string) => {
+  const onRemoveMemory = (id: string) => {
     setMemoryToDeleteId(id);
     setIsConfirmModalOpen(true);
   };
 
-  const confirmRemoveMemory = () => {
-    if (memoryToDeleteId)
-      setFormMemories((prev) =>
-        prev.filter((memory) => memory.id !== memoryToDeleteId)
-      );
+  const onConfirmRemoveMemory = async () => {
+    if (memoryToDeleteId) {
+      await d.MemoriesService(chatId!).removeMemory(memoryToDeleteId);
+
+      const updatedMemories = await d.MemoriesService(chatId!).get();
+
+      setFormMemories(updatedMemories);
+    }
 
     setIsConfirmModalOpen(false);
     setMemoryToDeleteId(null);
   };
 
-  const handleSave = async () => {
-    await saveMemories(formMemories);
-    navigateToChat();
+  const handleGoBack = async () => {
+    await d.MemoriesService(chatId!).save(formMemories);
+    navigate(`/chat/${chatId}`);
   };
-
-  const navigateToChat = () => navigate(`/chat/${chatId}`);
-
-  const handleGoBack = () => navigateToChat();
 
   return (
     <Page>
-      <Paper
-        component="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSave();
-        }}
-        mt={20}
-      >
-        <MemoriesHeader onGoBack={handleGoBack} isDirty={hasChanges} />
+      <Paper mt={20}>
+        <MemoriesHeader onGoBack={handleGoBack} />
 
         <Stack>
           <Group justify="space-between">
@@ -98,7 +86,7 @@ export const MemoriesPage: React.FC = () => {
             <Button
               variant="subtle"
               onClick={handleAddMemory}
-              style={{ color: ChatTheme.memories.primary }}
+              style={{ color: Theme.memories.primary }}
             >
               <RiAddLine /> Add Memory
             </Button>
@@ -116,23 +104,20 @@ export const MemoriesPage: React.FC = () => {
                 styles={{
                   input: {
                     backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    borderColor: ChatTheme.memories.border,
-                    color: ChatTheme.page.text,
+                    borderColor: Theme.memories.border,
+                    color: Theme.page.text,
                   },
                 }}
               />
               <Button
                 variant="outline"
                 color="red"
-                onClick={() => handleRemoveMemory(memory.id)}
+                onClick={() => onRemoveMemory(memory.id)}
                 style={{ alignSelf: "flex-start" }}
               >
                 <RiDeleteBinLine /> Delete Memory
               </Button>
-              <Divider
-                my="sm"
-                style={{ borderColor: ChatTheme.memories.border }}
-              />
+              <Divider my="sm" style={{ borderColor: Theme.memories.border }} />
             </Stack>
           ))}
         </Stack>
@@ -141,7 +126,7 @@ export const MemoriesPage: React.FC = () => {
       <ConfirmModal
         isOpen={isConfirmModalOpen}
         onCancel={() => setIsConfirmModalOpen(false)}
-        onConfirm={confirmRemoveMemory}
+        onConfirm={onConfirmRemoveMemory}
         title="Confirm Deletion"
         message="Are you sure you want to delete this memory?"
       />
@@ -151,28 +136,21 @@ export const MemoriesPage: React.FC = () => {
 
 interface MemoriesHeaderProps {
   onGoBack: () => void;
-  isDirty: boolean;
 }
 
-const MemoriesHeader: React.FC<MemoriesHeaderProps> = ({
-  onGoBack,
-  isDirty,
-}) => (
+const MemoriesHeader: React.FC<MemoriesHeaderProps> = ({ onGoBack }) => (
   <>
     <Group justify="space-between" align="center" mb="md">
       <Group>
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
-          <RiArrowLeftLine color={ChatTheme.page.text} />
+          <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <LuBrain size={24} color={ChatTheme.memories.primary} />
-        <Title order={2} fw={400} style={{ color: ChatTheme.memories.primary }}>
+        <LuBrain size={24} color={Theme.memories.primary} />
+        <Title order={2} fw={400} style={{ color: Theme.memories.primary }}>
           Memories
         </Title>
       </Group>
-      <Button type="submit" disabled={!isDirty}>
-        Save Changes
-      </Button>
     </Group>
-    <Divider mb="xl" style={{ borderColor: ChatTheme.memories.border }} />
+    <Divider mb="xl" style={{ borderColor: Theme.memories.border }} />
   </>
 );
