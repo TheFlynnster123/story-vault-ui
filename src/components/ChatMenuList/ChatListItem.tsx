@@ -24,8 +24,8 @@ export const ChatListItem = ({ chatId, onClick }: IChatListItemProps) => {
   return (
     <StyledChatListItem
       key={chatId}
-      hasBackgroundImage={hasBackgroundImage}
       onClick={() => onClick()}
+      $hasBackgroundImage={hasBackgroundImage}
       style={
         backgroundPhotoBase64
           ? getBackgroundImageStyles(backgroundPhotoBase64)
@@ -56,7 +56,7 @@ const StyledChatListItemTitle = styled.div`
 `;
 
 const StyledChatListItem = styled.div<{
-  hasBackgroundImage?: boolean;
+  $hasBackgroundImage?: boolean;
 }>`
   padding: 10px 15px;
   margin-bottom: 1rem;
@@ -77,7 +77,7 @@ const StyledChatListItem = styled.div<{
   }
 
   ${(props) =>
-    props.hasBackgroundImage &&
+    props.$hasBackgroundImage &&
     css`
       padding: 0;
       aspect-ratio: 1;

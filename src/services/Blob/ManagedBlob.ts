@@ -7,7 +7,7 @@ const DEFAULT_RETRY_DELAY_MS = 1000;
 export abstract class ManagedBlob<T> {
   protected chatId: string;
   protected data: T | undefined = undefined;
-  protected _isLoading: boolean = false;
+  protected _isLoading: boolean = true;
   protected initialized: boolean = false;
 
   private subscribers = new Set<() => void>();
