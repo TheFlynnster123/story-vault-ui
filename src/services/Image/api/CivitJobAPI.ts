@@ -52,7 +52,6 @@ export class CivitJobAPI {
 
       return JSON.parse(decryptedContent);
     } else {
-      d.ErrorService().log("Failed to get photo: " + response.statusText);
       throw new Error(`Error fetching photo: ${response.statusText}`);
     }
   }

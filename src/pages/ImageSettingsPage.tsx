@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
-import { RiArrowLeftLine } from "react-icons/ri";
+import { RiArrowLeftLine, RiImageLine } from "react-icons/ri";
 import { CivitaiKeyManager } from "../components/ImageSettings/CivitaiKeyManager";
 import { ImageModelList } from "../components/ImageSettings/ImageModelList";
 import { Page } from "./Page";
@@ -33,11 +33,14 @@ const ImageSettingsPage: React.FC = () => {
 
 const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <>
-    <Group>
-      <ActionIcon onClick={onBack} size="lg" variant="gradient">
+    <Group mb="md">
+      <ActionIcon onClick={onBack} size="lg" variant="subtle">
         <RiArrowLeftLine />
       </ActionIcon>
-      <Title order={1}>Image Settings</Title>
+      <RiImageLine size={28} />
+      <Title order={1} fw={400}>
+        Image Settings
+      </Title>
     </Group>
     <Divider my="xl" />
   </>
