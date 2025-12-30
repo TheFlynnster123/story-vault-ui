@@ -166,11 +166,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   };
 
   const handleGoBack = async () => {
-    const settingsToSave: ChatSettings = {
-      ...form.values,
-      chatTitle: form.values.chatTitle.trim(),
-    };
-    await d.ChatSettingsService(chatId).save(settingsToSave);
+    d.ChatSettingsService(chatId).savePendingChanges();
     navigate(-1);
   };
 

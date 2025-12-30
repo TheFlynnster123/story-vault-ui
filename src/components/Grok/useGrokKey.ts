@@ -14,7 +14,8 @@ const fetchGrokKeyStatus = async () => {
 
   const isValid = await api.hasValidGrokKey();
   grokKeyStatusSingleton = isValid;
-  await d.EncryptionManager().ensureKeysInitialized();
+
+  if (isValid) await d.EncryptionManager().ensureKeysInitialized();
 
   notifyListeners();
 };

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { Collapse, Button } from "@mantine/core";
+import { Button } from "@mantine/core";
 import { RiArrowDownSLine, RiArrowUpSLine } from "react-icons/ri";
 import "./ChatMessage.styled.ts";
 import { Theme } from "../../Common/Theme.ts";
@@ -73,9 +73,9 @@ export const ChapterMessage: React.FC<ChapterMessageProps> = ({
           </Button>
         </ExpandButtonContainer>
 
-        <Collapse in={isExpanded}>
+        {isExpanded && (
           <ChapterExpandedDetails chatId={chatId} chapterId={chapter.id} />
-        </Collapse>
+        )}
       </MessageContainer>
 
       <NextChapterDirection chapter={chapter} />

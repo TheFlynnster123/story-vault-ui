@@ -52,7 +52,6 @@ export class CivitJobAPI {
 
       return JSON.parse(decryptedContent);
     } else {
-      d.ErrorService().log("Failed to get photo: " + response.statusText);
       throw new Error(`Error fetching photo: ${response.statusText}`);
     }
   }
@@ -74,7 +73,6 @@ export class CivitJobAPI {
     if (response.ok) {
       return response.json();
     } else {
-      d.ErrorService().log("Failed to get job status:", response.statusText);
       return { scheduled: false, result: [] };
     }
   }

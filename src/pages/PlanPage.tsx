@@ -66,7 +66,7 @@ export const PlanPage: React.FC = () => {
   };
 
   const handleGoBack = async () => {
-    await planService?.savePlans();
+    planService?.SavePendingChanges();
     navigate(`/chat/${chatId}`);
   };
 

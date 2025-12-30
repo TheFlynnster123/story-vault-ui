@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useGrokKey } from "./useGrokKey";
 import {
-  PasswordInput,
+  TextInput,
   Button,
   Group,
   Alert,
@@ -19,10 +19,6 @@ export const GrokKeyManager: React.FC = () => {
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [grokKey, setGrokKey] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-
-  const handleUpdateKeyClick = () => {
-    setShowKeyInput(true);
-  };
 
   const handleCancelUpdate = () => {
     setShowKeyInput(false);
@@ -72,55 +68,23 @@ export const GrokKeyManager: React.FC = () => {
     }
   };
 
-  const renderStatus = () => {
-    if (hasValidGrokKey === undefined) {
-      return (
-        <Group>
-          <Loader size="sm" />
-          <Text>Checking key status...</Text>
-        </Group>
-      );
-    }
-    return (
-      <Alert
-        icon={
-          hasValidGrokKey ? <RiCheckboxCircleLine /> : <RiErrorWarningLine />
-        }
-        color={hasValidGrokKey ? "green" : "red"}
-        title={
-          hasValidGrokKey
-            ? "Valid Grok key configured"
-            : "No valid Grok key found"
-        }
-      >
-        {!showKeyInput && (
-          <Button
-            onClick={handleUpdateKeyClick}
-            size="xs"
-            variant="outline"
-            mt="sm"
-          >
-            {hasValidGrokKey ? "Update Key" : "Add Key"}
-          </Button>
-        )}
-      </Alert>
-    );
-  };
-
   return (
-    <Stack>
-      {renderStatus()}
+    <Stack w={"100%"}>
+      <KeyStatus
+        hasValidGrokKey={hasValidGrokKey}
+        showKeyInput={showKeyInput}
+        onUpdateClick={() => setShowKeyInput(true)}
+      />
       {showKeyInput && (
-        <Stack mt="md">
-          <PasswordInput
+        <Stack mb="sm">
+          <TextInput
             label="Enter your Grok API key"
             placeholder="Enter Grok API key..."
             value={grokKey}
             onChange={(e) => setGrokKey(e.target.value)}
             disabled={isUpdating}
-            autoFocus
           />
-          <Group>
+          <Group justify="center">
             <Button
               variant="default"
               onClick={handleCancelUpdate}
@@ -137,6 +101,49 @@ export const GrokKeyManager: React.FC = () => {
             </Button>
           </Group>
         </Stack>
+      )}
+    </Stack>
+  );
+};
+
+interface IKeyStatus {
+  hasValidGrokKey: boolean | undefined;
+  showKeyInput: boolean;
+  onUpdateClick: () => void;
+}
+
+const KeyStatus = ({
+  hasValidGrokKey,
+  showKeyInput,
+  onUpdateClick,
+}: IKeyStatus) => {
+  if (hasValidGrokKey === undefined) {
+    return (
+      <Group>
+        <Loader size="sm" />
+        <Text>Checking key status...</Text>
+      </Group>
+    );
+  }
+
+  const isValid = hasValidGrokKey;
+
+  return (
+    <Stack gap="sm" align="center">
+      <Alert
+        w="100%"
+        icon={isValid ? <RiCheckboxCircleLine /> : <RiErrorWarningLine />}
+        color={isValid ? "green" : "red"}
+        title={
+          <Text ta="center">
+            {isValid ? "Valid Grok key configured" : "No valid Grok key found"}
+          </Text>
+        }
+      />
+      {!showKeyInput && (
+        <Button onClick={onUpdateClick} size="sm" variant="outline">
+          {isValid ? "Update Key" : "Add Key"}
+        </Button>
       )}
     </Stack>
   );

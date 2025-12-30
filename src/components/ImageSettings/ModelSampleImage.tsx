@@ -1,5 +1,6 @@
 import React from "react";
-import { Image, Text, Box, Loader, Group } from "@mantine/core";
+import { Image, Text, Box, Loader, Group, Center } from "@mantine/core";
+import { RiImage2Line } from "react-icons/ri";
 import { useCivitJob } from "../Images/hooks/useCivitJob";
 
 export const GLOBAL_IMAGE_CHAT_ID = "SAMPLE_IMAGE_GENERATOR";
@@ -35,7 +36,11 @@ export const ModelSampleImage: React.FC<ModelSampleImageProps> = ({
   const sizeStyles = getSizeStyles(size);
 
   if (!sampleImageJobId) {
-    return null;
+    return (
+      <Center style={sizeStyles}>
+        <RiImage2Line size={120} color="#aaa" />
+      </Center>
+    );
   }
 
   if (isLoading) {
@@ -52,11 +57,11 @@ export const ModelSampleImage: React.FC<ModelSampleImageProps> = ({
   }
 
   if (!photoBase64) {
-    return showLabel ? (
-      <Text size="sm" c="dimmed">
-        No sample available
-      </Text>
-    ) : null;
+    return (
+      <Center style={sizeStyles}>
+        <RiImage2Line size={120} color="#aaa" />
+      </Center>
+    );
   }
 
   return (

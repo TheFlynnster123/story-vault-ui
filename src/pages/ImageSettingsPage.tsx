@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
-import { RiArrowLeftLine } from "react-icons/ri";
+import { Title, Grid, ActionIcon, Group, Divider } from "@mantine/core";
+import { RiArrowLeftLine, RiImageLine } from "react-icons/ri";
 import { CivitaiKeyManager } from "../components/ImageSettings/CivitaiKeyManager";
 import { ImageModelList } from "../components/ImageSettings/ImageModelList";
 import { Page } from "./Page";
@@ -11,9 +11,7 @@ const ImageSettingsPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGoBack = async () => {
-    // Save any pending changes before navigating away
-    const userImageModels = await d.ImageModelService().GetAllImageModels();
-    await d.ImageModelService().saveUserImageModels(userImageModels);
+    d.ImageModelService().SavePendingChanges();
     navigate(-1);
   };
 
@@ -23,11 +21,7 @@ const ImageSettingsPage: React.FC = () => {
       <Grid>
         <CivitaiKeyManager />
 
-        <Grid.Col span={12}>
-          <Paper withBorder p="xl" radius="md">
-            <ImageModelList />
-          </Paper>
-        </Grid.Col>
+        <ImageModelList />
       </Grid>
     </Page>
   );
@@ -35,11 +29,14 @@ const ImageSettingsPage: React.FC = () => {
 
 const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <>
-    <Group>
-      <ActionIcon onClick={onBack} size="lg" variant="gradient">
+    <Group mb="md">
+      <ActionIcon onClick={onBack} size="lg" variant="subtle">
         <RiArrowLeftLine />
       </ActionIcon>
-      <Title order={1}>Image Settings</Title>
+      <RiImageLine size={28} />
+      <Title order={1} fw={400}>
+        Image Settings
+      </Title>
     </Group>
     <Divider my="xl" />
   </>

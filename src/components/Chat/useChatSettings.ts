@@ -19,7 +19,7 @@ export const useChatSettings = (chatId: string): UseChatSettingsResult => {
 
     const updateState = async () => {
       setIsLoading(chatSettingsService.isLoading());
-      const data = await chatSettingsService.get();
+      const data = await chatSettingsService.Get();
       setChatSettings(data);
       setIsLoading(chatSettingsService.isLoading());
     };

@@ -7,7 +7,7 @@ const DEFAULT_RETRY_DELAY_MS = 1000;
 export abstract class ManagedBlob<T> {
   protected chatId: string;
   protected data: T | undefined = undefined;
-  protected _isLoading: boolean = false;
+  protected _isLoading: boolean = true;
   protected initialized: boolean = false;
 
   private subscribers = new Set<() => void>();
@@ -44,6 +44,7 @@ export abstract class ManagedBlob<T> {
     this.fetchPromise = this.fetchAndCache().finally(() => {
       this.isFetching = false;
     });
+
     return this.fetchPromise;
   }
 
@@ -56,6 +57,16 @@ export abstract class ManagedBlob<T> {
   public saveDebounced(data: T): void {
     this.updateLocalCache(data);
     this.scheduleDebounce();
+  }
+
+  public async savePendingChanges(): Promise<void> {
+    if (!this.hasPendingDebounce()) return;
+
+    this.clearDebounce();
+
+    if (this.data !== undefined) {
+      await this.persistToBlobAPI(this.data);
+    }
   }
 
   public async refetch(): Promise<T | undefined> {
@@ -144,6 +155,10 @@ export abstract class ManagedBlob<T> {
     clearTimeout(this.debounceTimeout);
 
     this.debounceTimeout = undefined;
+  }
+
+  private hasPendingDebounce(): boolean {
+    return this.debounceTimeout !== undefined;
   }
 
   private notifySubscribers(): void {
