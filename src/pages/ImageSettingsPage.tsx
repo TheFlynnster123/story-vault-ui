@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
+import { Title, Grid, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine, RiImageLine } from "react-icons/ri";
 import { CivitaiKeyManager } from "../components/ImageSettings/CivitaiKeyManager";
 import { ImageModelList } from "../components/ImageSettings/ImageModelList";

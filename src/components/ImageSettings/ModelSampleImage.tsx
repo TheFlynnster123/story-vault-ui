@@ -1,6 +1,6 @@
 import React from "react";
 import { Image, Text, Box, Loader, Group, Center } from "@mantine/core";
-import { RiImage2Line, RiImageLine } from "react-icons/ri";
+import { RiImage2Line } from "react-icons/ri";
 import { useCivitJob } from "../Images/hooks/useCivitJob";
 
 export const GLOBAL_IMAGE_CHAT_ID = "SAMPLE_IMAGE_GENERATOR";
