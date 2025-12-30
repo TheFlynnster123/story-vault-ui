@@ -21,11 +21,7 @@ const ImageSettingsPage: React.FC = () => {
       <Grid>
         <CivitaiKeyManager />
 
-        <Grid.Col span={12}>
-          <Paper withBorder p="xl" radius="md">
-            <ImageModelList />
-          </Paper>
-        </Grid.Col>
+        <ImageModelList />
       </Grid>
     </Page>
   );

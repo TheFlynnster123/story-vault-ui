@@ -69,7 +69,7 @@ export const CivitaiKeyManager: React.FC = () => {
   };
 
   return (
-    <Stack w={"100%"}>
+    <Stack w={"100%"} mb="xl">
       <KeyStatus
         hasValidCivitaiKey={hasValidCivitaiKey}
         showKeyInput={showKeyInput}
