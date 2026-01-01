@@ -42,8 +42,8 @@ export const ChatCreationWizard: React.FC = () => {
     try {
       await createChatWithInvalidation(async () => {
         await createChat();
-        await d.RecentChatsService().recordNavigation(chatId);
       });
+      await d.RecentChatsService().recordNavigation(chatId);
       navigate(`/chat/${chatId}`);
     } catch (error) {
       console.error("Failed to create chat:", error);
