@@ -27,7 +27,7 @@ export const ChatCreationWizard: React.FC = () => {
   );
   const [chatId] = useState(uuidv4());
   const navigate = useNavigate();
-  const { createChat: createChatWithCacheInvalidation, isCreating } =
+  const { createChat: createChatWithInvalidation, isCreating } =
     useCreateChat();
 
   const updateState = (updates: Partial<ChatCreationWizardState>) => {
@@ -40,7 +40,7 @@ export const ChatCreationWizard: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await createChatWithCacheInvalidation(async () => {
+      await createChatWithInvalidation(async () => {
         await createChat();
         await d.RecentChatsService().recordNavigation(chatId);
       });
