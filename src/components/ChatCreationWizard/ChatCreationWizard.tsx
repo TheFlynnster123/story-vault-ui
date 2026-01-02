@@ -19,14 +19,16 @@ import { ChatSettingsStep } from "./ChatSettingsStep";
 import { d } from "../../services/Dependencies";
 import type { ChatSettings } from "../../services/Chat/ChatSettings";
 import { Theme } from "../Common/Theme";
+import { useCreateChat } from "../Chat/useCreateChat";
 
 export const ChatCreationWizard: React.FC = () => {
   const [state, setState] = useState<ChatCreationWizardState>(
     createInitialWizardState()
   );
   const [chatId] = useState(uuidv4());
-  const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
+  const { createChat: createChatWithInvalidation, isCreating } =
+    useCreateChat();
 
   const updateState = (updates: Partial<ChatCreationWizardState>) => {
     setState((prev) => ({ ...prev, ...updates }));
@@ -37,14 +39,14 @@ export const ChatCreationWizard: React.FC = () => {
   const goHome = () => navigate("/");
 
   const handleCreate = async () => {
-    setIsCreating(true);
     try {
-      await createChat();
+      await createChatWithInvalidation(async () => {
+        await createChat();
+      });
       await d.RecentChatsService().recordNavigation(chatId);
       navigate(`/chat/${chatId}`);
     } catch (error) {
       console.error("Failed to create chat:", error);
-      setIsCreating(false);
     }
   };
 
