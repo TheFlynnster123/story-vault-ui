@@ -3,7 +3,7 @@ import { d } from "../Dependencies";
 import { toSystemMessage } from "../Utils/MessageUtils";
 import type { LLMMessage } from "../CQRS/LLMChatProjection";
 import type { Plan } from "./Plan";
-import { ChatSettingsUtils, type ChatSettings } from "../Chat/ChatSettings";
+import { type ChatSettings } from "../Chat/ChatSettings";
 
 const CHAPTER_SUMMARY_PROMPT: string =
   "Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without formatting or a preamble.";
@@ -155,7 +155,7 @@ export class LLMMessageContextService {
   // ---- Private: Message Creators ----
 
   private createStoryPromptMessage(chatSettings: ChatSettings): LLMMessage {
-    return toSystemMessage(ChatSettingsUtils.getStoryPrompt(chatSettings));
+    return toSystemMessage(chatSettings.prompt);
   }
 
   private createChapterSummaryPromptMessage(): LLMMessage {

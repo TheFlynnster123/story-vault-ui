@@ -10,11 +10,13 @@ import {
 } from "@mantine/core";
 import { RiArrowLeftLine, RiPencilFill, RiSettings4Line } from "react-icons/ri";
 import { LuBookOpen } from "react-icons/lu";
+import { BsChatLeftText } from "react-icons/bs";
 import { v4 as uuidv4 } from "uuid";
 import type { ChatCreationWizardState } from "./ChatCreationWizardState";
 import { createInitialWizardState } from "./ChatCreationWizardState";
 import { TitleStep } from "./TitleStep";
 import { StoryStep } from "./StoryStep";
+import { PromptStep } from "./PromptStep";
 import { ChatSettingsStep } from "./ChatSettingsStep";
 import type { ChatSettings } from "../../services/Chat/ChatSettings";
 import { Theme } from "../Common/Theme";
@@ -41,8 +43,7 @@ export const ChatCreationWizard: React.FC = () => {
       const settings: ChatSettings = {
         timestampCreatedUtcMs: Date.now(),
         chatTitle: state.title.trim(),
-        promptType: state.promptType,
-        customPrompt: state.customPrompt,
+        prompt: state.prompt || "",
         backgroundPhotoBase64: state.backgroundPhotoBase64,
         backgroundPhotoCivitJobId: state.backgroundPhotoCivitJobId,
       };
@@ -87,7 +88,11 @@ export const ChatCreationWizard: React.FC = () => {
         >
           <Stepper.Step label="Title" icon={<RiPencilFill size={18} />} />
           <Stepper.Step label="Story" icon={<LuBookOpen size={18} />} />
-          <Stepper.Step label="Config" icon={<RiSettings4Line size={18} />} />
+          <Stepper.Step label="Prompt" icon={<BsChatLeftText size={18} />} />
+          <Stepper.Step
+            label="Background Photo"
+            icon={<RiSettings4Line size={18} />}
+          />
         </Stepper>
 
         <div style={{ minHeight: "400px" }}>
@@ -107,6 +112,14 @@ export const ChatCreationWizard: React.FC = () => {
             />
           )}
           {state.step === 2 && (
+            <PromptStep
+              state={state}
+              updateState={updateState}
+              onNext={nextStep}
+              onBack={prevStep}
+            />
+          )}
+          {state.step === 3 && (
             <ChatSettingsStep
               chatId={chatId}
               state={state}

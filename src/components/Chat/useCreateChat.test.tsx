@@ -1,18 +1,45 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useCreateChat } from "./useCreateChat";
+import { useCreateChat } from "../ChatCreationWizard/useCreateChat";
 import { getChatIdsQueryKey } from "../ChatMenuList/useChats";
+import { d } from "../../services/Dependencies";
+import type { ChatSettings } from "../../services/Chat/ChatSettings";
+
+vi.mock("../../services/Dependencies");
 
 describe("useCreateChat", () => {
   let queryClient: QueryClient;
+  let mockChatSettingsService: any;
+  let mockChatService: any;
+  let mockRecentChatsService: any;
 
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
+        mutations: { retry: false },
       },
     });
+
+    mockChatSettingsService = {
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mockChatService = {
+      InitializeStory: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mockRecentChatsService = {
+      recordNavigation: vi.fn().mockResolvedValue(undefined),
+    };
+
+    vi.mocked(d.ChatSettingsService).mockReturnValue(mockChatSettingsService);
+    vi.mocked(d.ChatService).mockReturnValue(mockChatService);
+    vi.mocked(d.RecentChatsService).mockReturnValue(mockRecentChatsService);
+  });
+
+  afterEach(() => {
     vi.clearAllMocks();
   });
 
@@ -20,23 +47,54 @@ describe("useCreateChat", () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
-  it("should call createChat function", async () => {
+  const createMockParams = () => ({
+    chatId: "test-chat-123",
+    settings: {
+      timestampCreatedUtcMs: Date.now(),
+      chatTitle: "Test Chat",
+      prompt: "Test prompt",
+    } as ChatSettings,
+    story: "Once upon a time...",
+  });
+
+  it("should save chat settings", async () => {
     const { result } = renderHook(() => useCreateChat(), { wrapper });
+    const params = createMockParams();
 
-    const mockCreateChatFn = vi.fn().mockResolvedValue(undefined);
+    await result.current.createChat(params);
 
-    await result.current.createChat(mockCreateChatFn);
+    expect(d.ChatSettingsService).toHaveBeenCalledWith(params.chatId);
+    expect(mockChatSettingsService.save).toHaveBeenCalledWith(params.settings);
+  });
 
-    expect(mockCreateChatFn).toHaveBeenCalledTimes(1);
+  it("should initialize story", async () => {
+    const { result } = renderHook(() => useCreateChat(), { wrapper });
+    const params = createMockParams();
+
+    await result.current.createChat(params);
+
+    expect(d.ChatService).toHaveBeenCalledWith(params.chatId);
+    expect(mockChatService.InitializeStory).toHaveBeenCalledWith(params.story);
+  });
+
+  it("should record navigation", async () => {
+    const { result } = renderHook(() => useCreateChat(), { wrapper });
+    const params = createMockParams();
+
+    await result.current.createChat(params);
+
+    expect(d.RecentChatsService).toHaveBeenCalled();
+    expect(mockRecentChatsService.recordNavigation).toHaveBeenCalledWith(
+      params.chatId
+    );
   });
 
   it("should invalidate chat-ids cache on success", async () => {
     const { result } = renderHook(() => useCreateChat(), { wrapper });
-
     const refetchQueriesSpy = vi.spyOn(queryClient, "refetchQueries");
-    const mockCreateChatFn = vi.fn().mockResolvedValue(undefined);
+    const params = createMockParams();
 
-    await result.current.createChat(mockCreateChatFn);
+    await result.current.createChat(params);
 
     await waitFor(() => {
       expect(refetchQueriesSpy).toHaveBeenCalledWith({
@@ -47,16 +105,15 @@ describe("useCreateChat", () => {
 
   it("should set isCreating to true while creating", async () => {
     const { result } = renderHook(() => useCreateChat(), { wrapper });
+    const params = createMockParams();
 
     expect(result.current.isCreating).toBe(false);
 
-    const mockCreateChatFn = vi
-      .fn()
-      .mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 100))
-      );
+    mockChatSettingsService.save.mockImplementation(
+      () => new Promise((resolve) => setTimeout(resolve, 100))
+    );
 
-    const createPromise = result.current.createChat(mockCreateChatFn);
+    const createPromise = result.current.createChat(params);
 
     await waitFor(() => {
       expect(result.current.isCreating).toBe(true);
@@ -69,28 +126,40 @@ describe("useCreateChat", () => {
     });
   });
 
-  it("should propagate errors from createChat function", async () => {
+  it("should propagate errors from save", async () => {
     const { result } = renderHook(() => useCreateChat(), { wrapper });
+    const params = createMockParams();
 
-    const mockError = new Error("Failed to create chat");
-    const mockCreateChatFn = vi.fn().mockRejectedValue(mockError);
+    mockChatSettingsService.save.mockRejectedValue(new Error("Failed to save"));
 
-    await expect(result.current.createChat(mockCreateChatFn)).rejects.toThrow(
-      "Failed to create chat"
+    await expect(result.current.createChat(params)).rejects.toThrow(
+      "Failed to save"
     );
   });
 
-  it("should not invalidate cache if createChat function fails", async () => {
+  it("should propagate errors from InitializeStory", async () => {
     const { result } = renderHook(() => useCreateChat(), { wrapper });
+    const params = createMockParams();
 
+    mockChatService.InitializeStory.mockRejectedValue(
+      new Error("Failed to initialize")
+    );
+
+    await expect(result.current.createChat(params)).rejects.toThrow(
+      "Failed to initialize"
+    );
+  });
+
+  it("should not invalidate cache if createChat fails", async () => {
+    const { result } = renderHook(() => useCreateChat(), { wrapper });
     const refetchQueriesSpy = vi.spyOn(queryClient, "refetchQueries");
-    const mockCreateChatFn = vi
-      .fn()
-      .mockRejectedValue(new Error("Failed to create"));
+    const params = createMockParams();
 
-    await expect(
-      result.current.createChat(mockCreateChatFn)
-    ).rejects.toThrow();
+    mockChatSettingsService.save.mockRejectedValue(
+      new Error("Failed to create")
+    );
+
+    await expect(result.current.createChat(params)).rejects.toThrow();
 
     expect(refetchQueriesSpy).not.toHaveBeenCalled();
   });

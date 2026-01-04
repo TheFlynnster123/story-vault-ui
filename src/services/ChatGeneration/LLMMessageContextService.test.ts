@@ -10,9 +10,8 @@ import {
 import { LLMMessageContextService } from "./LLMMessageContextService";
 import { d } from "../Dependencies";
 import type { Memory } from "./Memory";
-import { FirstPersonCharacterPrompt } from "../Chat/templates/FirstPersonCharacterTemplate";
 import type { LLMChatProjection, LLMMessage } from "../CQRS/LLMChatProjection";
-import { ChatSettingsUtils, type ChatSettings } from "../Chat/ChatSettings";
+import type { ChatSettings } from "../Chat/ChatSettings";
 import type { Plan } from "./Plan";
 import type { MemoriesService } from "./MemoriesService";
 import type { PlanService } from "./PlanService";
@@ -54,34 +53,6 @@ describe("LLMMessageContextService", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
-  });
-
-  // ---- ChatSettingsUtils.getStoryPrompt Tests ----
-  describe("ChatSettingsUtils.getStoryPrompt", () => {
-    it("should return custom prompt when promptType is Manual", () => {
-      const chatSettings =
-        createChatSettingsWithCustomPrompt("My custom prompt");
-
-      const result = ChatSettingsUtils.getStoryPrompt(chatSettings);
-
-      expect(result).toBe("My custom prompt");
-    });
-
-    it("should return FirstPersonCharacterPrompt when promptType is not Manual", () => {
-      const chatSettings = createDefaultChatSettings();
-
-      const result = ChatSettingsUtils.getStoryPrompt(chatSettings);
-
-      expect(result).toBe(FirstPersonCharacterPrompt);
-    });
-
-    it("should return FirstPersonCharacterPrompt when customPrompt is empty", () => {
-      const chatSettings = createChatSettingsWithEmptyCustomPrompt();
-
-      const result = ChatSettingsUtils.getStoryPrompt(chatSettings);
-
-      expect(result).toBe(FirstPersonCharacterPrompt);
-    });
   });
 
   // ---- buildPlanMessages Tests ----
@@ -206,7 +177,7 @@ describe("LLMMessageContextService", () => {
 
       const lastMessage = result[result.length - 1];
       expect(lastMessage.role).toBe("system");
-      expect(lastMessage.content).toBe(FirstPersonCharacterPrompt);
+      expect(lastMessage.content).toBe("Test prompt");
     });
 
     it("should exclude story prompt when includeStoryPrompt is false", async () => {
@@ -214,9 +185,7 @@ describe("LLMMessageContextService", () => {
 
       const result = await service.buildGenerationRequestMessages(false);
 
-      const hasStoryPrompt = result.some(
-        (m) => m.content === FirstPersonCharacterPrompt
-      );
+      const hasStoryPrompt = result.some((m) => m.content === "Test prompt");
       expect(hasStoryPrompt).toBe(false);
     });
 
@@ -280,9 +249,7 @@ describe("LLMMessageContextService", () => {
         "Feedback"
       );
 
-      const hasStoryPrompt = result.some(
-        (m) => m.content === FirstPersonCharacterPrompt
-      );
+      const hasStoryPrompt = result.some((m) => m.content === "Test prompt");
       expect(hasStoryPrompt).toBe(false);
     });
   });
@@ -315,25 +282,7 @@ describe("LLMMessageContextService", () => {
     return {
       timestampCreatedUtcMs: Date.now(),
       chatTitle: "Test Chat",
-      promptType: "First Person Character",
-    };
-  }
-
-  function createChatSettingsWithCustomPrompt(
-    customPrompt: string
-  ): ChatSettings {
-    return {
-      ...createDefaultChatSettings(),
-      promptType: "Manual",
-      customPrompt,
-    };
-  }
-
-  function createChatSettingsWithEmptyCustomPrompt(): ChatSettings {
-    return {
-      ...createDefaultChatSettings(),
-      promptType: "Manual",
-      customPrompt: "",
+      prompt: "Test prompt",
     };
   }
 
@@ -405,7 +354,7 @@ describe("LLMMessageContextService", () => {
   function expectStoryPromptIsLast(messages: LLMMessage[]): void {
     const lastMessage = messages[messages.length - 1];
     expect(lastMessage.role).toBe("system");
-    expect(lastMessage.content).toBe(FirstPersonCharacterPrompt);
+    expect(lastMessage.content).toBe("Test prompt");
   }
 
   function expectMessagesContainChatMessages(messages: LLMMessage[]): void {
