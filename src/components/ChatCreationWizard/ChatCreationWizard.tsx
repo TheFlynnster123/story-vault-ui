@@ -16,10 +16,9 @@ import { createInitialWizardState } from "./ChatCreationWizardState";
 import { TitleStep } from "./TitleStep";
 import { StoryStep } from "./StoryStep";
 import { ChatSettingsStep } from "./ChatSettingsStep";
-import { d } from "../../services/Dependencies";
 import type { ChatSettings } from "../../services/Chat/ChatSettings";
 import { Theme } from "../Common/Theme";
-import { useCreateChat } from "../Chat/useCreateChat";
+import { useCreateChat } from "./useCreateChat";
 
 export const ChatCreationWizard: React.FC = () => {
   const [state, setState] = useState<ChatCreationWizardState>(
@@ -27,8 +26,7 @@ export const ChatCreationWizard: React.FC = () => {
   );
   const [chatId] = useState(uuidv4());
   const navigate = useNavigate();
-  const { createChat: createChatWithInvalidation, isCreating } =
-    useCreateChat();
+  const { createChat, isCreating } = useCreateChat();
 
   const updateState = (updates: Partial<ChatCreationWizardState>) => {
     setState((prev) => ({ ...prev, ...updates }));
@@ -40,36 +38,25 @@ export const ChatCreationWizard: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await createChatWithInvalidation(async () => {
-        await createChat();
+      const settings: ChatSettings = {
+        timestampCreatedUtcMs: Date.now(),
+        chatTitle: state.title.trim(),
+        promptType: state.promptType,
+        customPrompt: state.customPrompt,
+        backgroundPhotoBase64: state.backgroundPhotoBase64,
+        backgroundPhotoCivitJobId: state.backgroundPhotoCivitJobId,
+      };
+
+      await createChat({
+        chatId,
+        settings,
+        story: state.story.trim(),
       });
-      await d.RecentChatsService().recordNavigation(chatId);
+
       navigate(`/chat/${chatId}`);
     } catch (error) {
       console.error("Failed to create chat:", error);
     }
-  };
-
-  const createChat = async () => {
-    await saveChatSettings();
-    await initializeStory();
-  };
-
-  const saveChatSettings = async () => {
-    const settings: ChatSettings = {
-      timestampCreatedUtcMs: Date.now(),
-      chatTitle: state.title.trim(),
-      promptType: state.promptType,
-      customPrompt: state.customPrompt,
-      backgroundPhotoBase64: state.backgroundPhotoBase64,
-      backgroundPhotoCivitJobId: state.backgroundPhotoCivitJobId,
-    };
-
-    await d.ChatSettingsService(chatId).save(settings);
-  };
-
-  const initializeStory = async () => {
-    await d.ChatService(chatId).InitializeStory(state.story.trim());
   };
 
   return (
