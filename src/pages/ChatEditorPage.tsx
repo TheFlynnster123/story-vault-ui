@@ -9,7 +9,6 @@ import {
   Paper,
   ActionIcon,
   Stack,
-  Select,
   Divider,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -90,8 +89,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       chatTitle: "",
       backgroundPhotoBase64: undefined as string | undefined,
       backgroundPhotoCivitJobId: undefined as string | undefined,
-      promptType: "First Person Character",
-      customPrompt: "",
+      prompt: "",
     },
     validate: {
       chatTitle: (value: string) =>
@@ -106,8 +104,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
         chatTitle: chatSettings.chatTitle || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
         backgroundPhotoCivitJobId: chatSettings.backgroundPhotoCivitJobId,
-        promptType: chatSettings.promptType || "First Person Character",
-        customPrompt: chatSettings.customPrompt || "",
+        prompt: chatSettings.prompt || "",
       };
       form.setInitialValues(values);
       form.reset();
@@ -189,9 +186,6 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
 interface ChatFormFieldsProps {
   form: {
     getInputProps: (field: string) => any;
-    values: {
-      promptType: string;
-    };
   };
   onFormUpdated: (overrides?: Partial<ChatSettings>) => void;
 }
@@ -213,28 +207,16 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
       }}
     />
 
-    <Select
+    <Textarea
       label="Prompt"
-      data={["First Person Character", "Manual"]}
-      {...form.getInputProps("promptType")}
-      onChange={(value) => {
-        form.getInputProps("promptType").onChange(value);
-        onFormUpdated({ promptType: value as any });
+      placeholder="Enter your prompt..."
+      minRows={6}
+      {...form.getInputProps("prompt")}
+      onChange={(e) => {
+        form.getInputProps("prompt").onChange(e);
+        onFormUpdated({ prompt: e.currentTarget.value });
       }}
     />
-
-    {form.values.promptType === "Manual" && (
-      <Textarea
-        label="Custom Prompt"
-        placeholder="Enter your custom prompt..."
-        p="10"
-        {...form.getInputProps("customPrompt")}
-        onChange={(e) => {
-          form.getInputProps("customPrompt").onChange(e);
-          onFormUpdated({ customPrompt: e.currentTarget.value });
-        }}
-      />
-    )}
   </Stack>
 );
 

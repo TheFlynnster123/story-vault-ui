@@ -49,6 +49,8 @@ export abstract class ManagedBlob<T> {
   }
 
   public async save(data: T): Promise<void> {
+    this._isLoading = false;
+
     this.clearDebounce();
     this.updateLocalCache(data);
     await this.persistToBlobAPI(data);

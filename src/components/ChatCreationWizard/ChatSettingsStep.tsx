@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import {
   Stack,
-  Select,
-  Textarea,
   Text,
   Button,
   Paper,
@@ -11,13 +9,12 @@ import {
   Group,
   TextInput,
   Loader,
-  Divider,
 } from "@mantine/core";
 import {
-  RiCheckLine,
   RiImageLine,
   RiSparklingLine,
   RiArrowLeftLine,
+  RiCheckLine,
 } from "react-icons/ri";
 import type { ChatCreationWizardState } from "./ChatCreationWizardState";
 import { useCivitJob } from "../Images/hooks/useCivitJob";
@@ -107,31 +104,6 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
   return (
     <Stack gap="xl">
       <Stack gap="md">
-        <Select
-          label="Prompt Type"
-          data={["First Person Character", "Manual"]}
-          value={state.promptType}
-          onChange={(value) =>
-            updateState({
-              promptType: value as "Manual" | "First Person Character",
-            })
-          }
-        />
-
-        {state.promptType === "Manual" && (
-          <Textarea
-            label="Custom Prompt"
-            placeholder="Enter your custom prompt..."
-            value={state.customPrompt}
-            onChange={(e) =>
-              updateState({ customPrompt: e.currentTarget.value })
-            }
-            minRows={4}
-          />
-        )}
-
-        <Divider />
-
         <Text size="sm" fw={500} mt="xs">
           Background Photo (Optional)
         </Text>
@@ -226,7 +198,7 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
         <Button
           onClick={onCreate}
           loading={isCreating}
-          leftSection={<RiCheckLine size={18} />}
+          rightSection={<RiCheckLine size={18} />}
           size="md"
         >
           Create Chat
