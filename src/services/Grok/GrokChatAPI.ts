@@ -14,7 +14,10 @@ export class GrokChatAPI {
     this.API_URL = Config.storyVaultAPIURL;
   }
 
-  public async postChat(messages: LLMMessage[]): Promise<string> {
+  public async postChat(
+    messages: LLMMessage[],
+    modelOverride?: string
+  ): Promise<string> {
     var grokEncryptionKey = await d.EncryptionManager().getGrokEncryptionKey();
 
     const headers: Record<string, string> = {
@@ -27,6 +30,10 @@ export class GrokChatAPI {
       messages: messages,
       ...systemSettings?.chatGenerationSettings,
     };
+
+    if (modelOverride) {
+      requestBody.model = modelOverride;
+    }
 
     const response = await this.makeRequest<{ reply: string }>(
       `/api/PostChat`,
