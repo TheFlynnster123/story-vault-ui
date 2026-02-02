@@ -65,14 +65,20 @@ export const StoryEditorPage: React.FC = () => {
         </Group>
       </Group>
 
-      <Stack mt="xl">
+      <Stack>
         <Textarea
+          my="md"
+          size="md"
           value={content}
           onChange={(e) => setContent(e.currentTarget.value)}
           placeholder="Enter story details..."
-          autosize
-          minRows={15}
           autoFocus
+          autosize={false}
+          styles={{
+            input: {
+              height: "80vh",
+            },
+          }}
         />
 
         <Group justify="flex-end">
