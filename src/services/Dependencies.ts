@@ -5,9 +5,11 @@ import { getMemoriesManagedBlobInstance } from "./Blob/MemoriesManagedBlob";
 import { getPlansManagedBlobInstance } from "./Blob/PlansManagedBlob";
 import { getRecentChatsManagedBlobInstance } from "./Blob/RecentChatsManagedBlob";
 import { getSystemSettingsManagedBlobInstance } from "./Blob/SystemSettingsManagedBlob";
+import { getSystemPromptsManagedBlobInstance } from "./Blob/SystemPromptsManagedBlob";
 import { ErrorService } from "../components/Common/ErrorService";
 import { QUERY_CLIENT } from "../App";
 import { SystemSettingsService } from "./System/SystemSettingsService";
+import { SystemPromptsService } from "./Prompts/SystemPromptsService";
 import { getChatSettingsServiceInstance } from "./Chat/ChatSettingsService";
 import { GrokChatAPI } from "./Grok/GrokChatAPI";
 import {
@@ -121,6 +123,10 @@ export class Dependencies {
     return new SystemSettingsService();
   }
 
+  SystemPromptsService() {
+    return new SystemPromptsService();
+  }
+
   ChatSettingsService(chatId: string) {
     return getChatSettingsServiceInstance(chatId);
   }
@@ -147,6 +153,10 @@ export class Dependencies {
 
   SystemSettingsManagedBlob() {
     return getSystemSettingsManagedBlobInstance();
+  }
+
+  SystemPromptsManagedBlob() {
+    return getSystemPromptsManagedBlobInstance();
   }
 
   QueryClient() {

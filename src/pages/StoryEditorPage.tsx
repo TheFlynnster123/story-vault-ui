@@ -13,6 +13,7 @@ import { LuBookOpen } from "react-icons/lu";
 import { d } from "../services/Dependencies";
 import { Theme } from "../components/Common/Theme";
 import { Page } from "./Page";
+import { StoryGeneratorModal } from "../components/StoryEditor/StoryGeneratorModal";
 
 export const StoryEditorPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -65,21 +66,32 @@ export const StoryEditorPage: React.FC = () => {
         </Group>
       </Group>
 
-      <Stack mt="xl">
+      <Stack>
         <Textarea
+          my="md"
+          size="md"
           value={content}
           onChange={(e) => setContent(e.currentTarget.value)}
           placeholder="Enter story details..."
-          autosize
-          minRows={15}
           autoFocus
+          autosize={false}
+          styles={{
+            input: {
+              height: "80vh",
+            },
+          }}
         />
 
-        <Group justify="flex-end">
-          <Button variant="default" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+        <Group justify="space-between" w="100%">
+          <StoryGeneratorModal
+            onStoryGenerated={(story) => setContent(story)}
+          />
+          <Group>
+            <Button variant="default" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>Save Changes</Button>
+          </Group>
         </Group>
       </Stack>
     </Page>

@@ -4,6 +4,7 @@ import React from "react";
 import LandingPage from "./pages/LandingPage";
 import ChatMenuPage from "./pages/ChatMenuPage";
 import SystemSettingsPage from "./pages/SystemSettingsPage";
+import SystemPromptsPage from "./pages/SystemPromptsPage";
 import ImageSettingsPage from "./pages/ImageSettingsPage";
 import ImageModelEditPage from "./pages/ImageModelEditPage";
 import { ChatEditorPage } from "./pages/ChatEditorPage";
@@ -85,6 +86,14 @@ const App: React.FC<AppProps> = () => {
             element={
               <ProtectedRoute requireGrokKey={false}>
                 <SystemSettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/system-prompts"
+            element={
+              <ProtectedRoute requireGrokKey={false}>
+                <SystemPromptsPage />
               </ProtectedRoute>
             }
           />

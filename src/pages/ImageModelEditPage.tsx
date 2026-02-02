@@ -61,7 +61,7 @@ const ImageModelEditPage: React.FC = () => {
 
   const handleGoBack = async () => {
     d.ImageModelService().SavePendingChanges();
-    navigate("/image-settings");
+    navigate(-1);
   };
 
   const handleModelChange = async (updatedModel: ImageModel) => {
