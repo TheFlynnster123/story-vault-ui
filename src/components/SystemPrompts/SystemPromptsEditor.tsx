@@ -1,22 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { useSystemPrompts } from "./useSystemPrompts";
 import { useLocation } from "react-router-dom";
-import { Group, Loader, Stack, Text, Textarea } from "@mantine/core";
+import {
+  ActionIcon,
+  Group,
+  Loader,
+  Stack,
+  Text,
+  Textarea,
+  Tooltip,
+} from "@mantine/core";
+import { VscRefresh } from "react-icons/vsc";
 import type { SystemPrompts } from "../../services/Prompts/SystemPrompts";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../services/Prompts/SystemPrompts";
 import { d } from "../../services/Dependencies";
 
 export const SystemPromptsEditor: React.FC = () => {
   const { systemPrompts, isLoading } = useSystemPrompts();
   const location = useLocation();
-  const [localPrompts, setLocalPrompts] = useState<SystemPrompts>({});
+  const [localPrompts, setLocalPrompts] = useState<SystemPrompts>(
+    DEFAULT_SYSTEM_PROMPTS,
+  );
   const [highlightedPrompt, setHighlightedPrompt] = useState<string | null>(
-    null
+    null,
   );
 
   useEffect(() => {
-    if (systemPrompts) {
-      setLocalPrompts({ ...systemPrompts });
-    }
+    setLocalPrompts({ ...systemPrompts });
   }, [systemPrompts]);
 
   useEffect(() => {
@@ -42,6 +52,15 @@ export const SystemPromptsEditor: React.FC = () => {
     d.SystemPromptsService().SaveDebounced(updatedPrompts);
   };
 
+  const handleResetToDefault = (promptKey: keyof SystemPrompts) => {
+    const updatedPrompts = {
+      ...localPrompts,
+      [promptKey]: DEFAULT_SYSTEM_PROMPTS[promptKey],
+    };
+    setLocalPrompts(updatedPrompts);
+    d.SystemPromptsService().Save(updatedPrompts);
+  };
+
   if (isLoading) {
     return (
       <Group>
@@ -59,15 +78,33 @@ export const SystemPromptsEditor: React.FC = () => {
         style={{
           padding: "12px",
           borderRadius: "8px",
-          transition: "background-color 0.3s ease",
           backgroundColor:
             highlightedPrompt === "newStoryPrompt"
-              ? "rgba(64, 192, 87, 0.1)"
+              ? "rgba(255, 152, 0, 0.1)"
               : "transparent",
+          border:
+            highlightedPrompt === "newStoryPrompt"
+              ? "2px solid rgba(255, 152, 0, 0.5)"
+              : "2px solid transparent",
+          transition: "all 0.3s ease",
         }}
       >
+        <Group justify="space-between" align="center" mb="xs">
+          <Text fw={500} size="sm">
+            New Story Generation Prompt
+          </Text>
+          <Tooltip label="Reset to default">
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => handleResetToDefault("newStoryPrompt")}
+              color="gray"
+            >
+              <VscRefresh size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
         <Textarea
-          label="New Story Generation Prompt"
           description="This prompt guides the AI when generating new stories from user input"
           value={localPrompts.newStoryPrompt || ""}
           onChange={(e) =>
@@ -80,6 +117,106 @@ export const SystemPromptsEditor: React.FC = () => {
           This system prompt is used when users generate a new story. It should
           instruct the AI to create an engaging, open-ended story opening based
           on the user's input.
+        </Text>
+      </Stack>
+
+      <Stack
+        gap="xs"
+        id="defaultThirdPersonPrompt"
+        style={{
+          padding: "12px",
+          borderRadius: "8px",
+          backgroundColor:
+            highlightedPrompt === "defaultThirdPersonPrompt"
+              ? "rgba(64, 192, 87, 0.1)"
+              : "transparent",
+          border:
+            highlightedPrompt === "defaultThirdPersonPrompt"
+              ? "2px solid rgba(64, 192, 87, 0.5)"
+              : "2px solid transparent",
+          transition: "all 0.3s ease",
+        }}
+      >
+        <Group justify="space-between" align="center" mb="xs">
+          <Text fw={500} size="sm">
+            Default Third Person Prompt
+          </Text>
+          <Tooltip label="Reset to default">
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => handleResetToDefault("defaultThirdPersonPrompt")}
+              color="gray"
+            >
+              <VscRefresh size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+        <Textarea
+          description="This prompt is used in chat conversations with third-person narration"
+          value={localPrompts.defaultThirdPersonPrompt || ""}
+          onChange={(e) =>
+            handlePromptChange({
+              defaultThirdPersonPrompt: e.currentTarget.value,
+            })
+          }
+          minRows={4}
+          autosize
+        />
+        <Text size="sm" c="dimmed">
+          This prompt guides the AI to respond in third person perspective
+          during chat conversations. It's used when creating chats with
+          third-person narration.
+        </Text>
+      </Stack>
+
+      <Stack
+        gap="xs"
+        id="defaultFirstPersonPrompt"
+        style={{
+          padding: "12px",
+          borderRadius: "8px",
+          backgroundColor:
+            highlightedPrompt === "defaultFirstPersonPrompt"
+              ? "rgba(66, 153, 225, 0.1)"
+              : "transparent",
+          border:
+            highlightedPrompt === "defaultFirstPersonPrompt"
+              ? "2px solid rgba(66, 153, 225, 0.5)"
+              : "2px solid transparent",
+          transition: "all 0.3s ease",
+        }}
+      >
+        <Group justify="space-between" align="center" mb="xs">
+          <Text fw={500} size="sm">
+            Default First Person Prompt
+          </Text>
+          <Tooltip label="Reset to default">
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => handleResetToDefault("defaultFirstPersonPrompt")}
+              color="gray"
+            >
+              <VscRefresh size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+        <Textarea
+          description="This prompt is used in chat conversations with first-person narration"
+          value={localPrompts.defaultFirstPersonPrompt || ""}
+          onChange={(e) =>
+            handlePromptChange({
+              defaultFirstPersonPrompt: e.currentTarget.value,
+            })
+          }
+          minRows={4}
+          autosize
+        />
+        <Text size="sm" c="dimmed">
+          This prompt guides the AI to respond in first person perspective
+          during chat conversations. It's used when creating chats with
+          first-person narration.
         </Text>
       </Stack>
     </Stack>

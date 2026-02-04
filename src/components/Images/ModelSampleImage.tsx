@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, Text, Box, Loader, Group, Center } from "@mantine/core";
 import { RiImage2Line } from "react-icons/ri";
-import { useCivitJob } from "../Images/hooks/useCivitJob";
+import { useCivitJob } from "./hooks/useCivitJob";
 
 export const GLOBAL_IMAGE_CHAT_ID = "SAMPLE_IMAGE_GENERATOR";
 
@@ -31,7 +31,7 @@ export const ModelSampleImage: React.FC<ModelSampleImageProps> = ({
 }) => {
   const { photoBase64, isLoading } = useCivitJob(
     GLOBAL_IMAGE_CHAT_ID,
-    sampleImageJobId || ""
+    sampleImageJobId || "",
   );
   const sizeStyles = getSizeStyles(size);
 

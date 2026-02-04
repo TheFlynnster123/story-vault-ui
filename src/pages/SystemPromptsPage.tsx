@@ -2,15 +2,11 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine } from "react-icons/ri";
-import { LuFileText } from "react-icons/lu";
+import { LuMegaphone } from "react-icons/lu";
 import { SystemPromptsEditor } from "../components/SystemPrompts/SystemPromptsEditor";
 import { Page } from "./Page";
 import { d } from "../services/Dependencies";
-
-interface SettingsSectionProps {
-  title: string;
-  children: React.ReactNode;
-}
+import { Theme } from "../components/Common/Theme";
 
 const SystemPromptsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,28 +20,15 @@ const SystemPromptsPage: React.FC = () => {
     <Page>
       <PageHeader onBack={handleGoBack} />
       <Grid>
-        <SettingsSection title="Story Generation Prompts">
-          <SystemPromptsEditor />
-        </SettingsSection>
+        <Grid.Col span={12}>
+          <Paper p="xl" radius="md">
+            <SystemPromptsEditor />
+          </Paper>
+        </Grid.Col>
       </Grid>
     </Page>
   );
 };
-
-const SettingsSection: React.FC<SettingsSectionProps> = ({
-  title,
-  children,
-}) => (
-  <Grid.Col span={{ base: 12, md: 8 }}>
-    <Paper p="xl" radius="md">
-      <Title order={3} mb="md">
-        {title}
-      </Title>
-      <Divider mb="lg" />
-      {children}
-    </Paper>
-  </Grid.Col>
-);
 
 const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <>
@@ -53,8 +36,8 @@ const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
       <ActionIcon onClick={onBack} size="lg" variant="subtle">
         <RiArrowLeftLine />
       </ActionIcon>
-      <LuFileText size={28} />
-      <Title order={1} fw={400}>
+      <LuMegaphone size={28} color={Theme.systemPrompts.primary} />
+      <Title order={1} fw={400} c={Theme.systemPrompts.primary}>
         System Prompts
       </Title>
     </Group>

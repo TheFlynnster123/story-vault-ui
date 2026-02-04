@@ -15,14 +15,14 @@ import {
 import { RiArrowLeftLine, RiImageLine, RiDeleteBinLine } from "react-icons/ri";
 import { Page } from "./Page";
 import { d } from "../services/Dependencies";
-import { SampleImageGenerator } from "../components/ImageSettings/SampleImageGenerator";
-import { ModelFromImage } from "../components/ImageSettings/ModelFromImage";
-import { ModelSampleImage } from "../components/ImageSettings/ModelSampleImage";
+import { SampleImageGenerator } from "../components/Images/SampleImageGenerator";
+import { ModelFromImage } from "../components/Images/ModelFromImage";
+import { ModelSampleImage } from "../components/Images/ModelSampleImage";
 import {
   PromptsComponent,
   ParametersComponent,
   AdditionalNetworksComponent,
-} from "../components/ImageSettings/ImageModelViewComponents";
+} from "../components/Images/ImageModelViewComponents";
 import type { ImageModel } from "../services/Image/modelGeneration/ImageModel";
 import { ConfirmModal } from "../components/Common/ConfirmModal";
 
@@ -41,7 +41,7 @@ const ImageModelEditPage: React.FC = () => {
         const imageModelService = d.ImageModelService();
         const userImageModels = await imageModelService.GetAllImageModels();
         const model = userImageModels.models.find(
-          (m: ImageModel) => m.id === modelId
+          (m: ImageModel) => m.id === modelId,
         );
 
         if (model) {
@@ -107,7 +107,7 @@ const ImageModelEditPage: React.FC = () => {
     setShowDeleteConfirm(false);
     await d.ImageModelService().DeleteImageModel(imageModel.id);
     d.ImageModelService().SavePendingChanges();
-    navigate("/image-settings");
+    navigate("/default-image-models");
   };
 
   const handleDeleteCancel = () => {
@@ -131,7 +131,7 @@ const ImageModelEditPage: React.FC = () => {
           {error || "Model not found"}
         </Alert>
         <Button onClick={handleGoBack} mt="md">
-          Back to Image Settings
+          Back to Default Image Models
         </Button>
       </Page>
     );

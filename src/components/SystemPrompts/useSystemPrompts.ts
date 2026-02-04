@@ -4,15 +4,18 @@ import type { SystemPrompts } from "../../services/Prompts/SystemPrompts";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../services/Prompts/SystemPrompts";
 
 interface UseSystemPromptsResult {
-  systemPrompts: SystemPrompts | undefined;
+  systemPrompts: SystemPrompts;
   isLoading: boolean;
   saveSystemPrompts: (systemPrompts: SystemPrompts) => Promise<void>;
 }
 
 export const useSystemPrompts = (): UseSystemPromptsResult => {
-  const [systemPrompts, setSystemPrompts] = useState<SystemPrompts | undefined>(
-    undefined
-  );
+  const [systemPrompts, setSystemPrompts] = useState<SystemPrompts>({
+    newStoryPrompt: "",
+    defaultFirstPersonPrompt: "",
+    defaultThirdPersonPrompt: "",
+    defaultImagePrompt: "",
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   const blob = () => d.SystemPromptsManagedBlob();
@@ -37,7 +40,7 @@ export const useSystemPrompts = (): UseSystemPromptsResult => {
   }, []);
 
   const saveSystemPrompts = async (
-    newPrompts: SystemPrompts
+    newPrompts: SystemPrompts,
   ): Promise<void> => {
     await blob().save(newPrompts);
   };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Stepper,
@@ -19,14 +19,25 @@ import { ChatSettingsStep } from "./ChatSettingsStep";
 import type { ChatSettings } from "../../services/Chat/ChatSettings";
 import { Theme } from "../Common/Theme";
 import { useCreateChat } from "./useCreateChat";
+import { useSystemPrompts } from "../SystemPrompts/useSystemPrompts";
 
 export const ChatCreationWizard: React.FC = () => {
   const [state, setState] = useState<ChatCreationWizardState>(
-    createInitialWizardState()
+    createInitialWizardState(),
   );
   const [chatId] = useState(uuidv4());
   const navigate = useNavigate();
   const { createChat, isCreating } = useCreateChat();
+  const { systemPrompts } = useSystemPrompts();
+
+  useEffect(() => {
+    if (systemPrompts.defaultThirdPersonPrompt && !state.prompt) {
+      setState((prev) => ({
+        ...prev,
+        prompt: systemPrompts.defaultThirdPersonPrompt,
+      }));
+    }
+  }, [systemPrompts.defaultThirdPersonPrompt, state.prompt]);
 
   const updateState = (updates: Partial<ChatCreationWizardState>) => {
     setState((prev) => ({ ...prev, ...updates }));

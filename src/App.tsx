@@ -5,7 +5,7 @@ import LandingPage from "./pages/LandingPage";
 import ChatMenuPage from "./pages/ChatMenuPage";
 import SystemSettingsPage from "./pages/SystemSettingsPage";
 import SystemPromptsPage from "./pages/SystemPromptsPage";
-import ImageSettingsPage from "./pages/ImageSettingsPage";
+import DefaultImageModelsPage from "./pages/DefaultImageModelsPage";
 import ImageModelEditPage from "./pages/ImageModelEditPage";
 import { ChatEditorPage } from "./pages/ChatEditorPage";
 import ChatPage from "./pages/ChatPage";
@@ -98,15 +98,15 @@ const App: React.FC<AppProps> = () => {
             }
           />
           <Route
-            path="/image-settings"
+            path="/default-image-models"
             element={
               <ProtectedRoute requireGrokKey={false}>
-                <ImageSettingsPage />
+                <DefaultImageModelsPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/image-settings/edit/:modelId"
+            path="/default-image-models/edit/:modelId"
             element={
               <ProtectedRoute requireGrokKey={false}>
                 <ImageModelEditPage />

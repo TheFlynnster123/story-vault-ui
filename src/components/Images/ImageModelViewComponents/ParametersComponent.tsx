@@ -1,6 +1,6 @@
 import React from "react";
 import { NumberInput, Group, Stack, Title, TextInput } from "@mantine/core";
-import { SchedulerCombobox } from "../SchedulerCombobox";
+import { SchedulerCombobox } from "../../Images/SchedulerCombobox";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { d } from "../../../services/Dependencies";
 import type { ImageModel } from "../../../services/Image/modelGeneration/ImageModel";
@@ -16,7 +16,7 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
 }) => {
   const handleParameterChange = (
     field: keyof FromTextInput["params"],
-    value: string | number
+    value: string | number,
   ) => {
     onChange({
       ...imageModel,

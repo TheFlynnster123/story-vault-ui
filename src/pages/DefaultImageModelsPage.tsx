@@ -6,7 +6,7 @@ import { ImageModelList } from "../components/Images/ImageModelList";
 import { Page } from "./Page";
 import { d } from "../services/Dependencies";
 
-const ImageSettingsPage: React.FC = () => {
+const DefaultImageModelsPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGoBack = async () => {
@@ -39,4 +39,4 @@ const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   </>
 );
 
-export default ImageSettingsPage;
+export default DefaultImageModelsPage;

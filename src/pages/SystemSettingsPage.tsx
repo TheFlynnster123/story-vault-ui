@@ -5,6 +5,7 @@ import { RiArrowLeftLine, RiSettings3Line } from "react-icons/ri";
 import { SystemSettingsEditor } from "../components/SystemSettings/SystemSettingsEditor";
 import { Page } from "./Page";
 import { GrokKeyManager } from "../components/Grok/GrokKeyManager";
+import { CivitaiKeyManager } from "../components/Images/CivitaiKeyManager";
 import { d } from "../services/Dependencies";
 
 interface SettingsSectionProps {
@@ -26,6 +27,10 @@ const SystemSettingsPage: React.FC = () => {
       <Grid>
         <SettingsSection title="Grok API Configuration">
           <GrokKeyManager />
+        </SettingsSection>
+
+        <SettingsSection title="Civitai API Configuration">
+          <CivitaiKeyManager />
         </SettingsSection>
 
         <SettingsSection title="Chat Generation Settings">

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { SystemSettingsButton } from "../components/ChatMenuList/SystemSettingsButton";
-import { ImageSettingsButton } from "../components/ChatMenuList/ImageSettingsButton";
+import { SystemPromptsButton } from "../components/ChatMenuList/SystemPromptsButton";
+import { DefaultImageModelsButton } from "../components/ChatMenuList/DefaultImageModelsButton";
 import { CreateChatButton } from "../components/ChatMenuList/CreateChatButton";
 import { ChatList } from "../components/ChatMenuList/ChatList";
 import styled from "styled-components";
@@ -46,7 +47,8 @@ const ChatMenuPage = () => {
           <ChatMenuTitle>Chats</ChatMenuTitle>
           <SystemSettingsContainer>
             <SystemSettingsButton />
-            <ImageSettingsButton />
+            <DefaultImageModelsButton />
+            <SystemPromptsButton />
           </SystemSettingsContainer>
         </ChatMenuHeader>
         <CreateChatButton />

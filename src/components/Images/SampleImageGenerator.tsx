@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button, Group } from "@mantine/core";
 import { RiImageLine, RiErrorWarningLine, RiCheckLine } from "react-icons/ri";
-import { useCivitJob } from "../Images/hooks/useCivitJob";
+import { useCivitJob } from "./hooks/useCivitJob";
 import { d } from "../../services/Dependencies";
 import type { ImageModel } from "../../services/Image/modelGeneration/ImageModel";
 
@@ -17,7 +17,7 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
   onSampleImageCreated,
 }) => {
   const [jobId, setJobId] = useState<string | null>(
-    model.sampleImageId || null
+    model.sampleImageId || null,
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);

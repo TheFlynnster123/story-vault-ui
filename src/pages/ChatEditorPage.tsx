@@ -216,6 +216,7 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
         form.getInputProps("prompt").onChange(e);
         onFormUpdated({ prompt: e.currentTarget.value });
       }}
+      styles={{ input: { height: "30vh" } }}
     />
   </Stack>
 );

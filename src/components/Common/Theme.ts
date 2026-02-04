@@ -66,6 +66,21 @@ export const Theme = {
     backgroundSecondary: "rgba(190, 24, 93, 0.3)",
   },
 
+  /** Colors for system prompts UI elements - Orange/Amber theme */
+  systemPrompts: {
+    /** Primary orange color */
+    primary: "rgba(255, 152, 0, 1)",
+    /** Secondary darker orange */
+    secondary: "rgba(230, 81, 0, 1)",
+    /** Border color for system prompt elements */
+    border: "rgba(255, 152, 0, 0.5)",
+    /** Text color for headers */
+    headerText: "rgba(255, 255, 255, 1)",
+    /** Transparent version for backgrounds */
+    backgroundPrimary: "rgba(255, 152, 0, 0.8)",
+    backgroundSecondary: "rgba(230, 81, 0, 0.8)",
+  },
+
   /** Colors for different message types */
   messages: {
     /** User message colors */

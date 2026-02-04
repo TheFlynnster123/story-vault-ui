@@ -1,5 +1,3 @@
-import { d } from "../../services/Dependencies";
-
 export interface ChatCreationWizardState {
   step: number;
   title: string;
@@ -17,7 +15,7 @@ export const createInitialWizardState = (): ChatCreationWizardState => {
     title: "",
     story: "",
     promptType: "Third Person",
-    prompt: d.DefaultPrompts().ThirdPersonChatPrompt(),
+    prompt: "",
     generateImage: false,
   };
 };

@@ -1,11 +1,18 @@
-import { Stack, Loader, Text, Alert, Button, Paper } from "@mantine/core";
+import {
+  Stack,
+  Loader,
+  Text,
+  Alert,
+  Button,
+  Paper,
+} from "@mantine/core";
 import React from "react";
 import { RiAddLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
+import { useImageModels } from "./useImageModels";
+import { ImageModelListItem } from "./ImageModelListItem";
 import type { ImageModel } from "../../services/Image/modelGeneration/ImageModel";
-import { useImageModels } from "../Images/useImageModels";
-import { ImageModelListItem } from "../Images/ImageModelListItem";
 
 export const ImageModelList: React.FC = () => {
   const navigate = useNavigate();

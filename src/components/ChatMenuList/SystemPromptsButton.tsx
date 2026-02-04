@@ -1,17 +1,17 @@
-import { RiImageFill } from "react-icons/ri";
+import { LuMegaphone } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
-export const ImageSettingsButton = () => {
+export const SystemPromptsButton = () => {
   const navigate = useNavigate();
 
   return (
     <StyledButton
-      onClick={() => navigate("/image-settings")}
-      aria-label="Open image settings"
-      title="Image Settings"
+      onClick={() => navigate("/system-prompts")}
+      aria-label="Open system prompts"
+      title="System Prompts"
     >
-      <RiImageFill />
+      <LuMegaphone />
     </StyledButton>
   );
 };
