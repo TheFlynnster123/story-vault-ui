@@ -59,12 +59,8 @@ import { ChatEventStore } from "./CQRS/ChatEventStore";
 import { ChatService } from "./CQRS/ChatService";
 import { ChatAPI } from "./Chat/ChatAPI";
 import { MemoriesService } from "./ChatGeneration/MemoriesService";
-import { DefaultPrompts } from "./Prompts/DefaultPrompts";
 
 export class Dependencies {
-  DefaultPrompts() {
-    return new DefaultPrompts();
-  }
   CivitKeyAPI() {
     return new CivitKeyAPI();
   }
@@ -110,7 +106,7 @@ export class Dependencies {
   }
   LLMMessageContextService(chatId: string) {
     return getLLMMessageContextServiceInstance(
-      chatId
+      chatId,
     ) as LLMMessageContextService;
   }
   GrokChatAPI() {

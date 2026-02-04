@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useCivitaiKey } from "../Images/hooks/useCivitaiKey";
+import { useCivitaiKey } from "./hooks/useCivitaiKey";
 import {
   TextInput,
   Button,

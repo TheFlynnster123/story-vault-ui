@@ -1,1 +1,1 @@
-export { CivitaiKeyManager } from "../ImageSettings/CivitaiKeyManager";
+export { CivitaiKeyManager } from "../Images/CivitaiKeyManager";

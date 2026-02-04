@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../test-utils";
 import { SampleImageGenerator } from "./SampleImageGenerator";
-import { useCivitJob } from "../Images/hooks/useCivitJob";
+import { useCivitJob } from "./hooks/useCivitJob";
 import type { ImageModel } from "../../services/Image/modelGeneration/ImageModel";
 import { d } from "../../services/Dependencies";
 
@@ -57,7 +57,7 @@ describe("SampleImageGenerator", () => {
       <SampleImageGenerator
         model={mockImageModel}
         onSampleImageCreated={mockOnSampleImageCreated}
-      />
+      />,
     );
 
     const button = screen.getByRole("button");
@@ -76,7 +76,7 @@ describe("SampleImageGenerator", () => {
       <SampleImageGenerator
         model={mockImageModel}
         onSampleImageCreated={mockOnSampleImageCreated}
-      />
+      />,
     );
 
     const button = screen.getByRole("button");
@@ -104,7 +104,7 @@ describe("SampleImageGenerator", () => {
       <SampleImageGenerator
         model={modelWithJobId}
         onSampleImageCreated={mockOnSampleImageCreated}
-      />
+      />,
     );
 
     const button = screen.getByRole("button");
@@ -120,7 +120,7 @@ describe("SampleImageGenerator", () => {
       <SampleImageGenerator
         model={mockImageModel}
         onSampleImageCreated={mockOnSampleImageCreated}
-      />
+      />,
     );
 
     const button = screen.getByRole("button");
@@ -141,7 +141,7 @@ describe("SampleImageGenerator", () => {
       <SampleImageGenerator
         model={mockImageModel}
         onSampleImageCreated={mockOnSampleImageCreated}
-      />
+      />,
     );
 
     const button = screen.getByRole("button");
@@ -172,7 +172,7 @@ describe("SampleImageGenerator", () => {
       <SampleImageGenerator
         model={modelWithNetworks}
         onSampleImageCreated={mockOnSampleImageCreated}
-      />
+      />,
     );
 
     const button = screen.getByRole("button");
@@ -204,7 +204,7 @@ describe("SampleImageGenerator", () => {
       <SampleImageGenerator
         model={mockImageModel}
         onSampleImageCreated={mockOnSampleImageCreated}
-      />
+      />,
     );
 
     expect(useCivitJob).toHaveBeenCalledWith("SAMPLE_IMAGE_GENERATOR", "");
@@ -219,7 +219,7 @@ describe("SampleImageGenerator", () => {
       <SampleImageGenerator
         model={mockImageModel}
         onSampleImageCreated={mockOnSampleImageCreated}
-      />
+      />,
     );
 
     const button = screen.getByRole("button");
