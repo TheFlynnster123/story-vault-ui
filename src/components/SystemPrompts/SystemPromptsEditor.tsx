@@ -14,6 +14,7 @@ import { VscRefresh } from "react-icons/vsc";
 import type { SystemPrompts } from "../../services/Prompts/SystemPrompts";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../services/Prompts/SystemPrompts";
 import { d } from "../../services/Dependencies";
+import { ConfirmModal } from "../Common/ConfirmModal";
 
 export const SystemPromptsEditor: React.FC = () => {
   const { systemPrompts, isLoading } = useSystemPrompts();
@@ -24,6 +25,15 @@ export const SystemPromptsEditor: React.FC = () => {
   const [highlightedPrompt, setHighlightedPrompt] = useState<string | null>(
     null,
   );
+  const [resetConfirmation, setResetConfirmation] = useState<{
+    isOpen: boolean;
+    promptKey: keyof SystemPrompts | null;
+    promptName: string;
+  }>({
+    isOpen: false,
+    promptKey: null,
+    promptName: "",
+  });
 
   useEffect(() => {
     setLocalPrompts({ ...systemPrompts });
@@ -52,13 +62,32 @@ export const SystemPromptsEditor: React.FC = () => {
     d.SystemPromptsService().SaveDebounced(updatedPrompts);
   };
 
-  const handleResetToDefault = (promptKey: keyof SystemPrompts) => {
-    const updatedPrompts = {
-      ...localPrompts,
-      [promptKey]: DEFAULT_SYSTEM_PROMPTS[promptKey],
-    };
-    setLocalPrompts(updatedPrompts);
-    d.SystemPromptsService().Save(updatedPrompts);
+  const handleResetClick = (
+    promptKey: keyof SystemPrompts,
+    promptName: string,
+  ) => {
+    setResetConfirmation({
+      isOpen: true,
+      promptKey,
+      promptName,
+    });
+  };
+
+  const handleResetConfirm = () => {
+    if (resetConfirmation.promptKey) {
+      const updatedPrompts = {
+        ...localPrompts,
+        [resetConfirmation.promptKey]:
+          DEFAULT_SYSTEM_PROMPTS[resetConfirmation.promptKey],
+      };
+      setLocalPrompts(updatedPrompts);
+      d.SystemPromptsService().Save(updatedPrompts);
+    }
+    setResetConfirmation({ isOpen: false, promptKey: null, promptName: "" });
+  };
+
+  const handleResetCancel = () => {
+    setResetConfirmation({ isOpen: false, promptKey: null, promptName: "" });
   };
 
   if (isLoading) {
@@ -72,6 +101,14 @@ export const SystemPromptsEditor: React.FC = () => {
 
   return (
     <Stack gap="md">
+      <ConfirmModal
+        isOpen={resetConfirmation.isOpen}
+        onCancel={handleResetCancel}
+        onConfirm={handleResetConfirm}
+        title="Reset Prompt to Default"
+        message={`Are you sure you want to reset "${resetConfirmation.promptName}" to its default value? This action cannot be undone.`}
+      />
+
       <Stack
         gap="xs"
         id="newStoryPrompt"
@@ -97,7 +134,12 @@ export const SystemPromptsEditor: React.FC = () => {
             <ActionIcon
               variant="subtle"
               size="sm"
-              onClick={() => handleResetToDefault("newStoryPrompt")}
+              onClick={() =>
+                handleResetClick(
+                  "newStoryPrompt",
+                  "New Story Generation Prompt",
+                )
+              }
               color="gray"
             >
               <VscRefresh size={16} />
@@ -145,7 +187,12 @@ export const SystemPromptsEditor: React.FC = () => {
             <ActionIcon
               variant="subtle"
               size="sm"
-              onClick={() => handleResetToDefault("defaultThirdPersonPrompt")}
+              onClick={() =>
+                handleResetClick(
+                  "defaultThirdPersonPrompt",
+                  "Default Third Person Prompt",
+                )
+              }
               color="gray"
             >
               <VscRefresh size={16} />
@@ -195,7 +242,12 @@ export const SystemPromptsEditor: React.FC = () => {
             <ActionIcon
               variant="subtle"
               size="sm"
-              onClick={() => handleResetToDefault("defaultFirstPersonPrompt")}
+              onClick={() =>
+                handleResetClick(
+                  "defaultFirstPersonPrompt",
+                  "Default First Person Prompt",
+                )
+              }
               color="gray"
             >
               <VscRefresh size={16} />

@@ -29,7 +29,11 @@ export const PromptStep: React.FC<PromptStepProps> = ({
       return systemPrompts.defaultFirstPersonPrompt || "";
     }
     return "";
-  }, [state.promptType, systemPrompts.defaultThirdPersonPrompt, systemPrompts.defaultFirstPersonPrompt]);
+  }, [
+    state.promptType,
+    systemPrompts.defaultThirdPersonPrompt,
+    systemPrompts.defaultFirstPersonPrompt,
+  ]);
 
   const handlePromptTypeChange = (value: string | null) => {
     if (!value) return;
