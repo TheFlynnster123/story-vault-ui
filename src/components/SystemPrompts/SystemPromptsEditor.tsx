@@ -69,7 +69,7 @@ export const SystemPromptsEditor: React.FC = () => {
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="sm">
       <ConfirmModal
         isOpen={resetConfirmation.isOpen}
         onCancel={handleResetCancel}

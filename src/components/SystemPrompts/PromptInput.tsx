@@ -43,12 +43,12 @@ export const PromptInput: React.FC<PromptInputProps> = ({
       transition: "all 0.3s ease",
     }}
   >
-    <Group justify="space-between" align="center">
-      <Text fw={500} size="sm">
+    <Group justify="space-between" align="center" mb={0}>
+      <Text fw={600} size="md" c="orange">
         {label}
       </Text>
       <Tooltip label="Reset to default">
-        <ActionIcon variant="subtle" size="sm" onClick={onReset} color="gray">
+        <ActionIcon variant="light" size="sm" onClick={onReset} color="orange">
           <VscRefresh size={16} />
         </ActionIcon>
       </Tooltip>

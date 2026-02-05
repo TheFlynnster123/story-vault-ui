@@ -21,7 +21,7 @@ const SystemPromptsPage: React.FC = () => {
       <PageHeader onBack={handleGoBack} />
       <Grid>
         <Grid.Col span={12}>
-          <Paper p="xl" radius="md">
+          <Paper p="md" radius="md">
             <SystemPromptsEditor />
           </Paper>
         </Grid.Col>
@@ -41,7 +41,7 @@ const PageHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
         System Prompts
       </Title>
     </Group>
-    <Divider my="xl" />
+    <Divider mb="md" mt="xl" />
   </>
 );
 
