@@ -12,6 +12,9 @@ import ChatPage from "./pages/ChatPage";
 import { PlanPage } from "./pages/PlanPage";
 import { MemoriesPage } from "./pages/MemoriesPage";
 import { StoryEditorPage } from "./pages/StoryEditorPage";
+import { ChatImageModelsPage } from "./pages/ChatImageModelsPage";
+import ChatImageModelTemplatePage from "./pages/ChatImageModelTemplatePage";
+import ChatImageModelEditPage from "./pages/ChatImageModelEditPage";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { ChatCreationWizard } from "./components/ChatCreationWizard/ChatCreationWizard";
 
@@ -62,6 +65,30 @@ const App: React.FC<AppProps> = () => {
             element={
               <ProtectedRoute>
                 <MemoriesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/image-models"
+            element={
+              <ProtectedRoute>
+                <ChatImageModelsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/image-models/add-from-template"
+            element={
+              <ProtectedRoute>
+                <ChatImageModelTemplatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/image-models/edit/:modelId"
+            element={
+              <ProtectedRoute>
+                <ChatImageModelEditPage />
               </ProtectedRoute>
             }
           />

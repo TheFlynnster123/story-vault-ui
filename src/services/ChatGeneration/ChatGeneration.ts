@@ -4,7 +4,7 @@ import { d } from "../Dependencies";
 const chatGenerationInstances = new Map<string, ChatGeneration>();
 
 export const getChatGenerationInstance = (
-  chatId: string | null
+  chatId: string | null,
 ): ChatGeneration | null => {
   if (!chatId) return null;
 
@@ -74,11 +74,13 @@ export class ChatGeneration {
       this.setStatus("Generating image prompt...");
       const messageList = d.LLMChatProjection(this.chatId).GetMessages();
       const generatedPrompt = await d
-        .ImageGenerator()
+        .ImageGenerator(this.chatId)
         .generatePrompt(messageList);
 
       this.setStatus("Triggering image generation...");
-      const jobId = await d.ImageGenerator().triggerJob(generatedPrompt);
+      const jobId = await d
+        .ImageGenerator(this.chatId)
+        .triggerJob(generatedPrompt);
 
       this.setStatus("Saving job...");
       await d.ChatService(this.chatId).CreateCivitJob(jobId, generatedPrompt);
@@ -93,7 +95,7 @@ export class ChatGeneration {
 
   async regenerateResponse(
     messageId: string,
-    feedback?: string
+    feedback?: string,
   ): Promise<string | undefined> {
     const message = d.LLMChatProjection(this.chatId).GetMessage(messageId);
 
@@ -188,11 +190,13 @@ export class ChatGeneration {
       this.setStatus("Generating image prompt...");
       const messageList = d.LLMChatProjection(this.chatId).GetMessages();
       const generatedPrompt = await d
-        .ImageGenerator()
+        .ImageGenerator(this.chatId)
         .generatePromptWithFeedback(messageList, originalPrompt, feedback);
 
       this.setStatus("Triggering image generation...");
-      const newJobId = await d.ImageGenerator().triggerJob(generatedPrompt);
+      const newJobId = await d
+        .ImageGenerator(this.chatId)
+        .triggerJob(generatedPrompt);
 
       this.setStatus("Saving job...");
       await d

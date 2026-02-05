@@ -1,5 +1,6 @@
 import { BlobAPI } from "./Blob/BlobAPI";
 import { getChatSettingsManagedBlobInstance } from "./Blob/ChatSettingsManagedBlob";
+import { getChatImageModelsManagedBlobInstance } from "./Blob/ChatImageModelsManagedBlob";
 import { getImageModelsManagedBlobInstance } from "./Blob/ImageModelsManagedBlob";
 import { getMemoriesManagedBlobInstance } from "./Blob/MemoriesManagedBlob";
 import { getPlansManagedBlobInstance } from "./Blob/PlansManagedBlob";
@@ -25,6 +26,7 @@ import {
   getLLMMessageContextServiceInstance,
 } from "./ChatGeneration/LLMMessageContextService";
 import { ImageGenerator } from "./Image/ImageGenerator";
+import { getChatImageModelServiceInstance } from "./Image/ChatImageModelService";
 import {
   UserChatProjection,
   getUserChatProjectionInstance,
@@ -95,8 +97,14 @@ export class Dependencies {
   MemoriesService(chatId: string) {
     return new MemoriesService(chatId);
   }
-  ImageGenerator() {
-    return new ImageGenerator();
+  ImageGenerator(chatId: string) {
+    return new ImageGenerator(chatId);
+  }
+  ChatImageModelService(chatId: string) {
+    return getChatImageModelServiceInstance(chatId);
+  }
+  ChatImageModelsManagedBlob(chatId: string) {
+    return getChatImageModelsManagedBlobInstance(chatId);
   }
   ChatGenerationService(chatId: string) {
     return getChatGenerationInstance(chatId) as ChatGeneration;
