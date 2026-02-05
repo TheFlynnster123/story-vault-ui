@@ -114,7 +114,6 @@ const ActionButtons = ({
   isExpanded: boolean;
 }) => {
   const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
-    console.log("yo");
     e.stopPropagation();
     e.preventDefault();
 
