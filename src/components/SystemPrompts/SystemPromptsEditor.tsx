@@ -124,6 +124,22 @@ export const SystemPromptsEditor: React.FC = () => {
           )
         }
       />
+
+      <PromptInput
+        id="defaultImagePrompt"
+        label="Default Image Generation Prompt"
+        helpText="This prompt instructs the AI how to describe scenes for image generation. It's used when generating images in chats unless overridden by a chat-specific image model prompt."
+        value={localPrompts.defaultImagePrompt || ""}
+        isHighlighted={highlightedPrompt === "defaultImagePrompt"}
+        onChange={(value) => handlePromptChange({ defaultImagePrompt: value })}
+        onReset={() =>
+          handleResetClick(
+            "defaultImagePrompt",
+            "Default Image Generation Prompt",
+          )
+        }
+        minRows={6}
+      />
     </Stack>
   );
 };

@@ -7,6 +7,7 @@ import { ChapterSection } from "./ChapterSection";
 import { ChatSettingsButton } from "./ChatSettingsButton";
 import { PlanSection } from "./PlanSection";
 import { MemoriesSection } from "./MemoriesSection";
+import { ChatImageModelsSection } from "./ChatImageModelsSection";
 
 interface FlowAccordionProps {
   chatId: string;
@@ -19,6 +20,8 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
   const navigateToChatSettings = () => navigate(`/chat/${chatId}/edit`);
   const navigateToPlan = () => navigate(`/chat/${chatId}/plan`);
   const navigateToMemories = () => navigate(`/chat/${chatId}/memories`);
+  const navigateToChatImageModels = () =>
+    navigate(`/chat/${chatId}/image-models`);
 
   return (
     <Box
@@ -40,6 +43,10 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
               <MemoriesSection
                 chatId={chatId}
                 onNavigate={navigateToMemories}
+              />
+              <ChatImageModelsSection
+                chatId={chatId}
+                onNavigate={navigateToChatImageModels}
               />
             </Stack>
           </Accordion.Panel>

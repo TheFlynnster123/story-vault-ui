@@ -37,5 +37,15 @@ Keep the opening concise but compelling. Focus on creating a strong foundation t
     "Respond with the next message in the conversation in first person. Keep dialogue realistic and natural, with full sentences. Respond directly where the users response ends.",
   defaultThirdPersonPrompt:
     "Respond with the next message in the conversation in third person. Keep dialogue realistic and natural, with full sentences. Respond directly where the users response ends.",
-  defaultImagePrompt: "",
+  defaultImagePrompt: `Consider setting and the character present.
+
+For each reply, include 3–5 words for:
+- **Setting** (where the scene takes place)
+- **Description of person involved** (appearance, clothing, notable traits)
+- **Description of what they are doing** (their action or posture)
+
+Respond with ONLY a detailed, comma separated list depicting the current characters for image generation purposes.
+
+Example:
+"restaurant, evening, italian, woman, black dress, classy, sitting, touching face, at table, sitting in chair"`,
 };

@@ -14,4 +14,10 @@ export type ImageModel = {
    * The job ID for the sample image generated for this model.
    */
   sampleImageId?: string;
+
+  /**
+   * Optional LLM prompt that instructs the AI how to describe scenes for image generation.
+   * If not set, falls back to the system-level defaultImagePrompt.
+   */
+  imageGenerationPrompt?: string;
 };
