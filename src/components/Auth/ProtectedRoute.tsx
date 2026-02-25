@@ -2,7 +2,7 @@ import React from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth0Setup } from "./useAuth0Setup";
-import { useGrokKey } from "../Grok/useGrokKey";
+import { useGrokKey } from "../../features/Grok/hooks/useGrokKey";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

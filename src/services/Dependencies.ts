@@ -1,32 +1,32 @@
 import { BlobAPI } from "./Blob/BlobAPI";
-import { getChatSettingsManagedBlobInstance } from "./Blob/ChatSettingsManagedBlob";
-import { getChatImageModelsManagedBlobInstance } from "./Blob/ChatImageModelsManagedBlob";
-import { getImageModelsManagedBlobInstance } from "./Blob/ImageModelsManagedBlob";
-import { getMemoriesManagedBlobInstance } from "./Blob/MemoriesManagedBlob";
-import { getPlansManagedBlobInstance } from "./Blob/PlansManagedBlob";
-import { getRecentChatsManagedBlobInstance } from "./Blob/RecentChatsManagedBlob";
-import { getSystemSettingsManagedBlobInstance } from "./Blob/SystemSettingsManagedBlob";
-import { getSystemPromptsManagedBlobInstance } from "./Blob/SystemPromptsManagedBlob";
+import { getChatSettingsManagedBlobInstance } from "../features/Chat/services/Chat/ChatSettingsManagedBlob";
+import { getChatImageModelsManagedBlobInstance } from "../features/Images/services/ChatImageModelsManagedBlob";
+import { getImageModelsManagedBlobInstance } from "../features/Images/services/ImageModelsManagedBlob";
+import { getMemoriesManagedBlobInstance } from "../features/Memories/services/MemoriesManagedBlob";
+import { getPlansManagedBlobInstance } from "../features/Plans/services/PlansManagedBlob";
+import { getRecentChatsManagedBlobInstance } from "../features/Chat/services/Chat/RecentChatsManagedBlob";
+import { getSystemSettingsManagedBlobInstance } from "../features/SystemSettings/services/SystemSettingsManagedBlob";
+import { getSystemPromptsManagedBlobInstance } from "../features/Prompts/services/SystemPromptsManagedBlob";
 import { ErrorService } from "../components/Common/ErrorService";
 import { QUERY_CLIENT } from "../App";
-import { SystemSettingsService } from "./System/SystemSettingsService";
-import { SystemPromptsService } from "./Prompts/SystemPromptsService";
-import { getChatSettingsServiceInstance } from "./Chat/ChatSettingsService";
-import { GrokChatAPI } from "./Grok/GrokChatAPI";
+import { SystemSettingsService } from "../features/SystemSettings/services/SystemSettingsService";
+import { SystemPromptsService } from "../features/Prompts/services/SystemPromptsService";
+import { getChatSettingsServiceInstance } from "../features/Chat/services/Chat/ChatSettingsService";
+import { GrokChatAPI } from "../features/Grok/services/GrokChatAPI";
 import {
   PlanService,
   getPlanServiceInstance,
-} from "./ChatGeneration/PlanService";
+} from "../features/Plans/services/PlanService";
 import {
   ChatGeneration,
   getChatGenerationInstance,
-} from "./ChatGeneration/ChatGeneration";
+} from "../features/Chat/services/ChatGeneration/ChatGeneration";
 import {
   LLMMessageContextService,
   getLLMMessageContextServiceInstance,
-} from "./ChatGeneration/LLMMessageContextService";
-import { ImageGenerator } from "./Image/ImageGenerator";
-import { getChatImageModelServiceInstance } from "./Image/ChatImageModelService";
+} from "../features/Chat/services/ChatGeneration/LLMMessageContextService";
+import { ImageGenerator } from "../features/Images/services/ImageGenerator";
+import { getChatImageModelServiceInstance } from "../features/Images/services/ChatImageModelService";
 import {
   UserChatProjection,
   getUserChatProjectionInstance,
@@ -42,25 +42,25 @@ import {
 import {
   RecentChatsService,
   getRecentChatsServiceInstance,
-} from "./Chat/RecentChatsService";
-import { PhotoStorageService } from "./Image/PhotoStorageService";
+} from "../features/Chat/services/Chat/RecentChatsService";
+import { PhotoStorageService } from "../features/Images/services/PhotoStorageService";
 import { getAuthApiSingleton } from "./Auth/AuthAPI";
 import { getEncryptionManagerSingleton } from "./Auth/EncryptionManager";
-import { GrokKeyAPI } from "./Grok/GrokKeyAPI";
-import { CivitJobOrchestrator } from "./Image/CivitJobOrchestrator";
-import { ImageModelFromGeneratedImageService } from "./Image/modelGeneration/ImageModelFromGeneratedImageService";
-import { ImageModelService } from "./Image/modelGeneration/ImageModelService";
-import { GeneratedImageQuery } from "./Image/modelGeneration/GeneratedImageQuery";
-import { ImageIdExtractor } from "./Image/modelGeneration/ImageIdExtractor";
-import { ImageModelMapper } from "./Image/modelGeneration/ImageModelMapper";
-import { BaseModelMapper } from "./Image/modelGeneration/BaseModelMapper";
-import { SchedulerMapper } from "./Image/modelGeneration/SchedulerMapper";
-import { CivitKeyAPI } from "./Image/api/CivitKeyAPI";
-import { CivitJobAPI } from "./Image/api/CivitJobAPI";
+import { GrokKeyAPI } from "../features/Grok/services/GrokKeyAPI";
+import { CivitJobOrchestrator } from "../features/Images/services/CivitJobOrchestrator";
+import { ImageModelFromGeneratedImageService } from "../features/Images/services/modelGeneration/ImageModelFromGeneratedImageService";
+import { ImageModelService } from "../features/Images/services/modelGeneration/ImageModelService";
+import { SchedulerMapper } from "../features/Images/services/modelGeneration/SchedulerMapper";
+import { CivitKeyAPI } from "../features/Images/services/api/CivitKeyAPI";
+import { CivitJobAPI } from "../features/Images/services/api/CivitJobAPI";
 import { ChatEventStore } from "./CQRS/ChatEventStore";
 import { ChatService } from "./CQRS/ChatService";
-import { ChatAPI } from "./Chat/ChatAPI";
-import { MemoriesService } from "./ChatGeneration/MemoriesService";
+import { ChatAPI } from "../features/Chat/services/Chat/ChatAPI";
+import { MemoriesService } from "../features/Memories/services/MemoriesService";
+import { BaseModelMapper } from "../features/Images/services/modelGeneration/BaseModelMapper";
+import { GeneratedImageQuery } from "../features/Images/services/modelGeneration/GeneratedImageQuery";
+import { ImageIdExtractor } from "../features/Images/services/modelGeneration/ImageIdExtractor";
+import { ImageModelMapper } from "../features/Images/services/modelGeneration/ImageModelMapper";
 
 export class Dependencies {
   CivitKeyAPI() {
