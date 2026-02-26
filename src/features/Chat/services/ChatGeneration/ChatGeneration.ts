@@ -50,6 +50,12 @@ export class ChatGeneration {
     this.setIsLoading(true);
 
     try {
+      this.setStatus("Updating plans...");
+      const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
+      await d
+        .PlanGenerationService(this.chatId)
+        .generateUpdatedPlans(chatMessages);
+
       const requestMessages = await d
         .LLMMessageContextService(this.chatId)
         .buildGenerationRequestMessages();
@@ -112,6 +118,12 @@ export class ChatGeneration {
       const originalContent = message.content;
 
       await d.ChatService(chatId).DeleteMessage(messageId);
+
+      this.setStatus("Updating plans...");
+      const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
+      await d
+        .PlanGenerationService(this.chatId)
+        .generateUpdatedPlans(chatMessages);
 
       const requestMessages = await d
         .LLMMessageContextService(this.chatId)

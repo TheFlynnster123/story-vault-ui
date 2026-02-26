@@ -11,7 +11,7 @@ import { LLMMessageContextService } from "./LLMMessageContextService";
 import type { Memory } from "../../../Memories/services/Memory";
 import type { Plan } from "../../../Plans/services/Plan";
 import type { MemoriesService } from "../../../Memories/services/MemoriesService";
-import type { PlanGenerationService } from "../../../Plans/services/PlanGenerationService";
+import type { PlanService } from "../../../Plans/services/PlanService";
 import type { ChatSettingsService } from "../Chat/ChatSettingsService";
 import type {
   LLMChatProjection,
@@ -27,7 +27,7 @@ describe("LLMMessageContextService", () => {
 
   let ChatSettingsService: Mocked<ChatSettingsService>;
   let LLMChatProjection: Mocked<LLMChatProjection>;
-  let PlanGenerationService: Mocked<PlanGenerationService>;
+  let PlanService: Mocked<PlanService>;
   let MemoriesService: Mocked<MemoriesService>;
 
   beforeEach(() => {
@@ -39,8 +39,8 @@ describe("LLMMessageContextService", () => {
       GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
     } as any;
 
-    PlanGenerationService = {
-      generateUpdatedPlans: vi.fn().mockResolvedValue([]),
+    PlanService = {
+      GetPlans: vi.fn().mockReturnValue([]),
     } as any;
 
     MemoriesService = {
@@ -49,7 +49,7 @@ describe("LLMMessageContextService", () => {
 
     vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
     vi.mocked(d.LLMChatProjection).mockReturnValue(LLMChatProjection);
-    vi.mocked(d.PlanGenerationService).mockReturnValue(PlanGenerationService);
+    vi.mocked(d.PlanService).mockReturnValue(PlanService);
     vi.mocked(d.MemoriesService).mockReturnValue(MemoriesService);
   });
 
@@ -151,16 +151,13 @@ describe("LLMMessageContextService", () => {
       expect(LLMChatProjection.GetMessages).toHaveBeenCalled();
     });
 
-    it("should generate updated plans", async () => {
+    it("should read plans from PlanService", async () => {
       const service = new LLMMessageContextService(testChatId);
-      const chatMessages = createMockChatMessages();
-      LLMChatProjection.GetMessages.mockReturnValue(chatMessages);
 
       await service.buildGenerationRequestMessages();
 
-      expect(PlanGenerationService.generateUpdatedPlans).toHaveBeenCalledWith(
-        chatMessages,
-      );
+      expect(d.PlanService).toHaveBeenCalledWith(testChatId);
+      expect(PlanService.GetPlans).toHaveBeenCalled();
     });
 
     it("should fetch memories", async () => {
@@ -193,9 +190,7 @@ describe("LLMMessageContextService", () => {
 
     it("should build messages in correct order", async () => {
       const service = new LLMMessageContextService(testChatId);
-      PlanGenerationService.generateUpdatedPlans.mockResolvedValue(
-        createMockPlans(),
-      );
+      PlanService.GetPlans.mockReturnValue(createMockPlans());
       MemoriesService.Get.mockResolvedValue(createMockMemories());
 
       const result = await service.buildGenerationRequestMessages();

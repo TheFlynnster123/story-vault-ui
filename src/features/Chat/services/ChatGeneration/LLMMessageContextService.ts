@@ -3,7 +3,7 @@ import { d } from "../../../../services/Dependencies";
 import { toSystemMessage } from "../../../../services/Utils/MessageUtils";
 import type { Memory } from "../../../Memories/services/Memory";
 import type { Plan } from "../../../Plans/services/Plan";
-import { type ChatSettings } from "../Chat/ChatSettings";
+import type { ChatSettings } from "../Chat/ChatSettings";
 
 const CHAPTER_SUMMARY_PROMPT: string =
   "Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without formatting or a preamble.";
@@ -45,11 +45,7 @@ export class LLMMessageContextService {
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     const chatMessages = this.getChatMessages();
-
-    const plans = await d
-      .PlanGenerationService(this.chatId)
-      .generateUpdatedPlans(chatMessages);
-
+    const plans = this.getPlans();
     const memories = await this.fetchMemories();
 
     return this.assembleGenerationMessages(
@@ -99,7 +95,11 @@ export class LLMMessageContextService {
   private getChatMessages(): LLMMessage[] {
     return d.LLMChatProjection(this.chatId).GetMessages();
   }
-  
+
+  private getPlans(): Plan[] {
+    return d.PlanService(this.chatId).GetPlans();
+  }
+
   private async fetchMemories(): Promise<Memory[]> {
     return d.MemoriesService(this.chatId).Get();
   }

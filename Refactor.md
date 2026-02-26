@@ -2,19 +2,6 @@
 
 ## 2. Architectural Issues
 
-### 2a. Hidden Side-Effects in "Build" Methods
-
-**Problem:** `LLMMessageContextService.buildGenerationRequestMessages()` silently triggers N LLM calls by calling `PlanService.generateUpdatedPlans()`. A method named "build" implies pure assembly — not expensive, mutating API requests.
-
-**Fix:** Move plan regeneration out of the context builder. `ChatGeneration.generateResponse()` should explicitly call plan regeneration before building context:
-
-```typescript
-// In ChatGeneration.generateResponse():
-await d.PlanService(this.chatId).generateUpdatedPlans(chatMessages);
-const requestMessages = await d.LLMMessageContextService(this.chatId)
-  .buildGenerationRequestMessages();  // Now purely assembles messages
-```
-
 ### 2c. Optimistic Projection Updates Without Rollback
 
 **Problem:** In `ChatEventService.addEvent()`, projections are updated *before* the event is persisted to storage. If persistence fails, the UI shows state that doesn't exist in storage.
@@ -161,8 +148,6 @@ These are noted for awareness but not prioritized now:
 
 | # | Item | Impact | Effort |
 |---|------|--------|--------|
-| 1 | Folder restructure by concept (§1) | High — directly addresses the "klugey" feeling | Large |
-| 2 | Hidden side-effects in build methods (§2a) | High — correctness risk | Small |
 | 3 | Singleton/boilerplate consolidation (§3a, §3c) | Medium — DX improvement | Medium |
 | 5 | Naming & convention standardization (§4) | Medium — reduces cognitive load | Medium |
 | 6 | Error handling gaps (§5) | Medium — reliability | Medium |
