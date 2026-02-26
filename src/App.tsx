@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import React from "react";
-import LandingPage from "./pages/LandingPage";
+import LandingPage from "./features/Auth/pages/LandingPage";
 import ChatMenuPage from "./features/Chat/pages/ChatMenuPage";
 import SystemSettingsPage from "./features/SystemSettings/pages/SystemSettingsPage";
 import SystemPromptsPage from "./features/Prompts/pages/SystemPromptsPage";
@@ -15,7 +15,7 @@ import { StoryEditorPage } from "./features/StoryEditor/pages/StoryEditorPage";
 import { ChatImageModelsPage } from "./features/Images/pages/ChatImageModelsPage";
 import ChatImageModelTemplatePage from "./features/Images/pages/ChatImageModelTemplatePage";
 import ChatImageModelEditPage from "./features/Images/pages/ChatImageModelEditPage";
-import ProtectedRoute from "./components/Auth/ProtectedRoute";
+import ProtectedRoute from "./features/Auth/components/ProtectedRoute";
 import { ChatCreationWizard } from "./features/Chat/components/ChatCreationWizard/ChatCreationWizard";
 
 export const QUERY_CLIENT = new QueryClient();

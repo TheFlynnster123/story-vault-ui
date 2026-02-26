@@ -19,7 +19,7 @@ import { ChatSettingsStep } from "./ChatSettingsStep";
 import type { ChatSettings } from "../../services/Chat/ChatSettings";
 import { useCreateChat } from "./useCreateChat";
 import { useSystemPrompts } from "../../../Prompts/hooks/useSystemPrompts";
-import { Theme } from "../../../../components/Common/Theme";
+import { Theme } from "../../../../components/Theme";
 
 export const ChatCreationWizard: React.FC = () => {
   const [state, setState] = useState<ChatCreationWizardState>(

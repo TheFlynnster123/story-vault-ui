@@ -1,4 +1,4 @@
-import Config from "../../../../components/Common/Config";
+import Config from "../../../../services/Config";
 import { d } from "../../../../services/Dependencies";
 
 export class ChatAPI {

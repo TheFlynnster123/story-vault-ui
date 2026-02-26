@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Title, Grid, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine, RiImageLine } from "react-icons/ri";
 import { ImageModelList } from "../components/ImageModelList";
-import { Page } from "../../../pages/Page";
+import { Page } from "../../../components/Page";
 import { d } from "../../../services/Dependencies";
 
 const ImageSettingsPage: React.FC = () => {

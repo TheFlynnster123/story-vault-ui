@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { Button } from "@mantine/core";
 import { RiArrowDownSLine, RiArrowUpSLine } from "react-icons/ri";
 import "./ChatMessage.styled.ts";
-import { Theme } from "../../../../../components/Common/Theme";
+import { Theme } from "../../../../../components/Theme";
 import type { ChapterChatMessage } from "../../../../../services/CQRS/UserChatProjection";
 import { ChapterContent } from "./Chapter/ChapterContent.tsx";
 import { ChapterExpandedDetails } from "./Chapter/ChapterExpandedMessages.tsx";

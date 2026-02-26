@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render } from "../../../test-utils";
+import { render } from "../../../testing";
 import { screen, waitFor } from "@testing-library/react";
 import { SystemSettingsEditor } from "./SystemSettingsEditor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

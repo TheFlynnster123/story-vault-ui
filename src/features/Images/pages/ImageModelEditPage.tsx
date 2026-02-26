@@ -13,7 +13,7 @@ import {
   Loader,
 } from "@mantine/core";
 import { RiArrowLeftLine, RiImageLine, RiDeleteBinLine } from "react-icons/ri";
-import { Page } from "../../../pages/Page";
+import { Page } from "../../../components/Page";
 import { d } from "../../../services/Dependencies";
 import { SampleImageGenerator } from "../components/SampleImageGenerator";
 import { ModelFromImage } from "../components/ModelFromImage";
@@ -24,7 +24,7 @@ import {
   AdditionalNetworksComponent,
 } from "../components/ImageModelViewComponents";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
-import { ConfirmModal } from "../../../components/Common/ConfirmModal";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 
 const ImageModelEditPage: React.FC = () => {
   const navigate = useNavigate();

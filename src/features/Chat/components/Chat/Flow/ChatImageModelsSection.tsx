@@ -5,7 +5,7 @@ import { FlowButton } from "./FlowButton";
 import { PreviewItem } from "./PreviewItem";
 import { ContentPreview } from "./ContentPreview";
 import { useChatImageModels } from "../../../../Images/hooks/useChatImageModels";
-import { Theme } from "../../../../../components/Common/Theme";
+import { Theme } from "../../../../../components/Theme";
 
 interface ChatImageModelsSectionProps {
   chatId: string;

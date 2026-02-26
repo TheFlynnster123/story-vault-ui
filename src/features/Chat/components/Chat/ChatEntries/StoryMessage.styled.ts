@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { Theme } from "../../../../../components/Common/Theme";
+import { Theme } from "../../../../../components/Theme";
 
 export const StoryMessageContainer = styled.div`
   padding: 1rem;

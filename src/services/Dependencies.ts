@@ -7,7 +7,7 @@ import { getPlansManagedBlobInstance } from "../features/Plans/services/PlansMan
 import { getRecentChatsManagedBlobInstance } from "../features/Chat/services/Chat/RecentChatsManagedBlob";
 import { getSystemSettingsManagedBlobInstance } from "../features/SystemSettings/services/SystemSettingsManagedBlob";
 import { getSystemPromptsManagedBlobInstance } from "../features/Prompts/services/SystemPromptsManagedBlob";
-import { ErrorService } from "../components/Common/ErrorService";
+import { ErrorService } from "./ErrorService";
 import { QUERY_CLIENT } from "../App";
 import { SystemSettingsService } from "../features/SystemSettings/services/SystemSettingsService";
 import { SystemPromptsService } from "../features/Prompts/services/SystemPromptsService";

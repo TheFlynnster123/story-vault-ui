@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine, RiSettings3Line } from "react-icons/ri";
 import { SystemSettingsEditor } from "../components/SystemSettingsEditor";
-import { Page } from "../../../pages/Page";
+import { Page } from "../../../components/Page";
 import { GrokKeyManager } from "../../../features/Grok/components/GrokKeyManager";
 import { CivitaiKeyManager } from "../../../features/Images/components/CivitaiKeyManager";
 import { d } from "../../../services/Dependencies";

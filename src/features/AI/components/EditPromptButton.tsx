@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@mantine/core";
 import type { ButtonProps } from "@mantine/core";
 import { LuMegaphone } from "react-icons/lu";
-import { Theme } from "../../../components/Common/Theme";
+import { Theme } from "../../../components/Theme";
 
 interface EditPromptButtonProps extends Omit<ButtonProps, "leftSection"> {
   onClick?: () => void;

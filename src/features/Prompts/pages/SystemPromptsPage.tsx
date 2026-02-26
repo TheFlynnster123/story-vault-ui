@@ -4,9 +4,9 @@ import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine } from "react-icons/ri";
 import { LuMegaphone } from "react-icons/lu";
 import { SystemPromptsEditor } from "../components/SystemPromptsEditor";
-import { Page } from "../../../pages/Page";
+import { Page } from "../../../components/Page";
 import { d } from "../../../services/Dependencies";
-import { Theme } from "../../../components/Common/Theme";
+import { Theme } from "../../../components/Theme";
 
 const SystemPromptsPage: React.FC = () => {
   const navigate = useNavigate();

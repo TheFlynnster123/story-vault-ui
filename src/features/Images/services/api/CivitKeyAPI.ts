@@ -1,5 +1,5 @@
 import { d } from "../../../../services/Dependencies";
-import Config from "../../../../components/Common/Config";
+import Config from "../../../../services/Config";
 
 interface ICivitaiAPI {
   hasValidCivitaiKey(): Promise<boolean>;

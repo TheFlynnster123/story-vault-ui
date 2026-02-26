@@ -1,7 +1,7 @@
 import React from "react";
 import { Group, Text } from "@mantine/core";
 import { RiBookOpenLine } from "react-icons/ri";
-import { Theme } from "../../../../../components/Common/Theme";
+import { Theme } from "../../../../../components/Theme";
 import { FlowButton } from "./FlowButton";
 
 interface CompressToChapterButtonProps {

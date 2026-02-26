@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Group, Text } from "@mantine/core";
 import { LuBrain } from "react-icons/lu";
-import { Theme } from "../../../components/Common/Theme";
+import { Theme } from "../../../components/Theme";
 import type { Memory } from "../services/Memory";
 import { useMemories } from "../hooks/useMemories";
 import { PreviewItem } from "../../Chat/components/Chat/Flow/PreviewItem";

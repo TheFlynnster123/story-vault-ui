@@ -16,9 +16,9 @@ import {
 } from "@mantine/core";
 import type { Memory } from "../services/Memory";
 import { useMemories } from "../hooks/useMemories";
-import { Page } from "../../../pages/Page";
-import { Theme } from "../../../components/Common/Theme";
-import { ConfirmModal } from "../../../components/Common/ConfirmModal";
+import { Page } from "../../../components/Page";
+import { Theme } from "../../../components/Theme";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 import { d } from "../../../services/Dependencies";
 
 export const MemoriesPage: React.FC = () => {

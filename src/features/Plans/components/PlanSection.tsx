@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Group, Text } from "@mantine/core";
 import { RiFileList2Line } from "react-icons/ri";
-import { Theme } from "../../../components/Common/Theme";
+import { Theme } from "../../../components/Theme";
 import type { Plan } from "../services/Plan";
 import { ContentPreview } from "../../Chat/components/Chat/Flow/ContentPreview";
 import { FlowButton } from "../../Chat/components/Chat/Flow/FlowButton";

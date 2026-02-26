@@ -21,9 +21,9 @@ import {
 import type { Plan } from "../services/Plan";
 import { usePlanCache } from "../hooks/usePlanCache";
 import { v4 as uuidv4 } from "uuid";
-import { Theme } from "../../../components/Common/Theme";
-import { Page } from "../../../pages/Page";
-import { ConfirmModal } from "../../../components/Common/ConfirmModal";
+import { Theme } from "../../../components/Theme";
+import { Page } from "../../../components/Page";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 import { getPlanServiceInstance } from "../services/PlanService";
 
 export const PlanPage: React.FC = () => {

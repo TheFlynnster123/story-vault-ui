@@ -16,8 +16,8 @@ import type { ChatSettings } from "../services/Chat/ChatSettings";
 import { v4 as uuidv4 } from "uuid";
 import { ChatDeleteControl } from "../components/ChatEditor/ChatDeleteControl";
 import { BackgroundPhotoUploader } from "../components/ChatEditor/BackgroundPhotoUploader";
-import { Page } from "../../../pages/Page";
-import { Theme } from "../../../components/Common/Theme";
+import { Page } from "../../../components/Page";
+import { Theme } from "../../../components/Theme";
 import { useChatSettings } from "../hooks/useChatSettings";
 import { d } from "../../../services/Dependencies";
 

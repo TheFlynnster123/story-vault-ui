@@ -8,7 +8,7 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import { GlobalStyles } from "./index.styled";
 import { Auth0Provider } from "@auth0/auth0-react";
-import Config from "./components/Common/Config.ts";
+import Config from "./services/Config";
 import { Notifications } from "@mantine/notifications";
 
 createRoot(document.getElementById("root")!).render(
@@ -27,5 +27,5 @@ createRoot(document.getElementById("root")!).render(
         <App />
       </MantineProvider>
     </Auth0Provider>
-  </StrictMode>
+  </StrictMode>,
 );

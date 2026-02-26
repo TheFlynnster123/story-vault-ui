@@ -4,7 +4,7 @@ import { Group, Loader, Stack, Text } from "@mantine/core";
 import type { SystemPrompts } from "../services/SystemPrompts";
 import { DEFAULT_SYSTEM_PROMPTS } from "../services/SystemPrompts";
 import { d } from "../../../services/Dependencies";
-import { ConfirmModal } from "../../../components/Common/ConfirmModal";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 import { PromptInput } from "./PromptInput";
 import { usePromptHighlight } from "../hooks/usePromptHighlight";
 

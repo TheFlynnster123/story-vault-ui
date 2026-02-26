@@ -1,5 +1,5 @@
 import type { FromTextInput } from "civitai/dist/types/Inputs";
-import Config from "../../../../components/Common/Config";
+import Config from "../../../../services/Config";
 import type { CivitJobStatus, PhotoData } from "../CivitJob";
 import { d } from "../../../../services/Dependencies";
 

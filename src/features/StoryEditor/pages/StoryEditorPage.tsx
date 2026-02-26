@@ -11,8 +11,8 @@ import {
 import { RiArrowLeftLine } from "react-icons/ri";
 import { LuBookOpen } from "react-icons/lu";
 import { d } from "../../../services/Dependencies";
-import { Theme } from "../../../components/Common/Theme";
-import { Page } from "../../../pages/Page";
+import { Theme } from "../../../components/Theme";
+import { Page } from "../../../components/Page";
 import { StoryGeneratorModal } from "../components/StoryGeneratorModal";
 
 export const StoryEditorPage: React.FC = () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "../../../test-utils";
+import { renderHook, act } from "../../../testing";
 import { useImageModels } from "./useImageModels";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
 

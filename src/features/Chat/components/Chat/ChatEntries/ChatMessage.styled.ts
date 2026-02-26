@@ -1,5 +1,5 @@
 import styled, { keyframes } from "styled-components";
-import { Theme } from "../../../../../components/Common/Theme";
+import { Theme } from "../../../../../components/Theme";
 
 /* ========================= */
 /* Helper Functions          */

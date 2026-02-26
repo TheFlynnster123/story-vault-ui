@@ -15,7 +15,7 @@ import { MessageOverlay } from "./ChatEntryButtons/MessageOverlay.tsx";
 import { RegenerateFeedbackModal } from "./ChatEntryButtons/RegenerateFeedbackModal.tsx";
 import { ViewPromptModal } from "./ChatEntryButtons/ViewPromptModal.tsx";
 import { DeleteConfirmModal } from "./ChatEntryButtons/DeleteConfirmModal.tsx";
-import { Theme } from "../../../../../components/Common/Theme.ts";
+import { Theme } from "../../../../../components/Theme";
 import type { CivitJobChatMessage } from "../../../../../services/CQRS/UserChatProjection.ts";
 import { useCivitJob } from "../../../../Images/hooks/useCivitJob.ts";
 import { d } from "../../../../../services/Dependencies.ts";

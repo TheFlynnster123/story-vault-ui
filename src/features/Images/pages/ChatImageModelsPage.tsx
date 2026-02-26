@@ -17,8 +17,8 @@ import { v4 as uuidv4 } from "uuid";
 import { useChatImageModels } from "../hooks/useChatImageModels";
 import { ImageModelListItem } from "../components/ImageModelListItem";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
-import { Page } from "../../../pages/Page";
-import { Theme } from "../../../components/Common/Theme";
+import { Page } from "../../../components/Page";
+import { Theme } from "../../../components/Theme";
 import { d } from "../../../services/Dependencies";
 
 export const ChatImageModelsPage: React.FC = () => {

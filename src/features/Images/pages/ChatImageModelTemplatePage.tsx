@@ -17,8 +17,8 @@ import {
 import { useImageModels } from "../hooks/useImageModels";
 import { useChatImageModels } from "../hooks/useChatImageModels";
 import { ModelSampleImage } from "../components/ModelSampleImage";
-import { Page } from "../../../pages/Page";
-import { Theme } from "../../../components/Common/Theme";
+import { Page } from "../../../components/Page";
+import { Theme } from "../../../components/Theme";
 
 export const ChatImageModelTemplatePage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
