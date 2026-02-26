@@ -18,7 +18,9 @@ import { ManagedBlob } from "../ManagedBlob";
 
 // --- Test Implementation ---
 class TestBlob extends ManagedBlob<{ value: string }> {
-  protected getBlobName = () => "test-blob";
+  constructor(chatId: string) {
+    super(chatId, "test-blob");
+  }
 }
 
 // --- Helpers ---
@@ -36,8 +38,8 @@ describe("ManagedBlob - Concurrent get() Stress Tests", () => {
     blobApi.getBlob.mockImplementation(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve(JSON.stringify({ value: "data" })), 50)
-        )
+          setTimeout(() => resolve(JSON.stringify({ value: "data" })), 50),
+        ),
     );
 
     const blob = createBlob();
@@ -66,8 +68,8 @@ describe("ManagedBlob - Concurrent get() Stress Tests", () => {
     blobApi.getBlob.mockImplementation(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve(JSON.stringify({ value: "data" })), 50)
-        )
+          setTimeout(() => resolve(JSON.stringify({ value: "data" })), 50),
+        ),
     );
 
     const blob = createBlob();

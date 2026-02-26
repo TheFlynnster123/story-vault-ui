@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import React from "react";
 import LandingPage from "./features/Auth/pages/LandingPage";
@@ -17,8 +17,7 @@ import ChatImageModelTemplatePage from "./features/Images/pages/ChatImageModelTe
 import ChatImageModelEditPage from "./features/Images/pages/ChatImageModelEditPage";
 import ProtectedRoute from "./features/Auth/components/ProtectedRoute";
 import { ChatCreationWizard } from "./features/Chat/components/ChatCreationWizard/ChatCreationWizard";
-
-export const QUERY_CLIENT = new QueryClient();
+import { QUERY_CLIENT } from "./services/QueryClient";
 
 interface AppProps {}
 

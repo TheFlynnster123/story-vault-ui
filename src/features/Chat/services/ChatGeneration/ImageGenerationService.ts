@@ -1,18 +1,10 @@
 import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
+import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
-const instances = new Map<string, ImageGenerationService>();
-
-export const getImageGenerationServiceInstance = (
-  chatId: string | null,
-): ImageGenerationService | null => {
-  if (!chatId) return null;
-
-  if (!instances.has(chatId))
-    instances.set(chatId, new ImageGenerationService(chatId));
-
-  return instances.get(chatId)!;
-};
+export const getImageGenerationServiceInstance = createInstanceCache(
+  (chatId: string) => new ImageGenerationService(chatId),
+);
 
 export class ImageGenerationService extends GenerationOrchestrator {
   private chatId: string;

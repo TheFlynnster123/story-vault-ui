@@ -1,18 +1,11 @@
 import { d } from "../../../services/Dependencies";
 import type { ImageModel } from "./modelGeneration/ImageModel";
 import type { ChatImageModels } from "./ChatImageModelsManagedBlob";
+import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 
-// Singleton instances per chatId
-const instances = new Map<string, ChatImageModelService>();
-
-export const getChatImageModelServiceInstance = (
-  chatId: string,
-): ChatImageModelService => {
-  if (!instances.has(chatId)) {
-    instances.set(chatId, new ChatImageModelService(chatId));
-  }
-  return instances.get(chatId)!;
-};
+export const getChatImageModelServiceInstance = createInstanceCache(
+  (chatId: string) => new ChatImageModelService(chatId),
+);
 
 export class ChatImageModelService {
   private chatId: string;

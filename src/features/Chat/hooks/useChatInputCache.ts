@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { getChatInputCacheInstance } from "../services/Chat/ChatInputCache";
+import { d } from "../../../services/Dependencies";
 
-export const useChatInputCache = (chatId: string | null) => {
+export const useChatInputCache = (chatId: string) => {
   const [, forceUpdate] = useState({});
-  const inputCache = getChatInputCacheInstance(chatId);
+  const inputCache = d.ChatInputCache(chatId);
 
   useEffect(() => {
     if (!inputCache) return;

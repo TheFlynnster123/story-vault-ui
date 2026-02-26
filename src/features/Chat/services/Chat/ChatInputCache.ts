@@ -1,16 +1,8 @@
-// Singleton instances for chat input cache
-const chatInputCacheInstances = new Map<string, ChatInputCache>();
+import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
-export const getChatInputCacheInstance = (
-  chatId: string | null
-): ChatInputCache | null => {
-  if (!chatId) return null;
-
-  if (!chatInputCacheInstances.has(chatId))
-    chatInputCacheInstances.set(chatId, new ChatInputCache(chatId));
-
-  return chatInputCacheInstances.get(chatId)!;
-};
+export const getChatInputCacheInstance = createInstanceCache(
+  (chatId: string) => new ChatInputCache(chatId),
+);
 
 export class ChatInputCache {
   private inputValue: string = "";

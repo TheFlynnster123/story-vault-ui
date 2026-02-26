@@ -8,50 +8,23 @@ import { getRecentChatsManagedBlobInstance } from "../features/Chat/services/Cha
 import { getSystemSettingsManagedBlobInstance } from "../features/SystemSettings/services/SystemSettingsManagedBlob";
 import { getSystemPromptsManagedBlobInstance } from "../features/Prompts/services/SystemPromptsManagedBlob";
 import { ErrorService } from "./ErrorService";
-import { QUERY_CLIENT } from "../App";
+import { QUERY_CLIENT } from "./QueryClient";
 import { SystemSettingsService } from "../features/SystemSettings/services/SystemSettingsService";
 import { SystemPromptsService } from "../features/Prompts/services/SystemPromptsService";
 import { getChatSettingsServiceInstance } from "../features/Chat/services/Chat/ChatSettingsService";
 import { GrokChatAPI } from "../features/Grok/services/GrokChatAPI";
-import {
-  PlanService,
-  getPlanServiceInstance,
-} from "../features/Plans/services/PlanService";
+import { getPlanServiceInstance } from "../features/Plans/services/PlanService";
 import { PlanGenerationService } from "../features/Plans/services/PlanGenerationService";
-import {
-  TextGenerationService,
-  getTextGenerationServiceInstance,
-} from "../features/Chat/services/ChatGeneration/TextGenerationService";
-import {
-  ImageGenerationService,
-  getImageGenerationServiceInstance,
-} from "../features/Chat/services/ChatGeneration/ImageGenerationService";
-import {
-  ChapterGenerationService,
-  getChapterGenerationServiceInstance,
-} from "../features/Chat/services/ChatGeneration/ChapterGenerationService";
-import {
-  LLMMessageContextService,
-  getLLMMessageContextServiceInstance,
-} from "../features/Chat/services/ChatGeneration/LLMMessageContextService";
+import { getTextGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/TextGenerationService";
+import { getImageGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ImageGenerationService";
+import { getChapterGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ChapterGenerationService";
+import { getLLMMessageContextServiceInstance } from "../features/Chat/services/ChatGeneration/LLMMessageContextService";
 import { ImageGenerator } from "../features/Images/services/ImageGenerator";
 import { getChatImageModelServiceInstance } from "../features/Images/services/ChatImageModelService";
-import {
-  UserChatProjection,
-  getUserChatProjectionInstance,
-} from "./CQRS/UserChatProjection";
-import {
-  LLMChatProjection,
-  getLLMChatProjectionInstance,
-} from "./CQRS/LLMChatProjection";
-import {
-  ChatEventService,
-  getChatEventServiceInstance,
-} from "./CQRS/ChatEventService";
-import {
-  RecentChatsService,
-  getRecentChatsServiceInstance,
-} from "../features/Chat/services/Chat/RecentChatsService";
+import { getUserChatProjectionInstance } from "./CQRS/UserChatProjection";
+import { getLLMChatProjectionInstance } from "./CQRS/LLMChatProjection";
+import { getChatEventServiceInstance } from "./CQRS/ChatEventService";
+import { getRecentChatsServiceInstance } from "../features/Chat/services/Chat/RecentChatsService";
 import { PhotoStorageService } from "../features/Images/services/PhotoStorageService";
 import { getAuthApiSingleton } from "./Auth/AuthAPI";
 import { getEncryptionManagerSingleton } from "./Auth/EncryptionManager";
@@ -70,6 +43,7 @@ import { BaseModelMapper } from "../features/Images/services/modelGeneration/Bas
 import { GeneratedImageQuery } from "../features/Images/services/modelGeneration/GeneratedImageQuery";
 import { ImageIdExtractor } from "../features/Images/services/modelGeneration/ImageIdExtractor";
 import { ImageModelMapper } from "../features/Images/services/modelGeneration/ImageModelMapper";
+import { getChatInputCacheInstance } from "../features/Chat/services/Chat/ChatInputCache";
 
 export class Dependencies {
   CivitKeyAPI() {
@@ -116,26 +90,22 @@ export class Dependencies {
     return getChatImageModelsManagedBlobInstance(chatId);
   }
   TextGenerationService(chatId: string) {
-    return getTextGenerationServiceInstance(chatId) as TextGenerationService;
+    return getTextGenerationServiceInstance(chatId);
   }
   ImageGenerationService(chatId: string) {
-    return getImageGenerationServiceInstance(chatId) as ImageGenerationService;
+    return getImageGenerationServiceInstance(chatId);
   }
   ChapterGenerationService(chatId: string) {
-    return getChapterGenerationServiceInstance(
-      chatId,
-    ) as ChapterGenerationService;
+    return getChapterGenerationServiceInstance(chatId);
   }
   PlanService(chatId: string) {
-    return getPlanServiceInstance(chatId) as PlanService;
+    return getPlanServiceInstance(chatId);
   }
   PlanGenerationService(chatId: string) {
     return new PlanGenerationService(chatId);
   }
   LLMMessageContextService(chatId: string) {
-    return getLLMMessageContextServiceInstance(
-      chatId,
-    ) as LLMMessageContextService;
+    return getLLMMessageContextServiceInstance(chatId);
   }
   GrokChatAPI() {
     return new GrokChatAPI();
@@ -223,23 +193,27 @@ export class Dependencies {
   }
 
   UserChatProjection(chatId: string) {
-    return getUserChatProjectionInstance(chatId) as UserChatProjection;
+    return getUserChatProjectionInstance(chatId);
   }
 
   LLMChatProjection(chatId: string) {
-    return getLLMChatProjectionInstance(chatId) as LLMChatProjection;
+    return getLLMChatProjectionInstance(chatId);
   }
 
   ChatEventService(chatId: string) {
-    return getChatEventServiceInstance(chatId) as ChatEventService;
+    return getChatEventServiceInstance(chatId);
   }
 
   ChatService(chatId: string) {
     return new ChatService(chatId);
   }
 
+  ChatInputCache(chatId: string) {
+    return getChatInputCacheInstance(chatId);
+  }
+
   RecentChatsService() {
-    return getRecentChatsServiceInstance() as RecentChatsService;
+    return getRecentChatsServiceInstance();
   }
 }
 

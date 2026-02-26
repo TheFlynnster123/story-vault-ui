@@ -1,18 +1,10 @@
 import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
+import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
-const instances = new Map<string, TextGenerationService>();
-
-export const getTextGenerationServiceInstance = (
-  chatId: string | null,
-): TextGenerationService | null => {
-  if (!chatId) return null;
-
-  if (!instances.has(chatId))
-    instances.set(chatId, new TextGenerationService(chatId));
-
-  return instances.get(chatId)!;
-};
+export const getTextGenerationServiceInstance = createInstanceCache(
+  (chatId: string) => new TextGenerationService(chatId),
+);
 
 export class TextGenerationService extends GenerationOrchestrator {
   private chatId: string;

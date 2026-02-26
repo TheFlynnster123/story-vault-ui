@@ -1,17 +1,10 @@
 import { d } from "../../../../services/Dependencies";
 import type { ChatSettings } from "./ChatSettings";
+import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
-// Singleton instances per chatId
-const instances = new Map<string, ChatSettingsService>();
-
-export const getChatSettingsServiceInstance = (
-  chatId: string,
-): ChatSettingsService => {
-  if (!instances.has(chatId)) {
-    instances.set(chatId, new ChatSettingsService(chatId));
-  }
-  return instances.get(chatId)!;
-};
+export const getChatSettingsServiceInstance = createInstanceCache(
+  (chatId: string) => new ChatSettingsService(chatId),
+);
 
 export class ChatSettingsService {
   private chatId: string;

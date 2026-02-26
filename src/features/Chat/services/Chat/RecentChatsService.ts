@@ -1,12 +1,9 @@
 import { d } from "../../../../services/Dependencies";
+import { createGlobalInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
-let instance: RecentChatsService | null = null;
-
-export const getRecentChatsServiceInstance = (): RecentChatsService => {
-  if (!instance) instance = new RecentChatsService();
-
-  return instance;
-};
+export const getRecentChatsServiceInstance = createGlobalInstanceCache(
+  () => new RecentChatsService(),
+);
 
 export class RecentChatsService {
   async recordNavigation(chatId: string): Promise<void> {

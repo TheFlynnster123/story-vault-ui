@@ -20,7 +20,9 @@ import { ManagedBlob } from "../ManagedBlob";
 const DEBOUNCE_MS = 50;
 
 class TestBlob extends ManagedBlob<{ value: string }> {
-  protected getBlobName = () => "test-blob";
+  constructor(chatId: string) {
+    super(chatId, "test-blob");
+  }
   protected getDebounceMs = () => DEBOUNCE_MS;
 }
 
@@ -52,7 +54,7 @@ describe("ManagedBlob - Debounce Stress Tests", () => {
     expect(blobApi.saveBlob).toHaveBeenCalledWith(
       "chat-123",
       "test-blob",
-      JSON.stringify({ value: "third" })
+      JSON.stringify({ value: "third" }),
     );
   });
 
@@ -68,7 +70,7 @@ describe("ManagedBlob - Debounce Stress Tests", () => {
     expect(blobApi.saveBlob).toHaveBeenCalledWith(
       "chat-123",
       "test-blob",
-      JSON.stringify({ value: "immediate" })
+      JSON.stringify({ value: "immediate" }),
     );
   });
 
@@ -100,13 +102,13 @@ describe("ManagedBlob - Debounce Stress Tests", () => {
       1,
       "chat-123",
       "test-blob",
-      JSON.stringify({ value: "saved-1" })
+      JSON.stringify({ value: "saved-1" }),
     );
     expect(blobApi.saveBlob).toHaveBeenNthCalledWith(
       2,
       "chat-123",
       "test-blob",
-      JSON.stringify({ value: "debounced-3" })
+      JSON.stringify({ value: "debounced-3" }),
     );
   });
 

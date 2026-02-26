@@ -1,19 +1,10 @@
 import { d } from "../../../services/Dependencies";
 import type { Plan } from "./Plan";
+import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 
-// Singleton instances
-const planServiceInstances = new Map<string, PlanService>();
-
-export const getPlanServiceInstance = (
-  chatId: string | null,
-): PlanService | null => {
-  if (!chatId) return null;
-
-  if (!planServiceInstances.has(chatId))
-    planServiceInstances.set(chatId, new PlanService(chatId));
-
-  return planServiceInstances.get(chatId)!;
-};
+export const getPlanServiceInstance = createInstanceCache(
+  (chatId: string) => new PlanService(chatId),
+);
 
 export class PlanService {
   public Plans: Plan[] = [];

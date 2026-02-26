@@ -7,13 +7,11 @@ export const setAuth0Context = (context: any) => {
   globalAuth0Context = context;
 };
 
-let authApiSingleton: AuthAPI | null = null;
+import { createGlobalInstanceCache } from "../Utils/getOrCreateInstance";
 
-export function getAuthApiSingleton(): AuthAPI {
-  if (!authApiSingleton) authApiSingleton = new AuthAPI();
-
-  return authApiSingleton;
-}
+export const getAuthApiSingleton = createGlobalInstanceCache(
+  () => new AuthAPI(),
+);
 
 export interface AuthAPI {
   // User info

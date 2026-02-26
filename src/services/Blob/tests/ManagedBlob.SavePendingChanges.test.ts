@@ -17,8 +17,8 @@ vi.mock("../../Dependencies", () => ({
 }));
 
 class TestBlob extends ManagedBlob<string> {
-  protected getBlobName(): string {
-    return "test-blob";
+  constructor(chatId: string) {
+    super(chatId, "test-blob");
   }
 }
 
@@ -50,7 +50,7 @@ describe("ManagedBlob.savePendingChanges", () => {
     expect(blobApi.saveBlob).toHaveBeenCalledWith(
       chatId,
       "test-blob",
-      JSON.stringify(testData)
+      JSON.stringify(testData),
     );
   });
 

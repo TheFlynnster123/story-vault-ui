@@ -1,19 +1,11 @@
 import type { ChatEvent } from "./events/ChatEvent";
 import { d } from "../Dependencies";
 
-// ---- Singleton ----
-const chatEventServiceInstances = new Map<string, ChatEventService>();
+import { createInstanceCache } from "../Utils/getOrCreateInstance";
 
-export const getChatEventServiceInstance = (
-  chatId: string | null
-): ChatEventService | null => {
-  if (!chatId) return null;
-
-  if (!chatEventServiceInstances.has(chatId))
-    chatEventServiceInstances.set(chatId, new ChatEventService(chatId));
-
-  return chatEventServiceInstances.get(chatId)!;
-};
+export const getChatEventServiceInstance = createInstanceCache(
+  (chatId: string) => new ChatEventService(chatId),
+);
 
 export class ChatEventService {
   private chatId: string;

@@ -11,25 +11,11 @@ const CHAPTER_SUMMARY_PROMPT: string =
 const CHAPTER_TITLE_PROMPT: string =
   "Review the conversation above and generate a concise, engaging title for the current chapter. The title should capture the essence of what happened. Keep it short (3-7 words). Provide only the title without formatting or any preamble.";
 
-// ---- Singleton instances ----
-const llmMessageContextServiceInstances = new Map<
-  string,
-  LLMMessageContextService
->();
+import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
-export const getLLMMessageContextServiceInstance = (
-  chatId: string | null,
-): LLMMessageContextService | null => {
-  if (!chatId) return null;
-
-  if (!llmMessageContextServiceInstances.has(chatId))
-    llmMessageContextServiceInstances.set(
-      chatId,
-      new LLMMessageContextService(chatId),
-    );
-
-  return llmMessageContextServiceInstances.get(chatId)!;
-};
+export const getLLMMessageContextServiceInstance = createInstanceCache(
+  (chatId: string) => new LLMMessageContextService(chatId),
+);
 
 export class LLMMessageContextService {
   private chatId: string;

@@ -1,18 +1,10 @@
 import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
+import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
-const instances = new Map<string, ChapterGenerationService>();
-
-export const getChapterGenerationServiceInstance = (
-  chatId: string | null,
-): ChapterGenerationService | null => {
-  if (!chatId) return null;
-
-  if (!instances.has(chatId))
-    instances.set(chatId, new ChapterGenerationService(chatId));
-
-  return instances.get(chatId)!;
-};
+export const getChapterGenerationServiceInstance = createInstanceCache(
+  (chatId: string) => new ChapterGenerationService(chatId),
+);
 
 export class ChapterGenerationService extends GenerationOrchestrator {
   private chatId: string;

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { getPlanServiceInstance } from "../services/PlanService";
+import { d } from "../../../services/Dependencies";
 import type { Plan } from "../services/Plan";
 
-export const usePlanCache = (chatId: string | null) => {
+export const usePlanCache = (chatId: string) => {
   const [, forceUpdate] = useState({});
-  const cache = getPlanServiceInstance(chatId);
+  const cache = d.PlanService(chatId);
 
   useEffect(() => {
     if (!cache) return;

@@ -24,7 +24,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
 import { ConfirmModal } from "../../../components/ConfirmModal";
-import { getPlanServiceInstance } from "../services/PlanService";
+import { d } from "../../../services/Dependencies";
 
 export const PlanPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -35,7 +35,7 @@ export const PlanPage: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
 
-  const planService = getPlanServiceInstance(chatId!);
+  const planService = d.PlanService(chatId!);
 
   const handleAddPlan = (type: Plan["type"]) => {
     const newPlan: Plan = {

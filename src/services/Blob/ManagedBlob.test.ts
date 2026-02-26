@@ -21,8 +21,8 @@ import { ManagedBlob } from "./ManagedBlob";
 
 // Simple concrete test implementation
 class TestManagedBlob extends ManagedBlob<TestData> {
-  protected getBlobName(): string {
-    return "test-blob";
+  constructor(chatId: string) {
+    super(chatId, "test-blob");
   }
 
   protected getDebounceMs(): number {
@@ -100,7 +100,7 @@ describe("ManagedBlob - Basic Functionality", () => {
       expect(blobApi.saveBlob).toHaveBeenCalledWith(
         testChatId,
         "test-blob",
-        JSON.stringify({ value: "saved" })
+        JSON.stringify({ value: "saved" }),
       );
     });
 
