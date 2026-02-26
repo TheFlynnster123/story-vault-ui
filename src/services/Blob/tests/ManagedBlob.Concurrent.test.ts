@@ -16,15 +16,9 @@ vi.mock("../../Dependencies", () => ({
 
 import { ManagedBlob } from "../ManagedBlob";
 
-// --- Test Implementation ---
-class TestBlob extends ManagedBlob<{ value: string }> {
-  constructor(chatId: string) {
-    super(chatId, "test-blob");
-  }
-}
-
 // --- Helpers ---
-const createBlob = () => new TestBlob("chat-123");
+const createBlob = () =>
+  new ManagedBlob<{ value: string }>("chat-123", "test-blob");
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // --- Tests ---

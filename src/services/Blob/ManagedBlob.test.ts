@@ -19,20 +19,12 @@ vi.mock("../Dependencies", () => ({
 
 import { ManagedBlob } from "./ManagedBlob";
 
-// Simple concrete test implementation
-class TestManagedBlob extends ManagedBlob<TestData> {
-  constructor(chatId: string) {
-    super(chatId, "test-blob");
-  }
-
-  protected getDebounceMs(): number {
-    return 100;
-  }
-}
-
 interface TestData {
   value: string;
 }
+
+const createTestBlob = (chatId: string) =>
+  new ManagedBlob<TestData>(chatId, "test-blob", 100);
 
 describe("ManagedBlob - Basic Functionality", () => {
   const testChatId = "test-chat-123";
@@ -48,7 +40,7 @@ describe("ManagedBlob - Basic Functionality", () => {
   describe("get", () => {
     it("fetches from API and returns parsed data", async () => {
       blobApi.getBlob.mockResolvedValue(JSON.stringify({ value: "test" }));
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       const result = await blob.get();
 
@@ -58,7 +50,7 @@ describe("ManagedBlob - Basic Functionality", () => {
 
     it("returns cached data on subsequent calls without fetching", async () => {
       blobApi.getBlob.mockResolvedValue(JSON.stringify({ value: "test" }));
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       await blob.get();
       await blob.get();
@@ -68,7 +60,7 @@ describe("ManagedBlob - Basic Functionality", () => {
 
     it("returns undefined when blob not found (404)", async () => {
       blobApi.getBlob.mockRejectedValue(new Error("Blob not found!"));
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       const result = await blob.get();
 
@@ -77,7 +69,7 @@ describe("ManagedBlob - Basic Functionality", () => {
 
     it("throws on non-404 errors", async () => {
       blobApi.getBlob.mockRejectedValue(new Error("Server error"));
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       await expect(blob.get()).rejects.toThrow("Server error");
     });
@@ -85,7 +77,7 @@ describe("ManagedBlob - Basic Functionality", () => {
 
   describe("save", () => {
     it("updates local cache immediately", async () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       await blob.save({ value: "saved" });
 
@@ -93,7 +85,7 @@ describe("ManagedBlob - Basic Functionality", () => {
     });
 
     it("persists data to backend", async () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       await blob.save({ value: "saved" });
 
@@ -105,7 +97,7 @@ describe("ManagedBlob - Basic Functionality", () => {
     });
 
     it("notifies subscribers", async () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
       const subscriber = vi.fn();
       blob.subscribe(subscriber);
 
@@ -117,7 +109,7 @@ describe("ManagedBlob - Basic Functionality", () => {
 
   describe("saveDebounced", () => {
     it("updates local cache immediately", async () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       blob.saveDebounced({ value: "debounced" });
 
@@ -125,7 +117,7 @@ describe("ManagedBlob - Basic Functionality", () => {
     });
 
     it("does not persist immediately", () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       blob.saveDebounced({ value: "debounced" });
 
@@ -133,7 +125,7 @@ describe("ManagedBlob - Basic Functionality", () => {
     });
 
     it("notifies subscribers immediately", () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
       const subscriber = vi.fn();
       blob.subscribe(subscriber);
 
@@ -148,7 +140,7 @@ describe("ManagedBlob - Basic Functionality", () => {
       blobApi.getBlob
         .mockResolvedValueOnce(JSON.stringify({ value: "old" }))
         .mockResolvedValueOnce(JSON.stringify({ value: "new" }));
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       await blob.get();
       const result = await blob.refetch();
@@ -161,7 +153,7 @@ describe("ManagedBlob - Basic Functionality", () => {
   describe("delete", () => {
     it("clears local cache", async () => {
       blobApi.getBlob.mockResolvedValue(JSON.stringify({ value: "test" }));
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       await blob.get();
       await blob.delete();
@@ -172,7 +164,7 @@ describe("ManagedBlob - Basic Functionality", () => {
     });
 
     it("calls deleteBlob on API", async () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       await blob.delete();
 
@@ -180,7 +172,7 @@ describe("ManagedBlob - Basic Functionality", () => {
     });
 
     it("notifies subscribers", async () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
       const subscriber = vi.fn();
       blob.subscribe(subscriber);
 
@@ -192,7 +184,7 @@ describe("ManagedBlob - Basic Functionality", () => {
 
   describe("subscribe", () => {
     it("returns unsubscribe function that stops notifications", async () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
       const subscriber = vi.fn();
 
       const unsubscribe = blob.subscribe(subscriber);
@@ -206,14 +198,14 @@ describe("ManagedBlob - Basic Functionality", () => {
 
   describe("isLoading", () => {
     it("returns true initially", () => {
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       expect(blob.isLoading()).toBe(true);
     });
 
     it("returns false after loading completes", async () => {
       blobApi.getBlob.mockResolvedValue(JSON.stringify({ value: "test" }));
-      const blob = new TestManagedBlob(testChatId);
+      const blob = createTestBlob(testChatId);
 
       await blob.get();
 

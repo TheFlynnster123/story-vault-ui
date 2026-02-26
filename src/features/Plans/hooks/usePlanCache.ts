@@ -7,16 +7,15 @@ export const usePlanCache = (chatId: string) => {
   const cache = d.PlanService(chatId);
 
   useEffect(() => {
-    if (!cache) return;
     return cache.subscribe(() => forceUpdate({}));
   }, [cache]);
 
   return {
-    plans: cache?.GetPlans() || [],
+    plans: cache.GetPlans(),
     updatePlanDefinition: (planId: string, field: keyof Plan, value: string) =>
-      cache?.UpdatePlanDefinition(planId, field, value),
-    addPlan: (plan: Plan) => cache?.AddPlan(plan),
-    deletePlan: (planId: string) => cache?.RemovePlan(planId),
-    savePlans: async () => await cache?.SavePlans(),
+      cache.UpdatePlanDefinition(planId, field, value),
+    addPlan: (plan: Plan) => cache.AddPlan(plan),
+    deletePlan: (planId: string) => cache.RemovePlan(planId),
+    savePlans: async () => await cache.SavePlans(),
   };
 };
