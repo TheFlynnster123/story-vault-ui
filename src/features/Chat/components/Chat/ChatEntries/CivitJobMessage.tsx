@@ -116,7 +116,7 @@ export const CivitJobMessage = ({
 
   const handleRegenerate = () => {
     setShowButtons(false);
-    d.ChatGenerationService(chatId)?.regenerateImage(jobId);
+    d.ImageGenerationService(chatId)?.regenerateImage(jobId);
   };
 
   const handleSetAsBackground = async () => {
@@ -127,7 +127,7 @@ export const CivitJobMessage = ({
   const handleRegenerateWithFeedback = () => {
     setShowButtons(false);
     setShowFeedbackModal(false);
-    d.ChatGenerationService(chatId)?.regenerateImage(jobId, feedback);
+    d.ImageGenerationService(chatId)?.regenerateImage(jobId, feedback);
     setFeedback("");
   };
 

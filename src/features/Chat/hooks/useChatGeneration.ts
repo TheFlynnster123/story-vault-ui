@@ -7,58 +7,68 @@ interface IUseChatGenerationProps {
 
 export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
   const [, forceUpdate] = useState({});
-  const chatGeneration = d.ChatGenerationService(chatId);
+  const textGeneration = d.TextGenerationService(chatId);
+  const imageGeneration = d.ImageGenerationService(chatId);
 
   useEffect(() => {
-    if (!chatGeneration) return;
-    return chatGeneration.subscribe(() => forceUpdate({}));
-  }, [chatGeneration]);
+    const unsubText = textGeneration?.subscribe(() => forceUpdate({}));
+    const unsubImage = imageGeneration?.subscribe(() => forceUpdate({}));
+
+    return () => {
+      unsubText?.();
+      unsubImage?.();
+    };
+  }, [textGeneration, imageGeneration]);
 
   const generateResponse = useCallback(
     async (userInput: string): Promise<string> => {
       await d.ChatService(chatId).AddUserMessage(userInput);
 
-      return (await chatGeneration.generateResponse()) ?? "";
+      return (await textGeneration.generateResponse()) ?? "";
     },
-    [chatGeneration],
+    [textGeneration],
   );
 
   const regenerateResponse = useCallback(
     async (messageId: string) => {
       try {
-        return await chatGeneration.regenerateResponse(messageId);
+        return await textGeneration.regenerateResponse(messageId);
       } catch (e) {
         d.ErrorService().log("Failed to regenerate response", e);
       }
     },
-    [chatGeneration],
+    [textGeneration],
   );
 
   const regenerateResponseWithFeedback = useCallback(
     async (messageId: string, feedback?: string) => {
       try {
-        return await chatGeneration.regenerateResponse(messageId, feedback);
+        return await textGeneration.regenerateResponse(messageId, feedback);
       } catch (e) {
         d.ErrorService().log("Failed to regenerate response with feedback", e);
       }
     },
-    [chatGeneration],
+    [textGeneration],
   );
 
   const generateImage = useCallback(async () => {
     try {
-      await chatGeneration.generateImage();
+      await imageGeneration.generateImage();
     } catch (e) {
       d.ErrorService().log("Failed to generate image", e);
     }
-  }, [chatGeneration]);
+  }, [imageGeneration]);
+
+  const isLoading =
+    textGeneration?.IsLoading || imageGeneration?.IsLoading || false;
+  const status = textGeneration?.Status ?? imageGeneration?.Status;
 
   return {
     generateResponse,
     regenerateResponse,
     regenerateResponseWithFeedback,
     generateImage,
-    status: chatGeneration?.Status,
-    isLoading: chatGeneration?.IsLoading || false,
+    status,
+    isLoading,
   };
 };

@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { d } from "../../../../../services/Dependencies";
-import { useChatGeneration } from "../../../hooks/useChatGeneration";
 
 interface UseAddChapterParams {
   chatId: string;
@@ -11,7 +10,12 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [nextChapterDirection, setNextChapterDirection] = useState("");
-  const chatGeneration = useChatGeneration({ chatId });
+  const [, forceUpdate] = useState({});
+  const chapterGeneration = d.ChapterGenerationService(chatId);
+
+  useEffect(() => {
+    return chapterGeneration?.subscribe(() => forceUpdate({}));
+  }, [chapterGeneration]);
 
   const handleOpenModal = async () => {
     setShowModal(true);
@@ -19,8 +23,8 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     // Automatically generate title and summary when modal opens
     try {
       const [generatedTitle, generatedSummary] = await Promise.all([
-        d.ChatGenerationService(chatId).generateChapterTitle(),
-        d.ChatGenerationService(chatId).generateChapterSummary(),
+        d.ChapterGenerationService(chatId).generateChapterTitle(),
+        d.ChapterGenerationService(chatId).generateChapterSummary(),
       ]);
 
       if (generatedTitle) {
@@ -44,7 +48,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
   const handleGenerateSummary = async () => {
     try {
       const generatedSummary = await d
-        .ChatGenerationService(chatId)
+        .ChapterGenerationService(chatId)
         .generateChapterSummary();
       if (generatedSummary) {
         setSummary(generatedSummary);
@@ -72,7 +76,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     title,
     summary,
     nextChapterDirection,
-    isGenerating: chatGeneration.isLoading,
+    isGenerating: chapterGeneration?.IsLoading || false,
     setTitle,
     setSummary,
     setNextChapterDirection,

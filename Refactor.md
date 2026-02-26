@@ -2,27 +2,6 @@
 
 ## 2. Architectural Issues
 
-### 2c. Optimistic Projection Updates Without Rollback
-
-**Problem:** In `ChatEventService.addEvent()`, projections are updated *before* the event is persisted to storage. If persistence fails, the UI shows state that doesn't exist in storage.
-
-**Fix:** Either:
-- Persist first, then update projections (simpler, slightly slower UX)
-- Keep optimistic updates but add rollback on failure (more complex, better UX)
-
-### 2d. ChatGeneration Growing Into a God Class
-
-**Problem:** `ChatGeneration` has 6 public async methods covering text generation, image generation, regeneration with/without feedback, chapter summaries, and chapter titles. Each follows the same loading/status/try-finally pattern.
-
-**Fix:** Consider extracting into focused services:
-- `TextGenerationService` — generateResponse, regenerateResponse
-- `ImageGenerationService` — generateImage, regenerateImage
-- `ChapterGenerationService` — generateChapterSummary, generateChapterTitle
-
-Each follows the same orchestration pattern and can share a common base or strategy.
-
----
-
 ## 3. Pattern Inconsistencies
 
 ### 3a. Singleton/Instantiation Chaos in Dependencies.ts
@@ -37,11 +16,6 @@ Each follows the same orchestration pattern and can share a common base or strat
 - Extract a generic `getOrCreateInstance<T>()` helper to replace the ~10 copy-pasted singleton map patterns.
 - Move `QUERY_CLIENT` creation out of `App.tsx` into `core/` so Dependencies.ts doesn't import from a React component.
 
-### 3b. Unsafe `as Type` Casts on getInstance Calls
-
-**Problem:** Multiple `getInstance` functions return `T | undefined` but are cast to `T` in `Dependencies.ts`, hiding potential `undefined` runtime errors.
-
-**Fix:** Make getInstance functions throw internally if the instance isn't found (or if chatId is null/invalid), so the return type is genuinely non-nullable. No casts needed.
 
 ### 3c. ManagedBlob Subclass Boilerplate
 
@@ -112,38 +86,6 @@ export const getPlansBlob = createManagedBlob<Plan[]>("plan", "per-chat");
 
 ---
 
-## 5. Error Handling Gaps
-
-### 5a. Silent Persistence Failures
-
-**Problem:** `ChatEventStore.saveEvent()` returns `boolean` instead of throwing. The caller in `ChatEventService` doesn't check the return value — a failed persist is silently lost.
-
-**Fix:** Make `saveEvent()` throw on failure. `ChatEventService.addEvent()` should catch and rollback projection state.
-
-### 5b. Silent Decryption Failures
-
-**Problem:** In `ChatEventStore.getEvents()`, failed decryptions log an error but silently skip the event. This causes silent data loss where projection state doesn't match what was persisted.
-
-**Fix:** Surface decryption failures to the user (via ErrorService notification) so they know data may be missing.
-
-### 5c. PlanService Constructor Race Condition
-
-**Problem:** `PlanService` constructor calls `initializePlansIfNeeded()` which is async — but the promise is never awaited. If `GetPlans()` is called before the load finishes, it returns `[]`.
-
-**Fix:** Use the same stored-promise pattern that `ChatEventService` uses for its `Initialize()` method.
-
----
-
-## 6. Performance (Future — Not Blocking)
-
-These are noted for awareness but not prioritized now:
-
-- **Subscriber notification storms during event replay:** Both projections notify subscribers on every event during initialization. For large chats, this causes hundreds of unnecessary React re-renders. Fix: batch notifications, only notify after full replay.
-- **Linear scans over message arrays:** `find()` is used throughout projections. For large chats, an ID-indexed `Map` would be faster.
-- **`UserChatMessage.data` typed as `any`:** Breaks type safety. Should use a discriminated union by message type.
-
----
-
 ## Priority Order
 
 | # | Item | Impact | Effort |
@@ -154,5 +96,4 @@ These are noted for awareness but not prioritized now:
 | 7 | Hooks bypass Dependencies.ts (§3d) | Low — convention compliance | Small |
 | 8 | Unsafe casts (§3b) | Low — type safety | Small |
 | 9 | ChatGeneration god class (§2d) | Low — not blocking yet | Medium |
-| 10 | Optimistic update rollback (§2c) | Low — rare failure case | Medium |
-| 11 | Performance improvements (§6) | Low — future concern | Medium |
+

@@ -19,9 +19,17 @@ import {
 } from "../features/Plans/services/PlanService";
 import { PlanGenerationService } from "../features/Plans/services/PlanGenerationService";
 import {
-  ChatGeneration,
-  getChatGenerationInstance,
-} from "../features/Chat/services/ChatGeneration/ChatGeneration";
+  TextGenerationService,
+  getTextGenerationServiceInstance,
+} from "../features/Chat/services/ChatGeneration/TextGenerationService";
+import {
+  ImageGenerationService,
+  getImageGenerationServiceInstance,
+} from "../features/Chat/services/ChatGeneration/ImageGenerationService";
+import {
+  ChapterGenerationService,
+  getChapterGenerationServiceInstance,
+} from "../features/Chat/services/ChatGeneration/ChapterGenerationService";
 import {
   LLMMessageContextService,
   getLLMMessageContextServiceInstance,
@@ -107,8 +115,16 @@ export class Dependencies {
   ChatImageModelsManagedBlob(chatId: string) {
     return getChatImageModelsManagedBlobInstance(chatId);
   }
-  ChatGenerationService(chatId: string) {
-    return getChatGenerationInstance(chatId) as ChatGeneration;
+  TextGenerationService(chatId: string) {
+    return getTextGenerationServiceInstance(chatId) as TextGenerationService;
+  }
+  ImageGenerationService(chatId: string) {
+    return getImageGenerationServiceInstance(chatId) as ImageGenerationService;
+  }
+  ChapterGenerationService(chatId: string) {
+    return getChapterGenerationServiceInstance(
+      chatId,
+    ) as ChapterGenerationService;
   }
   PlanService(chatId: string) {
     return getPlanServiceInstance(chatId) as PlanService;
