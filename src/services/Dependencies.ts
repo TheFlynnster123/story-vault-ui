@@ -17,6 +17,7 @@ import {
   PlanService,
   getPlanServiceInstance,
 } from "../features/Plans/services/PlanService";
+import { PlanGenerationService } from "../features/Plans/services/PlanGenerationService";
 import {
   ChatGeneration,
   getChatGenerationInstance,
@@ -111,6 +112,9 @@ export class Dependencies {
   }
   PlanService(chatId: string) {
     return getPlanServiceInstance(chatId) as PlanService;
+  }
+  PlanGenerationService(chatId: string) {
+    return new PlanGenerationService(chatId);
   }
   LLMMessageContextService(chatId: string) {
     return getLLMMessageContextServiceInstance(

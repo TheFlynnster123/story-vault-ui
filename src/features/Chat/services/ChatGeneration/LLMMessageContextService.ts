@@ -45,7 +45,11 @@ export class LLMMessageContextService {
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     const chatMessages = this.getChatMessages();
-    const plans = await this.fetchUpdatedPlans(chatMessages);
+
+    const plans = await d
+      .PlanGenerationService(this.chatId)
+      .generateUpdatedPlans(chatMessages);
+
     const memories = await this.fetchMemories();
 
     return this.assembleGenerationMessages(
@@ -95,13 +99,7 @@ export class LLMMessageContextService {
   private getChatMessages(): LLMMessage[] {
     return d.LLMChatProjection(this.chatId).GetMessages();
   }
-
-  private async fetchUpdatedPlans(chatMessages: LLMMessage[]): Promise<Plan[]> {
-    const service = d.PlanService(this.chatId);
-    await service.generateUpdatedPlans(chatMessages);
-    return service.GetPlans();
-  }
-
+  
   private async fetchMemories(): Promise<Memory[]> {
     return d.MemoriesService(this.chatId).Get();
   }

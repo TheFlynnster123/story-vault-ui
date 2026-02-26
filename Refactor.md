@@ -1,11 +1,5 @@
 # Refactor Plan
 
-## Guiding Principle
-
-The codebase currently organizes by **element type** (pages/, components/, services/), which scatters related files across many folders. The refactor will reorganize by **concept** so that a page, its components, hooks, and services all live together. This should make features easier to find, reason about, and modify.
-
----
-
 ## 2. Architectural Issues
 
 ### 2a. Hidden Side-Effects in "Build" Methods
@@ -20,12 +14,6 @@ await d.PlanService(this.chatId).generateUpdatedPlans(chatMessages);
 const requestMessages = await d.LLMMessageContextService(this.chatId)
   .buildGenerationRequestMessages();  // Now purely assembles messages
 ```
-
-### 2b. PlanService Split Personality
-
-**Problem:** `PlanService` is both a CRUD data service *and* an LLM generation service. Compare with `MemoriesService` which is cleanly just CRUD.
-
-**Fix:** Extract `generateUpdatedPlans()` and `generatePlanContent()` into a `PlanGenerationService` (or fold them into `ChatGeneration`). `PlanService` becomes pure CRUD like `MemoriesService`.
 
 ### 2c. Optimistic Projection Updates Without Rollback
 
@@ -175,8 +163,7 @@ These are noted for awareness but not prioritized now:
 |---|------|--------|--------|
 | 1 | Folder restructure by concept (§1) | High — directly addresses the "klugey" feeling | Large |
 | 2 | Hidden side-effects in build methods (§2a) | High — correctness risk | Small |
-| 3 | PlanService split (§2b) | Medium — cleaner separation | Small |
-| 4 | Singleton/boilerplate consolidation (§3a, §3c) | Medium — DX improvement | Medium |
+| 3 | Singleton/boilerplate consolidation (§3a, §3c) | Medium — DX improvement | Medium |
 | 5 | Naming & convention standardization (§4) | Medium — reduces cognitive load | Medium |
 | 6 | Error handling gaps (§5) | Medium — reliability | Medium |
 | 7 | Hooks bypass Dependencies.ts (§3d) | Low — convention compliance | Small |

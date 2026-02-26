@@ -1,6 +1,4 @@
 import { d } from "../../../services/Dependencies";
-import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
-import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import type { Plan } from "./Plan";
 
 // Singleton instances
@@ -129,41 +127,4 @@ export class PlanService {
       this.notifySubscribers();
     }
   }
-
-  public generateUpdatedPlans = async (
-    chatMessages: LLMMessage[],
-  ): Promise<void> => {
-    this.IsLoading = true;
-    try {
-      const processPromises = this.Plans.map(
-        async (plan) => await this.generatePlanContent(plan, chatMessages),
-      );
-
-      this.Plans = await Promise.all(processPromises);
-      this.notifySubscribers();
-    } finally {
-      this.IsLoading = false;
-    }
-  };
-
-  private generatePlanContent = async (
-    plan: Plan,
-    chatMessages: LLMMessage[],
-  ) => {
-    const promptMessages: LLMMessage[] = [
-      ...chatMessages,
-      toSystemMessage(
-        `#${plan.name}\r\n
-          ~ Consider the chat history above, and generate a plan in Markdown without preamble or additional text ~
-          ${plan.prompt}
-          \r\n
-          =====
-          \r\n`,
-      ),
-    ];
-
-    const response = await d.GrokChatAPI().postChat(promptMessages);
-
-    return { ...plan, content: response };
-  };
 }
