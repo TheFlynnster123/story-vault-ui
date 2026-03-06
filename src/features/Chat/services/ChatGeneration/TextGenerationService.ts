@@ -16,11 +16,12 @@ export class TextGenerationService extends GenerationOrchestrator {
 
   async generateResponse(): Promise<string | undefined> {
     return this.orchestrate(async () => {
-      this.setStatus("Updating plans...");
+      const planGenerationService = d.PlanGenerationService(this.chatId);
+      if (planGenerationService.hasPlansNeedingRefresh()) {
+        this.setStatus("Updating plans...");
+      }
       const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
-      await d
-        .PlanGenerationService(this.chatId)
-        .generateUpdatedPlans(chatMessages);
+      await planGenerationService.generateUpdatedPlans(chatMessages);
 
       const requestMessages = await d
         .LLMMessageContextService(this.chatId)
@@ -52,11 +53,12 @@ export class TextGenerationService extends GenerationOrchestrator {
 
       await d.ChatService(this.chatId).DeleteMessage(messageId);
 
-      this.setStatus("Updating plans...");
+      const planGenerationService = d.PlanGenerationService(this.chatId);
+      if (planGenerationService.hasPlansNeedingRefresh()) {
+        this.setStatus("Updating plans...");
+      }
       const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
-      await d
-        .PlanGenerationService(this.chatId)
-        .generateUpdatedPlans(chatMessages);
+      await planGenerationService.generateUpdatedPlans(chatMessages);
 
       const requestMessages = await d
         .LLMMessageContextService(this.chatId)

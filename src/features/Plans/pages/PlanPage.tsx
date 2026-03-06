@@ -6,6 +6,7 @@ import {
   RiDeleteBinLine,
   RiFileList2Line,
 } from "react-icons/ri";
+import { VscRefresh } from "react-icons/vsc";
 import {
   Title,
   Button,
@@ -17,14 +18,41 @@ import {
   Textarea,
   Text,
   Divider,
+  NumberInput,
+  Badge,
+  Tooltip,
 } from "@mantine/core";
 import type { Plan } from "../services/Plan";
+import {
+  DEFAULT_PLAN_PROMPT,
+  DEFAULT_PLAN_NAME,
+  DEFAULT_REFRESH_INTERVAL,
+  formatRefreshStatus,
+} from "../services/Plan";
 import { usePlanCache } from "../hooks/usePlanCache";
 import { v4 as uuidv4 } from "uuid";
 import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
 import { ConfirmModal } from "../../../components/ConfirmModal";
 import { d } from "../../../services/Dependencies";
+
+const createNewPlan = (): Plan => ({
+  id: uuidv4(),
+  type: "planning",
+  name: DEFAULT_PLAN_NAME,
+  prompt: DEFAULT_PLAN_PROMPT,
+  refreshInterval: DEFAULT_REFRESH_INTERVAL,
+  messagesSinceLastUpdate: 0,
+});
+
+const inputStyles = {
+  label: { color: Theme.page.text },
+  input: {
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderColor: Theme.plan.border,
+    color: Theme.page.text,
+  },
+};
 
 export const PlanPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -37,18 +65,18 @@ export const PlanPage: React.FC = () => {
 
   const planService = d.PlanService(chatId!);
 
-  const handleAddPlan = (type: Plan["type"]) => {
-    const newPlan: Plan = {
-      id: uuidv4(),
-      type,
-      name: `Basic Plan`,
-      prompt: "Write a list of key points relevant to the story:",
-    };
-    addPlan?.(newPlan);
+  const handleAddPlan = () => addPlan?.(createNewPlan());
+
+  const handlePlanChange = (
+    id: string,
+    field: keyof Plan,
+    value: string | number,
+  ) => {
+    updatePlanDefinition?.(id, field, value);
   };
 
-  const handlePlanChange = (id: string, field: keyof Plan, value: string) => {
-    updatePlanDefinition?.(id, field, value);
+  const handleResetPrompt = (id: string) => {
+    updatePlanDefinition?.(id, "prompt", DEFAULT_PLAN_PROMPT);
   };
 
   const handleRemovePlan = (id: string) => {
@@ -70,21 +98,17 @@ export const PlanPage: React.FC = () => {
     navigate(`/chat/${chatId}`);
   };
 
-  const getPlansByType = (type: Plan["type"]) =>
-    plans.filter((plan) => plan.type === type);
-
   return (
     <Page>
       <Paper mt={30}>
         <PlanHeader onGoBack={handleGoBack} />
 
         <Stack>
-          <PlanSection
-            title="Plans"
-            type="planning"
-            plans={getPlansByType("planning")}
+          <PlanList
+            plans={plans}
             onAdd={handleAddPlan}
             onChange={handlePlanChange}
+            onResetPrompt={handleResetPrompt}
             onRemove={handleRemovePlan}
           />
         </Stack>
@@ -122,73 +146,135 @@ const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
   </>
 );
 
-interface PlanSectionProps {
-  title: string;
-  type: Plan["type"];
+interface PlanListProps {
   plans: Plan[];
-  onAdd: (type: Plan["type"]) => void;
-  onChange: (id: string, field: keyof Plan, value: string) => void;
+  onAdd: () => void;
+  onChange: (id: string, field: keyof Plan, value: string | number) => void;
+  onResetPrompt: (id: string) => void;
   onRemove: (id: string) => void;
 }
 
-const PlanSection: React.FC<PlanSectionProps> = ({
-  title,
-  type,
+const PlanList: React.FC<PlanListProps> = ({
   plans,
   onAdd,
   onChange,
+  onResetPrompt,
   onRemove,
 }) => (
   <Stack>
     <Group justify="space-between">
-      <Text fw={500}>{title}</Text>
+      <Text fw={500}>Plans</Text>
       <Button
         variant="subtle"
-        onClick={() => onAdd(type)}
+        onClick={onAdd}
         style={{ color: Theme.plan.primary }}
       >
         <RiAddLine /> Add Plan
       </Button>
     </Group>
     {plans.map((plan) => (
-      <Stack key={plan.id} gap="sm">
-        <TextInput
-          label="Name"
-          value={plan.name}
-          onChange={(e) => onChange(plan.id, "name", e.currentTarget.value)}
-          styles={{
-            label: { color: Theme.page.text },
-            input: {
-              backgroundColor: "rgba(0, 0, 0, 0.3)",
-              borderColor: Theme.plan.border,
-              color: Theme.page.text,
-            },
-          }}
-        />
-        <Textarea
-          label="Plan Prompt"
-          value={plan.prompt}
-          onChange={(e) => onChange(plan.id, "prompt", e.currentTarget.value)}
-          minRows={5}
-          styles={{
-            label: { color: Theme.page.text },
-            input: {
-              backgroundColor: "rgba(0, 0, 0, 0.3)",
-              borderColor: Theme.plan.border,
-              color: Theme.page.text,
-            },
-          }}
-        />
-        <Button
-          variant="outline"
-          color="red"
-          onClick={() => onRemove(plan.id)}
-          style={{ alignSelf: "flex-start" }}
-        >
-          <RiDeleteBinLine /> Delete Plan
-        </Button>
-        <Divider my="sm" style={{ borderColor: Theme.plan.border }} />
-      </Stack>
+      <PlanEditor
+        key={plan.id}
+        plan={plan}
+        onChange={onChange}
+        onResetPrompt={onResetPrompt}
+        onRemove={onRemove}
+      />
     ))}
   </Stack>
 );
+
+interface PlanEditorProps {
+  plan: Plan;
+  onChange: (id: string, field: keyof Plan, value: string | number) => void;
+  onResetPrompt: (id: string) => void;
+  onRemove: (id: string) => void;
+}
+
+const PlanEditor: React.FC<PlanEditorProps> = ({
+  plan,
+  onChange,
+  onResetPrompt,
+  onRemove,
+}) => (
+  <Stack key={plan.id} gap="sm">
+    <TextInput
+      label="Name"
+      value={plan.name}
+      onChange={(e) => onChange(plan.id, "name", e.currentTarget.value)}
+      styles={inputStyles}
+    />
+    <Stack gap={4}>
+      <Group justify="space-between" align="center">
+        <Text size="sm" fw={500} style={{ color: Theme.page.text }}>
+          Plan Prompt
+        </Text>
+        <Tooltip label="Reset to default prompt">
+          <ActionIcon
+            variant="light"
+            size="sm"
+            onClick={() => onResetPrompt(plan.id)}
+            color="teal"
+          >
+            <VscRefresh size={16} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+      <Textarea
+        value={plan.prompt}
+        onChange={(e) => onChange(plan.id, "prompt", e.currentTarget.value)}
+        minRows={5}
+        autosize
+        styles={inputStyles}
+      />
+    </Stack>
+    <Group gap="md" align="flex-end">
+      <NumberInput
+        label="Refresh every N messages"
+        value={plan.refreshInterval}
+        onChange={(value) =>
+          onChange(plan.id, "refreshInterval", Number(value) || 1)
+        }
+        min={1}
+        max={100}
+        w={200}
+        styles={inputStyles}
+      />
+      <RefreshStatusBadge plan={plan} />
+    </Group>
+    <Button
+      variant="outline"
+      color="red"
+      onClick={() => onRemove(plan.id)}
+      style={{ alignSelf: "flex-start" }}
+    >
+      <RiDeleteBinLine /> Delete Plan
+    </Button>
+    <Divider my="sm" style={{ borderColor: Theme.plan.border }} />
+  </Stack>
+);
+
+interface RefreshStatusBadgeProps {
+  plan: Plan;
+}
+
+const RefreshStatusBadge: React.FC<RefreshStatusBadgeProps> = ({ plan }) => {
+  const remaining = Math.max(
+    0,
+    plan.refreshInterval - plan.messagesSinceLastUpdate,
+  );
+  const isDue = remaining === 0;
+
+  return (
+    <Badge
+      variant="light"
+      color={isDue ? "green" : "teal"}
+      size="lg"
+      style={{ marginBottom: 2 }}
+    >
+      {isDue
+        ? "⟳ Refresh pending"
+        : `⟳ ${formatRefreshStatus(plan)} messages until refresh`}
+    </Badge>
+  );
+};

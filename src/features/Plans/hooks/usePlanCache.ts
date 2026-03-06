@@ -12,8 +12,11 @@ export const usePlanCache = (chatId: string) => {
 
   return {
     plans: cache.getPlans(),
-    updatePlanDefinition: (planId: string, field: keyof Plan, value: string) =>
-      cache.updatePlanDefinition(planId, field, value),
+    updatePlanDefinition: (
+      planId: string,
+      field: keyof Plan,
+      value: string | number,
+    ) => cache.updatePlanDefinition(planId, field, value),
     addPlan: (plan: Plan) => cache.addPlan(plan),
     deletePlan: (planId: string) => cache.removePlan(planId),
     savePlans: async () => await cache.savePlans(),

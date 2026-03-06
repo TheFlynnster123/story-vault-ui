@@ -1,10 +1,14 @@
 import { d } from "../../../services/Dependencies";
 import type { Plan } from "./Plan";
+import { applyPlanDefaults } from "./Plan";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 
 export const getPlanServiceInstance = createInstanceCache(
   (chatId: string) => new PlanService(chatId),
 );
+
+const migrateLoadedPlans = (plans: Plan[]): Plan[] =>
+  plans.map(applyPlanDefaults);
 
 export class PlanService {
   public Plans: Plan[] = [];
@@ -47,7 +51,7 @@ export class PlanService {
 
   public fetchPlans = async (): Promise<Plan[]> => {
     const data = await d.PlansManagedBlob(this.chatId).get();
-    return data ?? [];
+    return migrateLoadedPlans(data ?? []);
   };
 
   public getPlans(): Plan[] {
@@ -66,11 +70,11 @@ export class PlanService {
   public updatePlanDefinition(
     planId: string,
     field: keyof Plan,
-    value: string,
+    value: string | number,
   ): void {
     const plan = this.Plans.find((p) => p.id === planId);
     if (plan) {
-      (plan[field] as string) = value;
+      (plan[field] as string | number) = value;
       this.notifySubscribers();
       this.savePlansDebounced();
     }

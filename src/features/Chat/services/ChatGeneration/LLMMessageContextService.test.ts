@@ -299,6 +299,8 @@ describe("LLMMessageContextService", () => {
         name: "Plan 1",
         prompt: "Prompt 1",
         content: "Content 1",
+        refreshInterval: 5,
+        messagesSinceLastUpdate: 0,
       },
       {
         id: "plan-2",
@@ -306,6 +308,8 @@ describe("LLMMessageContextService", () => {
         name: "Plan 2",
         prompt: "Prompt 2",
         content: "Content 2",
+        refreshInterval: 5,
+        messagesSinceLastUpdate: 0,
       },
     ];
   }
@@ -316,6 +320,8 @@ describe("LLMMessageContextService", () => {
       type: "planning",
       name: "Empty Plan",
       prompt: "Prompt",
+      refreshInterval: 5,
+      messagesSinceLastUpdate: 0,
     };
   }
 
