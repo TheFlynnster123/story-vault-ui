@@ -21,6 +21,3 @@ export const useChatInputExpansion = () => {
     minimize,
   };
 };
-
-// Keep the old export for backwards compatibility temporarily
-export const useExpandableTextarea = useChatInputExpansion;

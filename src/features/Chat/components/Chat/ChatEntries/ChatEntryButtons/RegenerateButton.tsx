@@ -11,7 +11,7 @@ export const RegenerateButton: React.FC<RegenerateButtonProps> = ({
   chatId,
   messageId,
 }) => {
-  const { regenerateResponse } = useChatGeneration({ chatId });
+  const { regenerateResponse } = useChatGeneration(chatId);
 
   const handleRegenerate = () => {
     regenerateResponse(messageId);

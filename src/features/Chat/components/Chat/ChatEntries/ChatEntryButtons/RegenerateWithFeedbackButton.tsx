@@ -15,7 +15,7 @@ export const RegenerateWithFeedbackButton: React.FC<
   const [showModal, setShowModal] = useState(false);
   const [feedback, setFeedback] = useState("");
   const { regenerateResponse, regenerateResponseWithFeedback } =
-    useChatGeneration({ chatId });
+    useChatGeneration(chatId);
 
   const handleSubmit = () => {
     if (feedback.trim()) {

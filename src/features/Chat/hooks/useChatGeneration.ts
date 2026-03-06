@@ -1,11 +1,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { d } from "../../../services/Dependencies";
 
-interface IUseChatGenerationProps {
-  chatId: string;
-}
-
-export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
+export const useChatGeneration = (chatId: string) => {
   const [, forceUpdate] = useState({});
   const textGeneration = d.TextGenerationService(chatId);
   const imageGeneration = d.ImageGenerationService(chatId);
@@ -22,9 +18,14 @@ export const useChatGeneration = ({ chatId }: IUseChatGenerationProps) => {
 
   const generateResponse = useCallback(
     async (userInput: string): Promise<string> => {
-      await d.ChatService(chatId).AddUserMessage(userInput);
+      try {
+        await d.ChatService(chatId).AddUserMessage(userInput);
 
-      return (await textGeneration.generateResponse()) ?? "";
+        return (await textGeneration.generateResponse()) ?? "";
+      } catch (e) {
+        d.ErrorService().log("Failed to generate response", e);
+        return "";
+      }
     },
     [textGeneration],
   );

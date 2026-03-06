@@ -83,11 +83,11 @@ export class LLMMessageContextService {
   }
 
   private getPlans(): Plan[] {
-    return d.PlanService(this.chatId).GetPlans();
+    return d.PlanService(this.chatId).getPlans();
   }
 
   private async fetchMemories(): Promise<Memory[]> {
-    return d.MemoriesService(this.chatId).Get();
+    return d.MemoriesService(this.chatId).get();
   }
 
   // ---- Private: Message Assembly ----

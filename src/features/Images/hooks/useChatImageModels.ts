@@ -25,7 +25,7 @@ export const useChatImageModels = (chatId: string) => {
       return result;
     } catch (err) {
       setError(errorMessage);
-      console.error(`${errorMessage}:`, err);
+      d.ErrorService().log(errorMessage, err);
       return null;
     }
   };
@@ -38,7 +38,7 @@ export const useChatImageModels = (chatId: string) => {
       setChatImageModels(models);
     } catch (err) {
       setError("Failed to load chat image models");
-      console.error("Error loading chat image models:", err);
+      d.ErrorService().log("Failed to load chat image models", err);
     } finally {
       setLoading(false);
     }

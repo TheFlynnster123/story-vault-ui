@@ -3,7 +3,7 @@ import { Button, Modal, Group, Text } from "@mantine/core";
 import { RiDeleteBinLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 import { d } from "../../../../services/Dependencies";
-import { useChatDeletion } from "../../hooks/useDeleteChat";
+import { useChatDeletion } from "../../hooks/useChatDeletion";
 
 interface ChatDeleteControlProps {
   chatId: string;

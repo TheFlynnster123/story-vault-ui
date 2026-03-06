@@ -13,11 +13,11 @@ export class PlanGenerationService {
   public generateUpdatedPlans = async (
     chatMessages: LLMMessage[],
   ): Promise<Plan[]> => {
-    const plans = d.PlanService(this.chatId).GetPlans();
+    const plans = d.PlanService(this.chatId).getPlans();
     const updatedPlans = await Promise.all(
       plans.map((plan) => this.generatePlanContent(plan, chatMessages)),
     );
-    await d.PlanService(this.chatId).SavePlans(updatedPlans);
+    await d.PlanService(this.chatId).savePlans(updatedPlans);
     return updatedPlans;
   };
 

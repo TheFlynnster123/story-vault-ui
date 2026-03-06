@@ -10,8 +10,8 @@ describe("PlanGenerationService", () => {
   const testChatId = "test-chat-123";
 
   let mockPlanService: {
-    GetPlans: ReturnType<typeof vi.fn>;
-    SavePlans: ReturnType<typeof vi.fn>;
+    getPlans: ReturnType<typeof vi.fn>;
+    savePlans: ReturnType<typeof vi.fn>;
     Plans: Plan[];
   };
 
@@ -21,8 +21,8 @@ describe("PlanGenerationService", () => {
 
   beforeEach(() => {
     mockPlanService = {
-      GetPlans: vi.fn().mockReturnValue([]),
-      SavePlans: vi.fn().mockResolvedValue(undefined),
+      getPlans: vi.fn().mockReturnValue([]),
+      savePlans: vi.fn().mockResolvedValue(undefined),
       Plans: [],
     };
 
@@ -42,7 +42,7 @@ describe("PlanGenerationService", () => {
   describe("generateUpdatedPlans", () => {
     it("should do nothing when there are no plans", async () => {
       const service = new PlanGenerationService(testChatId);
-      mockPlanService.GetPlans.mockReturnValue([]);
+      mockPlanService.getPlans.mockReturnValue([]);
 
       await service.generateUpdatedPlans(createMockChatMessages());
 
@@ -52,7 +52,7 @@ describe("PlanGenerationService", () => {
     it("should generate content for each plan", async () => {
       const service = new PlanGenerationService(testChatId);
       const plans = createMockPlans();
-      mockPlanService.GetPlans.mockReturnValue(plans);
+      mockPlanService.getPlans.mockReturnValue(plans);
       mockGrokChatAPI.postChat
         .mockResolvedValueOnce("Updated content 1")
         .mockResolvedValueOnce("Updated content 2");
@@ -71,7 +71,7 @@ describe("PlanGenerationService", () => {
       const service = new PlanGenerationService(testChatId);
       const plans = [createSinglePlan()];
       const chatMessages = createMockChatMessages();
-      mockPlanService.GetPlans.mockReturnValue(plans);
+      mockPlanService.getPlans.mockReturnValue(plans);
 
       await service.generateUpdatedPlans(chatMessages);
 
@@ -90,12 +90,12 @@ describe("PlanGenerationService", () => {
     it("should save updated plans via PlanService", async () => {
       const service = new PlanGenerationService(testChatId);
       const plans = [createSinglePlan()];
-      mockPlanService.GetPlans.mockReturnValue(plans);
+      mockPlanService.getPlans.mockReturnValue(plans);
       mockGrokChatAPI.postChat.mockResolvedValue("New content");
 
       await service.generateUpdatedPlans(createMockChatMessages());
 
-      expect(mockPlanService.SavePlans).toHaveBeenCalledWith(
+      expect(mockPlanService.savePlans).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({ content: "New content" }),
         ]),
@@ -105,7 +105,7 @@ describe("PlanGenerationService", () => {
     it("should preserve plan metadata while updating content", async () => {
       const service = new PlanGenerationService(testChatId);
       const plan = createSinglePlan();
-      mockPlanService.GetPlans.mockReturnValue([plan]);
+      mockPlanService.getPlans.mockReturnValue([plan]);
       mockGrokChatAPI.postChat.mockResolvedValue("New content");
 
       const result = await service.generateUpdatedPlans(
@@ -124,7 +124,7 @@ describe("PlanGenerationService", () => {
     it("should process all plans in parallel", async () => {
       const service = new PlanGenerationService(testChatId);
       const plans = createMockPlans();
-      mockPlanService.GetPlans.mockReturnValue(plans);
+      mockPlanService.getPlans.mockReturnValue(plans);
       mockGrokChatAPI.postChat.mockImplementation(
         () =>
           new Promise((resolve) => setTimeout(() => resolve("Generated"), 10)),

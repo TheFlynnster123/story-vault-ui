@@ -5,14 +5,14 @@ import { SpinningIcon } from "./ChatInput.styled";
 import React from "react";
 import { useChatInputCache } from "../../hooks/useChatInputCache";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
-import { useChatInputExpansion } from "../../hooks/useExpandableTextarea";
+import { useChatInputExpansion } from "../../hooks/useChatInputExpansion";
 
 export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
   const { inputValue, setInputValue, clearInputValue } =
     useChatInputCache(chatId);
   const { isExpanded, expand, minimize } = useChatInputExpansion();
   const { generateImage, generateResponse, isLoading, status } =
-    useChatGeneration({ chatId });
+    useChatGeneration(chatId);
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {

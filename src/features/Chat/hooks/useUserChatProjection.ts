@@ -7,9 +7,9 @@ interface UseUserChatProjectionReturn {
   getChapterMessages: (chapterId: string) => UserChatMessage[];
 }
 
-export function useUserChatProjection(
+export const useUserChatProjection = (
   chatId: string,
-): UseUserChatProjectionReturn {
+): UseUserChatProjectionReturn => {
   const [messages, setMessages] = useState<UserChatMessage[]>([]);
 
   const onNotify = async () => {
@@ -33,4 +33,4 @@ export function useUserChatProjection(
     getChapterMessages: (chapterId: string) =>
       d.UserChatProjection(chatId).getChapterMessages(chapterId),
   };
-}
+};

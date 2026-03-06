@@ -40,11 +40,11 @@ describe("LLMMessageContextService", () => {
     } as any;
 
     PlanService = {
-      GetPlans: vi.fn().mockReturnValue([]),
+      getPlans: vi.fn().mockReturnValue([]),
     } as any;
 
     MemoriesService = {
-      Get: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue([]),
     } as any;
 
     vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
@@ -157,7 +157,7 @@ describe("LLMMessageContextService", () => {
       await service.buildGenerationRequestMessages();
 
       expect(d.PlanService).toHaveBeenCalledWith(testChatId);
-      expect(PlanService.GetPlans).toHaveBeenCalled();
+      expect(PlanService.getPlans).toHaveBeenCalled();
     });
 
     it("should fetch memories", async () => {
@@ -166,7 +166,7 @@ describe("LLMMessageContextService", () => {
       await service.buildGenerationRequestMessages();
 
       expect(d.MemoriesService).toHaveBeenCalledWith(testChatId);
-      expect(MemoriesService.Get).toHaveBeenCalled();
+      expect(MemoriesService.get).toHaveBeenCalled();
     });
 
     it("should include story prompt by default", async () => {
@@ -190,8 +190,8 @@ describe("LLMMessageContextService", () => {
 
     it("should build messages in correct order", async () => {
       const service = new LLMMessageContextService(testChatId);
-      PlanService.GetPlans.mockReturnValue(createMockPlans());
-      MemoriesService.Get.mockResolvedValue(createMockMemories());
+      PlanService.getPlans.mockReturnValue(createMockPlans());
+      MemoriesService.get.mockResolvedValue(createMockMemories());
 
       const result = await service.buildGenerationRequestMessages();
 
