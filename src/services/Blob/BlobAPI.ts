@@ -1,5 +1,5 @@
 import { d } from "../Dependencies";
-import Config from "../../components/Common/Config";
+import Config from "../Config";
 
 interface SaveBlobRequest {
   chatId: string;
@@ -37,7 +37,7 @@ export class BlobAPI {
   public async saveBlob(
     chatId: string,
     blobName: string,
-    content: string
+    content: string,
   ): Promise<boolean> {
     try {
       const encryptedContent = await d
@@ -49,8 +49,8 @@ export class BlobAPI {
         `${this.URL}/api/SaveBlob`,
         buildSaveBlobRequest(
           { chatId, blobName, content: encryptedContent },
-          accessToken
-        )
+          accessToken,
+        ),
       );
 
       validateResponse(response, "save blob");
@@ -66,13 +66,13 @@ export class BlobAPI {
 
   public async getBlob(
     chatId: string,
-    blobName: string
+    blobName: string,
   ): Promise<string | undefined> {
     try {
       const accessToken = await this.getAccessToken();
       const response = await fetch(
         `${this.URL}/api/GetBlob`,
-        buildGetBlobRequest({ chatId, blobName }, accessToken)
+        buildGetBlobRequest({ chatId, blobName }, accessToken),
       );
 
       validateGetBlobResponse(response);
@@ -96,7 +96,7 @@ export class BlobAPI {
       const accessToken = await this.getAccessToken();
       const response = await fetch(
         `${this.URL}/api/DeleteBlob`,
-        buildDeleteBlobRequest({ chatId, blobName }, accessToken)
+        buildDeleteBlobRequest({ chatId, blobName }, accessToken),
       );
 
       validateResponse(response, "delete blob");
@@ -141,7 +141,7 @@ function validateGetBlobResponse(response: Response) {
 
 function buildSaveBlobRequest(
   request: SaveBlobRequest,
-  accessToken: string
+  accessToken: string,
 ): RequestInit {
   return {
     method: "POST",
@@ -155,7 +155,7 @@ function buildSaveBlobRequest(
 
 function buildGetBlobRequest(
   request: GetBlobRequest,
-  accessToken: string
+  accessToken: string,
 ): RequestInit {
   return {
     method: "POST",
@@ -169,7 +169,7 @@ function buildGetBlobRequest(
 
 function buildDeleteBlobRequest(
   request: DeleteBlobRequest,
-  accessToken: string
+  accessToken: string,
 ): RequestInit {
   return {
     method: "POST",

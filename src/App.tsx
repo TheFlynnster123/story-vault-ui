@@ -1,24 +1,23 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import React from "react";
-import LandingPage from "./pages/LandingPage";
-import ChatMenuPage from "./pages/ChatMenuPage";
-import SystemSettingsPage from "./pages/SystemSettingsPage";
-import SystemPromptsPage from "./pages/SystemPromptsPage";
-import DefaultImageModelsPage from "./pages/DefaultImageModelsPage";
-import ImageModelEditPage from "./pages/ImageModelEditPage";
-import { ChatEditorPage } from "./pages/ChatEditorPage";
-import ChatPage from "./pages/ChatPage";
-import { PlanPage } from "./pages/PlanPage";
-import { MemoriesPage } from "./pages/MemoriesPage";
-import { StoryEditorPage } from "./pages/StoryEditorPage";
-import { ChatImageModelsPage } from "./pages/ChatImageModelsPage";
-import ChatImageModelTemplatePage from "./pages/ChatImageModelTemplatePage";
-import ChatImageModelEditPage from "./pages/ChatImageModelEditPage";
-import ProtectedRoute from "./components/Auth/ProtectedRoute";
-import { ChatCreationWizard } from "./components/ChatCreationWizard/ChatCreationWizard";
-
-export const QUERY_CLIENT = new QueryClient();
+import LandingPage from "./features/Auth/pages/LandingPage";
+import ChatMenuPage from "./features/Chat/pages/ChatMenuPage";
+import SystemSettingsPage from "./features/SystemSettings/pages/SystemSettingsPage";
+import SystemPromptsPage from "./features/Prompts/pages/SystemPromptsPage";
+import DefaultImageModelsPage from "./features/Images/pages/DefaultImageModelsPage";
+import ImageModelEditPage from "./features/Images/pages/ImageModelEditPage";
+import { ChatEditorPage } from "./features/Chat/pages/ChatEditorPage";
+import ChatPage from "./features/Chat/pages/ChatPage";
+import { PlanPage } from "./features/Plans/pages/PlanPage";
+import { MemoriesPage } from "./features/Memories/pages/MemoriesPage";
+import { StoryEditorPage } from "./features/StoryEditor/pages/StoryEditorPage";
+import { ChatImageModelsPage } from "./features/Images/pages/ChatImageModelsPage";
+import ChatImageModelTemplatePage from "./features/Images/pages/ChatImageModelTemplatePage";
+import ChatImageModelEditPage from "./features/Images/pages/ChatImageModelEditPage";
+import ProtectedRoute from "./features/Auth/components/ProtectedRoute";
+import { ChatCreationWizard } from "./features/Chat/components/ChatCreationWizard/ChatCreationWizard";
+import { QUERY_CLIENT } from "./services/QueryClient";
 
 interface AppProps {}
 

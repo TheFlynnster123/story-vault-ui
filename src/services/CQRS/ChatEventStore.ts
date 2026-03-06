@@ -1,4 +1,4 @@
-import Config from "../../components/Common/Config";
+import Config from "../Config";
 import { d } from "../Dependencies";
 import type { ChatEvent } from "./events/ChatEvent";
 
@@ -21,7 +21,7 @@ export class ChatEventStore {
 
     const response = await fetch(
       `${this.URL}/api/GetChatEvents`,
-      buildGetChatEventsRequest(chatId, accessToken)
+      buildGetChatEventsRequest(chatId, accessToken),
     );
 
     if (response.ok) {
@@ -35,14 +35,14 @@ export class ChatEventStore {
 
   public async addChatEvent(
     chatId: string,
-    event: ChatEvent
+    event: ChatEvent,
   ): Promise<boolean> {
     const accessToken = await d.AuthAPI().getAccessToken();
     const eventDTO = await this.encryptEvent(event);
 
     const response = await fetch(
       `${this.URL}/api/AddChatEvent`,
-      buildAddChatEventRequest(chatId, eventDTO, accessToken)
+      buildAddChatEventRequest(chatId, eventDTO, accessToken),
     );
 
     if (response.ok) {
@@ -55,16 +55,16 @@ export class ChatEventStore {
 
   public async addChatEvents(
     chatId: string,
-    events: ChatEvent[]
+    events: ChatEvent[],
   ): Promise<boolean> {
     const accessToken = await d.AuthAPI().getAccessToken();
     const eventDTOs = await Promise.all(
-      events.map((event) => this.encryptEvent(event))
+      events.map((event) => this.encryptEvent(event)),
     );
 
     const response = await fetch(
       `${this.URL}/api/AddChatEvents`,
-      buildAddChatEventsRequest(chatId, eventDTOs, accessToken)
+      buildAddChatEventsRequest(chatId, eventDTOs, accessToken),
     );
 
     if (response.ok) {
@@ -118,7 +118,7 @@ export class ChatEventStore {
 // ---- Request Builders ----
 function buildGetChatEventsRequest(
   chatId: string,
-  accessToken: string
+  accessToken: string,
 ): RequestInit {
   return {
     method: "POST",
@@ -133,7 +133,7 @@ function buildGetChatEventsRequest(
 function buildAddChatEventRequest(
   chatId: string,
   eventDTO: ChatEventDTO,
-  accessToken: string
+  accessToken: string,
 ): RequestInit {
   return {
     method: "POST",
@@ -148,7 +148,7 @@ function buildAddChatEventRequest(
 function buildAddChatEventsRequest(
   chatId: string,
   eventDTOs: ChatEventDTO[],
-  accessToken: string
+  accessToken: string,
 ): RequestInit {
   return {
     method: "POST",

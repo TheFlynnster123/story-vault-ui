@@ -1,30 +1,66 @@
 import { d } from "../Dependencies";
+import {
+  createInstanceCache,
+  createGlobalInstanceCache,
+} from "../Utils/getOrCreateInstance";
 
 const DEFAULT_DEBOUNCE_MS = 4000;
 const DEFAULT_RETRY_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 1000;
 
-export abstract class ManagedBlob<T> {
+const GLOBAL_CHAT_ID = "global";
+
+/**
+ * Factory to create a cached ManagedBlob accessor for a per-chat blob.
+ *
+ * Replaces 5 ManagedBlob subclass files that only set a blob name string.
+ *
+ * Usage:
+ *   export const getChatSettingsBlob = createManagedBlob<ChatSettings>("chat-settings");
+ *   const blob = getChatSettingsBlob("chat-123");
+ */
+export const createManagedBlob = <T>(
+  blobName: string,
+): ((chatId: string) => ManagedBlob<T>) &
+  ((chatId: string | null) => ManagedBlob<T> | null) =>
+  createInstanceCache((chatId: string) => new ManagedBlob<T>(chatId, blobName));
+
+/**
+ * Factory to create a cached ManagedBlob accessor for a global (non-chat-specific) blob.
+ *
+ * Replaces 3 global ManagedBlob subclass files.
+ *
+ * Usage:
+ *   export const getSystemSettingsBlob = createGlobalManagedBlob<SystemSettings>("system-settings");
+ *   const blob = getSystemSettingsBlob();
+ */
+export const createGlobalManagedBlob = <T>(
+  blobName: string,
+): (() => ManagedBlob<T>) =>
+  createGlobalInstanceCache(() => new ManagedBlob<T>(GLOBAL_CHAT_ID, blobName));
+
+export class ManagedBlob<T> {
   protected chatId: string;
   protected data: T | undefined = undefined;
   protected _isLoading: boolean = true;
   protected initialized: boolean = false;
 
+  private blobName: string;
+  private debounceMs: number;
   private subscribers = new Set<() => void>();
   private debounceTimeout: ReturnType<typeof setTimeout> | undefined =
     undefined;
   private fetchPromise: Promise<T | undefined> | null = null;
   private isFetching = false;
 
-  constructor(chatId: string) {
+  constructor(
+    chatId: string,
+    blobName: string,
+    debounceMs: number = DEFAULT_DEBOUNCE_MS,
+  ) {
     this.chatId = chatId;
-  }
-
-  protected abstract getBlobName(): string;
-
-  // Override in subclass to customize debounce timing
-  protected getDebounceMs(): number {
-    return DEFAULT_DEBOUNCE_MS;
+    this.blobName = blobName;
+    this.debounceMs = debounceMs;
   }
 
   public subscribe(callback: () => void): () => void {
@@ -82,7 +118,7 @@ export abstract class ManagedBlob<T> {
     this.initialized = false;
     this.notifySubscribers();
 
-    await d.BlobAPI().deleteBlob(this.chatId, this.getBlobName());
+    await d.BlobAPI().deleteBlob(this.chatId, this.blobName);
   }
 
   private async fetchAndCache(): Promise<T | undefined> {
@@ -90,9 +126,7 @@ export abstract class ManagedBlob<T> {
     this.notifySubscribers();
 
     try {
-      const blobContent = await d
-        .BlobAPI()
-        .getBlob(this.chatId, this.getBlobName());
+      const blobContent = await d.BlobAPI().getBlob(this.chatId, this.blobName);
 
       this.updateLocalCache(blobContent ? JSON.parse(blobContent) : undefined);
       return this.data;
@@ -121,10 +155,10 @@ export abstract class ManagedBlob<T> {
 
   private async saveWithRetry(
     content: string,
-    attempt: number = 1
+    attempt: number = 1,
   ): Promise<void> {
     try {
-      await d.BlobAPI().saveBlob(this.chatId, this.getBlobName(), content);
+      await d.BlobAPI().saveBlob(this.chatId, this.blobName, content);
     } catch (e) {
       if (attempt < DEFAULT_RETRY_ATTEMPTS) {
         await delay(DEFAULT_RETRY_DELAY_MS * attempt);
@@ -132,7 +166,7 @@ export abstract class ManagedBlob<T> {
       }
       d.ErrorService().log(
         `Failed to save blob after ${DEFAULT_RETRY_ATTEMPTS} attempts`,
-        e
+        e,
       );
       throw e;
     }
@@ -149,7 +183,7 @@ export abstract class ManagedBlob<T> {
           d.ErrorService().log("Failed to save debounced blob", e);
         }
       }
-    }, this.getDebounceMs());
+    }, this.debounceMs);
   }
 
   private clearDebounce(): void {

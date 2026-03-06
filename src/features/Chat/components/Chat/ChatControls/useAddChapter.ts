@@ -1,0 +1,88 @@
+import { useState, useEffect } from "react";
+import { d } from "../../../../../services/Dependencies";
+
+interface UseAddChapterParams {
+  chatId: string;
+}
+
+export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
+  const [showModal, setShowModal] = useState(false);
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [nextChapterDirection, setNextChapterDirection] = useState("");
+  const [, forceUpdate] = useState({});
+  const chapterGeneration = d.ChapterGenerationService(chatId);
+
+  useEffect(() => {
+    return chapterGeneration?.subscribe(() => forceUpdate({}));
+  }, [chapterGeneration]);
+
+  const handleOpenModal = async () => {
+    setShowModal(true);
+
+    // Automatically generate title and summary when modal opens
+    try {
+      const [generatedTitle, generatedSummary] = await Promise.all([
+        d.ChapterGenerationService(chatId).generateChapterTitle(),
+        d.ChapterGenerationService(chatId).generateChapterSummary(),
+      ]);
+
+      if (generatedTitle) {
+        setTitle(generatedTitle);
+      }
+      if (generatedSummary) {
+        setSummary(generatedSummary);
+      }
+    } catch (error) {
+      d.ErrorService().log("Failed to generate chapter title/summary", error);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setTitle("");
+    setSummary("");
+    setNextChapterDirection("");
+  };
+
+  const handleGenerateSummary = async () => {
+    try {
+      const generatedSummary = await d
+        .ChapterGenerationService(chatId)
+        .generateChapterSummary();
+      if (generatedSummary) {
+        setSummary(generatedSummary);
+      }
+    } catch (error) {
+      d.ErrorService().log("Failed to generate chapter summary", error);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!title.trim() || !summary.trim()) return;
+
+    try {
+      await d
+        .ChatService(chatId)
+        .AddChapter(title, summary, nextChapterDirection || undefined);
+      handleCloseModal();
+    } catch (error) {
+      d.ErrorService().log("Failed to create chapter", error);
+    }
+  };
+
+  return {
+    showModal,
+    title,
+    summary,
+    nextChapterDirection,
+    isGenerating: chapterGeneration?.IsLoading || false,
+    setTitle,
+    setSummary,
+    setNextChapterDirection,
+    handleOpenModal,
+    handleCloseModal,
+    handleGenerateSummary,
+    handleSubmit,
+  };
+};

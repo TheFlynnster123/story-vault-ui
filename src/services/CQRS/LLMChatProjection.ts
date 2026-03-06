@@ -11,19 +11,11 @@ import type {
   StoryEditedEvent,
 } from "./events/ChatEvent";
 
-// Singleton instances
-const llmChatProjectionInstances = new Map<string, LLMChatProjection>();
+import { createInstanceCache } from "../Utils/getOrCreateInstance";
 
-export const getLLMChatProjectionInstance = (
-  chatId: string | null
-): LLMChatProjection | null => {
-  if (!chatId) return null;
-
-  if (!llmChatProjectionInstances.has(chatId))
-    llmChatProjectionInstances.set(chatId, new LLMChatProjection());
-
-  return llmChatProjectionInstances.get(chatId)!;
-};
+export const getLLMChatProjectionInstance = createInstanceCache(
+  (_chatId: string) => new LLMChatProjection(),
+);
 
 // ---- LLM Chat Projection ----
 export class LLMChatProjection {
@@ -107,7 +99,7 @@ export class LLMChatProjection {
   processStoryCreated(event: StoryCreatedEvent) {
     const storyContent = this.formatStoryContent(event.content);
     this.messages.unshift(
-      this.createMessageState(event.storyId, "message", "system", storyContent)
+      this.createMessageState(event.storyId, "message", "system", storyContent),
     );
   }
 
@@ -124,8 +116,8 @@ export class LLMChatProjection {
         event.messageId,
         "message",
         event.role,
-        event.content
-      )
+        event.content,
+      ),
     );
 
     this.updateLastChapterFormat();
@@ -158,7 +150,7 @@ export class LLMChatProjection {
     const chapterContent = this.formatChapterContentFull(
       event.title,
       event.summary,
-      event.nextChapterDirection
+      event.nextChapterDirection,
     );
 
     const chapterMessage = this.createMessageState(
@@ -166,7 +158,7 @@ export class LLMChatProjection {
       "chapter",
       "system",
       chapterContent,
-      event.coveredMessageIds
+      event.coveredMessageIds,
     );
 
     // Store metadata for future format updates
@@ -224,7 +216,7 @@ export class LLMChatProjection {
 
   getMessagesSinceChapter = (lastChapter: MessageState) =>
     this.getVisibleMessages().filter(
-      (m) => this.getMessageIndex(m.id) > this.getMessageIndex(lastChapter.id)
+      (m) => this.getMessageIndex(m.id) > this.getMessageIndex(lastChapter.id),
     );
 
   getVisibleChapterMessages = (chapter: MessageState) => {
@@ -247,7 +239,7 @@ export class LLMChatProjection {
     this.messages.filter((m) => !m.hiddenByChapterId && !m.deleted);
 
   getVisibleMessagesWithBufferBeforeLastChapter(
-    lastChapter: MessageState
+    lastChapter: MessageState,
   ): MessageState[] {
     const visibleMessages = this.getVisibleMessages();
     const bufferMessages = this.getPreviousChapterBufferMessages(lastChapter);
@@ -255,7 +247,7 @@ export class LLMChatProjection {
     if (bufferMessages.length === 0) return visibleMessages;
 
     const lastChapterIndex = visibleMessages.findIndex(
-      (m) => m.id === lastChapter.id
+      (m) => m.id === lastChapter.id,
     );
 
     if (lastChapterIndex === -1) return visibleMessages;
@@ -280,7 +272,7 @@ export class LLMChatProjection {
   getPreviousChapterBufferMessages(lastChapter: MessageState): MessageState[] {
     if (!lastChapter.coveredMessageIds) return [];
     const bufferIds = lastChapter.coveredMessageIds.slice(
-      -this.numberOfPreviousChapterMessages
+      -this.numberOfPreviousChapterMessages,
     );
 
     return bufferIds
@@ -296,7 +288,7 @@ export class LLMChatProjection {
   formatChapterContentWithDirection = (
     title: string,
     summary: string,
-    nextChapterDirection: string | undefined
+    nextChapterDirection: string | undefined,
   ): string => {
     let content = `[Previous Chapter Summary: ${title}]\n${summary}\n[End of Chapter Summary]`;
 
@@ -309,7 +301,7 @@ export class LLMChatProjection {
   formatChapterContentFull = (
     title?: string,
     summary?: string,
-    nextChapterDirection?: string
+    nextChapterDirection?: string,
   ): string => {
     let content = "";
 
@@ -348,7 +340,7 @@ export class LLMChatProjection {
     chapter.content = this.formatChapterContentFull(
       title,
       summary,
-      nextChapterDirection
+      nextChapterDirection,
     );
   }
 
@@ -361,7 +353,7 @@ export class LLMChatProjection {
     // Count visible messages after the last chapter
     const chapterIndex = this.getMessageIndex(lastChapter.id);
     const messagesAfterChapter = this.getVisibleMessages().filter(
-      (m) => this.getMessageIndex(m.id) > chapterIndex
+      (m) => this.getMessageIndex(m.id) > chapterIndex,
     );
 
     // If we have 6 or more messages after chapter, don't include covered messages
@@ -372,7 +364,7 @@ export class LLMChatProjection {
         chapter.content = this.formatChapterContentWithDirection(
           title,
           summary,
-          nextChapterDirection
+          nextChapterDirection,
         );
       }
     } else {
@@ -386,7 +378,7 @@ export class LLMChatProjection {
     type: "message" | "chapter",
     role: "user" | "assistant" | "system",
     content: string,
-    coveredMessageIds?: string[]
+    coveredMessageIds?: string[],
   ): MessageState {
     return {
       id,

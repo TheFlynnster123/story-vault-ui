@@ -16,11 +16,8 @@ vi.mock("../../Dependencies", () => ({
   },
 }));
 
-class TestBlob extends ManagedBlob<string> {
-  protected getBlobName(): string {
-    return "test-blob";
-  }
-}
+const createTestBlob = (chatId: string) =>
+  new ManagedBlob<string>(chatId, "test-blob");
 
 describe("ManagedBlob.savePendingChanges", () => {
   const chatId = "test-chat-id";
@@ -32,7 +29,7 @@ describe("ManagedBlob.savePendingChanges", () => {
   });
 
   it("should do nothing when no debounced save is pending", async () => {
-    const blob = new TestBlob(chatId);
+    const blob = createTestBlob(chatId);
 
     await blob.savePendingChanges();
 
@@ -40,7 +37,7 @@ describe("ManagedBlob.savePendingChanges", () => {
   });
 
   it("should save data when debounced save is pending", async () => {
-    const blob = new TestBlob(chatId);
+    const blob = createTestBlob(chatId);
     const testData = "test-data";
 
     blob.saveDebounced(testData);
@@ -50,14 +47,14 @@ describe("ManagedBlob.savePendingChanges", () => {
     expect(blobApi.saveBlob).toHaveBeenCalledWith(
       chatId,
       "test-blob",
-      JSON.stringify(testData)
+      JSON.stringify(testData),
     );
   });
 
   it("should clear the debounce timeout when saving", async () => {
     vi.useFakeTimers();
 
-    const blob = new TestBlob(chatId);
+    const blob = createTestBlob(chatId);
     blob.saveDebounced("test-data");
 
     await blob.savePendingChanges();
@@ -72,7 +69,7 @@ describe("ManagedBlob.savePendingChanges", () => {
   });
 
   it("should be idempotent when called multiple times", async () => {
-    const blob = new TestBlob(chatId);
+    const blob = createTestBlob(chatId);
     blob.saveDebounced("test-data");
 
     await blob.savePendingChanges();
@@ -85,7 +82,7 @@ describe("ManagedBlob.savePendingChanges", () => {
   it("should handle case when data is undefined", async () => {
     vi.useFakeTimers();
 
-    const blob = new TestBlob(chatId);
+    const blob = createTestBlob(chatId);
 
     // Trigger debounce but with no data set
     // This simulates an edge case, though unlikely in practice
@@ -102,7 +99,7 @@ describe("ManagedBlob.savePendingChanges", () => {
     const error = new Error("Network error");
     blobApi.saveBlob.mockRejectedValue(error);
 
-    const blob = new TestBlob(chatId);
+    const blob = createTestBlob(chatId);
     blob.saveDebounced("test-data");
 
     await expect(blob.savePendingChanges()).rejects.toThrow("Network error");

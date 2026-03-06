@@ -16,16 +16,12 @@ vi.mock("../../Dependencies", () => ({
 
 import { ManagedBlob } from "../ManagedBlob";
 
-// --- Test Implementation ---
+// --- Config ---
 const DEBOUNCE_MS = 50;
 
-class TestBlob extends ManagedBlob<{ value: string }> {
-  protected getBlobName = () => "test-blob";
-  protected getDebounceMs = () => DEBOUNCE_MS;
-}
-
 // --- Helpers ---
-const createBlob = () => new TestBlob("chat-123");
+const createBlob = () =>
+  new ManagedBlob<{ value: string }>("chat-123", "test-blob", DEBOUNCE_MS);
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const waitForDebounce = () => wait(DEBOUNCE_MS + 20);
 
@@ -52,7 +48,7 @@ describe("ManagedBlob - Debounce Stress Tests", () => {
     expect(blobApi.saveBlob).toHaveBeenCalledWith(
       "chat-123",
       "test-blob",
-      JSON.stringify({ value: "third" })
+      JSON.stringify({ value: "third" }),
     );
   });
 
@@ -68,7 +64,7 @@ describe("ManagedBlob - Debounce Stress Tests", () => {
     expect(blobApi.saveBlob).toHaveBeenCalledWith(
       "chat-123",
       "test-blob",
-      JSON.stringify({ value: "immediate" })
+      JSON.stringify({ value: "immediate" }),
     );
   });
 
@@ -100,13 +96,13 @@ describe("ManagedBlob - Debounce Stress Tests", () => {
       1,
       "chat-123",
       "test-blob",
-      JSON.stringify({ value: "saved-1" })
+      JSON.stringify({ value: "saved-1" }),
     );
     expect(blobApi.saveBlob).toHaveBeenNthCalledWith(
       2,
       "chat-123",
       "test-blob",
-      JSON.stringify({ value: "debounced-3" })
+      JSON.stringify({ value: "debounced-3" }),
     );
   });
 

@@ -11,19 +11,11 @@ import type {
   StoryEditedEvent,
 } from "./events/ChatEvent";
 
-// Singleton instances
-const userChatProjectionInstances = new Map<string, UserChatProjection>();
+import { createInstanceCache } from "../Utils/getOrCreateInstance";
 
-export const getUserChatProjectionInstance = (
-  chatId: string | null
-): UserChatProjection | null => {
-  if (!chatId) return null;
-
-  if (!userChatProjectionInstances.has(chatId))
-    userChatProjectionInstances.set(chatId, new UserChatProjection());
-
-  return userChatProjectionInstances.get(chatId)!;
-};
+export const getUserChatProjectionInstance = createInstanceCache(
+  (_chatId: string) => new UserChatProjection(),
+);
 
 export class UserChatProjection {
   public Messages: UserChatMessage[] = [];
@@ -92,13 +84,13 @@ export class UserChatProjection {
 
   public getChapterMessages(chapterId: string): UserChatMessage[] {
     const chapter = this.Messages.find(
-      (m) => m.id === chapterId && m.type === "chapter"
+      (m) => m.id === chapterId && m.type === "chapter",
     ) as ChapterChatMessage;
 
     if (!chapter || !chapter.data.coveredMessageIds) return [];
 
     return this.Messages.filter((m) =>
-      chapter.data.coveredMessageIds!.includes(m.id)
+      chapter.data.coveredMessageIds!.includes(m.id),
     );
   }
 
@@ -174,7 +166,7 @@ export class UserChatProjection {
 
   private processChapterEdited(event: ChapterEditedEvent) {
     const chapter = this.Messages.find(
-      (m) => m.id === event.chapterId && m.type === "chapter"
+      (m) => m.id === event.chapterId && m.type === "chapter",
     ) as ChapterChatMessage;
     if (chapter) {
       chapter.content = event.summary;
@@ -185,7 +177,7 @@ export class UserChatProjection {
 
   private processChapterDeleted(event: ChapterDeletedEvent) {
     const chapter = this.Messages.find(
-      (m) => m.id === event.chapterId && m.type === "chapter"
+      (m) => m.id === event.chapterId && m.type === "chapter",
     ) as ChapterChatMessage;
     if (!chapter) return;
 
@@ -247,7 +239,7 @@ export interface StoryChatMessage extends UserChatMessage {
 }
 
 function toType(
-  role: "assistant" | "user" | "system"
+  role: "assistant" | "user" | "system",
 ): "chapter" | "assistant" | "user-message" | "system-message" | "civit-job" {
   switch (role) {
     case "assistant":

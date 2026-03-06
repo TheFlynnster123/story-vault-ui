@@ -16,13 +16,9 @@ vi.mock("../../Dependencies", () => ({
 
 import { ManagedBlob } from "../ManagedBlob";
 
-// --- Test Implementation ---
-class TestBlob extends ManagedBlob<{ value: string }> {
-  protected getBlobName = () => "test-blob";
-}
-
 // --- Helpers ---
-const createBlob = () => new TestBlob("chat-123");
+const createBlob = () =>
+  new ManagedBlob<{ value: string }>("chat-123", "test-blob");
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // --- Tests ---
@@ -36,8 +32,8 @@ describe("ManagedBlob - Concurrent get() Stress Tests", () => {
     blobApi.getBlob.mockImplementation(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve(JSON.stringify({ value: "data" })), 50)
-        )
+          setTimeout(() => resolve(JSON.stringify({ value: "data" })), 50),
+        ),
     );
 
     const blob = createBlob();
@@ -66,8 +62,8 @@ describe("ManagedBlob - Concurrent get() Stress Tests", () => {
     blobApi.getBlob.mockImplementation(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve(JSON.stringify({ value: "data" })), 50)
-        )
+          setTimeout(() => resolve(JSON.stringify({ value: "data" })), 50),
+        ),
     );
 
     const blob = createBlob();

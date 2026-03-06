@@ -1,13 +1,9 @@
 import { d } from "../Dependencies";
+import { createGlobalInstanceCache } from "../Utils/getOrCreateInstance";
 
-let encryptionManagerSingleton: EncryptionManager | null = null;
-
-export function getEncryptionManagerSingleton(): EncryptionManager {
-  if (!encryptionManagerSingleton)
-    encryptionManagerSingleton = new EncryptionManager();
-
-  return encryptionManagerSingleton;
-}
+export const getEncryptionManagerSingleton = createGlobalInstanceCache(
+  () => new EncryptionManager(),
+);
 
 export type EncryptionKeyType = "grok" | "chat" | "civitai";
 
@@ -54,14 +50,14 @@ export class EncryptionManager {
     const keyHex = this.getKeyHex(keyType);
 
     const keyBuffer = new Uint8Array(
-      keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+      keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)),
     );
     const key = await crypto.subtle.importKey(
       "raw",
       keyBuffer,
       { name: "AES-GCM", length: 256 },
       true,
-      ["encrypt", "decrypt"]
+      ["encrypt", "decrypt"],
     );
 
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -73,7 +69,7 @@ export class EncryptionManager {
         iv: iv,
       },
       key,
-      encodedData
+      encodedData,
     );
 
     const combinedBuffer = new Uint8Array(iv.length + encryptedData.byteLength);
@@ -89,14 +85,14 @@ export class EncryptionManager {
     const keyHex = this.getKeyHex(keyType);
 
     const keyBuffer = new Uint8Array(
-      keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+      keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)),
     );
     const key = await crypto.subtle.importKey(
       "raw",
       keyBuffer,
       { name: "AES-GCM", length: 256 },
       true,
-      ["encrypt", "decrypt"]
+      ["encrypt", "decrypt"],
     );
 
     const combinedBuffer = base64ToArrayBuffer(data);
@@ -109,7 +105,7 @@ export class EncryptionManager {
         iv: new Uint8Array(iv),
       },
       key,
-      encryptedData
+      encryptedData,
     );
 
     return new TextDecoder().decode(decryptedData);
@@ -121,7 +117,7 @@ export class EncryptionManager {
       new TextEncoder().encode(this.encryptionGuid),
       { name: "PBKDF2" },
       false,
-      ["deriveKey"]
+      ["deriveKey"],
     );
 
     const derivedKey = await crypto.subtle.deriveKey(
@@ -134,7 +130,7 @@ export class EncryptionManager {
       keyMaterial,
       { name: "AES-GCM", length: 256 },
       true,
-      ["encrypt", "decrypt"]
+      ["encrypt", "decrypt"],
     );
 
     const exportedKey = await crypto.subtle.exportKey("raw", derivedKey);
