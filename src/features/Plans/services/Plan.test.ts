@@ -32,7 +32,7 @@ describe("Plan Constants", () => {
 
   it("should have a non-empty default plan prompt", () => {
     expect(DEFAULT_PLAN_PROMPT.length).toBeGreaterThan(0);
-    expect(DEFAULT_PLAN_PROMPT).toContain("Key Plot Points");
+    expect(DEFAULT_PLAN_PROMPT).toContain("Active Character Arcs");
   });
 
   it("should have a default plan name", () => {
