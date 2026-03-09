@@ -19,7 +19,9 @@ export const useChatGeneration = (chatId: string) => {
   const generateResponse = useCallback(
     async (userInput: string): Promise<string> => {
       try {
-        await d.ChatService(chatId).AddUserMessage(userInput);
+        if (userInput.trim()) {
+          await d.ChatService(chatId).AddUserMessage(userInput);
+        }
 
         return (await textGeneration.generateResponse()) ?? "";
       } catch (e) {

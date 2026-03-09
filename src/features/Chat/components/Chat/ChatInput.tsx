@@ -16,7 +16,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
-    if (!inputValue.trim() || isLoading) return;
+    if (isLoading) return;
 
     generateResponse(inputValue);
     clearInputValue();
