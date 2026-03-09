@@ -4,9 +4,11 @@ import { SystemMessage } from "./SystemMessage";
 import { CivitJobMessage } from "./CivitJobMessage";
 import { ChapterMessage } from "./ChapterMessage";
 import { StoryMessage } from "./StoryMessage";
+import { PlanMessage } from "./PlanMessage";
 import type {
   ChapterChatMessage,
   CivitJobChatMessage,
+  PlanChatMessage,
   StoryChatMessage,
   UserChatMessage,
 } from "../../../../../services/CQRS/UserChatProjection";
@@ -42,6 +44,10 @@ export const ChatEntry: React.FC<ChatEntryProps> = ({
     return (
       <ChapterMessage chatId={chatId} chapter={message as ChapterChatMessage} />
     );
+  }
+
+  if (message.type === "plan") {
+    return <PlanMessage chatId={chatId} message={message as PlanChatMessage} />;
   }
 
   if (message.type === "user-message") {

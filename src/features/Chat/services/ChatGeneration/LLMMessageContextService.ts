@@ -2,7 +2,6 @@ import type { LLMMessage } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
 import { toSystemMessage } from "../../../../services/Utils/MessageUtils";
 import type { Memory } from "../../../Memories/services/Memory";
-import type { Plan } from "../../../Plans/services/Plan";
 import type { ChatSettings } from "../Chat/ChatSettings";
 
 const CHAPTER_SUMMARY_PROMPT: string =
@@ -31,13 +30,11 @@ export class LLMMessageContextService {
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     const chatMessages = this.getChatMessages();
-    const plans = this.getPlans();
     const memories = await this.fetchMemories();
 
     return this.assembleGenerationMessages(
       chatSettings,
       chatMessages,
-      plans,
       memories,
       includeResponsePrompt,
     );
@@ -61,10 +58,6 @@ export class LLMMessageContextService {
     return this.assembleChapterTitleMessages(chatMessages);
   }
 
-  buildPlanMessages(plans: Plan[]): LLMMessage[] {
-    return plans.map((plan) => this.planToSystemMessage(plan));
-  }
-
   buildMemoryMessages(memories: Memory[]): LLMMessage[] {
     const content = this.combineMemoryContent(memories);
     if (!content) return [];
@@ -82,10 +75,6 @@ export class LLMMessageContextService {
     return d.LLMChatProjection(this.chatId).GetMessages();
   }
 
-  private getPlans(): Plan[] {
-    return d.PlanService(this.chatId).getPlans();
-  }
-
   private async fetchMemories(): Promise<Memory[]> {
     return d.MemoriesService(this.chatId).get();
   }
@@ -95,13 +84,11 @@ export class LLMMessageContextService {
   private assembleGenerationMessages(
     chatSettings: ChatSettings,
     chatMessages: LLMMessage[],
-    plans: Plan[],
     memories: Memory[],
     includeStoryPrompt: boolean,
   ): LLMMessage[] {
     const messages: LLMMessage[] = [
       ...chatMessages,
-      ...this.buildPlanMessages(plans),
       ...this.buildMemoryMessages(memories),
     ];
 
@@ -148,10 +135,6 @@ export class LLMMessageContextService {
 
   private createChapterTitlePromptMessage(): LLMMessage {
     return toSystemMessage(CHAPTER_TITLE_PROMPT);
-  }
-
-  private planToSystemMessage(plan: Plan): LLMMessage {
-    return toSystemMessage(`${plan.name}\n${plan.content ?? ""}`);
   }
 
   // ---- Private: Helpers ----

@@ -9,6 +9,8 @@ import type {
   ChapterDeletedEvent,
   StoryCreatedEvent,
   StoryEditedEvent,
+  PlanCreatedEvent,
+  PlanHiddenEvent,
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
@@ -68,6 +70,12 @@ export class UserChatProjection {
       case "CivitJobCreated":
         this.processCivitJobCreated(event);
         break;
+      case "PlanCreated":
+        this.processPlanCreated(event);
+        break;
+      case "PlanHidden":
+        this.processPlanHidden(event);
+        break;
     }
 
     this.notifySubscribers();
@@ -79,7 +87,9 @@ export class UserChatProjection {
   }
 
   public GetMessages(): UserChatMessage[] {
-    return this.Messages.filter((m) => !m.hiddenByChapterId && !m.deleted);
+    return this.Messages.filter(
+      (m) => !m.hiddenByChapterId && !m.deleted && !m.hidden,
+    );
   }
 
   public getChapterMessages(chapterId: string): UserChatMessage[] {
@@ -102,6 +112,7 @@ export class UserChatProjection {
       content: event.content,
       hiddenByChapterId: undefined,
       deleted: false,
+      hidden: false,
     });
   }
 
@@ -119,6 +130,7 @@ export class UserChatProjection {
       content: event.content,
       hiddenByChapterId: undefined,
       deleted: false,
+      hidden: false,
     });
   }
 
@@ -156,6 +168,7 @@ export class UserChatProjection {
       content: event.summary,
       hiddenByChapterId: undefined,
       deleted: false,
+      hidden: false,
       data: {
         title: event.title,
         nextChapterDirection: event.nextChapterDirection,
@@ -198,6 +211,41 @@ export class UserChatProjection {
 
       hiddenByChapterId: undefined,
       deleted: false,
+      hidden: false,
+    });
+  }
+
+  /**
+   * Adds a plan message to the chat timeline.
+   * Plan messages appear as distinct entries with a teal theme.
+   */
+  private processPlanCreated(event: PlanCreatedEvent) {
+    this.Messages.push({
+      id: event.messageId,
+      type: "plan",
+      content: event.content,
+      data: {
+        planDefinitionId: event.planDefinitionId,
+        planName: event.planName,
+      },
+      hiddenByChapterId: undefined,
+      deleted: false,
+      hidden: false,
+    });
+  }
+
+  /**
+   * Hides all existing plan messages for a given plan definition.
+   * Called before creating a new plan instance so only the latest is visible.
+   * Uses `hidden` (not `deleted`) to preserve event history.
+   */
+  private processPlanHidden(event: PlanHiddenEvent) {
+    this.Messages.filter(
+      (m) =>
+        m.type === "plan" &&
+        m.data?.planDefinitionId === event.planDefinitionId,
+    ).forEach((m) => {
+      m.hidden = true;
     });
   }
 }
@@ -211,7 +259,8 @@ export interface UserChatMessage {
     | "system-message"
     | "assistant"
     | "civit-job"
-    | "chapter";
+    | "chapter"
+    | "plan";
 
   content?: string; // Text-based content of the message
 
@@ -219,6 +268,15 @@ export interface UserChatMessage {
 
   hiddenByChapterId: string | undefined;
   deleted: boolean;
+
+  /**
+   * When true, the message is hidden from the UI and LLM context.
+   * Used by plan messages: when a new plan instance is generated,
+   * prior instances for the same plan definition are hidden.
+   * Distinct from `deleted` (permanent removal) and `hiddenByChapterId`
+   * (chapter-based covering of older messages).
+   */
+  hidden: boolean;
 }
 
 export interface CivitJobChatMessage extends UserChatMessage {
@@ -236,6 +294,15 @@ export interface ChapterChatMessage extends UserChatMessage {
 export interface StoryChatMessage extends UserChatMessage {
   type: "story";
   content: string;
+}
+
+export interface PlanChatMessage extends UserChatMessage {
+  type: "plan";
+  content: string;
+  data: {
+    planDefinitionId: string;
+    planName: string;
+  };
 }
 
 function toType(

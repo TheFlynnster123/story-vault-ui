@@ -3,9 +3,16 @@ export interface Plan {
   type: PlanType;
   name: string;
   prompt: string;
-  content?: string;
   refreshInterval: number;
   messagesSinceLastUpdate: number;
+}
+
+/**
+ * @deprecated Represents the legacy plan shape that included blob-stored content.
+ * Used only during migration to strip the content field from old plan data.
+ */
+export interface LegacyPlan extends Plan {
+  content?: string;
 }
 
 type PlanType = "planning";
@@ -29,7 +36,10 @@ export const applyPlanDefaults = (
     prompt: string;
   },
 ): Plan => ({
-  ...plan,
+  id: plan.id,
+  type: plan.type,
+  name: plan.name,
+  prompt: plan.prompt,
   refreshInterval: plan.refreshInterval ?? DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: plan.messagesSinceLastUpdate ?? 0,
 });

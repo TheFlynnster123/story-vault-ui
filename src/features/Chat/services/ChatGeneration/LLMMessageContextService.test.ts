@@ -9,9 +9,7 @@ import {
 } from "vitest";
 import { LLMMessageContextService } from "./LLMMessageContextService";
 import type { Memory } from "../../../Memories/services/Memory";
-import type { Plan } from "../../../Plans/services/Plan";
 import type { MemoriesService } from "../../../Memories/services/MemoriesService";
-import type { PlanService } from "../../../Plans/services/PlanService";
 import type { ChatSettingsService } from "../Chat/ChatSettingsService";
 import type {
   LLMChatProjection,
@@ -27,7 +25,6 @@ describe("LLMMessageContextService", () => {
 
   let ChatSettingsService: Mocked<ChatSettingsService>;
   let LLMChatProjection: Mocked<LLMChatProjection>;
-  let PlanService: Mocked<PlanService>;
   let MemoriesService: Mocked<MemoriesService>;
 
   beforeEach(() => {
@@ -39,54 +36,17 @@ describe("LLMMessageContextService", () => {
       GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
     } as any;
 
-    PlanService = {
-      getPlans: vi.fn().mockReturnValue([]),
-    } as any;
-
     MemoriesService = {
       get: vi.fn().mockResolvedValue([]),
     } as any;
 
     vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
     vi.mocked(d.LLMChatProjection).mockReturnValue(LLMChatProjection);
-    vi.mocked(d.PlanService).mockReturnValue(PlanService);
     vi.mocked(d.MemoriesService).mockReturnValue(MemoriesService);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-  });
-
-  // ---- buildPlanMessages Tests ----
-  describe("buildPlanMessages", () => {
-    it("should return empty array when no plans provided", () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = service.buildPlanMessages([]);
-
-      expect(result).toEqual([]);
-    });
-
-    it("should create system message for each plan", () => {
-      const service = new LLMMessageContextService(testChatId);
-      const plans = createMockPlans();
-
-      const result = service.buildPlanMessages(plans);
-
-      expect(result).toHaveLength(2);
-      expectSystemMessage(result[0], "Plan 1\nContent 1");
-      expectSystemMessage(result[1], "Plan 2\nContent 2");
-    });
-
-    it("should handle plans with undefined content", () => {
-      const service = new LLMMessageContextService(testChatId);
-      const plans = [createPlanWithUndefinedContent()];
-
-      const result = service.buildPlanMessages(plans);
-
-      expect(result).toHaveLength(1);
-      expectSystemMessage(result[0], "Empty Plan\n");
-    });
   });
 
   // ---- buildMemoryMessages Tests ----
@@ -151,15 +111,6 @@ describe("LLMMessageContextService", () => {
       expect(LLMChatProjection.GetMessages).toHaveBeenCalled();
     });
 
-    it("should read plans from PlanService", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildGenerationRequestMessages();
-
-      expect(d.PlanService).toHaveBeenCalledWith(testChatId);
-      expect(PlanService.getPlans).toHaveBeenCalled();
-    });
-
     it("should fetch memories", async () => {
       const service = new LLMMessageContextService(testChatId);
 
@@ -190,13 +141,11 @@ describe("LLMMessageContextService", () => {
 
     it("should build messages in correct order", async () => {
       const service = new LLMMessageContextService(testChatId);
-      PlanService.getPlans.mockReturnValue(createMockPlans());
       MemoriesService.get.mockResolvedValue(createMockMemories());
 
       const result = await service.buildGenerationRequestMessages();
 
       expectMessagesContainChatMessages(result);
-      expectMessagesContainPlans(result);
       expectMessagesContainMemories(result);
       expectStoryPromptIsLast(result);
     });
@@ -291,40 +240,6 @@ describe("LLMMessageContextService", () => {
     ];
   }
 
-  function createMockPlans(): Plan[] {
-    return [
-      {
-        id: "plan-1",
-        type: "planning",
-        name: "Plan 1",
-        prompt: "Prompt 1",
-        content: "Content 1",
-        refreshInterval: 5,
-        messagesSinceLastUpdate: 0,
-      },
-      {
-        id: "plan-2",
-        type: "planning",
-        name: "Plan 2",
-        prompt: "Prompt 2",
-        content: "Content 2",
-        refreshInterval: 5,
-        messagesSinceLastUpdate: 0,
-      },
-    ];
-  }
-
-  function createPlanWithUndefinedContent(): Plan {
-    return {
-      id: "plan-empty",
-      type: "planning",
-      name: "Empty Plan",
-      prompt: "Prompt",
-      refreshInterval: 5,
-      messagesSinceLastUpdate: 0,
-    };
-  }
-
   function createMockMemories(): Memory[] {
     return [
       { id: "mem-1", content: "Memory content 1" },
@@ -366,11 +281,6 @@ describe("LLMMessageContextService", () => {
     const assistantMessage = messages.find((m) => m.content === "Hi there!");
     expect(userMessage).toBeDefined();
     expect(assistantMessage).toBeDefined();
-  }
-
-  function expectMessagesContainPlans(messages: LLMMessage[]): void {
-    const planMessage = messages.find((m) => m.content.includes("Plan 1"));
-    expect(planMessage).toBeDefined();
   }
 
   function expectMessagesContainMemories(messages: LLMMessage[]): void {
