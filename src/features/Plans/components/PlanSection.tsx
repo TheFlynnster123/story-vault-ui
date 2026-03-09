@@ -1,12 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { Box, Group, Text } from "@mantine/core";
 import { RiFileList2Line } from "react-icons/ri";
 import { Theme } from "../../../components/Theme";
 import type { Plan } from "../services/Plan";
 import { formatRefreshStatus } from "../services/Plan";
-import { ContentPreview } from "../../Chat/components/Chat/Flow/ContentPreview";
 import { FlowButton } from "../../Chat/components/Chat/Flow/FlowButton";
-import { PreviewItem } from "../../Chat/components/Chat/Flow/PreviewItem";
 
 interface PlanSectionProps {
   plans: Plan[];
@@ -14,24 +12,12 @@ interface PlanSectionProps {
 }
 
 const buildPlanDescription = (plan: Plan): string =>
-  `⟳ ${formatRefreshStatus(plan)} until refresh — ${plan.prompt}`;
+  `⟳ ${formatRefreshStatus(plan)} until refresh`;
 
 export const PlanSection: React.FC<PlanSectionProps> = ({
   plans,
   onNavigate,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const renderPlanItem = (plan: Plan) => (
-    <PreviewItem
-      key={plan.id}
-      name={plan.name}
-      description={buildPlanDescription(plan)}
-      content={plan.content}
-      isExpanded={isExpanded}
-    />
-  );
-
   return (
     <Box>
       <FlowButton
@@ -47,13 +33,15 @@ export const PlanSection: React.FC<PlanSectionProps> = ({
           </Text>
         </Group>
       </FlowButton>
-      <ContentPreview
-        items={plans}
-        isExpanded={isExpanded}
-        onToggle={() => setIsExpanded(!isExpanded)}
-        renderItem={renderPlanItem}
-        emptyMessage="No plans configured"
-      />
+      {plans.length > 0 && (
+        <Box pl="md" pt={4}>
+          {plans.map((plan) => (
+            <Text key={plan.id} size="xs" c="dimmed">
+              {plan.name} — {buildPlanDescription(plan)}
+            </Text>
+          ))}
+        </Box>
+      )}
     </Box>
   );
 };

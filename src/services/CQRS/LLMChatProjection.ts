@@ -9,6 +9,8 @@ import type {
   ChapterDeletedEvent,
   StoryCreatedEvent,
   StoryEditedEvent,
+  PlanCreatedEvent,
+  PlanHiddenEvent,
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
@@ -69,6 +71,12 @@ export class LLMChatProjection {
         break;
       case "CivitJobCreated":
         return;
+      case "PlanCreated":
+        this.processPlanCreated(event);
+        break;
+      case "PlanHidden":
+        this.processPlanHidden(event);
+        break;
     }
 
     this.notifySubscribers();
@@ -211,6 +219,50 @@ export class LLMChatProjection {
     chapter.deleted = true;
   }
 
+  /**
+   * Adds a plan message to the LLM context with formatted markers.
+   * Format: [Plan: Name]\n{content}\n[End of Plan]
+   * This ensures the LLM recognizes plan content as distinct from conversation.
+   */
+  processPlanCreated(event: PlanCreatedEvent) {
+    const formattedContent = this.formatPlanContent(
+      event.planName,
+      event.content,
+    );
+    const planMessage = this.createMessageState(
+      event.messageId,
+      "plan",
+      "system",
+      formattedContent,
+    );
+    planMessage.data = {
+      planDefinitionId: event.planDefinitionId,
+      planName: event.planName,
+      rawContent: event.content,
+    };
+    this.messages.push(planMessage);
+  }
+
+  /**
+   * Hides all existing plan messages for a plan definition.
+   * When a new plan is generated, prior instances become invisible
+   * to the LLM so it only sees the latest plan state.
+   */
+  processPlanHidden(event: PlanHiddenEvent) {
+    this.messages
+      .filter(
+        (m) =>
+          m.type === "plan" &&
+          m.data?.planDefinitionId === event.planDefinitionId,
+      )
+      .forEach((m) => {
+        m.hidden = true;
+      });
+  }
+
+  formatPlanContent = (planName: string, content: string): string =>
+    `[Plan: ${planName}]\n${content}\n[End of Plan]`;
+
   // ---- Helpers ----
   formatStoryContent = (content: string): string => `# Story\r\n${content}`;
 
@@ -236,7 +288,9 @@ export class LLMChatProjection {
     this.messages.findIndex((m) => m.id === id);
 
   getVisibleMessages = (): MessageState[] =>
-    this.messages.filter((m) => !m.hiddenByChapterId && !m.deleted);
+    this.messages.filter(
+      (m) => !m.hiddenByChapterId && !m.deleted && !m.hidden,
+    );
 
   getVisibleMessagesWithBufferBeforeLastChapter(
     lastChapter: MessageState,
@@ -349,6 +403,7 @@ export class LLMChatProjection {
     if (!lastChapter?.data || !lastChapter.coveredMessageIds) return;
 
     const { title, summary, nextChapterDirection } = lastChapter.data;
+    if (!title || !summary) return;
 
     // Count visible messages after the last chapter
     const chapterIndex = this.getMessageIndex(lastChapter.id);
@@ -375,7 +430,7 @@ export class LLMChatProjection {
 
   createMessageState(
     id: string,
-    type: "message" | "chapter",
+    type: "message" | "chapter" | "plan",
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[],
@@ -387,6 +442,7 @@ export class LLMChatProjection {
       content,
       hiddenByChapterId: null,
       deleted: false,
+      hidden: false,
       coveredMessageIds,
     };
   }
@@ -395,17 +451,26 @@ export class LLMChatProjection {
 // ---- Types ----
 interface MessageState {
   id: string;
-  type: "message" | "chapter";
+  type: "message" | "chapter" | "plan";
   role: "user" | "assistant" | "system";
   content: string;
   hiddenByChapterId: string | null;
   deleted: boolean;
+  /**
+   * When true, the message is excluded from LLM context.
+   * Used by plan messages: prior plan instances are hidden
+   * when a new plan is generated for the same definition.
+   */
+  hidden: boolean;
   coveredMessageIds?: string[] | null;
-  // Store chapter metadata for format updates
+  // Store chapter/plan metadata for format updates
   data?: {
-    title: string;
-    summary: string;
+    title?: string;
+    summary?: string;
     nextChapterDirection?: string;
+    planDefinitionId?: string;
+    planName?: string;
+    rawContent?: string;
   };
 }
 

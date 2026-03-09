@@ -86,7 +86,7 @@ describe("applyPlanDefaults", () => {
   });
 
   it("should preserve all original fields", () => {
-    const plan = createPlan({ content: "Some content" });
+    const plan = createPlan();
 
     const result = applyPlanDefaults(plan);
 
@@ -94,7 +94,20 @@ describe("applyPlanDefaults", () => {
     expect(result.type).toBe(plan.type);
     expect(result.name).toBe(plan.name);
     expect(result.prompt).toBe(plan.prompt);
-    expect(result.content).toBe("Some content");
+  });
+
+  it("should strip legacy content field during migration", () => {
+    const legacyPlan = {
+      id: "plan-1",
+      type: "planning" as const,
+      name: "Old Plan",
+      prompt: "Old prompt",
+      content: "Legacy content that should be stripped",
+    };
+
+    const result = applyPlanDefaults(legacyPlan);
+
+    expect((result as any).content).toBeUndefined();
   });
 });
 
@@ -154,7 +167,6 @@ describe("resetMessageCounter", () => {
 
   it("should preserve all other plan fields", () => {
     const plan = createPlan({
-      content: "Some content",
       refreshInterval: 10,
       messagesSinceLastUpdate: 7,
     });
@@ -163,7 +175,6 @@ describe("resetMessageCounter", () => {
 
     expect(result.id).toBe(plan.id);
     expect(result.name).toBe(plan.name);
-    expect(result.content).toBe("Some content");
     expect(result.refreshInterval).toBe(10);
   });
 
@@ -197,7 +208,6 @@ describe("incrementMessageCounter", () => {
 
   it("should preserve all other plan fields", () => {
     const plan = createPlan({
-      content: "Content",
       refreshInterval: 3,
       messagesSinceLastUpdate: 2,
     });
@@ -206,7 +216,6 @@ describe("incrementMessageCounter", () => {
 
     expect(result.id).toBe(plan.id);
     expect(result.name).toBe(plan.name);
-    expect(result.content).toBe("Content");
     expect(result.refreshInterval).toBe(3);
   });
 

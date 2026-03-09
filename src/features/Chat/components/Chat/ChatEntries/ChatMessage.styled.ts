@@ -143,6 +143,56 @@ export const MessageText = styled.div<{ $type: "user" | "system" | "story" }>`
   }
 `;
 
+/**
+ * Styled text container for plan messages in the chat timeline.
+ * Uses the teal/cyan theme to visually distinguish plans from conversation.
+ * Does NOT use white-space: pre-wrap so markdown block elements render correctly.
+ */
+export const PlanMessageText = styled.div`
+  font-size: small;
+  padding: 8px 12px;
+  border-radius: 10px;
+  display: inline-block;
+  width: 100%;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5);
+  cursor: default;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
+
+  pre,
+  code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  transition:
+    min-height 0.2s ease,
+    min-width 0.2s ease,
+    opacity 0.2s ease;
+
+  background-color: ${applyTransparency(
+    "rgba(0, 131, 143, 0.8)",
+    Theme.chatEntry.transparency,
+  )};
+  color: ${Theme.messages.assistant.text};
+  border-left: 4px solid rgba(0, 188, 212, 1);
+
+  .clickable {
+    cursor: pointer;
+  }
+`;
+
+/**
+ * Clickable header for collapsed plan messages.
+ * Shows "{planName} Updated" with an expand/collapse indicator.
+ */
+export const PlanMessageHeader = styled.div`
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+`;
+
 export const DeleteButton = styled.button`
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #ddd;

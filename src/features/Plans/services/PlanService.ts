@@ -58,15 +58,6 @@ export class PlanService {
     return this.Plans;
   }
 
-  public updatePlanContent(planId: string, content: string): void {
-    const plan = this.Plans.find((p) => p.id === planId);
-    if (plan) {
-      plan.content = content;
-      this.notifySubscribers();
-      this.savePlansDebounced();
-    }
-  }
-
   public updatePlanDefinition(
     planId: string,
     field: keyof Plan,

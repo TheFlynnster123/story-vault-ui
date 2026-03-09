@@ -5,6 +5,7 @@ import {
   RiAddLine,
   RiDeleteBinLine,
   RiFileList2Line,
+  RiPlayLine,
 } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
 import {
@@ -62,6 +63,7 @@ export const PlanPage: React.FC = () => {
   );
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+  const [generatingPlanId, setGeneratingPlanId] = useState<string | null>(null);
 
   const planService = d.PlanService(chatId!);
 
@@ -77,6 +79,15 @@ export const PlanPage: React.FC = () => {
 
   const handleResetPrompt = (id: string) => {
     updatePlanDefinition?.(id, "prompt", DEFAULT_PLAN_PROMPT);
+  };
+
+  const handleGenerateNow = async (id: string) => {
+    setGeneratingPlanId(id);
+    try {
+      await d.PlanGenerationService(chatId!).generatePlanNow(id);
+    } finally {
+      setGeneratingPlanId(null);
+    }
   };
 
   const handleRemovePlan = (id: string) => {
@@ -109,7 +120,9 @@ export const PlanPage: React.FC = () => {
             onAdd={handleAddPlan}
             onChange={handlePlanChange}
             onResetPrompt={handleResetPrompt}
+            onGenerateNow={handleGenerateNow}
             onRemove={handleRemovePlan}
+            generatingPlanId={generatingPlanId}
           />
         </Stack>
       </Paper>
@@ -151,7 +164,9 @@ interface PlanListProps {
   onAdd: () => void;
   onChange: (id: string, field: keyof Plan, value: string | number) => void;
   onResetPrompt: (id: string) => void;
+  onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;
+  generatingPlanId: string | null;
 }
 
 const PlanList: React.FC<PlanListProps> = ({
@@ -159,7 +174,9 @@ const PlanList: React.FC<PlanListProps> = ({
   onAdd,
   onChange,
   onResetPrompt,
+  onGenerateNow,
   onRemove,
+  generatingPlanId,
 }) => (
   <Stack>
     <Group justify="space-between">
@@ -178,7 +195,9 @@ const PlanList: React.FC<PlanListProps> = ({
         plan={plan}
         onChange={onChange}
         onResetPrompt={onResetPrompt}
+        onGenerateNow={onGenerateNow}
         onRemove={onRemove}
+        isGenerating={generatingPlanId === plan.id}
       />
     ))}
   </Stack>
@@ -188,14 +207,18 @@ interface PlanEditorProps {
   plan: Plan;
   onChange: (id: string, field: keyof Plan, value: string | number) => void;
   onResetPrompt: (id: string) => void;
+  onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;
+  isGenerating: boolean;
 }
 
 const PlanEditor: React.FC<PlanEditorProps> = ({
   plan,
   onChange,
   onResetPrompt,
+  onGenerateNow,
   onRemove,
+  isGenerating,
 }) => (
   <Stack key={plan.id} gap="sm">
     <TextInput
@@ -242,14 +265,20 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
       />
       <RefreshStatusBadge plan={plan} />
     </Group>
-    <Button
-      variant="outline"
-      color="red"
-      onClick={() => onRemove(plan.id)}
-      style={{ alignSelf: "flex-start" }}
-    >
-      <RiDeleteBinLine /> Delete Plan
-    </Button>
+    <Group gap="sm">
+      <Button
+        variant="light"
+        color="teal"
+        onClick={() => onGenerateNow(plan.id)}
+        loading={isGenerating}
+        leftSection={<RiPlayLine />}
+      >
+        Generate Now
+      </Button>
+      <Button variant="outline" color="red" onClick={() => onRemove(plan.id)}>
+        <RiDeleteBinLine /> Delete Plan
+      </Button>
+    </Group>
     <Divider my="sm" style={{ borderColor: Theme.plan.border }} />
   </Stack>
 );

@@ -10,6 +10,10 @@ import { CivitJobCreatedEventUtil } from "./events/CivitJobCreatedEventUtil";
 import { MessagesDeletedEventUtil } from "./events/MessagesDeletedEventUtil";
 import { StoryCreatedEventUtil } from "./events/StoryCreatedEventUtil";
 import { StoryEditedEventUtil } from "./events/StoryEditedEventUtil";
+import {
+  PlanCreatedEventUtil,
+  PlanHiddenEventUtil,
+} from "./events/PlanEventUtils";
 import { d } from "../Dependencies";
 
 export class ChatService {
@@ -53,7 +57,7 @@ export class ChatService {
 
   public async EditMessage(
     messageId: string,
-    newContent: string
+    newContent: string,
   ): Promise<void> {
     const event = MessageEditedEventUtil.Create(messageId, newContent);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
@@ -77,7 +81,7 @@ export class ChatService {
   public async AddChapter(
     title: string,
     summary: string,
-    nextChapterDirection?: string
+    nextChapterDirection?: string,
   ): Promise<void> {
     const allMessages = d.UserChatProjection(this.chatId).GetMessages();
     const coveredMessageIds = allMessages
@@ -88,7 +92,7 @@ export class ChatService {
       title,
       summary,
       coveredMessageIds,
-      nextChapterDirection
+      nextChapterDirection,
     );
 
     await d.ChatEventService(this.chatId).AddChatEvent(event);
@@ -98,13 +102,13 @@ export class ChatService {
     chapterId: string,
     title: string,
     summary: string,
-    nextChapterDirection?: string
+    nextChapterDirection?: string,
   ): Promise<void> {
     const event = ChapterEditedEventUtil.Create(
       chapterId,
       title,
       summary,
-      nextChapterDirection
+      nextChapterDirection,
     );
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
@@ -112,5 +116,27 @@ export class ChatService {
   public async DeleteChapter(chapterId: string): Promise<void> {
     const event = ChapterDeletedEventUtil.Create(chapterId);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  // ---- Plan Operations ----
+
+  /**
+   * Hides all prior plan messages for this definition, then creates a new plan message.
+   * This ensures only the latest plan instance is visible in the timeline.
+   */
+  public async AddPlanMessage(
+    planDefinitionId: string,
+    planName: string,
+    content: string,
+  ): Promise<void> {
+    const hideEvent = PlanHiddenEventUtil.Create(planDefinitionId);
+    await d.ChatEventService(this.chatId).AddChatEvent(hideEvent);
+
+    const createEvent = PlanCreatedEventUtil.Create(
+      planDefinitionId,
+      planName,
+      content,
+    );
+    await d.ChatEventService(this.chatId).AddChatEvent(createEvent);
   }
 }
