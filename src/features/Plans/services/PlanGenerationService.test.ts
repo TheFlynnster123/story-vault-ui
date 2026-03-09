@@ -25,6 +25,7 @@ describe("PlanGenerationService", () => {
 
   let mockLLMChatProjection: {
     GetMessages: ReturnType<typeof vi.fn>;
+    GetMessagesExcludingPlan: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -44,6 +45,9 @@ describe("PlanGenerationService", () => {
 
     mockLLMChatProjection = {
       GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
+      GetMessagesExcludingPlan: vi
+        .fn()
+        .mockReturnValue(createMockChatMessages()),
     };
 
     vi.mocked(d.PlanService).mockReturnValue(mockPlanService as any);
@@ -429,6 +433,169 @@ describe("PlanGenerationService", () => {
         expect.objectContaining({ id: "target", messagesSinceLastUpdate: 0 }),
         expect.objectContaining({ id: "other", messagesSinceLastUpdate: 7 }),
       ]);
+    });
+  });
+
+  // ---- regeneratePlanFromMessage Tests ----
+  describe("regeneratePlanFromMessage", () => {
+    it("should do nothing when plan definition is not found", async () => {
+      const service = new PlanGenerationService(testChatId);
+      mockPlanService.getPlans.mockReturnValue([]);
+
+      await service.regeneratePlanFromMessage("nonexistent-id", "old content");
+
+      expect(mockGrokChatAPI.postChat).not.toHaveBeenCalled();
+      expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
+    });
+
+    it("should get chat messages excluding the plan being regenerated", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage("plan-1", "old content");
+
+      expect(
+        mockLLMChatProjection.GetMessagesExcludingPlan,
+      ).toHaveBeenCalledWith("plan-1");
+    });
+
+    it("should use update prompt with prior content when priorContent is provided", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({
+        id: "plan-1",
+        name: "Story Plan",
+        prompt: "Analyze the story",
+      });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage(
+        "plan-1",
+        "Prior plan content here",
+      );
+
+      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const lastMessage = callArgs[callArgs.length - 1];
+      expect(lastMessage.content).toContain("Story Plan");
+      expect(lastMessage.content).toContain("current version of this plan");
+      expect(lastMessage.content).toContain("Prior plan content here");
+      expect(lastMessage.content).toContain("Update the plan in Markdown");
+      expect(lastMessage.content).toContain("Analyze the story");
+    });
+
+    it("should include user feedback in the prompt when provided", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1", name: "Story Plan" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage(
+        "plan-1",
+        "Prior plan content",
+        "Focus more on character arcs",
+      );
+
+      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const lastMessage = callArgs[callArgs.length - 1];
+      expect(lastMessage.content).toContain("User feedback on what to change:");
+      expect(lastMessage.content).toContain("Focus more on character arcs");
+    });
+
+    it("should not include feedback section when no feedback provided", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage("plan-1", "Prior plan content");
+
+      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const lastMessage = callArgs[callArgs.length - 1];
+      expect(lastMessage.content).not.toContain(
+        "User feedback on what to change:",
+      );
+    });
+
+    it("should not include feedback section when feedback is blank", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage(
+        "plan-1",
+        "Prior plan content",
+        "   ",
+      );
+
+      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const lastMessage = callArgs[callArgs.length - 1];
+      expect(lastMessage.content).not.toContain(
+        "User feedback on what to change:",
+      );
+    });
+
+    it("should use fresh generate prompt when no priorContent provided", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({
+        id: "plan-1",
+        name: "Story Plan",
+        prompt: "Analyze the story",
+      });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage("plan-1");
+
+      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const lastMessage = callArgs[callArgs.length - 1];
+      expect(lastMessage.content).toContain("Story Plan");
+      expect(lastMessage.content).toContain("Generate a plan in Markdown");
+      expect(lastMessage.content).not.toContain("current version of this plan");
+    });
+
+    it("should store generated content as CQRS event via ChatService", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1", name: "Story Plan" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+      mockGrokChatAPI.postChat.mockResolvedValue("Regenerated plan content");
+
+      await service.regeneratePlanFromMessage("plan-1", "Old content");
+
+      expect(mockChatService.AddPlanMessage).toHaveBeenCalledWith(
+        "plan-1",
+        "Story Plan",
+        "Regenerated plan content",
+      );
+    });
+
+    it("should strip markdown code fences from regenerated content", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1", name: "Story Plan" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+      mockGrokChatAPI.postChat.mockResolvedValue(
+        "```markdown\n### Updated Plan\nContent here\n```",
+      );
+
+      await service.regeneratePlanFromMessage("plan-1", "Old content");
+
+      expect(mockChatService.AddPlanMessage).toHaveBeenCalledWith(
+        "plan-1",
+        "Story Plan",
+        "### Updated Plan\nContent here",
+      );
+    });
+
+    it("should include chat context messages in the LLM request", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage("plan-1", "Old content");
+
+      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      expect(callArgs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ content: "Hello" }),
+          expect.objectContaining({ content: "Hi there!" }),
+        ]),
+      );
     });
   });
 

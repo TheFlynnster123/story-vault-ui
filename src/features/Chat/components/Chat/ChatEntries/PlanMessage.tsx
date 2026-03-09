@@ -7,19 +7,17 @@ import {
   PlanMessageText,
 } from "./ChatMessage.styled";
 import type { PlanChatMessage } from "../../../../../services/CQRS/UserChatProjection";
-import { MessageButtonsContainer } from "./ChatEntryButtons/MessageButtonsContainer";
+import { PlanMessageButtonsContainer } from "./ChatEntryButtons/PlanMessageButtonsContainer";
 import { MessageOverlay } from "./ChatEntryButtons/MessageOverlay";
 
 interface PlanMessageProps {
   chatId: string;
   message: PlanChatMessage;
-  isLastMessage: boolean;
 }
 
 export const PlanMessage: React.FC<PlanMessageProps> = ({
   chatId,
   message,
-  isLastMessage,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
@@ -43,10 +41,11 @@ export const PlanMessage: React.FC<PlanMessageProps> = ({
         </PlanMessageText>
 
         <MessageOverlay show={showButtons} onBackdropClick={toggleButtons}>
-          <MessageButtonsContainer
+          <PlanMessageButtonsContainer
             chatId={chatId}
             messageId={message.id}
-            isLastMessage={isLastMessage}
+            planDefinitionId={message.data.planDefinitionId}
+            priorContent={message.content}
           />
         </MessageOverlay>
       </MessageContentWrapper>

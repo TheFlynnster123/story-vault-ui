@@ -96,6 +96,21 @@ export class LLMChatProjection {
     return this.getVisibleMessages();
   }
 
+  /**
+   * Returns LLM context messages excluding plan messages for a specific plan definition.
+   * Used during plan regeneration so the plan's own content isn't in the context
+   * (it's provided separately in the prompt instead).
+   */
+  public GetMessagesExcludingPlan(planDefinitionId: string): LLMMessage[] {
+    return this.GetMessages().filter((m) => {
+      const state = this.getMessage(m.id ?? "");
+      return !(
+        state?.type === "plan" &&
+        state.data?.planDefinitionId === planDefinitionId
+      );
+    });
+  }
+
   public GetMessage(id: string): LLMMessage | null {
     const msg = this.getMessage(id);
 

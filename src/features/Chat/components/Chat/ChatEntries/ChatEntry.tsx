@@ -47,13 +47,7 @@ export const ChatEntry: React.FC<ChatEntryProps> = ({
   }
 
   if (message.type === "plan") {
-    return (
-      <PlanMessage
-        chatId={chatId}
-        message={message as PlanChatMessage}
-        isLastMessage={isLastMessage}
-      />
-    );
+    return <PlanMessage chatId={chatId} message={message as PlanChatMessage} />;
   }
 
   if (message.type === "user-message") {

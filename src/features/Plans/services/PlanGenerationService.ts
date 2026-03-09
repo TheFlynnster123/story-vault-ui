@@ -18,10 +18,45 @@ const buildPlanPrompt = (plan: Plan): string =>
     plan.prompt,
   ].join("\n");
 
+const buildUpdatePlanPrompt = (
+  plan: Plan,
+  priorContent: string,
+  feedback?: string,
+): string => {
+  const lines = [
+    `# ${plan.name}`,
+    ``,
+    `Consider the full chat history above.`,
+    `Here is the current version of this plan:`,
+    `---`,
+    priorContent,
+    `---`,
+    `Update the plan in Markdown. No preamble or additional commentary.`,
+    ``,
+    plan.prompt,
+  ];
+
+  if (feedback?.trim()) {
+    lines.push(``, `User feedback on what to change:`, feedback);
+  }
+
+  return lines.join("\n");
+};
+
 const buildPromptMessages = (
   chatMessages: LLMMessage[],
   plan: Plan,
 ): LLMMessage[] => [...chatMessages, toSystemMessage(buildPlanPrompt(plan))];
+
+const buildUpdatePromptMessages = (
+  chatMessages: LLMMessage[],
+  plan: Plan,
+  priorContent: string,
+  feedback?: string,
+): LLMMessage[] => [
+  ...chatMessages,
+  toSystemMessage(buildUpdatePlanPrompt(plan, priorContent, feedback)),
+];
 
 export class PlanGenerationService {
   private chatId: string;
@@ -66,6 +101,43 @@ export class PlanGenerationService {
     const plans = d.PlanService(this.chatId).getPlans();
     return plans.some(isDueForRefresh);
   };
+
+  /**
+   * Regenerates a plan from the chat timeline.
+   * If priorContent is provided, sends an "update" prompt that includes
+   * the prior plan and optional user feedback.
+   * If no priorContent (hidden/deleted), generates from scratch.
+   * Plan messages for this definition are excluded from the chat context
+   * so the prior content isn't duplicated (it's in the prompt instead).
+   */
+  public regeneratePlanFromMessage = async (
+    planDefinitionId: string,
+    priorContent?: string,
+    feedback?: string,
+  ): Promise<void> => {
+    const plan = this.findPlanDefinition(planDefinitionId);
+    if (!plan) return;
+
+    const chatMessages = d
+      .LLMChatProjection(this.chatId)
+      .GetMessagesExcludingPlan(planDefinitionId);
+
+    const promptMessages = priorContent
+      ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
+      : buildPromptMessages(chatMessages, plan);
+
+    const response = await d.GrokChatAPI().postChat(promptMessages);
+    const content = stripMarkdownCodeFence(response);
+    await d
+      .ChatService(this.chatId)
+      .AddPlanMessage(plan.id, plan.name, content);
+  };
+
+  private findPlanDefinition = (planDefinitionId: string): Plan | undefined =>
+    d
+      .PlanService(this.chatId)
+      .getPlans()
+      .find((p) => p.id === planDefinitionId);
 
   private processPlan = async (
     plan: Plan,
