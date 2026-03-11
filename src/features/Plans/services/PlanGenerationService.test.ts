@@ -698,6 +698,121 @@ describe("PlanGenerationService", () => {
     });
   });
 
+  // ---- Generation State Tracking Tests ----
+  describe("generation state tracking", () => {
+    it("should report plan as generating during generatePlanNow", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      let wasGeneratingDuringCall = false;
+      mockGrokChatAPI.postChat.mockImplementation(async () => {
+        wasGeneratingDuringCall = service.isGenerating("plan-1");
+        return "content";
+      });
+
+      await service.generatePlanNow("plan-1");
+
+      expect(wasGeneratingDuringCall).toBe(true);
+      expect(service.isGenerating("plan-1")).toBe(false);
+    });
+
+    it("should report plan as generating during regeneratePlanFromMessage", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      let wasGeneratingDuringCall = false;
+      mockGrokChatAPI.postChat.mockImplementation(async () => {
+        wasGeneratingDuringCall = service.isGenerating("plan-1");
+        return "content";
+      });
+
+      await service.regeneratePlanFromMessage("plan-1", "prior content");
+
+      expect(wasGeneratingDuringCall).toBe(true);
+      expect(service.isGenerating("plan-1")).toBe(false);
+    });
+
+    it("should report plan as generating during cadence-based update", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const duePlan = createPlan({
+        id: "due-plan",
+        refreshInterval: 1,
+        messagesSinceLastUpdate: 1,
+      });
+      mockPlanService.getPlans.mockReturnValue([duePlan]);
+
+      let wasGeneratingDuringCall = false;
+      mockGrokChatAPI.postChat.mockImplementation(async () => {
+        wasGeneratingDuringCall = service.isGenerating("due-plan");
+        return "content";
+      });
+
+      await service.generateUpdatedPlans(createMockChatMessages());
+
+      expect(wasGeneratingDuringCall).toBe(true);
+      expect(service.isGenerating("due-plan")).toBe(false);
+    });
+
+    it("should notify subscribers when generation starts and ends", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      const subscriber = vi.fn();
+      service.subscribe(subscriber);
+
+      await service.generatePlanNow("plan-1");
+
+      expect(subscriber).toHaveBeenCalledTimes(2);
+    });
+
+    it("should clear generating state even on error", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+      mockGrokChatAPI.postChat.mockRejectedValue(new Error("API error"));
+
+      await expect(service.generatePlanNow("plan-1")).rejects.toThrow(
+        "API error",
+      );
+
+      expect(service.isGenerating("plan-1")).toBe(false);
+    });
+
+    it("should unsubscribe correctly", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      const subscriber = vi.fn();
+      const unsubscribe = service.subscribe(subscriber);
+      unsubscribe();
+
+      await service.generatePlanNow("plan-1");
+
+      expect(subscriber).not.toHaveBeenCalled();
+    });
+
+    it("should expose generating plan IDs via getGeneratingPlanIds", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      let capturedIds: string[] = [];
+      mockGrokChatAPI.postChat.mockImplementation(async () => {
+        capturedIds = [...service.getGeneratingPlanIds()];
+        return "content";
+      });
+
+      await service.generatePlanNow("plan-1");
+
+      expect(capturedIds).toContain("plan-1");
+      expect(service.getGeneratingPlanIds().size).toBe(0);
+    });
+  });
+
   // ---- Helper Functions ----
   function createMockChatMessages(): LLMMessage[] {
     return [

@@ -39,7 +39,11 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
             <Stack gap="xs" p="md">
               <ChapterSection chatId={chatId} />
               <ChatSettingsButton onClick={navigateToChatSettings} />
-              <PlanSection plans={plans} onNavigate={navigateToPlan} />
+              <PlanSection
+                chatId={chatId}
+                plans={plans}
+                onNavigate={navigateToPlan}
+              />
               <MemoriesSection
                 chatId={chatId}
                 onNavigate={navigateToMemories}

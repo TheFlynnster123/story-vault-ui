@@ -6,6 +6,18 @@ import {
   PlanHiddenEventUtil,
 } from "../events/PlanEventUtils";
 import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
+import type { ChapterCreatedEvent } from "../events/ChatEvent";
+
+const createChapterEvent = (
+  chapterId: string,
+  coveredMessageIds: string[],
+): ChapterCreatedEvent => ({
+  type: "ChapterCreated",
+  chapterId,
+  title: "Chapter",
+  summary: "Summary",
+  coveredMessageIds,
+});
 
 describe("UserChatProjection - Plan Events", () => {
   let projection: UserChatProjection;
@@ -215,6 +227,96 @@ describe("UserChatProjection - Plan Events", () => {
       );
       expect(planDefs).toContain("arc");
       expect(planDefs).toContain("theme");
+    });
+  });
+
+  describe("Chapter-Plan Interaction", () => {
+    it("should not hide plan messages when chapter covers their IDs", () => {
+      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      projection.process(msg);
+      const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
+      projection.process(planEvent);
+
+      projection.process(
+        createChapterEvent("ch-1", [msg.messageId, planEvent.messageId]),
+      );
+
+      const messages = projection.GetMessages();
+      const planMessages = messages.filter((m) => m.type === "plan");
+      expect(planMessages).toHaveLength(1);
+      expect(planMessages[0].content).toBe("Plan content");
+    });
+
+    it("should still hide regular messages when chapter covers them", () => {
+      const msg1 = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg2 = MessageCreatedEventUtil.Create("assistant", "Hi there");
+      projection.process(msg1);
+      projection.process(msg2);
+
+      projection.process(
+        createChapterEvent("ch-1", [msg1.messageId, msg2.messageId]),
+      );
+
+      const messages = projection.GetMessages();
+      const userMessages = messages.filter(
+        (m) => m.type === "user-message" || m.type === "assistant",
+      );
+      expect(userMessages).toHaveLength(0);
+    });
+
+    it("should keep plan visible alongside chapter in timeline", () => {
+      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      projection.process(msg);
+      const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
+      projection.process(planEvent);
+
+      projection.process(
+        createChapterEvent("ch-1", [msg.messageId, planEvent.messageId]),
+      );
+
+      const messages = projection.GetMessages();
+      const types = messages.map((m) => m.type);
+      expect(types).toContain("plan");
+      expect(types).toContain("chapter");
+    });
+
+    it("should not hide plan when multiple plans and messages are covered", () => {
+      const msg1 = MessageCreatedEventUtil.Create("user", "Msg 1");
+      projection.process(msg1);
+      const plan1 = createPlanEvent("def-1", "Plan A", "A");
+      projection.process(plan1);
+      const msg2 = MessageCreatedEventUtil.Create("assistant", "Msg 2");
+      projection.process(msg2);
+      const plan2 = createPlanEvent("def-2", "Plan B", "B");
+      projection.process(plan2);
+
+      projection.process(
+        createChapterEvent("ch-1", [
+          msg1.messageId,
+          plan1.messageId,
+          msg2.messageId,
+          plan2.messageId,
+        ]),
+      );
+
+      const messages = projection.GetMessages();
+      const planMessages = messages.filter((m) => m.type === "plan");
+      expect(planMessages).toHaveLength(2);
+    });
+
+    it("should not hide chapter messages when covered by another chapter", () => {
+      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      projection.process(msg);
+
+      projection.process(createChapterEvent("ch-1", [msg.messageId]));
+
+      const ch1Msg = projection.GetMessages().find((m) => m.type === "chapter");
+
+      projection.process(createChapterEvent("ch-2", [ch1Msg!.id]));
+
+      const messages = projection.GetMessages();
+      const chapters = messages.filter((m) => m.type === "chapter");
+      expect(chapters).toHaveLength(2);
     });
   });
 });

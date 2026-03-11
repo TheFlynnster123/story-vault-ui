@@ -14,7 +14,7 @@ import { SystemPromptsService } from "../features/Prompts/services/SystemPrompts
 import { getChatSettingsServiceInstance } from "../features/Chat/services/Chat/ChatSettingsService";
 import { GrokChatAPI } from "../features/Grok/services/GrokChatAPI";
 import { getPlanServiceInstance } from "../features/Plans/services/PlanService";
-import { PlanGenerationService } from "../features/Plans/services/PlanGenerationService";
+import { getPlanGenerationServiceInstance } from "../features/Plans/services/PlanGenerationService";
 import { getTextGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/TextGenerationService";
 import { getImageGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ImageGenerationService";
 import { getChapterGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ChapterGenerationService";
@@ -102,7 +102,7 @@ export class Dependencies {
     return getPlanServiceInstance(chatId);
   }
   PlanGenerationService(chatId: string) {
-    return new PlanGenerationService(chatId);
+    return getPlanGenerationServiceInstance(chatId);
   }
   LLMMessageContextService(chatId: string) {
     return getLLMMessageContextServiceInstance(chatId);

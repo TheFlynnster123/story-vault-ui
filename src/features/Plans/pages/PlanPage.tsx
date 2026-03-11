@@ -31,6 +31,7 @@ import {
   formatRefreshStatus,
 } from "../services/Plan";
 import { usePlanCache } from "../hooks/usePlanCache";
+import { usePlanGenerationStatus } from "../hooks/usePlanGenerationStatus";
 import { v4 as uuidv4 } from "uuid";
 import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
@@ -63,7 +64,7 @@ export const PlanPage: React.FC = () => {
   );
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
-  const [generatingPlanId, setGeneratingPlanId] = useState<string | null>(null);
+  const { isGenerating } = usePlanGenerationStatus(chatId!);
 
   const planService = d.PlanService(chatId!);
 
@@ -81,13 +82,8 @@ export const PlanPage: React.FC = () => {
     updatePlanDefinition?.(id, "prompt", DEFAULT_PLAN_PROMPT);
   };
 
-  const handleGenerateNow = async (id: string) => {
-    setGeneratingPlanId(id);
-    try {
-      await d.PlanGenerationService(chatId!).generatePlanNow(id);
-    } finally {
-      setGeneratingPlanId(null);
-    }
+  const handleGenerateNow = (id: string) => {
+    d.PlanGenerationService(chatId!).generatePlanNow(id);
   };
 
   const handleRemovePlan = (id: string) => {
@@ -122,7 +118,7 @@ export const PlanPage: React.FC = () => {
             onResetPrompt={handleResetPrompt}
             onGenerateNow={handleGenerateNow}
             onRemove={handleRemovePlan}
-            generatingPlanId={generatingPlanId}
+            isGenerating={isGenerating}
           />
         </Stack>
       </Paper>
@@ -166,7 +162,7 @@ interface PlanListProps {
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;
-  generatingPlanId: string | null;
+  isGenerating: (planId: string) => boolean;
 }
 
 const PlanList: React.FC<PlanListProps> = ({
@@ -176,7 +172,7 @@ const PlanList: React.FC<PlanListProps> = ({
   onResetPrompt,
   onGenerateNow,
   onRemove,
-  generatingPlanId,
+  isGenerating,
 }) => (
   <Stack>
     <Group justify="space-between">
@@ -197,7 +193,7 @@ const PlanList: React.FC<PlanListProps> = ({
         onResetPrompt={onResetPrompt}
         onGenerateNow={onGenerateNow}
         onRemove={onRemove}
-        isGenerating={generatingPlanId === plan.id}
+        isGenerating={isGenerating(plan.id)}
       />
     ))}
   </Stack>

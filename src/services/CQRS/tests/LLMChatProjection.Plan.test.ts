@@ -5,6 +5,18 @@ import {
   PlanHiddenEventUtil,
 } from "../events/PlanEventUtils";
 import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
+import type { ChapterCreatedEvent } from "../events/ChatEvent";
+
+const createChapterEvent = (
+  chapterId: string,
+  coveredMessageIds: string[],
+): ChapterCreatedEvent => ({
+  type: "ChapterCreated",
+  chapterId,
+  title: "Chapter",
+  summary: "Summary",
+  coveredMessageIds,
+});
 
 describe("LLMChatProjection - Plan Events", () => {
   let projection: LLMChatProjection;
@@ -287,6 +299,119 @@ describe("LLMChatProjection - Plan Events", () => {
       expect(messages[0].content).toBe("First");
       expect(messages[1].content).toBe("Second");
       expect(messages[2].content).toBe("Third");
+    });
+  });
+
+  describe("Chapter-Plan Interaction", () => {
+    it("should not hide plan messages when chapter covers their IDs", () => {
+      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      projection.process(msg);
+      const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
+      projection.process(planEvent);
+
+      projection.process(
+        createChapterEvent("ch-1", [msg.messageId, planEvent.messageId]),
+      );
+
+      // Add messages after chapter so buffer logic doesn't re-inject covered messages
+      for (let i = 0; i < 10; i++) {
+        projection.process(MessageCreatedEventUtil.Create("user", `Post ${i}`));
+      }
+
+      const messages = projection.GetMessages();
+      const planMessages = messages.filter((m) => m.content.includes("[Plan:"));
+      expect(planMessages).toHaveLength(1);
+    });
+
+    it("should still hide regular messages when chapter covers them alongside plans", () => {
+      const msg1 = MessageCreatedEventUtil.Create("user", "Hello");
+      projection.process(msg1);
+      const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
+      projection.process(planEvent);
+      const msg2 = MessageCreatedEventUtil.Create("assistant", "Hi there");
+      projection.process(msg2);
+
+      projection.process(
+        createChapterEvent("ch-1", [
+          msg1.messageId,
+          planEvent.messageId,
+          msg2.messageId,
+        ]),
+      );
+
+      // Add enough messages after so buffer doesn't re-include hidden messages
+      for (let i = 0; i < 10; i++) {
+        projection.process(
+          MessageCreatedEventUtil.Create("user", `Post chapter ${i}`),
+        );
+      }
+
+      const messages = projection.GetMessages();
+      const hasHello = messages.some(
+        (m) => m.content === "Hello" && m.role === "user",
+      );
+      const hasHiThere = messages.some(
+        (m) => m.content === "Hi there" && m.role === "assistant",
+      );
+      expect(hasHello).toBe(false);
+      expect(hasHiThere).toBe(false);
+
+      // But the plan should still be visible
+      const hasPlan = messages.some((m) => m.content.includes("[Plan:"));
+      expect(hasPlan).toBe(true);
+    });
+
+    it("should keep plan visible alongside chapter summary", () => {
+      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      projection.process(msg);
+      const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
+      projection.process(planEvent);
+
+      projection.process(
+        createChapterEvent("ch-1", [msg.messageId, planEvent.messageId]),
+      );
+
+      // Add messages after chapter so buffer logic doesn't interfere
+      for (let i = 0; i < 10; i++) {
+        projection.process(MessageCreatedEventUtil.Create("user", `Post ${i}`));
+      }
+
+      const messages = projection.GetMessages();
+      const hasPlan = messages.some((m) => m.content.includes("[Plan:"));
+      const hasChapter = messages.some((m) =>
+        m.content.includes("[Previous Chapter Summary:"),
+      );
+      expect(hasPlan).toBe(true);
+      expect(hasChapter).toBe(true);
+    });
+
+    it("should not hide plan when multiple plans and messages are covered", () => {
+      const msg1 = MessageCreatedEventUtil.Create("user", "Msg 1");
+      projection.process(msg1);
+      const plan1 = createPlanEvent("def-1", "Plan A", "A");
+      projection.process(plan1);
+      const msg2 = MessageCreatedEventUtil.Create("assistant", "Msg 2");
+      projection.process(msg2);
+      const plan2 = createPlanEvent("def-2", "Plan B", "B");
+      projection.process(plan2);
+
+      projection.process(
+        createChapterEvent("ch-1", [
+          msg1.messageId,
+          plan1.messageId,
+          msg2.messageId,
+          plan2.messageId,
+        ]),
+      );
+
+      // Add messages after chapter so buffer logic doesn't re-inject covered messages
+      for (let i = 0; i < 10; i++) {
+        projection.process(MessageCreatedEventUtil.Create("user", `Post ${i}`));
+      }
+
+      const messages = projection.GetMessages();
+      const planMessages = messages.filter((m) => m.content.includes("[Plan:"));
+      expect(planMessages).toHaveLength(2);
     });
   });
 });

@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { IoCamera, IoSend, IoSync } from "react-icons/io5";
-import { Textarea, ActionIcon, Group, Box, Stack } from "@mantine/core";
+import { Textarea, ActionIcon, Group, Box, Stack, Loader } from "@mantine/core";
 import { SpinningIcon } from "./ChatInput.styled";
 import React from "react";
 import { useChatInputCache } from "../../hooks/useChatInputCache";
@@ -11,12 +11,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
   const { inputValue, setInputValue, clearInputValue } =
     useChatInputCache(chatId);
   const { isExpanded, expand, minimize } = useChatInputExpansion();
-  const { generateImage, generateResponse, isLoading, status } =
-    useChatGeneration(chatId);
+  const {
+    generateImage,
+    generateResponse,
+    isTextLoading,
+    isImageLoading,
+    status,
+  } = useChatGeneration(chatId);
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
-    if (isLoading) return;
+    if (isTextLoading) return;
 
     generateResponse(inputValue);
     clearInputValue();
@@ -38,12 +43,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
           value={inputValue}
           onChange={setInputValue}
           placeholder={status ?? "Type your message here..."}
-          disabled={isLoading}
+          disabled={isTextLoading}
           isExpanded={isExpanded}
         />
         <ActionButtons
           onMinimize={minimize}
-          isLoading={isLoading}
+          isTextLoading={isTextLoading}
+          isImageLoading={isImageLoading}
           onGenerateImage={generateImage}
           onSend={handleSend}
           isExpanded={isExpanded}
@@ -57,19 +63,20 @@ interface ChatInputProps {
   chatId: string;
 }
 
-const InputIcon = ({
-  isLoading,
-  icon: Icon,
-}: {
-  isLoading: boolean;
-  icon: typeof IoCamera;
-}) =>
+const SendIcon = ({ isLoading }: { isLoading: boolean }) =>
   isLoading ? (
     <SpinningIcon>
       <IoSync style={ICON_STYLE} />
     </SpinningIcon>
   ) : (
-    <Icon style={ICON_STYLE} />
+    <IoSend style={ICON_STYLE} />
+  );
+
+const ImageIcon = ({ isLoading }: { isLoading: boolean }) =>
+  isLoading ? (
+    <Loader size="sm" color={ICON_STYLE.color} />
+  ) : (
+    <IoCamera style={ICON_STYLE} />
   );
 
 interface MessageTextareaProps {
@@ -101,13 +108,15 @@ const MessageTextarea: React.FC<MessageTextareaProps> = ({
 );
 
 const ActionButtons = ({
-  isLoading,
+  isTextLoading,
+  isImageLoading,
   onGenerateImage,
   onSend,
   onMinimize,
   isExpanded,
 }: {
-  isLoading: boolean;
+  isTextLoading: boolean;
+  isImageLoading: boolean;
   onGenerateImage: () => void;
   onSend: () => void;
   onMinimize: () => void;
@@ -118,7 +127,6 @@ const ActionButtons = ({
     e.preventDefault();
 
     onGenerateImage();
-    onMinimize();
   };
 
   const handleSend = (e: React.MouseEvent | React.TouchEvent) => {
@@ -139,11 +147,11 @@ const ActionButtons = ({
           color="blue"
           onMouseDown={handleGenerateImage}
           onTouchEnd={handleGenerateImage}
-          disabled={isLoading}
+          disabled={isImageLoading}
           aria-label="Generate Image"
           tabIndex={0}
         >
-          <InputIcon isLoading={isLoading} icon={IoCamera} />
+          <ImageIcon isLoading={isImageLoading} />
         </ActionIcon>
       )}
       <ActionIcon
@@ -153,11 +161,11 @@ const ActionButtons = ({
         color="blue"
         onMouseDown={handleSend}
         onTouchEnd={handleSend}
-        disabled={isLoading}
-        aria-label={isLoading ? "Sending..." : "Send"}
+        disabled={isTextLoading}
+        aria-label={isTextLoading ? "Sending..." : "Send"}
         tabIndex={0}
       >
-        <InputIcon isLoading={isLoading} icon={IoSend} />
+        <SendIcon isLoading={isTextLoading} />
       </ActionIcon>
     </Stack>
   );

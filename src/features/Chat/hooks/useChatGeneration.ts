@@ -54,17 +54,15 @@ export const useChatGeneration = (chatId: string) => {
     [textGeneration],
   );
 
-  const generateImage = useCallback(async () => {
-    try {
-      await imageGeneration.generateImage();
-    } catch (e) {
+  const generateImage = useCallback(() => {
+    imageGeneration.generateImage().catch((e) => {
       d.ErrorService().log("Failed to generate image", e);
-    }
+    });
   }, [imageGeneration]);
 
-  const isLoading =
-    textGeneration?.IsLoading || imageGeneration?.IsLoading || false;
-  const status = textGeneration?.Status ?? imageGeneration?.Status;
+  const isTextLoading = textGeneration?.IsLoading || false;
+  const isImageLoading = imageGeneration?.IsLoading || false;
+  const status = textGeneration?.Status;
 
   return {
     generateResponse,
@@ -72,6 +70,7 @@ export const useChatGeneration = (chatId: string) => {
     regenerateResponseWithFeedback,
     generateImage,
     status,
-    isLoading,
+    isTextLoading,
+    isImageLoading,
   };
 };

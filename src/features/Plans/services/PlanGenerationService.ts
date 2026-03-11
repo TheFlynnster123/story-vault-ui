@@ -1,5 +1,6 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
+import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import type { Plan } from "./Plan";
 import {
@@ -7,6 +8,10 @@ import {
   resetMessageCounter,
   incrementMessageCounter,
 } from "./Plan";
+
+export const getPlanGenerationServiceInstance = createInstanceCache(
+  (chatId: string) => new PlanGenerationService(chatId),
+);
 
 const buildPlanPrompt = (plan: Plan): string =>
   [
@@ -60,10 +65,43 @@ const buildUpdatePromptMessages = (
 
 export class PlanGenerationService {
   private chatId: string;
+  private generatingPlanIds = new Set<string>();
+  private subscribers = new Set<() => void>();
 
   constructor(chatId: string) {
     this.chatId = chatId;
   }
+
+  // ---- Generation State ----
+
+  public subscribe = (callback: () => void): (() => void) => {
+    this.subscribers.add(callback);
+    return () => this.subscribers.delete(callback);
+  };
+
+  public isGenerating = (planId: string): boolean =>
+    this.generatingPlanIds.has(planId);
+
+  public getGeneratingPlanIds = (): ReadonlySet<string> =>
+    this.generatingPlanIds;
+
+  private trackGeneration = async (
+    planId: string,
+    operation: () => Promise<void>,
+  ): Promise<void> => {
+    this.generatingPlanIds.add(planId);
+    this.notifySubscribers();
+    try {
+      await operation();
+    } finally {
+      this.generatingPlanIds.delete(planId);
+      this.notifySubscribers();
+    }
+  };
+
+  private notifySubscribers = (): void => {
+    this.subscribers.forEach((callback) => callback());
+  };
 
   /**
    * Checks each plan's refresh cadence and regenerates any that are due.
@@ -89,12 +127,16 @@ export class PlanGenerationService {
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
 
-    const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
-    await this.regeneratePlan(plan, chatMessages);
+    await this.trackGeneration(planId, async () => {
+      const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
+      await this.regeneratePlan(plan, chatMessages);
 
-    const updatedPlan = resetMessageCounter(plan);
-    const updatedPlans = plans.map((p) => (p.id === planId ? updatedPlan : p));
-    await d.PlanService(this.chatId).savePlans(updatedPlans);
+      const updatedPlan = resetMessageCounter(plan);
+      const updatedPlans = plans.map((p) =>
+        p.id === planId ? updatedPlan : p,
+      );
+      await d.PlanService(this.chatId).savePlans(updatedPlans);
+    });
   };
 
   public hasPlansNeedingRefresh = (): boolean => {
@@ -118,19 +160,21 @@ export class PlanGenerationService {
     const plan = this.findPlanDefinition(planDefinitionId);
     if (!plan) return;
 
-    const chatMessages = d
-      .LLMChatProjection(this.chatId)
-      .GetMessagesExcludingPlan(planDefinitionId);
+    await this.trackGeneration(planDefinitionId, async () => {
+      const chatMessages = d
+        .LLMChatProjection(this.chatId)
+        .GetMessagesExcludingPlan(planDefinitionId);
 
-    const promptMessages = priorContent
-      ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
-      : buildPromptMessages(chatMessages, plan);
+      const promptMessages = priorContent
+        ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
+        : buildPromptMessages(chatMessages, plan);
 
-    const response = await d.GrokChatAPI().postChat(promptMessages);
-    const content = stripMarkdownCodeFence(response);
-    await d
-      .ChatService(this.chatId)
-      .AddPlanMessage(plan.id, plan.name, content);
+      const response = await d.GrokChatAPI().postChat(promptMessages);
+      const content = stripMarkdownCodeFence(response);
+      await d
+        .ChatService(this.chatId)
+        .AddPlanMessage(plan.id, plan.name, content);
+    });
   };
 
   private findPlanDefinition = (planDefinitionId: string): Plan | undefined =>
@@ -144,7 +188,9 @@ export class PlanGenerationService {
     chatMessages: LLMMessage[],
   ): Promise<Plan> => {
     if (isDueForRefresh(plan)) {
-      await this.regeneratePlan(plan, chatMessages);
+      await this.trackGeneration(plan.id, () =>
+        this.regeneratePlan(plan, chatMessages),
+      );
       return resetMessageCounter(plan);
     }
     return incrementMessageCounter(plan);
