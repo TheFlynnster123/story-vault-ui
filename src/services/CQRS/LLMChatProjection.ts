@@ -197,9 +197,13 @@ export class LLMChatProjection {
   hideMessages(chapterId: string, messageIds: string[]) {
     messageIds.forEach((id) => {
       const msg = this.getMessage(id);
-      if (msg) msg.hiddenByChapterId = chapterId;
+      if (msg && this.isHideableByChapter(msg))
+        msg.hiddenByChapterId = chapterId;
     });
   }
+
+  private isHideableByChapter = (msg: MessageState): boolean =>
+    msg.type === "message";
 
   processChapterEdited(event: ChapterEditedEvent) {
     const chapter = this.getMessage(event.chapterId);

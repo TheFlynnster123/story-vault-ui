@@ -1,12 +1,13 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
+import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import type { Plan } from "./Plan";
-import {
-  isDueForRefresh,
-  resetMessageCounter,
-  incrementMessageCounter,
-} from "./Plan";
+import { isDueForRefresh, resetMessageCounter } from "./Plan";
+
+export const getPlanGenerationServiceInstance = createInstanceCache(
+  (chatId: string) => new PlanGenerationService(chatId),
+);
 
 const buildPlanPrompt = (plan: Plan): string =>
   [
@@ -60,24 +61,68 @@ const buildUpdatePromptMessages = (
 
 export class PlanGenerationService {
   private chatId: string;
+  private generatingPlanIds = new Set<string>();
+  private subscribers = new Set<() => void>();
 
   constructor(chatId: string) {
     this.chatId = chatId;
   }
 
-  /**
-   * Checks each plan's refresh cadence and regenerates any that are due.
-   * Plans not due get their counter incremented.
-   * Generated content is stored as CQRS events in the chat timeline.
-   */
-  public generateUpdatedPlans = async (
-    chatMessages: LLMMessage[],
+  // ---- Generation State ----
+
+  public subscribe = (callback: () => void): (() => void) => {
+    this.subscribers.add(callback);
+    return () => this.subscribers.delete(callback);
+  };
+
+  public isGenerating = (planId: string): boolean =>
+    this.generatingPlanIds.has(planId);
+
+  public getGeneratingPlanIds = (): ReadonlySet<string> =>
+    this.generatingPlanIds;
+
+  private trackGeneration = async (
+    planId: string,
+    operation: () => Promise<void>,
   ): Promise<void> => {
-    const plans = d.PlanService(this.chatId).getPlans();
-    const updatedPlans = await Promise.all(
-      plans.map((plan) => this.processPlan(plan, chatMessages)),
-    );
-    await d.PlanService(this.chatId).savePlans(updatedPlans);
+    this.generatingPlanIds.add(planId);
+    this.notifySubscribers();
+    try {
+      await operation();
+    } finally {
+      this.generatingPlanIds.delete(planId);
+      this.notifySubscribers();
+    }
+  };
+
+  private notifySubscribers = (): void => {
+    this.subscribers.forEach((callback) => callback());
+  };
+
+  // ---- Public API ----
+
+  /**
+   * Called when a new message is sent in the chat.
+   * Increments the counter on every plan and saves immediately,
+   * then fires off background regeneration for any plans that are now due.
+   */
+  public onMessageSent = (): void => {
+    const planService = d.PlanService(this.chatId);
+    const plans = planService.getPlans();
+    if (plans.length === 0) return;
+
+    const updatedPlans = plans.map((plan) => ({
+      ...plan,
+      messagesSinceLastUpdate: plan.messagesSinceLastUpdate + 1,
+    }));
+    planService.savePlans(updatedPlans);
+
+    const duePlans = updatedPlans.filter(isDueForRefresh);
+    if (duePlans.length === 0) return;
+
+    this.regenerateDuePlans(duePlans).catch((e) => {
+      d.ErrorService().log("Failed to update plans", e);
+    });
   };
 
   /**
@@ -85,21 +130,14 @@ export class PlanGenerationService {
    * Used by the "Generate Now" button on the Plan page.
    */
   public generatePlanNow = async (planId: string): Promise<void> => {
-    const plans = d.PlanService(this.chatId).getPlans();
-    const plan = plans.find((p) => p.id === planId);
+    const plan = this.findPlanDefinition(planId);
     if (!plan) return;
 
-    const chatMessages = d.LLMChatProjection(this.chatId).GetMessages();
-    await this.regeneratePlan(plan, chatMessages);
-
-    const updatedPlan = resetMessageCounter(plan);
-    const updatedPlans = plans.map((p) => (p.id === planId ? updatedPlan : p));
-    await d.PlanService(this.chatId).savePlans(updatedPlans);
-  };
-
-  public hasPlansNeedingRefresh = (): boolean => {
-    const plans = d.PlanService(this.chatId).getPlans();
-    return plans.some(isDueForRefresh);
+    await this.trackGeneration(planId, async () => {
+      const chatMessages = this.getChatMessages();
+      await this.regeneratePlan(plan, chatMessages);
+      this.resetCounter(planId);
+    });
   };
 
   /**
@@ -118,37 +156,54 @@ export class PlanGenerationService {
     const plan = this.findPlanDefinition(planDefinitionId);
     if (!plan) return;
 
-    const chatMessages = d
-      .LLMChatProjection(this.chatId)
-      .GetMessagesExcludingPlan(planDefinitionId);
+    await this.trackGeneration(planDefinitionId, async () => {
+      const chatMessages = d
+        .LLMChatProjection(this.chatId)
+        .GetMessagesExcludingPlan(planDefinitionId);
 
-    const promptMessages = priorContent
-      ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
-      : buildPromptMessages(chatMessages, plan);
+      const promptMessages = priorContent
+        ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
+        : buildPromptMessages(chatMessages, plan);
 
-    const response = await d.GrokChatAPI().postChat(promptMessages);
-    const content = stripMarkdownCodeFence(response);
-    await d
-      .ChatService(this.chatId)
-      .AddPlanMessage(plan.id, plan.name, content);
+      const response = await d.GrokChatAPI().postChat(promptMessages);
+      const content = stripMarkdownCodeFence(response);
+      await d
+        .ChatService(this.chatId)
+        .AddPlanMessage(plan.id, plan.name, content);
+    });
   };
+
+  // ---- Private Helpers ----
+
+  private regenerateDuePlans = async (duePlans: Plan[]): Promise<void> => {
+    const chatMessages = this.getChatMessages();
+    await Promise.all(
+      duePlans.map((plan) =>
+        this.trackGeneration(plan.id, async () => {
+          await this.regeneratePlan(plan, chatMessages);
+          this.resetCounter(plan.id);
+        }),
+      ),
+    );
+  };
+
+  private resetCounter = (planId: string): void => {
+    const planService = d.PlanService(this.chatId);
+    const plans = planService.getPlans();
+    const updatedPlans = plans.map((p) =>
+      p.id === planId ? resetMessageCounter(p) : p,
+    );
+    planService.savePlans(updatedPlans);
+  };
+
+  private getChatMessages = (): LLMMessage[] =>
+    d.LLMChatProjection(this.chatId).GetMessages();
 
   private findPlanDefinition = (planDefinitionId: string): Plan | undefined =>
     d
       .PlanService(this.chatId)
       .getPlans()
       .find((p) => p.id === planDefinitionId);
-
-  private processPlan = async (
-    plan: Plan,
-    chatMessages: LLMMessage[],
-  ): Promise<Plan> => {
-    if (isDueForRefresh(plan)) {
-      await this.regeneratePlan(plan, chatMessages);
-      return resetMessageCounter(plan);
-    }
-    return incrementMessageCounter(plan);
-  };
 
   /**
    * Generates new plan content via LLM and stores it as a CQRS event.

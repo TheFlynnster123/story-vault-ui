@@ -159,7 +159,8 @@ export class UserChatProjection {
   private processChapterCreated(event: ChapterCreatedEvent) {
     event.coveredMessageIds.forEach((id) => {
       const msg = this.Messages.find((m) => m.id === id);
-      if (msg) msg.hiddenByChapterId = event.chapterId;
+      if (msg && this.isHideableByChapter(msg))
+        msg.hiddenByChapterId = event.chapterId;
     });
 
     this.Messages.push({
@@ -248,6 +249,17 @@ export class UserChatProjection {
       m.hidden = true;
     });
   }
+
+  private static HIDEABLE_TYPES: ReadonlySet<string> = new Set([
+    "user-message",
+    "system-message",
+    "assistant",
+    "civit-job",
+    "story",
+  ]);
+
+  private isHideableByChapter = (msg: UserChatMessage): boolean =>
+    UserChatProjection.HIDEABLE_TYPES.has(msg.type);
 }
 
 // ---- Supporting Types ----
