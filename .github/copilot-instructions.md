@@ -49,7 +49,6 @@ Reference: `.github/instructions/CodingPractices.md` for detailed examples.
 
 - **Event Sourcing State**: Via CQRS projections (chat messages, chapters)
 - **React Query**: Server state (user settings, API data) - hooks in `src/queries/`
-- **Zustand**: Local UI state (NOT currently used extensively, check before adding)
 - **Subscriptions**: Projections use observable pattern - call `.subscribe(callback)` to react to state changes
 
 ### Styling Conventions
