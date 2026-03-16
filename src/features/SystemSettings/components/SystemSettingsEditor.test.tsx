@@ -49,7 +49,7 @@ describe("SystemSettingsEditor", () => {
     );
   };
 
-  it("should render model select with all model options including grok-4-1-fast-reasoning", async () => {
+  it("should render model select with all model options including Grok 4.1 Mini", async () => {
     renderWithQueryClient(<SystemSettingsEditor />);
 
     await waitFor(() => {
@@ -71,11 +71,11 @@ describe("SystemSettingsEditor", () => {
       );
       const optionTexts = options.map((opt) => opt.textContent);
 
-      expect(optionTexts).toContain("grok-4-1-fast-reasoning");
+      expect(optionTexts).toContain("Grok 4.1 Mini (Recommended!)");
     });
   });
 
-  it("should include grok-4-1-fast-reasoning in the correct position in model options", async () => {
+  it("should include Grok 4.1 Mini in the correct position in model options", async () => {
     renderWithQueryClient(<SystemSettingsEditor />);
 
     await waitFor(() => {
@@ -96,19 +96,27 @@ describe("SystemSettingsEditor", () => {
       );
       const optionTexts = options.map((opt) => opt.textContent);
 
-      // Verify the new model appears after grok-4-0709 and before grok-4-fast-non-reasoning
-      const grok4_0709Index = optionTexts.indexOf("grok-4-0709");
-      const grok4_1_fastReasoningIndex = optionTexts.indexOf(
-        "grok-4-1-fast-reasoning",
+      // Verify xAI models appear in correct order within their group
+      const grok4_0709Index = optionTexts.indexOf("Grok 4.0 (0709)");
+      const grok41MiniIndex = optionTexts.indexOf(
+        "Grok 4.1 Mini (Recommended!)",
       );
-      const grok4_fastNonReasoningIndex = optionTexts.indexOf(
-        "grok-4-fast-non-reasoning",
-      );
+      const grok41MiniFastIndex = optionTexts.indexOf("Grok 4.1 Mini Fast");
 
-      expect(grok4_1_fastReasoningIndex).toBeGreaterThan(grok4_0709Index);
-      expect(grok4_1_fastReasoningIndex).toBeLessThan(
-        grok4_fastNonReasoningIndex,
-      );
+      expect(grok41MiniIndex).toBeGreaterThan(grok4_0709Index);
+      expect(grok41MiniIndex).toBeLessThan(grok41MiniFastIndex);
+
+      // Verify premier models from other providers are present
+      expect(optionTexts).toContain("Claude Opus 4");
+      expect(optionTexts).toContain("Claude Sonnet 4");
+      expect(optionTexts).toContain("GPT-5");
+      expect(optionTexts).toContain("Gemini 2.5 Pro");
+      expect(optionTexts).toContain("DeepSeek V3.2");
+      expect(optionTexts).toContain("Llama 4 Maverick");
+      expect(optionTexts).toContain("Kimi K2");
+      expect(optionTexts).toContain("LongCat Flash Chat");
+      expect(optionTexts).toContain("Qwen3 235B");
+      expect(optionTexts).toContain("GLM 5 Turbo");
     });
   });
 });

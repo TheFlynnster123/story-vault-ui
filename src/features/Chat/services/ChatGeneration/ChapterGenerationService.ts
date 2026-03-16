@@ -21,7 +21,7 @@ export class ChapterGenerationService extends GenerationOrchestrator {
         .buildChapterSummaryRequestMessages();
 
       this.setStatus("Generating chapter summary...");
-      return await d.GrokChatAPI().postChat(requestMessages);
+      return await d.OpenRouterChatAPI().postChat(requestMessages);
     });
   }
 
@@ -32,7 +32,7 @@ export class ChapterGenerationService extends GenerationOrchestrator {
         .buildChapterTitleRequestMessages();
 
       this.setStatus("Generating chapter title...");
-      return await d.GrokChatAPI().postChat(requestMessages);
+      return await d.OpenRouterChatAPI().postChat(requestMessages);
     });
   }
 }

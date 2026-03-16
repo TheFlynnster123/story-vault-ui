@@ -7,7 +7,7 @@ interface PostChatRequest {
   model?: string;
 }
 
-export class GrokChatAPI {
+export class OpenRouterChatAPI {
   API_URL: string;
 
   constructor() {
@@ -18,10 +18,12 @@ export class GrokChatAPI {
     messages: LLMMessage[],
     modelOverride?: string,
   ): Promise<string> {
-    var grokEncryptionKey = await d.EncryptionManager().getGrokEncryptionKey();
+    var openRouterEncryptionKey = await d
+      .EncryptionManager()
+      .getOpenRouterEncryptionKey();
 
     const headers: Record<string, string> = {
-      EncryptionKey: grokEncryptionKey,
+      EncryptionKey: openRouterEncryptionKey,
     };
 
     const systemSettings = await d.SystemSettingsService().Get();
@@ -83,7 +85,7 @@ export class GrokChatAPI {
       console.error("Fetch error:", e);
       if (e.message.includes("429")) {
         d.ErrorService().log(
-          "Grok rate limit exceeded - check that you have credits!",
+          "OpenRouter rate limit exceeded - check that you have credits!",
           e,
         );
         throw e;

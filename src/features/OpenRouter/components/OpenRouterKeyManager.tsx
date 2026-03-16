@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useGrokKey } from "../hooks/useGrokKey";
+import { useOpenRouterKey } from "../hooks/useOpenRouterKey";
 import {
   TextInput,
   Button,
@@ -13,23 +13,24 @@ import { notifications } from "@mantine/notifications";
 import { RiCheckboxCircleLine, RiErrorWarningLine } from "react-icons/ri";
 import { d } from "../../../services/Dependencies";
 
-export const GrokKeyManager: React.FC = () => {
-  const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
+export const OpenRouterKeyManager: React.FC = () => {
+  const { hasValidOpenRouterKey, refreshOpenRouterKeyStatus } =
+    useOpenRouterKey();
 
   const [showKeyInput, setShowKeyInput] = useState(false);
-  const [grokKey, setGrokKey] = useState("");
+  const [openRouterKey, setOpenRouterKey] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleCancelUpdate = () => {
     setShowKeyInput(false);
-    setGrokKey("");
+    setOpenRouterKey("");
   };
 
   const handleSaveKey = async () => {
-    if (!grokKey.trim()) {
+    if (!openRouterKey.trim()) {
       notifications.show({
         title: "Validation Error",
-        message: "Please enter a valid Grok key",
+        message: "Please enter a valid OpenRouter key",
         color: "red",
         icon: <RiErrorWarningLine />,
       });
@@ -41,25 +42,25 @@ export const GrokKeyManager: React.FC = () => {
     try {
       const encryptedKey = await d
         .EncryptionManager()
-        .encryptString("grok", grokKey);
+        .encryptString("openrouter", openRouterKey);
 
-      await d.GrokKeyAPI().saveGrokKey(encryptedKey);
-      await refreshGrokKeyStatus();
+      await d.OpenRouterKeyAPI().saveOpenRouterKey(encryptedKey);
+      await refreshOpenRouterKeyStatus();
 
       notifications.show({
         title: "Success",
-        message: "Grok key updated successfully!",
+        message: "OpenRouter key updated successfully!",
         color: "green",
         icon: <RiCheckboxCircleLine />,
       });
 
-      setGrokKey("");
+      setOpenRouterKey("");
       setShowKeyInput(false);
     } catch (e) {
-      d.ErrorService().log("Failed to save Grok key", e);
+      d.ErrorService().log("Failed to save OpenRouter key", e);
       notifications.show({
         title: "Error",
-        message: "Failed to save Grok key. Please try again.",
+        message: "Failed to save OpenRouter key. Please try again.",
         color: "red",
         icon: <RiErrorWarningLine />,
       });
@@ -71,17 +72,17 @@ export const GrokKeyManager: React.FC = () => {
   return (
     <Stack w={"100%"}>
       <KeyStatus
-        hasValidGrokKey={hasValidGrokKey}
+        hasValidOpenRouterKey={hasValidOpenRouterKey}
         showKeyInput={showKeyInput}
         onUpdateClick={() => setShowKeyInput(true)}
       />
       {showKeyInput && (
         <Stack mb="sm">
           <TextInput
-            label="Enter your Grok API key"
-            placeholder="Enter Grok API key..."
-            value={grokKey}
-            onChange={(e) => setGrokKey(e.target.value)}
+            label="Enter your OpenRouter API key"
+            placeholder="Enter OpenRouter API key..."
+            value={openRouterKey}
+            onChange={(e) => setOpenRouterKey(e.target.value)}
             disabled={isUpdating}
           />
           <Group justify="center">
@@ -95,7 +96,7 @@ export const GrokKeyManager: React.FC = () => {
             <Button
               onClick={handleSaveKey}
               loading={isUpdating}
-              disabled={!grokKey.trim()}
+              disabled={!openRouterKey.trim()}
             >
               Save Key
             </Button>
@@ -107,17 +108,17 @@ export const GrokKeyManager: React.FC = () => {
 };
 
 interface IKeyStatus {
-  hasValidGrokKey: boolean | undefined;
+  hasValidOpenRouterKey: boolean | undefined;
   showKeyInput: boolean;
   onUpdateClick: () => void;
 }
 
 const KeyStatus = ({
-  hasValidGrokKey,
+  hasValidOpenRouterKey,
   showKeyInput,
   onUpdateClick,
 }: IKeyStatus) => {
-  if (hasValidGrokKey === undefined) {
+  if (hasValidOpenRouterKey === undefined) {
     return (
       <Group>
         <Loader size="sm" />
@@ -126,7 +127,7 @@ const KeyStatus = ({
     );
   }
 
-  const isValid = hasValidGrokKey;
+  const isValid = hasValidOpenRouterKey;
 
   return (
     <Stack gap="sm" align="center">
@@ -136,7 +137,9 @@ const KeyStatus = ({
         color={isValid ? "green" : "red"}
         title={
           <Text ta="center">
-            {isValid ? "Valid Grok key configured" : "No valid Grok key found"}
+            {isValid
+              ? "Valid OpenRouter key configured"
+              : "No valid OpenRouter key found"}
           </Text>
         }
       />

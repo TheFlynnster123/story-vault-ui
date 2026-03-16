@@ -110,7 +110,7 @@ const App: React.FC<AppProps> = () => {
           <Route
             path="/system-settings"
             element={
-              <ProtectedRoute requireGrokKey={false}>
+              <ProtectedRoute requireOpenRouterKey={false}>
                 <SystemSettingsPage />
               </ProtectedRoute>
             }
@@ -118,7 +118,7 @@ const App: React.FC<AppProps> = () => {
           <Route
             path="/system-prompts"
             element={
-              <ProtectedRoute requireGrokKey={false}>
+              <ProtectedRoute requireOpenRouterKey={false}>
                 <SystemPromptsPage />
               </ProtectedRoute>
             }
@@ -126,7 +126,7 @@ const App: React.FC<AppProps> = () => {
           <Route
             path="/default-image-models"
             element={
-              <ProtectedRoute requireGrokKey={false}>
+              <ProtectedRoute requireOpenRouterKey={false}>
                 <DefaultImageModelsPage />
               </ProtectedRoute>
             }
@@ -134,7 +134,7 @@ const App: React.FC<AppProps> = () => {
           <Route
             path="/default-image-models/edit/:modelId"
             element={
-              <ProtectedRoute requireGrokKey={false}>
+              <ProtectedRoute requireOpenRouterKey={false}>
                 <ImageModelEditPage />
               </ProtectedRoute>
             }

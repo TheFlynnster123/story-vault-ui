@@ -19,7 +19,7 @@ describe("PlanGenerationService", () => {
     Plans: Plan[];
   };
 
-  let mockGrokChatAPI: {
+  let mockOpenRouterChatAPI: {
     postChat: ReturnType<typeof vi.fn>;
   };
 
@@ -43,7 +43,7 @@ describe("PlanGenerationService", () => {
       Plans: [],
     };
 
-    mockGrokChatAPI = {
+    mockOpenRouterChatAPI = {
       postChat: vi.fn().mockResolvedValue("Generated content"),
     };
 
@@ -63,7 +63,9 @@ describe("PlanGenerationService", () => {
     };
 
     vi.mocked(d.PlanService).mockReturnValue(mockPlanService as any);
-    vi.mocked(d.GrokChatAPI).mockReturnValue(mockGrokChatAPI as any);
+    vi.mocked(d.OpenRouterChatAPI).mockReturnValue(
+      mockOpenRouterChatAPI as any,
+    );
     vi.mocked(d.ChatService).mockReturnValue(mockChatService as any);
     vi.mocked(d.LLMChatProjection).mockReturnValue(
       mockLLMChatProjection as any,
@@ -84,7 +86,7 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      expect(mockGrokChatAPI.postChat).not.toHaveBeenCalled();
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
       expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
     });
 
@@ -105,7 +107,7 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      expect(mockGrokChatAPI.postChat).toHaveBeenCalledTimes(1);
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledTimes(1);
       expect(mockChatService.AddPlanMessage).toHaveBeenCalledTimes(1);
     });
 
@@ -154,7 +156,7 @@ describe("PlanGenerationService", () => {
         messagesSinceLastUpdate: 4,
       });
       mockPlanService.getPlans.mockReturnValue([duePlan]);
-      mockGrokChatAPI.postChat.mockResolvedValue("Fresh content");
+      mockOpenRouterChatAPI.postChat.mockResolvedValue("Fresh content");
 
       service.onMessageSent();
       await flushPromises();
@@ -178,7 +180,7 @@ describe("PlanGenerationService", () => {
       await flushPromises();
 
       expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
-      expect(mockGrokChatAPI.postChat).not.toHaveBeenCalled();
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
     });
 
     it("should include chat messages and plan prompt in LLM request", async () => {
@@ -194,7 +196,7 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       expect(callArgs).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ content: "Hello" }),
@@ -217,7 +219,7 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       const lastMessage = callArgs[callArgs.length - 1];
       expect(lastMessage.content).not.toContain("~");
       expect(lastMessage.content).not.toContain("=====");
@@ -295,7 +297,7 @@ describe("PlanGenerationService", () => {
         }),
       ];
       mockPlanService.getPlans.mockReturnValue(plans);
-      mockGrokChatAPI.postChat.mockImplementation(
+      mockOpenRouterChatAPI.postChat.mockImplementation(
         () =>
           new Promise((resolve) => setTimeout(() => resolve("Generated"), 10)),
       );
@@ -320,7 +322,7 @@ describe("PlanGenerationService", () => {
         messagesSinceLastUpdate: 9,
       });
       mockPlanService.getPlans.mockReturnValue([overduePlan]);
-      mockGrokChatAPI.postChat.mockResolvedValue("Refreshed");
+      mockOpenRouterChatAPI.postChat.mockResolvedValue("Refreshed");
 
       service.onMessageSent();
       await flushPromises();
@@ -357,14 +359,14 @@ describe("PlanGenerationService", () => {
         }),
       ];
       mockPlanService.getPlans.mockReturnValue(plans);
-      mockGrokChatAPI.postChat
+      mockOpenRouterChatAPI.postChat
         .mockResolvedValueOnce("New content 1")
         .mockResolvedValueOnce("New content 2");
 
       service.onMessageSent();
       await flushPromises();
 
-      expect(mockGrokChatAPI.postChat).toHaveBeenCalledTimes(2);
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledTimes(2);
       expect(mockChatService.AddPlanMessage).toHaveBeenCalledTimes(2);
     });
   });
@@ -380,7 +382,7 @@ describe("PlanGenerationService", () => {
         messagesSinceLastUpdate: 0,
       });
       mockPlanService.getPlans.mockReturnValue([plan]);
-      mockGrokChatAPI.postChat.mockResolvedValue("On demand content");
+      mockOpenRouterChatAPI.postChat.mockResolvedValue("On demand content");
 
       await service.generatePlanNow("plan-1");
 
@@ -415,7 +417,7 @@ describe("PlanGenerationService", () => {
 
       await service.generatePlanNow("nonexistent");
 
-      expect(mockGrokChatAPI.postChat).not.toHaveBeenCalled();
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
       expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
     });
 
@@ -455,7 +457,7 @@ describe("PlanGenerationService", () => {
 
       await service.regeneratePlanFromMessage("nonexistent-id", "old content");
 
-      expect(mockGrokChatAPI.postChat).not.toHaveBeenCalled();
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
       expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
     });
 
@@ -485,7 +487,7 @@ describe("PlanGenerationService", () => {
         "Prior plan content here",
       );
 
-      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       const lastMessage = callArgs[callArgs.length - 1];
       expect(lastMessage.content).toContain("Story Plan");
       expect(lastMessage.content).toContain("current version of this plan");
@@ -505,7 +507,7 @@ describe("PlanGenerationService", () => {
         "Focus more on character arcs",
       );
 
-      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       const lastMessage = callArgs[callArgs.length - 1];
       expect(lastMessage.content).toContain("User feedback on what to change:");
       expect(lastMessage.content).toContain("Focus more on character arcs");
@@ -518,7 +520,7 @@ describe("PlanGenerationService", () => {
 
       await service.regeneratePlanFromMessage("plan-1", "Prior plan content");
 
-      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       const lastMessage = callArgs[callArgs.length - 1];
       expect(lastMessage.content).not.toContain(
         "User feedback on what to change:",
@@ -536,7 +538,7 @@ describe("PlanGenerationService", () => {
         "   ",
       );
 
-      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       const lastMessage = callArgs[callArgs.length - 1];
       expect(lastMessage.content).not.toContain(
         "User feedback on what to change:",
@@ -554,7 +556,7 @@ describe("PlanGenerationService", () => {
 
       await service.regeneratePlanFromMessage("plan-1");
 
-      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       const lastMessage = callArgs[callArgs.length - 1];
       expect(lastMessage.content).toContain("Story Plan");
       expect(lastMessage.content).toContain("Generate a plan in Markdown");
@@ -565,7 +567,9 @@ describe("PlanGenerationService", () => {
       const service = new PlanGenerationService(testChatId);
       const plan = createPlan({ id: "plan-1", name: "Story Plan" });
       mockPlanService.getPlans.mockReturnValue([plan]);
-      mockGrokChatAPI.postChat.mockResolvedValue("Regenerated plan content");
+      mockOpenRouterChatAPI.postChat.mockResolvedValue(
+        "Regenerated plan content",
+      );
 
       await service.regeneratePlanFromMessage("plan-1", "Old content");
 
@@ -580,7 +584,7 @@ describe("PlanGenerationService", () => {
       const service = new PlanGenerationService(testChatId);
       const plan = createPlan({ id: "plan-1", name: "Story Plan" });
       mockPlanService.getPlans.mockReturnValue([plan]);
-      mockGrokChatAPI.postChat.mockResolvedValue(
+      mockOpenRouterChatAPI.postChat.mockResolvedValue(
         "```markdown\n### Updated Plan\nContent here\n```",
       );
 
@@ -600,7 +604,7 @@ describe("PlanGenerationService", () => {
 
       await service.regeneratePlanFromMessage("plan-1", "Old content");
 
-      const callArgs = mockGrokChatAPI.postChat.mock.calls[0][0];
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       expect(callArgs).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ content: "Hello" }),
@@ -619,7 +623,7 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      expect(mockGrokChatAPI.postChat).not.toHaveBeenCalled();
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
     });
 
     it("should trigger regeneration when at least one plan becomes due after increment", async () => {
@@ -631,7 +635,7 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      expect(mockGrokChatAPI.postChat).toHaveBeenCalledTimes(1);
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledTimes(1);
     });
 
     it("should not trigger regeneration when no plans are due after increment", async () => {
@@ -644,7 +648,7 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      expect(mockGrokChatAPI.postChat).not.toHaveBeenCalled();
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
     });
 
     it("should trigger regeneration when one of many plans becomes due", async () => {
@@ -658,7 +662,7 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      expect(mockGrokChatAPI.postChat).toHaveBeenCalledTimes(1);
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -671,7 +675,7 @@ describe("PlanGenerationService", () => {
         messagesSinceLastUpdate: 0,
       });
       mockPlanService.getPlans.mockReturnValue([plan]);
-      mockGrokChatAPI.postChat.mockResolvedValue(
+      mockOpenRouterChatAPI.postChat.mockResolvedValue(
         "```markdown\n### Plan\nContent here\n```",
       );
 
@@ -692,7 +696,9 @@ describe("PlanGenerationService", () => {
         messagesSinceLastUpdate: 0,
       });
       mockPlanService.getPlans.mockReturnValue([plan]);
-      mockGrokChatAPI.postChat.mockResolvedValue("```\n# Title\nBody\n```");
+      mockOpenRouterChatAPI.postChat.mockResolvedValue(
+        "```\n# Title\nBody\n```",
+      );
 
       service.onMessageSent();
       await flushPromises();
@@ -711,7 +717,9 @@ describe("PlanGenerationService", () => {
         messagesSinceLastUpdate: 0,
       });
       mockPlanService.getPlans.mockReturnValue([plan]);
-      mockGrokChatAPI.postChat.mockResolvedValue("### Plan\nContent here");
+      mockOpenRouterChatAPI.postChat.mockResolvedValue(
+        "### Plan\nContent here",
+      );
 
       service.onMessageSent();
       await flushPromises();
@@ -732,7 +740,7 @@ describe("PlanGenerationService", () => {
       mockPlanService.getPlans.mockReturnValue([plan]);
 
       let wasGeneratingDuringCall = false;
-      mockGrokChatAPI.postChat.mockImplementation(async () => {
+      mockOpenRouterChatAPI.postChat.mockImplementation(async () => {
         wasGeneratingDuringCall = service.isGenerating("plan-1");
         return "content";
       });
@@ -749,7 +757,7 @@ describe("PlanGenerationService", () => {
       mockPlanService.getPlans.mockReturnValue([plan]);
 
       let wasGeneratingDuringCall = false;
-      mockGrokChatAPI.postChat.mockImplementation(async () => {
+      mockOpenRouterChatAPI.postChat.mockImplementation(async () => {
         wasGeneratingDuringCall = service.isGenerating("plan-1");
         return "content";
       });
@@ -770,7 +778,7 @@ describe("PlanGenerationService", () => {
       mockPlanService.getPlans.mockReturnValue([duePlan]);
 
       let wasGeneratingDuringCall = false;
-      mockGrokChatAPI.postChat.mockImplementation(async () => {
+      mockOpenRouterChatAPI.postChat.mockImplementation(async () => {
         wasGeneratingDuringCall = service.isGenerating("due-plan");
         return "content";
       });
@@ -799,7 +807,7 @@ describe("PlanGenerationService", () => {
       const service = new PlanGenerationService(testChatId);
       const plan = createPlan({ id: "plan-1" });
       mockPlanService.getPlans.mockReturnValue([plan]);
-      mockGrokChatAPI.postChat.mockRejectedValue(new Error("API error"));
+      mockOpenRouterChatAPI.postChat.mockRejectedValue(new Error("API error"));
 
       await expect(service.generatePlanNow("plan-1")).rejects.toThrow(
         "API error",
@@ -828,7 +836,7 @@ describe("PlanGenerationService", () => {
       mockPlanService.getPlans.mockReturnValue([plan]);
 
       let capturedIds: string[] = [];
-      mockGrokChatAPI.postChat.mockImplementation(async () => {
+      mockOpenRouterChatAPI.postChat.mockImplementation(async () => {
         capturedIds = [...service.getGeneratingPlanIds()];
         return "content";
       });

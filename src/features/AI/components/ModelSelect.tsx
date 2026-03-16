@@ -3,14 +3,53 @@ import { Select, Stack, Text } from "@mantine/core";
 
 const MODEL_OPTIONS = [
   { value: "", label: "Default" },
-  { value: "grok-4-0709", label: "grok-4-0709" },
-  { value: "grok-4-1-fast-reasoning", label: "grok-4-1-fast-reasoning" },
-  { value: "grok-4-fast-non-reasoning", label: "grok-4-fast-non-reasoning" },
   {
-    value: "grok-4-fast-reasoning",
-    label: "grok-4-fast-reasoning (Recommended!)",
+    group: "⭐ Reddit Recommended",
+    items: [
+      { value: "deepseek/deepseek-v3.2-exp", label: "DeepSeek V3.2 Exp" },
+      { value: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2" },
+      { value: "deepseek/deepseek-chat-v3-0324", label: "DeepSeek V3 0324" },
+      { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
+      { value: "meituan/longcat-flash-chat", label: "LongCat Flash Chat" },
+      { value: "moonshotai/kimi-k2", label: "Kimi K2" },
+      { value: "z-ai/glm-5-turbo", label: "GLM 5 Turbo" },
+      { value: "qwen/qwen3-235b-a22b", label: "Qwen3 235B" },
+    ],
   },
-  { value: "grok-3", label: "grok-3" },
+  {
+    group: "xAI",
+    items: [
+      { value: "x-ai/grok-4", label: "Grok 4.0" },
+      { value: "x-ai/grok-4-0709", label: "Grok 4.0 (0709)" },
+      { value: "x-ai/grok-4.1-mini", label: "Grok 4.1 Mini (Recommended!)" },
+      { value: "x-ai/grok-4.1-mini-fast", label: "Grok 4.1 Mini Fast" },
+      { value: "x-ai/grok-3-mini", label: "Grok 3 Mini" },
+    ],
+  },
+  {
+    group: "Anthropic",
+    items: [{ value: "anthropic/claude-opus-4", label: "Claude Opus 4" }],
+  },
+  {
+    group: "OpenAI",
+    items: [
+      { value: "openai/gpt-5", label: "GPT-5" },
+      { value: "openai/gpt-5-mini", label: "GPT-5 Mini" },
+    ],
+  },
+  {
+    group: "Google",
+    items: [
+      { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+      { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+    ],
+  },
+  {
+    group: "Meta",
+    items: [
+      { value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick" },
+    ],
+  },
 ];
 
 interface ModelSelectProps {
@@ -36,9 +75,9 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
     />
     {withDescription && (
       <Text size="sm" c="dimmed">
-        Select which Grok model to use for chat generation. Different models
-        offer varying levels of speed and reasoning capabilities. Leave empty to
-        use the default model.
+        Select which model to use for chat generation via OpenRouter. Different
+        models offer varying levels of speed and reasoning capabilities. Leave
+        empty to use the default model.
       </Text>
     )}
   </Stack>

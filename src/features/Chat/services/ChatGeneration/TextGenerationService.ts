@@ -23,7 +23,7 @@ export class TextGenerationService extends GenerationOrchestrator {
         .buildGenerationRequestMessages();
 
       this.setStatus("Generating response...");
-      const response = await d.GrokChatAPI().postChat(requestMessages);
+      const response = await d.OpenRouterChatAPI().postChat(requestMessages);
 
       this.setStatus("Saving...");
       await d.ChatService(this.chatId).AddAssistantMessage(response);
@@ -55,7 +55,7 @@ export class TextGenerationService extends GenerationOrchestrator {
         .buildRegenerationRequestMessages(originalContent, feedback);
 
       this.setStatus("Generating response...");
-      const response = await d.GrokChatAPI().postChat(requestMessages);
+      const response = await d.OpenRouterChatAPI().postChat(requestMessages);
 
       this.setStatus("Saving....");
       await d.ChatService(this.chatId).AddAssistantMessage(response);

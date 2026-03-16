@@ -3,24 +3,25 @@ import styled from "styled-components";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth0Setup } from "../hooks/useAuth0Setup";
-import { useGrokKey } from "../../Grok/hooks/useGrokKey";
-import { GrokKeyInput } from "../../Grok/components/GrokKeyInput";
+import { useOpenRouterKey } from "../../OpenRouter/hooks/useOpenRouterKey";
+import { OpenRouterKeyInput } from "../../OpenRouter/components/OpenRouterKeyInput";
 
 const LandingPage: React.FC = () => {
   const { isAuthenticated, loginWithRedirect } = useAuth0();
-  const { hasValidGrokKey, refreshGrokKeyStatus } = useGrokKey();
+  const { hasValidOpenRouterKey, refreshOpenRouterKeyStatus } =
+    useOpenRouterKey();
   const navigate = useNavigate();
 
   useAuth0Setup();
 
   React.useEffect(() => {
-    if (isAuthenticated && hasValidGrokKey === true) {
+    if (isAuthenticated && hasValidOpenRouterKey === true) {
       navigate("/chat");
     }
-  }, [isAuthenticated, hasValidGrokKey, navigate]);
+  }, [isAuthenticated, hasValidOpenRouterKey, navigate]);
 
-  const handleGrokKeyUpdated = () => {
-    refreshGrokKeyStatus();
+  const handleOpenRouterKeyUpdated = () => {
+    refreshOpenRouterKeyStatus();
   };
 
   if (!isAuthenticated) {
@@ -31,12 +32,16 @@ const LandingPage: React.FC = () => {
     );
   }
 
-  if (hasValidGrokKey === undefined) {
-    return <LoadingContainer>Loading Grok Key status...</LoadingContainer>;
+  if (hasValidOpenRouterKey === undefined) {
+    return (
+      <LoadingContainer>Loading OpenRouter Key status...</LoadingContainer>
+    );
   }
 
-  if (!hasValidGrokKey) {
-    return <GrokKeyInput onGrokKeyUpdated={handleGrokKeyUpdated} />;
+  if (!hasValidOpenRouterKey) {
+    return (
+      <OpenRouterKeyInput onOpenRouterKeyUpdated={handleOpenRouterKeyUpdated} />
+    );
   }
 
   return <LoadingContainer>Redirecting to chat...</LoadingContainer>;

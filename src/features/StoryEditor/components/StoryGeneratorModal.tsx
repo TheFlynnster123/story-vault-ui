@@ -58,7 +58,7 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
       ];
 
       const generatedStory = await d
-        .GrokChatAPI()
+        .OpenRouterChatAPI()
         .postChat(messages, model || undefined);
 
       onStoryGenerated?.(generatedStory);

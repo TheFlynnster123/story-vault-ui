@@ -165,7 +165,7 @@ export class PlanGenerationService {
         ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
         : buildPromptMessages(chatMessages, plan);
 
-      const response = await d.GrokChatAPI().postChat(promptMessages);
+      const response = await d.OpenRouterChatAPI().postChat(promptMessages);
       const content = stripMarkdownCodeFence(response);
       await d
         .ChatService(this.chatId)
@@ -214,7 +214,7 @@ export class PlanGenerationService {
     chatMessages: LLMMessage[],
   ): Promise<void> => {
     const promptMessages = buildPromptMessages(chatMessages, plan);
-    const response = await d.GrokChatAPI().postChat(promptMessages);
+    const response = await d.OpenRouterChatAPI().postChat(promptMessages);
     const content = stripMarkdownCodeFence(response);
     await d
       .ChatService(this.chatId)
