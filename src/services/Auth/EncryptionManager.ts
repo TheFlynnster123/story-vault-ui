@@ -5,18 +5,18 @@ export const getEncryptionManagerSingleton = createGlobalInstanceCache(
   () => new EncryptionManager(),
 );
 
-export type EncryptionKeyType = "grok" | "chat" | "civitai";
+export type EncryptionKeyType = "openrouter" | "chat" | "civitai";
 
 export class EncryptionManager {
   //TODO: THESE SHOULD BE STORED VIA ACCESSOR, SO THEY CAN BE RETRIEVED ASYNC
-  private grokEncryptionKey?: string;
+  private openRouterEncryptionKey?: string;
   private chatEncryptionKey?: string;
   private civitaiEncryptionKey?: string;
   private encryptionGuid?: string;
 
-  async getGrokEncryptionKey() {
+  async getOpenRouterEncryptionKey() {
     await this.ensureKeysInitialized();
-    return this.grokEncryptionKey!;
+    return this.openRouterEncryptionKey!;
   }
 
   async getChatEncryptionKey() {
@@ -38,7 +38,7 @@ export class EncryptionManager {
     if (!this.encryptionGuid) {
       this.encryptionGuid = await d.AuthAPI().getEncryptionGuid();
 
-      this.grokEncryptionKey = await this.deriveKey("grok");
+      this.openRouterEncryptionKey = await this.deriveKey("openrouter");
       this.chatEncryptionKey = await this.deriveKey("chat");
       this.civitaiEncryptionKey = await this.deriveKey("civitai");
     }
@@ -141,8 +141,8 @@ export class EncryptionManager {
 
   private getKeyHex(keyType: string) {
     switch (keyType) {
-      case "grok":
-        return this.grokEncryptionKey!;
+      case "openrouter":
+        return this.openRouterEncryptionKey!;
       case "chat":
         return this.chatEncryptionKey!;
       case "civitai":

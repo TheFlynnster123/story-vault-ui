@@ -2,19 +2,19 @@ import React from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth0Setup } from "../hooks/useAuth0Setup";
-import { useGrokKey } from "../../Grok/hooks/useGrokKey";
+import { useOpenRouterKey } from "../../OpenRouter/hooks/useOpenRouterKey";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireGrokKey?: boolean;
+  requireOpenRouterKey?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  requireGrokKey = true,
+  requireOpenRouterKey = true,
 }) => {
   const { isLoading, isAuthenticated } = useAuth0();
-  const { hasValidGrokKey } = useGrokKey();
+  const { hasValidOpenRouterKey } = useOpenRouterKey();
   const location = useLocation();
 
   useAuth0Setup();
@@ -40,7 +40,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  if (requireGrokKey && hasValidGrokKey === undefined) {
+  if (requireOpenRouterKey && hasValidOpenRouterKey === undefined) {
     return (
       <div
         style={{
@@ -52,12 +52,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           color: "white",
         }}
       >
-        Loading Grok Key status...
+        Loading OpenRouter Key status...
       </div>
     );
   }
 
-  if (requireGrokKey && hasValidGrokKey === false) {
+  if (requireOpenRouterKey && hasValidOpenRouterKey === false) {
     return <Navigate to="/" replace />;
   }
 

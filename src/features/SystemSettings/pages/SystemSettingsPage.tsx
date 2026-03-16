@@ -4,7 +4,7 @@ import { Title, Grid, Paper, ActionIcon, Group, Divider } from "@mantine/core";
 import { RiArrowLeftLine, RiSettings3Line } from "react-icons/ri";
 import { SystemSettingsEditor } from "../components/SystemSettingsEditor";
 import { Page } from "../../../components/Page";
-import { GrokKeyManager } from "../../../features/Grok/components/GrokKeyManager";
+import { OpenRouterKeyManager } from "../../../features/OpenRouter/components/OpenRouterKeyManager";
 import { CivitaiKeyManager } from "../../../features/Images/components/CivitaiKeyManager";
 import { d } from "../../../services/Dependencies";
 
@@ -25,8 +25,8 @@ const SystemSettingsPage: React.FC = () => {
     <Page>
       <PageHeader onBack={handleGoBack} />
       <Grid>
-        <SettingsSection title="Grok API Configuration">
-          <GrokKeyManager />
+        <SettingsSection title="OpenRouter API Configuration">
+          <OpenRouterKeyManager />
         </SettingsSection>
 
         <SettingsSection title="Civitai API Configuration">

@@ -12,7 +12,7 @@ import { QUERY_CLIENT } from "./QueryClient";
 import { SystemSettingsService } from "../features/SystemSettings/services/SystemSettingsService";
 import { SystemPromptsService } from "../features/Prompts/services/SystemPromptsService";
 import { getChatSettingsServiceInstance } from "../features/Chat/services/Chat/ChatSettingsService";
-import { GrokChatAPI } from "../features/Grok/services/GrokChatAPI";
+import { OpenRouterChatAPI } from "../features/OpenRouter/services/OpenRouterChatAPI";
 import { getPlanServiceInstance } from "../features/Plans/services/PlanService";
 import { getPlanGenerationServiceInstance } from "../features/Plans/services/PlanGenerationService";
 import { getTextGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/TextGenerationService";
@@ -28,7 +28,7 @@ import { getRecentChatsServiceInstance } from "../features/Chat/services/Chat/Re
 import { PhotoStorageService } from "../features/Images/services/PhotoStorageService";
 import { getAuthApiSingleton } from "./Auth/AuthAPI";
 import { getEncryptionManagerSingleton } from "./Auth/EncryptionManager";
-import { GrokKeyAPI } from "../features/Grok/services/GrokKeyAPI";
+import { OpenRouterKeyAPI } from "../features/OpenRouter/services/OpenRouterKeyAPI";
 import { CivitJobOrchestrator } from "../features/Images/services/CivitJobOrchestrator";
 import { ImageModelFromGeneratedImageService } from "../features/Images/services/modelGeneration/ImageModelFromGeneratedImageService";
 import { ImageModelService } from "../features/Images/services/modelGeneration/ImageModelService";
@@ -54,8 +54,8 @@ export class Dependencies {
     return new CivitJobOrchestrator();
   }
 
-  GrokKeyAPI() {
-    return new GrokKeyAPI();
+  OpenRouterKeyAPI() {
+    return new OpenRouterKeyAPI();
   }
 
   EncryptionManager() {
@@ -107,8 +107,8 @@ export class Dependencies {
   LLMMessageContextService(chatId: string) {
     return getLLMMessageContextServiceInstance(chatId);
   }
-  GrokChatAPI() {
-    return new GrokChatAPI();
+  OpenRouterChatAPI() {
+    return new OpenRouterChatAPI();
   }
   CivitJobAPI() {
     return new CivitJobAPI();

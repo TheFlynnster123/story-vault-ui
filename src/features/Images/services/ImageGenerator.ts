@@ -20,7 +20,7 @@ export class ImageGenerator {
       toSystemMessage(imageGenerationPrompt),
     ];
 
-    return await d.GrokChatAPI().postChat(promptMessages);
+    return await d.OpenRouterChatAPI().postChat(promptMessages);
   }
 
   public async generatePromptWithFeedback(
@@ -40,7 +40,7 @@ export class ImageGenerator {
       toSystemMessage(feedbackMessage),
     ];
 
-    return await d.GrokChatAPI().postChat(promptMessages);
+    return await d.OpenRouterChatAPI().postChat(promptMessages);
   }
 
   public async triggerJob(imageGenerationPrompt: string): Promise<string> {
