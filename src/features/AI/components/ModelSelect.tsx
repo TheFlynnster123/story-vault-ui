@@ -13,6 +13,7 @@ const MODEL_OPTIONS = [
       { value: "meituan/longcat-flash-chat", label: "LongCat Flash Chat" },
       { value: "moonshotai/kimi-k2", label: "Kimi K2" },
       { value: "z-ai/glm-5-turbo", label: "GLM 5 Turbo" },
+      { value: "z-ai/glm-5", label: "GLM 5" },
       { value: "qwen/qwen3-235b-a22b", label: "Qwen3 235B" },
     ],
   },
