@@ -4,6 +4,19 @@ import { Select, Stack, Text } from "@mantine/core";
 const MODEL_OPTIONS = [
   { value: "", label: "Default" },
   {
+    group: "⭐ Reddit Recommended",
+    items: [
+      { value: "deepseek/deepseek-v3.2-exp", label: "DeepSeek V3.2 Exp" },
+      { value: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2" },
+      { value: "deepseek/deepseek-chat-v3-0324", label: "DeepSeek V3 0324" },
+      { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
+      { value: "meituan/longcat-flash-chat", label: "LongCat Flash Chat" },
+      { value: "moonshotai/kimi-k2", label: "Kimi K2" },
+      { value: "z-ai/glm-5-turbo", label: "GLM 5 Turbo" },
+      { value: "qwen/qwen3-235b-a22b", label: "Qwen3 235B" },
+    ],
+  },
+  {
     group: "xAI",
     items: [
       { value: "x-ai/grok-4", label: "Grok 4.0" },
@@ -15,10 +28,7 @@ const MODEL_OPTIONS = [
   },
   {
     group: "Anthropic",
-    items: [
-      { value: "anthropic/claude-opus-4", label: "Claude Opus 4" },
-      { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
-    ],
+    items: [{ value: "anthropic/claude-opus-4", label: "Claude Opus 4" }],
   },
   {
     group: "OpenAI",
@@ -35,36 +45,10 @@ const MODEL_OPTIONS = [
     ],
   },
   {
-    group: "DeepSeek",
-    items: [
-      { value: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2" },
-      { value: "deepseek/deepseek-v3.2-exp", label: "DeepSeek V3.2 Exp" },
-      { value: "deepseek/deepseek-chat-v3-0324", label: "DeepSeek V3 0324" },
-    ],
-  },
-  {
     group: "Meta",
     items: [
       { value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick" },
     ],
-  },
-  {
-    group: "Moonshot",
-    items: [{ value: "moonshotai/kimi-k2", label: "Kimi K2" }],
-  },
-  {
-    group: "Meituan",
-    items: [
-      { value: "meituan/longcat-flash-chat", label: "LongCat Flash Chat" },
-    ],
-  },
-  {
-    group: "Qwen",
-    items: [{ value: "qwen/qwen3-235b-a22b", label: "Qwen3 235B" }],
-  },
-  {
-    group: "Z.ai",
-    items: [{ value: "z-ai/glm-5-turbo", label: "GLM 5 Turbo" }],
   },
 ];
 
