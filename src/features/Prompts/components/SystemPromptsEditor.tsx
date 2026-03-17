@@ -7,6 +7,7 @@ import { d } from "../../../services/Dependencies";
 import { ConfirmModal } from "../../../components/ConfirmModal";
 import { PromptInput } from "./PromptInput";
 import { usePromptHighlight } from "../hooks/usePromptHighlight";
+import { ModelSelect } from "../../AI/components/ModelSelect";
 
 export const SystemPromptsEditor: React.FC = () => {
   const { systemPrompts, isLoading } = useSystemPrompts();
@@ -90,6 +91,14 @@ export const SystemPromptsEditor: React.FC = () => {
         }
         minRows={6}
       />
+      <ModelSelect
+        value={localPrompts.newStoryModel || ""}
+        onChange={(value) =>
+          handlePromptChange({ newStoryModel: value || undefined })
+        }
+        label="Story Generation Model"
+        withDescription={false}
+      />
 
       <PromptInput
         id="defaultThirdPersonPrompt"
@@ -140,6 +149,14 @@ export const SystemPromptsEditor: React.FC = () => {
         }
         minRows={6}
       />
+      <ModelSelect
+        value={localPrompts.defaultImageModel || ""}
+        onChange={(value) =>
+          handlePromptChange({ defaultImageModel: value || undefined })
+        }
+        label="Image Prompt Generation Model"
+        withDescription={false}
+      />
 
       <PromptInput
         id="chapterSummaryPrompt"
@@ -154,6 +171,14 @@ export const SystemPromptsEditor: React.FC = () => {
           handleResetClick("chapterSummaryPrompt", "Chapter Summary Prompt")
         }
       />
+      <ModelSelect
+        value={localPrompts.chapterSummaryModel || ""}
+        onChange={(value) =>
+          handlePromptChange({ chapterSummaryModel: value || undefined })
+        }
+        label="Chapter Summary Model"
+        withDescription={false}
+      />
 
       <PromptInput
         id="chapterTitlePrompt"
@@ -167,6 +192,14 @@ export const SystemPromptsEditor: React.FC = () => {
         onReset={() =>
           handleResetClick("chapterTitlePrompt", "Chapter Title Prompt")
         }
+      />
+      <ModelSelect
+        value={localPrompts.chapterTitleModel || ""}
+        onChange={(value) =>
+          handlePromptChange({ chapterTitleModel: value || undefined })
+        }
+        label="Chapter Title Model"
+        withDescription={false}
       />
     </Stack>
   );

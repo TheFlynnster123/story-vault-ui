@@ -8,6 +8,8 @@
 export interface SystemPrompts {
   /** Prompt used when generating new stories from user input */
   newStoryPrompt: string;
+  /** Model override for story generation (empty = use default) */
+  newStoryModel?: string;
 
   // TODO: Wire this to first-person narrative generation flow
   /** Prompt for generating first-person narrative content */
@@ -20,12 +22,18 @@ export interface SystemPrompts {
   // TODO: Wire this to image generation flow
   /** Prompt for AI image generation */
   defaultImagePrompt: string;
+  /** Model override for image prompt generation (empty = use default) */
+  defaultImageModel?: string;
 
   /** Prompt for generating chapter summaries */
   chapterSummaryPrompt: string;
+  /** Model override for chapter summary generation (empty = use default) */
+  chapterSummaryModel?: string;
 
   /** Prompt for generating chapter titles */
   chapterTitlePrompt: string;
+  /** Model override for chapter title generation (empty = use default) */
+  chapterTitleModel?: string;
 }
 
 export const DEFAULT_SYSTEM_PROMPTS: SystemPrompts = {

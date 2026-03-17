@@ -848,6 +848,80 @@ describe("PlanGenerationService", () => {
     });
   });
 
+  // ---- Per-Plan Model Override Tests ----
+  describe("per-plan model override", () => {
+    it("should pass plan model to postChat for generatePlanNow", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1", model: "anthropic/claude-opus-4" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.generatePlanNow("plan-1");
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "anthropic/claude-opus-4",
+      );
+    });
+
+    it("should pass undefined when plan has no model", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.generatePlanNow("plan-1");
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        undefined,
+      );
+    });
+
+    it("should pass undefined when plan model is empty string", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1", model: "" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.generatePlanNow("plan-1");
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        undefined,
+      );
+    });
+
+    it("should pass plan model to postChat for regeneratePlanFromMessage", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1", model: "openai/gpt-5" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage("plan-1", "prior content");
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "openai/gpt-5",
+      );
+    });
+
+    it("should pass plan model for cadence-based regeneration", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const duePlan = createPlan({
+        id: "plan-1",
+        model: "google/gemini-2.5-pro",
+        refreshInterval: 1,
+        messagesSinceLastUpdate: 0,
+      });
+      mockPlanService.getPlans.mockReturnValue([duePlan]);
+
+      service.onMessageSent();
+      await flushPromises();
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "google/gemini-2.5-pro",
+      );
+    });
+  });
+
   // ---- Helper Functions ----
   function createMockChatMessages(): LLMMessage[] {
     return [

@@ -58,23 +58,28 @@ TypeScript interface and defaults:
 ```typescript
 interface SystemPrompts {
   newStoryPrompt: string;              // Prompt for generating new stories
+  newStoryModel?: string;              // Model override for story generation
   defaultFirstPersonPrompt: string;    // First-person narrative generation
   defaultThirdPersonPrompt: string;    // Third-person narrative generation
   defaultImagePrompt: string;          // AI image scene description
+  defaultImageModel?: string;          // Model override for image prompt generation
   chapterSummaryPrompt: string;        // Chapter summary generation
+  chapterSummaryModel?: string;        // Model override for chapter summaries
   chapterTitlePrompt: string;          // Chapter title generation
+  chapterTitleModel?: string;          // Model override for chapter titles
 }
 ```
 
-Each prompt has a built-in default in `DEFAULT_SYSTEM_PROMPTS`.
+Each prompt has a built-in default in `DEFAULT_SYSTEM_PROMPTS`. Prompts that directly control a generation task also have an optional `model` field for per-prompt LLM model selection (empty = use global default from System Settings).
 
 ## Integration Points
 
 - **Chat Creation** — `defaultThirdPersonPrompt` is used as the default chat prompt
 - **Text Generation** — the chat's prompt (originally sourced from system prompts) guides the LLM
-- **Image Generation** — `defaultImagePrompt` is used when no model-specific prompt is configured
-- **Story Generation** — `newStoryPrompt` instructs the LLM when generating story openings
-- **Chapter Generation** — `chapterSummaryPrompt` and `chapterTitlePrompt` guide chapter creation
+- **Image Generation** — `defaultImagePrompt` is used when no model-specific prompt is configured; `defaultImageModel` overrides the LLM model
+- **Story Generation** — `newStoryPrompt` instructs the LLM when generating story openings; `newStoryModel` pre-fills the model picker
+- **Chapter Generation** — `chapterSummaryPrompt`/`chapterTitlePrompt` guide chapter creation; `chapterSummaryModel`/`chapterTitleModel` override the LLM model
+- **Plan Generation** — each `Plan` has its own `model` field for per-plan LLM model selection
 - **Deep Linking** — the `EditPromptButton` component navigates to `/system-prompts#<promptKey>`
 
 ## Directory Structure

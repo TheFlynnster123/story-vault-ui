@@ -50,39 +50,46 @@ The HTTP client for OpenRouter key management:
 
 All AI text generation flows through `OpenRouterChatAPI.postChat()`. Below is a complete list of every call site:
 
+### Model Resolution Hierarchy
+
+Each call site resolves the LLM model in this order:
+1. **Per-prompt model** — set alongside each system prompt or plan definition
+2. **Global default model** — from `SystemSettings.chatGenerationSettings.model`
+3. **OpenRouter default** — if no model is specified, OpenRouter uses its own default
+
 ### Chat Response Generation
 
-| Caller | File | Method | Purpose |
-|--------|------|--------|---------|
-| `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `generateResponse()` | Generates the main AI response to a user message |
-| `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `regenerateResponse()` | Regenerates an AI response with optional user feedback |
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `generateResponse()` | Global default |
+| `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `regenerateResponse()` | Global default |
 
 ### Chapter Generation
 
-| Caller | File | Method | Prompt Source |
-|--------|------|--------|--------------|
-| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterSummary()` | `SystemPrompts.chapterSummaryPrompt` |
-| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterTitle()` | `SystemPrompts.chapterTitlePrompt` |
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterSummary()` | `SystemPrompts.chapterSummaryModel` |
+| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterTitle()` | `SystemPrompts.chapterTitleModel` |
 
 ### Image Prompt Generation
 
-| Caller | File | Method | Purpose |
-|--------|------|--------|---------|
-| `ImageGenerator` | `Images/services/ImageGenerator.ts` | `generatePrompt()` | Generates a scene description prompt for image generation |
-| `ImageGenerator` | `Images/services/ImageGenerator.ts` | `generatePromptWithFeedback()` | Regenerates an image prompt with user feedback |
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `ImageGenerator` | `Images/services/ImageGenerator.ts` | `generatePrompt()` | `SystemPrompts.defaultImageModel` |
+| `ImageGenerator` | `Images/services/ImageGenerator.ts` | `generatePromptWithFeedback()` | `SystemPrompts.defaultImageModel` |
 
 ### Plan Generation
 
-| Caller | File | Method | Purpose |
-|--------|------|--------|---------|
-| `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `regeneratePlanFromMessage()` | Regenerates a plan from the chat timeline with optional feedback |
-| `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `regeneratePlan()` (private) | Generates/refreshes plan content when the plan's refresh interval is met |
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `regeneratePlanFromMessage()` | `Plan.model` (per-plan) |
+| `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `regeneratePlan()` (private) | `Plan.model` (per-plan) |
 
 ### Story Generation
 
-| Caller | File | Method | Purpose |
-|--------|------|--------|---------|
-| `StoryGeneratorModal` | `StoryEditor/components/StoryGeneratorModal.tsx` | `handleRun()` | Generates a story from a user prompt (supports model override) |
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `StoryGeneratorModal` | `StoryEditor/components/StoryGeneratorModal.tsx` | `handleRun()` | User-selected (defaults to `SystemPrompts.newStoryModel`) |
 
 ## Directory Structure
 

@@ -20,7 +20,8 @@ export class ImageGenerator {
       toSystemMessage(imageGenerationPrompt),
     ];
 
-    return await d.OpenRouterChatAPI().postChat(promptMessages);
+    const model = await this.resolveImageModel();
+    return await d.OpenRouterChatAPI().postChat(promptMessages, model);
   }
 
   public async generatePromptWithFeedback(
@@ -40,7 +41,8 @@ export class ImageGenerator {
       toSystemMessage(feedbackMessage),
     ];
 
-    return await d.OpenRouterChatAPI().postChat(promptMessages);
+    const model = await this.resolveImageModel();
+    return await d.OpenRouterChatAPI().postChat(promptMessages, model);
   }
 
   public async triggerJob(imageGenerationPrompt: string): Promise<string> {
@@ -79,6 +81,14 @@ export class ImageGenerator {
 
     // Ultimate fallback to hardcoded default (shouldn't happen in practice)
     return DEFAULT_IMAGE_GENERATION_PROMPT;
+  }
+
+  /**
+   * Resolves the LLM model for image prompt generation.
+   */
+  private async resolveImageModel(): Promise<string | undefined> {
+    const systemPrompts = await d.SystemPromptsService().Get();
+    return systemPrompts?.defaultImageModel || undefined;
   }
 }
 
