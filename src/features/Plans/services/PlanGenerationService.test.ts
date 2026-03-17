@@ -208,6 +208,23 @@ describe("PlanGenerationService", () => {
       expect(lastMessage.content).toContain("Analyze the story");
     });
 
+    it("should exclude the plan's own messages from LLM context", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const duePlan = createPlan({
+        id: "plan-1",
+        refreshInterval: 1,
+        messagesSinceLastUpdate: 0,
+      });
+      mockPlanService.getPlans.mockReturnValue([duePlan]);
+
+      service.onMessageSent();
+      await flushPromises();
+
+      expect(
+        mockLLMChatProjection.GetMessagesExcludingPlan,
+      ).toHaveBeenCalledWith("plan-1");
+    });
+
     it("should use clean prompt format without old formatting artifacts", async () => {
       const service = new PlanGenerationService(testChatId);
       const duePlan = createPlan({
@@ -421,7 +438,7 @@ describe("PlanGenerationService", () => {
       expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
     });
 
-    it("should use LLMChatProjection for chat messages", async () => {
+    it("should use LLMChatProjection for chat messages excluding plan's own messages", async () => {
       const service = new PlanGenerationService(testChatId);
       const plan = createPlan({ id: "plan-1" });
       mockPlanService.getPlans.mockReturnValue([plan]);
@@ -429,7 +446,9 @@ describe("PlanGenerationService", () => {
       await service.generatePlanNow("plan-1");
 
       expect(d.LLMChatProjection).toHaveBeenCalledWith(testChatId);
-      expect(mockLLMChatProjection.GetMessages).toHaveBeenCalled();
+      expect(
+        mockLLMChatProjection.GetMessagesExcludingPlan,
+      ).toHaveBeenCalledWith("plan-1");
     });
 
     it("should not affect other plans' counters", async () => {

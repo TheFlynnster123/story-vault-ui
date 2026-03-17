@@ -134,7 +134,7 @@ export class PlanGenerationService {
     if (!plan) return;
 
     await this.trackGeneration(planId, async () => {
-      const chatMessages = this.getChatMessages();
+      const chatMessages = this.getChatMessagesExcludingPlan(planId);
       await this.regeneratePlan(plan, chatMessages);
       this.resetCounter(planId);
     });
@@ -176,10 +176,10 @@ export class PlanGenerationService {
   // ---- Private Helpers ----
 
   private regenerateDuePlans = async (duePlans: Plan[]): Promise<void> => {
-    const chatMessages = this.getChatMessages();
     await Promise.all(
       duePlans.map((plan) =>
         this.trackGeneration(plan.id, async () => {
+          const chatMessages = this.getChatMessagesExcludingPlan(plan.id);
           await this.regeneratePlan(plan, chatMessages);
           this.resetCounter(plan.id);
         }),
@@ -196,8 +196,8 @@ export class PlanGenerationService {
     planService.savePlans(updatedPlans);
   };
 
-  private getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(this.chatId).GetMessages();
+  private getChatMessagesExcludingPlan = (planId: string): LLMMessage[] =>
+    d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(planId);
 
   private findPlanDefinition = (planDefinitionId: string): Plan | undefined =>
     d
