@@ -46,6 +46,51 @@ The HTTP client for OpenRouter key management:
 - `hasValidOpenRouterKey()` — checks if a valid key exists (200 = valid, 404 = not found)
 - `saveOpenRouterKey(encryptedKey)` — persists a new encrypted OpenRouter key
 
+## Text Generation Usage
+
+All AI text generation flows through `OpenRouterChatAPI.postChat()`. Below is a complete list of every call site:
+
+### Model Resolution Hierarchy
+
+Each call site resolves the LLM model in this order:
+1. **Per-prompt model** — set alongside each system prompt or plan definition
+2. **Global default model** — from `SystemSettings.chatGenerationSettings.model`
+3. **OpenRouter default** — if no model is specified, OpenRouter uses its own default
+
+### Chat Response Generation
+
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `generateResponse()` | Global default |
+| `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `regenerateResponse()` | Global default |
+
+### Chapter Generation
+
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterSummary()` | `SystemPrompts.chapterSummaryModel` |
+| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterTitle()` | `SystemPrompts.chapterTitleModel` |
+
+### Image Prompt Generation
+
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `ImageGenerator` | `Images/services/ImageGenerator.ts` | `generatePrompt()` | `SystemPrompts.defaultImageModel` |
+| `ImageGenerator` | `Images/services/ImageGenerator.ts` | `generatePromptWithFeedback()` | `SystemPrompts.defaultImageModel` |
+
+### Plan Generation
+
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `regeneratePlanFromMessage()` | `Plan.model` (per-plan) |
+| `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `regeneratePlan()` (private) | `Plan.model` (per-plan) |
+
+### Story Generation
+
+| Caller | File | Method | Model Source |
+|--------|------|--------|-------------|
+| `StoryGeneratorModal` | `StoryEditor/components/StoryGeneratorModal.tsx` | `handleRun()` | User-selected (defaults to `SystemPrompts.newStoryModel`) |
+
 ## Directory Structure
 
 ```

@@ -3,12 +3,7 @@ import { d } from "../../../../services/Dependencies";
 import { toSystemMessage } from "../../../../services/Utils/MessageUtils";
 import type { Memory } from "../../../Memories/services/Memory";
 import type { ChatSettings } from "../Chat/ChatSettings";
-
-const CHAPTER_SUMMARY_PROMPT: string =
-  "Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without formatting or a preamble.";
-
-const CHAPTER_TITLE_PROMPT: string =
-  "Review the conversation above and generate a concise, engaging title for the current chapter. The title should capture the essence of what happened. Keep it short (3-7 words). Provide only the title without formatting or any preamble.";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
 
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
@@ -50,12 +45,14 @@ export class LLMMessageContextService {
 
   async buildChapterSummaryRequestMessages(): Promise<LLMMessage[]> {
     const chatMessages = this.getChatMessages();
-    return this.assembleChapterSummaryMessages(chatMessages);
+    const chapterSummaryPrompt = await this.fetchChapterSummaryPrompt();
+    return this.assembleChapterSummaryMessages(chatMessages, chapterSummaryPrompt);
   }
 
   async buildChapterTitleRequestMessages(): Promise<LLMMessage[]> {
     const chatMessages = this.getChatMessages();
-    return this.assembleChapterTitleMessages(chatMessages);
+    const chapterTitlePrompt = await this.fetchChapterTitlePrompt();
+    return this.assembleChapterTitleMessages(chatMessages, chapterTitlePrompt);
   }
 
   buildMemoryMessages(memories: Memory[]): LLMMessage[] {
@@ -79,6 +76,22 @@ export class LLMMessageContextService {
     return d.MemoriesService(this.chatId).get();
   }
 
+  private async fetchChapterSummaryPrompt(): Promise<string> {
+    const systemPrompts = await d.SystemPromptsService().Get();
+    return (
+      systemPrompts?.chapterSummaryPrompt ||
+      DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt
+    );
+  }
+
+  private async fetchChapterTitlePrompt(): Promise<string> {
+    const systemPrompts = await d.SystemPromptsService().Get();
+    return (
+      systemPrompts?.chapterTitlePrompt ||
+      DEFAULT_SYSTEM_PROMPTS.chapterTitlePrompt
+    );
+  }
+
   // ---- Private: Message Assembly ----
 
   private assembleGenerationMessages(
@@ -100,14 +113,16 @@ export class LLMMessageContextService {
 
   private assembleChapterSummaryMessages(
     chatMessages: LLMMessage[],
+    chapterSummaryPrompt: string,
   ): LLMMessage[] {
-    return [...chatMessages, this.createChapterSummaryPromptMessage()];
+    return [...chatMessages, toSystemMessage(chapterSummaryPrompt)];
   }
 
   private assembleChapterTitleMessages(
     chatMessages: LLMMessage[],
+    chapterTitlePrompt: string,
   ): LLMMessage[] {
-    return [...chatMessages, this.createChapterTitlePromptMessage()];
+    return [...chatMessages, toSystemMessage(chapterTitlePrompt)];
   }
 
   private appendFeedbackMessage(
@@ -127,14 +142,6 @@ export class LLMMessageContextService {
 
   private createStoryPromptMessage(chatSettings: ChatSettings): LLMMessage {
     return toSystemMessage(chatSettings.prompt);
-  }
-
-  private createChapterSummaryPromptMessage(): LLMMessage {
-    return toSystemMessage(CHAPTER_SUMMARY_PROMPT);
-  }
-
-  private createChapterTitlePromptMessage(): LLMMessage {
-    return toSystemMessage(CHAPTER_TITLE_PROMPT);
   }
 
   // ---- Private: Helpers ----

@@ -20,8 +20,10 @@ export class ChapterGenerationService extends GenerationOrchestrator {
         .LLMMessageContextService(this.chatId)
         .buildChapterSummaryRequestMessages();
 
+      const model = await this.resolveChapterSummaryModel();
+
       this.setStatus("Generating chapter summary...");
-      return await d.OpenRouterChatAPI().postChat(requestMessages);
+      return await d.OpenRouterChatAPI().postChat(requestMessages, model);
     });
   }
 
@@ -31,8 +33,20 @@ export class ChapterGenerationService extends GenerationOrchestrator {
         .LLMMessageContextService(this.chatId)
         .buildChapterTitleRequestMessages();
 
+      const model = await this.resolveChapterTitleModel();
+
       this.setStatus("Generating chapter title...");
-      return await d.OpenRouterChatAPI().postChat(requestMessages);
+      return await d.OpenRouterChatAPI().postChat(requestMessages, model);
     });
+  }
+
+  private async resolveChapterSummaryModel(): Promise<string | undefined> {
+    const systemPrompts = await d.SystemPromptsService().Get();
+    return systemPrompts?.chapterSummaryModel || undefined;
+  }
+
+  private async resolveChapterTitleModel(): Promise<string | undefined> {
+    const systemPrompts = await d.SystemPromptsService().Get();
+    return systemPrompts?.chapterTitleModel || undefined;
   }
 }
