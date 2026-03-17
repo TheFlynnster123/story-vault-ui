@@ -37,6 +37,7 @@ import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
 import { ConfirmModal } from "../../../components/ConfirmModal";
 import { d } from "../../../services/Dependencies";
+import { ModelSelect } from "../../AI/components/ModelSelect";
 
 const createNewPlan = (): Plan => ({
   id: uuidv4(),
@@ -247,6 +248,12 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
         styles={inputStyles}
       />
     </Stack>
+    <ModelSelect
+      value={plan.model || ""}
+      onChange={(value) => onChange(plan.id, "model", value || "")}
+      label="Plan Model"
+      withDescription={false}
+    />
     <Group gap="md" align="flex-end">
       <NumberInput
         label="Refresh every N messages"

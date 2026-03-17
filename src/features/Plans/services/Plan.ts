@@ -3,6 +3,7 @@ export interface Plan {
   type: PlanType;
   name: string;
   prompt: string;
+  model?: string;
   refreshInterval: number;
   messagesSinceLastUpdate: number;
 }

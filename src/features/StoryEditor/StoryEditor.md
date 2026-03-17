@@ -24,7 +24,7 @@ A modal dialog for generating story content using AI. Features:
 - Model selector (defaults to system-configured model, overridable per generation)
 - "Edit Prompt" button that deep-links to the system prompts page (`#newStoryPrompt`)
 - Uses the `newStoryPrompt` system prompt as the system message
-- Calls `GrokChatAPI.postChat()` with the system prompt + user idea
+- Calls `OpenRouterChatAPI.postChat()` with the system prompt + user idea
 - Returns the generated story to the parent editor
 
 ## Integration Points

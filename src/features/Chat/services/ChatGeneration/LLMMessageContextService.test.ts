@@ -17,6 +17,8 @@ import type {
 } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
 import type { ChatSettings } from "../Chat/ChatSettings";
+import type { SystemPromptsService } from "../../../Prompts/services/SystemPromptsService";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
 
 vi.mock("../../../../services/Dependencies");
 
@@ -26,6 +28,7 @@ describe("LLMMessageContextService", () => {
   let ChatSettingsService: Mocked<ChatSettingsService>;
   let LLMChatProjection: Mocked<LLMChatProjection>;
   let MemoriesService: Mocked<MemoriesService>;
+  let SystemPromptsService: Mocked<SystemPromptsService>;
 
   beforeEach(() => {
     ChatSettingsService = {
@@ -40,9 +43,14 @@ describe("LLMMessageContextService", () => {
       get: vi.fn().mockResolvedValue([]),
     } as any;
 
+    SystemPromptsService = {
+      Get: vi.fn().mockResolvedValue(DEFAULT_SYSTEM_PROMPTS),
+    } as any;
+
     vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
     vi.mocked(d.LLMChatProjection).mockReturnValue(LLMChatProjection);
     vi.mocked(d.MemoriesService).mockReturnValue(MemoriesService);
+    vi.mocked(d.SystemPromptsService).mockReturnValue(SystemPromptsService);
   });
 
   afterEach(() => {
@@ -221,6 +229,81 @@ describe("LLMMessageContextService", () => {
       const lastMessage = result[result.length - 1];
       expect(lastMessage.role).toBe("system");
       expect(lastMessage.content).toContain("generate a brief summary");
+    });
+
+    it("should use user-configured chapter summary prompt", async () => {
+      const customPrompt = "Custom chapter summary instructions";
+      SystemPromptsService.Get.mockResolvedValue({
+        ...DEFAULT_SYSTEM_PROMPTS,
+        chapterSummaryPrompt: customPrompt,
+      });
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildChapterSummaryRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe(customPrompt);
+    });
+
+    it("should fall back to default when system prompts return undefined", async () => {
+      SystemPromptsService.Get.mockResolvedValue(undefined);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildChapterSummaryRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe(
+        DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt,
+      );
+    });
+  });
+
+  // ---- buildChapterTitleRequestMessages Tests ----
+  describe("buildChapterTitleRequestMessages", () => {
+    it("should include chat messages", async () => {
+      const service = new LLMMessageContextService(testChatId);
+      const chatMessages = createMockChatMessages();
+      LLMChatProjection.GetMessages.mockReturnValue(chatMessages);
+
+      const result = await service.buildChapterTitleRequestMessages();
+
+      expect(result.slice(0, -1)).toEqual(chatMessages);
+    });
+
+    it("should include chapter title prompt", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildChapterTitleRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.content).toContain("generate a concise, engaging title");
+    });
+
+    it("should use user-configured chapter title prompt", async () => {
+      const customPrompt = "Custom chapter title instructions";
+      SystemPromptsService.Get.mockResolvedValue({
+        ...DEFAULT_SYSTEM_PROMPTS,
+        chapterTitlePrompt: customPrompt,
+      });
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildChapterTitleRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe(customPrompt);
+    });
+
+    it("should fall back to default when system prompts return undefined", async () => {
+      SystemPromptsService.Get.mockResolvedValue(undefined);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildChapterTitleRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe(
+        DEFAULT_SYSTEM_PROMPTS.chapterTitlePrompt,
+      );
     });
   });
 

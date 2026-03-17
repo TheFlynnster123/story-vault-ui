@@ -24,8 +24,10 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
 
   const defaultModel = useMemo(
-    () => systemSettings?.chatGenerationSettings?.model ?? "",
-    [systemSettings],
+    () =>
+      systemPrompts?.newStoryModel ||
+      (systemSettings?.chatGenerationSettings?.model ?? ""),
+    [systemSettings, systemPrompts],
   );
 
   useEffect(() => {
