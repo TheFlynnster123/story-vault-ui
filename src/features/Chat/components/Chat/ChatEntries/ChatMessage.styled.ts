@@ -44,11 +44,11 @@ export const MessageItem = styled.div<{ $type: "user" | "system" | "story" }>`
   text-align: ${({ $type }) => ($type === "user" ? "right" : "left")};
 `;
 
-export const MessageContentWrapper = styled.div`
+export const MessageContentWrapper = styled.div<{ $fullWidth?: boolean }>`
   margin-top: 1rem;
   position: relative;
-  display: inline-block;
-  max-width: 85%;
+  display: ${({ $fullWidth }) => ($fullWidth ? "block" : "inline-block")};
+  max-width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "85%")};
 
   /* When overlay exists */
   &:has(.message-overlay) {
@@ -60,7 +60,7 @@ export const MessageContentWrapper = styled.div`
   }
 
   @media (max-width: 768px) {
-    max-width: 90%;
+    max-width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "90%")};
 
     &:has(.message-overlay) {
       min-width: 240px;
@@ -72,7 +72,7 @@ export const MessageContentWrapper = styled.div`
   }
 
   @media (max-width: 480px) {
-    max-width: 95%;
+    max-width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "95%")};
 
     &:has(.message-overlay) {
       min-width: 240px;
