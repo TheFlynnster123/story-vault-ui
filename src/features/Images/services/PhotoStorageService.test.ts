@@ -62,7 +62,7 @@ describe("PhotoStorageService", () => {
   };
 
   const mockSavePhotoSuccess = () => {
-    mockCivitJobAPI.savePhoto.mockResolvedValue(true);
+    mockCivitJobAPI.savePhoto.mockResolvedValue(undefined);
   };
 
   describe("getStoredPhoto", () => {
