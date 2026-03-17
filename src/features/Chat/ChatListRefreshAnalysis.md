@@ -181,56 +181,34 @@ Uses the batched `MessagesDeleted` event, so only 1 notification.
 
 ## Suggested Plan (Not Yet Implemented)
 
-### Fix 1: Batch Notifications During Initialization
+### Fix 1: Batch Notifications During Initialization ✅ IMPLEMENTED
 
 **Problem:** `initializeProjections()` fires a subscriber notification per event.
 
-**Suggestion:** Add a `processBatch(events: ChatEvent[])` method to both `UserChatProjection` and `LLMChatProjection` that processes all events but only calls `notifySubscribers()` once at the end.
+**Solution:** Added `processBatch(events: ChatEvent[])` to both `UserChatProjection` and `LLMChatProjection`. Processes all events but only calls `notifySubscribers()` once at the end. `ChatEventService.initializeProjections()` now calls `processBatch()`.
 
-```
-// UserChatProjection
-public processBatch(events: ChatEvent[]): void {
-  for (const event of events) {
-    this.processEvent(event); // extracted from process(), no notify
-  }
-  this.notifySubscribers();
-}
-```
+**Impact:** Reduces initialization from **N notifications to 1**.
 
-Update `ChatEventService.initializeProjections()` to call `processBatch()` instead of individual `process()` calls.
-
-**Impact:** Reduces initialization from **N notifications to 1**. This is the highest-impact fix.
-
-### Fix 2: Batch Multi-Event Operations via `AddChatEvents`
+### Fix 2: Batch Multi-Event Operations via `AddChatEvents` ✅ PARTIALLY IMPLEMENTED
 
 **Problem:** `AddPlanMessage`, `regenerateResponse`, and `regenerateImage` each emit 2 events sequentially, producing 2 separate notifications.
 
-**Suggestion:** Add an `AddChatEvents(events: ChatEvent[])` method to `ChatEventService` that processes all events through projections (via `processBatch`), then persists them. Use the existing `ChatEventStore.addChatEvents()` API which already exists but is unused.
+**Solution:** Added `AddChatEvents(events: ChatEvent[])` to `ChatEventService` that processes all events through projections via `processBatch`, then persists them via `ChatEventStore.addChatEvents()`.
 
-Update the callers:
-- `ChatService.AddPlanMessage` → submit `[hideEvent, createEvent]` in one call
-- `TextGenerationService.regenerateResponse` → submit `[deleteEvent, createEvent]` in one call
-- `ImageGenerationService.regenerateImage` → submit `[deleteEvent, createEvent]` in one call
+Updated caller:
+- ✅ `ChatService.AddPlanMessage` → submits `[hideEvent, createEvent]` in one call
 
-**Impact:** Reduces each of these operations from **2 notifications to 1**.
+Not batched (by design):
+- `TextGenerationService.regenerateResponse` — the delete must be applied before building LLM context, and the new message isn't known until after the LLM responds. The multi-second gap between events provides useful visual feedback (old message disappears → loading → new message appears).
+- `ImageGenerationService.regenerateImage` — same pattern: delete must precede LLM prompt generation, and the create event is only known after external API calls complete.
 
-### Fix 3: Memoize `ChatEntry` with `React.memo`
+**Impact:** Reduces `AddPlanMessage` from **2 notifications to 1**. Regeneration operations intentionally keep 2 notifications for correct context and UX.
 
-**Problem:** `ChatEntry` is not memoized. Every time the messages array updates (even for a single new message), Virtuoso re-renders all visible items. Each `ChatEntry` creates child components unconditionally.
+### Fix 3: Memoize `ChatEntry` with `React.memo` ✅ IMPLEMENTED
 
-**Suggestion:** Wrap `ChatEntry` with `React.memo` and a custom comparator that checks `message.id`, `message.content`, `message.deleted`, `message.hidden`, and `isLastMessage`.
+**Problem:** `ChatEntry` is not memoized. Every time the messages array updates, Virtuoso re-renders all visible items.
 
-```
-export const ChatEntry = React.memo<ChatEntryProps>(({ chatId, message, isLastMessage }) => {
-  // ... existing implementation
-}, (prev, next) =>
-  prev.message.id === next.message.id &&
-  prev.message.content === next.message.content &&
-  prev.message.deleted === next.message.deleted &&
-  prev.message.hidden === next.message.hidden &&
-  prev.isLastMessage === next.isLastMessage
-);
-```
+**Solution:** Wrapped `ChatEntry` with `React.memo` and a custom comparator that checks `message.id`, `message.content`, `message.deleted`, `message.hidden`, and `isLastMessage`.
 
 **Impact:** Only the items whose props actually changed will re-render after a list update.
 
@@ -244,7 +222,7 @@ export const ChatEntry = React.memo<ChatEntryProps>(({ chatId, message, isLastMe
 
 ### Implementation Priority
 
-1. **Fix 1** (batch initialization) — Highest impact, lowest risk
-2. **Fix 3** (memoize ChatEntry) — High impact, low risk
-3. **Fix 2** (batch multi-event ops) — Medium impact, moderate risk (requires new API surface)
-4. **Fix 4** (stable references) — Low impact, low risk
+1. ✅ **Fix 1** (batch initialization) — Highest impact, lowest risk
+2. ✅ **Fix 3** (memoize ChatEntry) — High impact, low risk
+3. ✅ **Fix 2** (batch multi-event ops) — Medium impact, moderate risk (requires new API surface)
+4. 🔲 **Fix 4** (stable references) — Low impact, low risk

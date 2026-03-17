@@ -41,24 +41,18 @@ export class LLMChatProjection {
 
   // ---- Event Processing ----
   public process(event: ChatEvent) {
-    if (this.applyEvent(event)) {
-      this.notifySubscribers();
-    }
+    this.applyEvent(event);
+    this.notifySubscribers();
   }
 
   public processBatch(events: ChatEvent[]) {
-    let applied = false;
     for (const event of events) {
-      if (this.applyEvent(event)) {
-        applied = true;
-      }
+      this.applyEvent(event);
     }
-    if (applied) {
-      this.notifySubscribers();
-    }
+    this.notifySubscribers();
   }
 
-  private applyEvent(event: ChatEvent): boolean {
+  private applyEvent(event: ChatEvent) {
     switch (event.type) {
       case "StoryCreated":
         this.processStoryCreated(event);
@@ -88,7 +82,7 @@ export class LLMChatProjection {
         this.processChapterDeleted(event);
         break;
       case "CivitJobCreated":
-        return false;
+        break;
       case "PlanCreated":
         this.processPlanCreated(event);
         break;
@@ -96,7 +90,6 @@ export class LLMChatProjection {
         this.processPlanHidden(event);
         break;
     }
-    return true;
   }
 
   // ---- LLM Message Retrieval ----
