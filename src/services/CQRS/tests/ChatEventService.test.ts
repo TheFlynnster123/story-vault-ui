@@ -16,14 +16,17 @@ describe("ChatEventService", () => {
     mockChatEventStore = {
       getChatEvents: vi.fn().mockResolvedValue([]),
       addChatEvent: vi.fn().mockResolvedValue(true),
+      addChatEvents: vi.fn().mockResolvedValue(true),
     };
 
     mockUserChatProjection = {
       process: vi.fn(),
+      processBatch: vi.fn(),
     };
 
     mockLLMChatProjection = {
       process: vi.fn(),
+      processBatch: vi.fn(),
     };
 
     // Mock the dependency injection
@@ -77,9 +80,9 @@ describe("ChatEventService", () => {
       // Should only fetch events once
       expect(mockChatEventStore.getChatEvents).toHaveBeenCalledTimes(1);
 
-      // Should only process events once (not duplicate)
-      expect(mockUserChatProjection.process).toHaveBeenCalledTimes(3);
-      expect(mockLLMChatProjection.process).toHaveBeenCalledTimes(3);
+      // Should only batch-process events once (not duplicate)
+      expect(mockUserChatProjection.processBatch).toHaveBeenCalledTimes(1);
+      expect(mockLLMChatProjection.processBatch).toHaveBeenCalledTimes(1);
     });
 
     it("should replay all events to UserChatProjection during initialization", async () => {
@@ -89,13 +92,8 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      expect(mockUserChatProjection.process).toHaveBeenCalledTimes(5);
-      events.forEach((event, index) => {
-        expect(mockUserChatProjection.process).toHaveBeenNthCalledWith(
-          index + 1,
-          event
-        );
-      });
+      expect(mockUserChatProjection.processBatch).toHaveBeenCalledTimes(1);
+      expect(mockUserChatProjection.processBatch).toHaveBeenCalledWith(events);
     });
 
     it("should replay all events to LLMChatProjection during initialization", async () => {
@@ -105,13 +103,8 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      expect(mockLLMChatProjection.process).toHaveBeenCalledTimes(5);
-      events.forEach((event, index) => {
-        expect(mockLLMChatProjection.process).toHaveBeenNthCalledWith(
-          index + 1,
-          event
-        );
-      });
+      expect(mockLLMChatProjection.processBatch).toHaveBeenCalledTimes(1);
+      expect(mockLLMChatProjection.processBatch).toHaveBeenCalledWith(events);
     });
 
     it("should handle empty event history gracefully", async () => {
@@ -120,8 +113,8 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      expect(mockUserChatProjection.process).not.toHaveBeenCalled();
-      expect(mockLLMChatProjection.process).not.toHaveBeenCalled();
+      expect(mockUserChatProjection.processBatch).toHaveBeenCalledWith([]);
+      expect(mockLLMChatProjection.processBatch).toHaveBeenCalledWith([]);
       expect(service.Events).toEqual([]);
     });
 
@@ -222,6 +215,42 @@ describe("ChatEventService", () => {
     });
   });
 
+  // ---- AddChatEvents Tests ----
+  describe("AddChatEvents", () => {
+    it("should batch-process events through both projections", async () => {
+      const service = new ChatEventService(testChatId);
+      await service.Initialize();
+
+      const events = createMockEvents(3);
+      await service.AddChatEvents(events);
+
+      expect(mockUserChatProjection.processBatch).toHaveBeenCalledWith(events);
+      expect(mockLLMChatProjection.processBatch).toHaveBeenCalledWith(events);
+    });
+
+    it("should persist events to the store via addChatEvents", async () => {
+      const service = new ChatEventService(testChatId);
+      await service.Initialize();
+
+      const events = createMockEvents(2);
+      await service.AddChatEvents(events);
+
+      expect(mockChatEventStore.addChatEvents).toHaveBeenCalledWith(
+        testChatId,
+        events
+      );
+    });
+
+    it("should auto-initialize if not already initialized", async () => {
+      const service = new ChatEventService(testChatId);
+
+      const events = createMockEvents(2);
+      await service.AddChatEvents(events);
+
+      expect(mockChatEventStore.getChatEvents).toHaveBeenCalledWith(testChatId);
+    });
+  });
+
   // ---- Edge Cases ----
   describe("Edge Cases", () => {
     it("should handle different event types", async () => {
@@ -263,17 +292,9 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      // Verify events processed in order
-      for (let i = 0; i < events.length; i++) {
-        expect(mockUserChatProjection.process).toHaveBeenNthCalledWith(
-          i + 1,
-          events[i]
-        );
-        expect(mockLLMChatProjection.process).toHaveBeenNthCalledWith(
-          i + 1,
-          events[i]
-        );
-      }
+      // Verify events processed as a batch in order
+      expect(mockUserChatProjection.processBatch).toHaveBeenCalledWith(events);
+      expect(mockLLMChatProjection.processBatch).toHaveBeenCalledWith(events);
     });
 
     it("should use correct chatId for all operations", async () => {

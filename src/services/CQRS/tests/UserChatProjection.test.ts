@@ -141,6 +141,68 @@ describe("UserChatProjection - Core Operations", () => {
     });
   });
 
+  // ---- Batch Processing Tests ----
+  describe("processBatch", () => {
+    it("should process multiple events and notify subscribers only once", () => {
+      const callback = vi.fn();
+      projection.subscribe(callback);
+
+      const events = [
+        {
+          type: "MessageCreated",
+          messageId: "m1",
+          role: "user",
+          content: "first",
+        } as MessageCreatedEvent,
+        {
+          type: "MessageCreated",
+          messageId: "m2",
+          role: "assistant",
+          content: "second",
+        } as MessageCreatedEvent,
+        {
+          type: "MessageCreated",
+          messageId: "m3",
+          role: "user",
+          content: "third",
+        } as MessageCreatedEvent,
+      ];
+
+      projection.processBatch(events);
+
+      expect(projection.Messages).toHaveLength(3);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it("should apply all events in order", () => {
+      projection.processBatch([
+        {
+          type: "MessageCreated",
+          messageId: "m1",
+          role: "user",
+          content: "original",
+        } as MessageCreatedEvent,
+        {
+          type: "MessageEdited",
+          messageId: "m1",
+          newContent: "edited",
+        } as MessageEditedEvent,
+      ]);
+
+      expect(projection.Messages).toHaveLength(1);
+      expect(projection.Messages[0].content).toBe("edited");
+    });
+
+    it("should notify once for empty batch", () => {
+      const callback = vi.fn();
+      projection.subscribe(callback);
+
+      projection.processBatch([]);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ---- MessageCreated Event Tests ----
   describe("MessageCreated Event Processing", () => {
     it("should add user message with correct type 'user-message'", () => {
@@ -737,6 +799,94 @@ describe("UserChatProjection - Core Operations", () => {
       expect(projection.Messages[1].id).toBe("msg-2");
       expect(projection.Messages[1].content).toBe("Edited");
       expect(projection.Messages[2].id).toBe("msg-3");
+    });
+  });
+
+  // ---- Immutable Updates (React.memo compatibility) ----
+  describe("Immutable Updates — new object references on mutation", () => {
+    it("should produce a new message reference when edited", () => {
+      const addEvent: MessageCreatedEvent = {
+        type: "MessageCreated",
+        messageId: "msg-1",
+        role: "user",
+        content: "Original",
+      };
+      projection.process(addEvent);
+      const before = projection.Messages[0];
+
+      const editEvent: MessageEditedEvent = {
+        type: "MessageEdited",
+        messageId: "msg-1",
+        newContent: "Edited",
+      };
+      projection.process(editEvent);
+      const after = projection.Messages[0];
+
+      expect(after).not.toBe(before);
+      expect(after.content).toBe("Edited");
+      expect(after.id).toBe("msg-1");
+    });
+
+    it("should produce a new message reference when deleted", () => {
+      const addEvent: MessageCreatedEvent = {
+        type: "MessageCreated",
+        messageId: "msg-1",
+        role: "user",
+        content: "test",
+      };
+      projection.process(addEvent);
+      const before = projection.Messages[0];
+
+      const deleteEvent: MessageDeletedEvent = {
+        type: "MessageDeleted",
+        messageId: "msg-1",
+      };
+      projection.process(deleteEvent);
+      const after = projection.Messages[0];
+
+      expect(after).not.toBe(before);
+      expect(after.deleted).toBe(true);
+    });
+
+    it("should produce new references for batch-deleted messages", () => {
+      ["msg-1", "msg-2"].forEach((id) =>
+        projection.process({
+          type: "MessageCreated",
+          messageId: id,
+          role: "user",
+          content: id,
+        } as MessageCreatedEvent),
+      );
+      const before1 = projection.Messages[0];
+      const before2 = projection.Messages[1];
+
+      projection.process({
+        type: "MessagesDeleted",
+        messageIds: ["msg-1", "msg-2"],
+      } as MessagesDeletedEvent);
+
+      expect(projection.Messages[0]).not.toBe(before1);
+      expect(projection.Messages[1]).not.toBe(before2);
+    });
+
+    it("should not change references for unaffected messages", () => {
+      ["msg-1", "msg-2"].forEach((id) =>
+        projection.process({
+          type: "MessageCreated",
+          messageId: id,
+          role: "user",
+          content: id,
+        } as MessageCreatedEvent),
+      );
+      const untouched = projection.Messages[0];
+
+      projection.process({
+        type: "MessageEdited",
+        messageId: "msg-2",
+        newContent: "Changed",
+      } as MessageEditedEvent);
+
+      expect(projection.Messages[0]).toBe(untouched);
     });
   });
 });
