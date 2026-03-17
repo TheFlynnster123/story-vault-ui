@@ -52,7 +52,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
           isImageLoading={isImageLoading}
           onGenerateImage={generateImage}
           onSend={handleSend}
-          isExpanded={isExpanded}
         />
       </Group>
     </Box>
@@ -113,14 +112,12 @@ const ActionButtons = ({
   onGenerateImage,
   onSend,
   onMinimize,
-  isExpanded,
 }: {
   isTextLoading: boolean;
   isImageLoading: boolean;
   onGenerateImage: () => void;
   onSend: () => void;
   onMinimize: () => void;
-  isExpanded: boolean;
 }) => {
   const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
@@ -139,21 +136,19 @@ const ActionButtons = ({
 
   return (
     <Stack style={{ alignSelf: "center" }} justify="center">
-      {isExpanded && (
-        <ActionIcon
-          size="input-md"
-          radius="xl"
-          variant="filled"
-          color="blue"
-          onMouseDown={handleGenerateImage}
-          onTouchEnd={handleGenerateImage}
-          disabled={isImageLoading}
-          aria-label="Generate Image"
-          tabIndex={0}
-        >
-          <ImageIcon isLoading={isImageLoading} />
-        </ActionIcon>
-      )}
+      <ActionIcon
+        size="input-md"
+        radius="xl"
+        variant="filled"
+        color="blue"
+        onMouseDown={handleGenerateImage}
+        onTouchEnd={handleGenerateImage}
+        disabled={isImageLoading}
+        aria-label="Generate Image"
+        tabIndex={0}
+      >
+        <ImageIcon isLoading={isImageLoading} />
+      </ActionIcon>
       <ActionIcon
         size="input-md"
         radius="xl"
