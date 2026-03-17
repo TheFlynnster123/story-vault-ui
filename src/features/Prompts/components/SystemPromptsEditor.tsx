@@ -140,6 +140,34 @@ export const SystemPromptsEditor: React.FC = () => {
         }
         minRows={6}
       />
+
+      <PromptInput
+        id="chapterSummaryPrompt"
+        label="Chapter Summary Prompt"
+        helpText="This prompt instructs the AI how to generate chapter summaries when compressing conversation history into chapters."
+        value={localPrompts.chapterSummaryPrompt || ""}
+        isHighlighted={highlightedPrompt === "chapterSummaryPrompt"}
+        onChange={(value) =>
+          handlePromptChange({ chapterSummaryPrompt: value })
+        }
+        onReset={() =>
+          handleResetClick("chapterSummaryPrompt", "Chapter Summary Prompt")
+        }
+      />
+
+      <PromptInput
+        id="chapterTitlePrompt"
+        label="Chapter Title Prompt"
+        helpText="This prompt instructs the AI how to generate concise, engaging titles for chapters."
+        value={localPrompts.chapterTitlePrompt || ""}
+        isHighlighted={highlightedPrompt === "chapterTitlePrompt"}
+        onChange={(value) =>
+          handlePromptChange({ chapterTitlePrompt: value })
+        }
+        onReset={() =>
+          handleResetClick("chapterTitlePrompt", "Chapter Title Prompt")
+        }
+      />
     </Stack>
   );
 };

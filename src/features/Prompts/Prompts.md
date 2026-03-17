@@ -61,6 +61,8 @@ interface SystemPrompts {
   defaultFirstPersonPrompt: string;    // First-person narrative generation
   defaultThirdPersonPrompt: string;    // Third-person narrative generation
   defaultImagePrompt: string;          // AI image scene description
+  chapterSummaryPrompt: string;        // Chapter summary generation
+  chapterTitlePrompt: string;          // Chapter title generation
 }
 ```
 
@@ -72,6 +74,7 @@ Each prompt has a built-in default in `DEFAULT_SYSTEM_PROMPTS`.
 - **Text Generation** — the chat's prompt (originally sourced from system prompts) guides the LLM
 - **Image Generation** — `defaultImagePrompt` is used when no model-specific prompt is configured
 - **Story Generation** — `newStoryPrompt` instructs the LLM when generating story openings
+- **Chapter Generation** — `chapterSummaryPrompt` and `chapterTitlePrompt` guide chapter creation
 - **Deep Linking** — the `EditPromptButton` component navigates to `/system-prompts#<promptKey>`
 
 ## Directory Structure

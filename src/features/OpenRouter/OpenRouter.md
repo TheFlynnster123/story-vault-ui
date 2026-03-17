@@ -59,10 +59,10 @@ All AI text generation flows through `OpenRouterChatAPI.postChat()`. Below is a 
 
 ### Chapter Generation
 
-| Caller | File | Method | Purpose |
-|--------|------|--------|---------|
-| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterSummary()` | Generates a summary for a new chapter |
-| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterTitle()` | Generates a title for a new chapter |
+| Caller | File | Method | Prompt Source |
+|--------|------|--------|--------------|
+| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterSummary()` | `SystemPrompts.chapterSummaryPrompt` |
+| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterTitle()` | `SystemPrompts.chapterTitlePrompt` |
 
 ### Image Prompt Generation
 

@@ -20,6 +20,12 @@ export interface SystemPrompts {
   // TODO: Wire this to image generation flow
   /** Prompt for AI image generation */
   defaultImagePrompt: string;
+
+  /** Prompt for generating chapter summaries */
+  chapterSummaryPrompt: string;
+
+  /** Prompt for generating chapter titles */
+  chapterTitlePrompt: string;
 }
 
 export const DEFAULT_SYSTEM_PROMPTS: SystemPrompts = {
@@ -48,4 +54,10 @@ Respond with ONLY a detailed, comma separated list depicting the current charact
 
 Example:
 "restaurant, evening, italian, woman, black dress, classy, sitting, touching face, at table, sitting in chair"`,
+
+  chapterSummaryPrompt:
+    "Review the conversation above and generate a brief summary of the current chapter. Focus on the key events, character developments, and plot progression. Keep the summary to about a paragraph. Provide your summary directly without formatting or a preamble.",
+
+  chapterTitlePrompt:
+    "Review the conversation above and generate a concise, engaging title for the current chapter. The title should capture the essence of what happened. Keep it short (3-7 words). Provide only the title without formatting or any preamble.",
 };

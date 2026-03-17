@@ -15,6 +15,8 @@ export const useSystemPrompts = (): UseSystemPromptsResult => {
     defaultFirstPersonPrompt: "",
     defaultThirdPersonPrompt: "",
     defaultImagePrompt: "",
+    chapterSummaryPrompt: "",
+    chapterTitlePrompt: "",
   });
   const [isLoading, setIsLoading] = useState(true);
 
