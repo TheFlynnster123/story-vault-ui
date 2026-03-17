@@ -193,7 +193,7 @@ describe("UserChatProjection - Core Operations", () => {
       expect(projection.Messages[0].content).toBe("edited");
     });
 
-    it("should handle empty batch without notifying", () => {
+    it("should notify once for empty batch", () => {
       const callback = vi.fn();
       projection.subscribe(callback);
 
