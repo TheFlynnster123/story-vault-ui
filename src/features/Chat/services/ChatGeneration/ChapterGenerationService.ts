@@ -1,7 +1,6 @@
 import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
-import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
 
 export const getChapterGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new ChapterGenerationService(chatId),
@@ -43,11 +42,11 @@ export class ChapterGenerationService extends GenerationOrchestrator {
 
   private async resolveChapterSummaryModel(): Promise<string | undefined> {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return systemPrompts?.chapterSummaryModel || DEFAULT_SYSTEM_PROMPTS.chapterSummaryModel || undefined;
+    return systemPrompts?.chapterSummaryModel || undefined;
   }
 
   private async resolveChapterTitleModel(): Promise<string | undefined> {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return systemPrompts?.chapterTitleModel || DEFAULT_SYSTEM_PROMPTS.chapterTitleModel || undefined;
+    return systemPrompts?.chapterTitleModel || undefined;
   }
 }
