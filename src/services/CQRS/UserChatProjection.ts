@@ -127,10 +127,7 @@ export class UserChatProjection {
   }
 
   private processStoryEdited(event: StoryEditedEvent) {
-    const story = this.Messages.find((m) => m.id === event.storyId);
-    if (story) {
-      story.content = event.content;
-    }
+    this.replaceMessage(event.storyId, { content: event.content });
   }
 
   private processMessageCreated(event: MessageCreatedEvent) {
@@ -145,32 +142,28 @@ export class UserChatProjection {
   }
 
   private processMessageEdited(event: MessageEditedEvent) {
-    const msg = this.Messages.find((m) => m.id === event.messageId);
-    if (msg) {
-      msg.content = event.newContent;
-    }
+    this.replaceMessage(event.messageId, { content: event.newContent });
   }
 
   private processMessageDeleted(event: MessageDeletedEvent) {
-    const msg = this.Messages.find((m) => m.id === event.messageId);
-    if (msg) {
-      msg.deleted = true;
-    }
+    this.replaceMessage(event.messageId, { deleted: true });
   }
 
   // ---- New batch deletion handler ----
   private processMessagesDeleted(event: MessagesDeletedEvent) {
     event.messageIds.forEach((id) => {
-      const msg = this.Messages.find((m) => m.id === id);
-      if (msg) msg.deleted = true;
+      this.replaceMessage(id, { deleted: true });
     });
   }
 
   private processChapterCreated(event: ChapterCreatedEvent) {
     event.coveredMessageIds.forEach((id) => {
-      const msg = this.Messages.find((m) => m.id === id);
-      if (msg && this.isHideableByChapter(msg))
-        msg.hiddenByChapterId = event.chapterId;
+      const index = this.Messages.findIndex((m) => m.id === id);
+      if (index !== -1 && this.isHideableByChapter(this.Messages[index]))
+        this.Messages[index] = {
+          ...this.Messages[index],
+          hiddenByChapterId: event.chapterId,
+        };
     });
 
     this.Messages.push({
@@ -189,30 +182,38 @@ export class UserChatProjection {
   }
 
   private processChapterEdited(event: ChapterEditedEvent) {
-    const chapter = this.Messages.find(
+    const index = this.Messages.findIndex(
       (m) => m.id === event.chapterId && m.type === "chapter",
-    ) as ChapterChatMessage;
-    if (chapter) {
-      chapter.content = event.summary;
-      chapter.data.title = event.title;
-      chapter.data.nextChapterDirection = event.nextChapterDirection;
+    );
+    if (index !== -1) {
+      const chapter = this.Messages[index] as ChapterChatMessage;
+      this.Messages[index] = {
+        ...chapter,
+        content: event.summary,
+        data: {
+          ...chapter.data,
+          title: event.title,
+          nextChapterDirection: event.nextChapterDirection,
+        },
+      };
     }
   }
 
   private processChapterDeleted(event: ChapterDeletedEvent) {
-    const chapter = this.Messages.find(
+    const chapterIndex = this.Messages.findIndex(
       (m) => m.id === event.chapterId && m.type === "chapter",
-    ) as ChapterChatMessage;
-    if (!chapter) return;
+    );
+    if (chapterIndex === -1) return;
+
+    const chapter = this.Messages[chapterIndex] as ChapterChatMessage;
 
     if (chapter.data.coveredMessageIds) {
       chapter.data.coveredMessageIds.forEach((id: string) => {
-        const msg = this.Messages.find((m) => m.id === id);
-        if (msg) msg.hiddenByChapterId = undefined;
+        this.replaceMessage(id, { hiddenByChapterId: undefined });
       });
     }
 
-    chapter.deleted = true;
+    this.Messages[chapterIndex] = { ...chapter, deleted: true };
   }
   private processCivitJobCreated(event: { jobId: string; prompt: string }) {
     this.Messages.push({
@@ -251,12 +252,13 @@ export class UserChatProjection {
    * Uses `hidden` (not `deleted`) to preserve event history.
    */
   private processPlanHidden(event: PlanHiddenEvent) {
-    this.Messages.filter(
-      (m) =>
+    this.Messages.forEach((m, index) => {
+      if (
         m.type === "plan" &&
-        m.data?.planDefinitionId === event.planDefinitionId,
-    ).forEach((m) => {
-      m.hidden = true;
+        m.data?.planDefinitionId === event.planDefinitionId
+      ) {
+        this.Messages[index] = { ...m, hidden: true };
+      }
     });
   }
 
@@ -270,6 +272,20 @@ export class UserChatProjection {
 
   private isHideableByChapter = (msg: UserChatMessage): boolean =>
     UserChatProjection.HIDEABLE_TYPES.has(msg.type);
+
+  /**
+   * Replaces a message in the array with a new object containing the updates.
+   * Creates a new object reference so React.memo detects the change.
+   */
+  private replaceMessage(
+    id: string,
+    updates: Partial<UserChatMessage>,
+  ): void {
+    const index = this.Messages.findIndex((m) => m.id === id);
+    if (index !== -1) {
+      this.Messages[index] = { ...this.Messages[index], ...updates };
+    }
+  }
 }
 
 // ---- Supporting Types ----

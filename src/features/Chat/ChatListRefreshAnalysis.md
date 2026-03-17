@@ -208,9 +208,18 @@ Not batched (by design):
 
 **Problem:** `ChatEntry` is not memoized. Every time the messages array updates, Virtuoso re-renders all visible items.
 
-**Solution:** Wrapped `ChatEntry` with `React.memo` and a custom comparator that checks `message.id`, `message.content`, `message.deleted`, `message.hidden`, and `isLastMessage`.
+**Solution:** Wrapped `ChatEntry` with `React.memo` and a reference equality comparator (`prev.message === next.message`).
 
-**Impact:** Only the items whose props actually changed will re-render after a list update.
+**Prerequisite — Immutable Updates (Fix 3b):** `UserChatProjection` event handlers previously mutated message objects in-place (e.g., `msg.content = newContent`). Because `GetMessages()` returns the same object references, `React.memo` could never detect property changes — `prev.message` and `next.message` were the same object, so all field comparisons returned `true`. This meant edits, chapter edits, and story edits would silently fail to re-render.
+
+**Fix 3b:** Changed all mutation event handlers (`processMessageEdited`, `processStoryEdited`, `processChapterEdited`, `processMessageDeleted`, `processMessagesDeleted`, `processChapterCreated`, `processChapterDeleted`, `processPlanHidden`) to produce **new object references** via spread (`this.Messages[index] = { ...this.Messages[index], ...updates }`). A `replaceMessage` helper centralizes this pattern. Now `React.memo`'s reference equality check reliably detects which messages have changed.
+
+**Why reference equality is safe:**
+- Mutations always create a new object → changed messages get new references
+- `GetMessages()` returns the same object references for unchanged messages → they pass the equality check and skip re-render
+- Covers all properties (including `data`) without listing each field explicitly
+
+**Impact:** Only the items whose props actually changed will re-render after a list update. Message edits, chapter edits, and story edits now correctly trigger re-renders.
 
 ### Fix 4: Stabilize the Messages Array Reference (Optional / Low Priority)
 
@@ -224,5 +233,6 @@ Not batched (by design):
 
 1. ✅ **Fix 1** (batch initialization) — Highest impact, lowest risk
 2. ✅ **Fix 3** (memoize ChatEntry) — High impact, low risk
-3. ✅ **Fix 2** (batch multi-event ops) — Medium impact, moderate risk (requires new API surface)
-4. 🔲 **Fix 4** (stable references) — Low impact, low risk
+3. ✅ **Fix 3b** (immutable updates) — Critical for Fix 3 correctness
+4. ✅ **Fix 2** (batch multi-event ops) — Medium impact, moderate risk (requires new API surface)
+5. 🔲 **Fix 4** (stable references) — Low impact, low risk
