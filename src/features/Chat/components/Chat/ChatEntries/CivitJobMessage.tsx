@@ -21,7 +21,7 @@ import { useCivitJob } from "../../../../Images/hooks/useCivitJob.ts";
 import { d } from "../../../../../services/Dependencies.ts";
 
 const MessageContent = styled.div`
-  max-width: 80vw;
+  width: 100%;
   cursor: pointer;
 
   &.message-text {
@@ -135,7 +135,7 @@ export const CivitJobMessage = ({
 
   return (
     <MessageItem $type="system">
-      <MessageContentWrapper>
+      <MessageContentWrapper $fullWidth>
         <MessageContent className="message-text" onClick={toggle}>
           {shouldShowLoadingIndicator() && <LoadingImageIndicator />}
           {getErrorMessage() && (
