@@ -11,6 +11,7 @@ describe("ChatService - Plan Operations", () => {
   beforeEach(() => {
     mockChatEventService = {
       AddChatEvent: vi.fn().mockResolvedValue(undefined),
+      AddChatEvents: vi.fn().mockResolvedValue(undefined),
     };
 
     vi.mocked(d.ChatEventService).mockReturnValue(mockChatEventService);
@@ -21,16 +22,16 @@ describe("ChatService - Plan Operations", () => {
   });
 
   describe("AddPlanMessage", () => {
-    it("should emit PlanHidden event before PlanCreated event", async () => {
+    it("should emit PlanHidden event before PlanCreated event in a single batch", async () => {
       const service = new ChatService(testChatId);
 
       await service.AddPlanMessage("def-1", "Plan Name", "Plan content");
 
-      expect(mockChatEventService.AddChatEvent).toHaveBeenCalledTimes(2);
-      const firstCall = mockChatEventService.AddChatEvent.mock.calls[0][0];
-      const secondCall = mockChatEventService.AddChatEvent.mock.calls[1][0];
-      expect(firstCall.type).toBe("PlanHidden");
-      expect(secondCall.type).toBe("PlanCreated");
+      expect(mockChatEventService.AddChatEvents).toHaveBeenCalledTimes(1);
+      const events = mockChatEventService.AddChatEvents.mock.calls[0][0];
+      expect(events).toHaveLength(2);
+      expect(events[0].type).toBe("PlanHidden");
+      expect(events[1].type).toBe("PlanCreated");
     });
 
     it("should create PlanHidden event with correct planDefinitionId", async () => {
@@ -38,7 +39,7 @@ describe("ChatService - Plan Operations", () => {
 
       await service.AddPlanMessage("def-42", "Plan", "Content");
 
-      const hideEvent = getCalledEventAt(0);
+      const hideEvent = getBatchedEventAt(0);
       expect(hideEvent.type).toBe("PlanHidden");
       expect(hideEvent.planDefinitionId).toBe("def-42");
     });
@@ -48,7 +49,7 @@ describe("ChatService - Plan Operations", () => {
 
       await service.AddPlanMessage("def-1", "Story Arc", "Arc details");
 
-      const createEvent = getCalledEventAt(1);
+      const createEvent = getBatchedEventAt(1);
       expect(createEvent.type).toBe("PlanCreated");
       expect(createEvent.planDefinitionId).toBe("def-1");
       expect(createEvent.planName).toBe("Story Arc");
@@ -60,7 +61,7 @@ describe("ChatService - Plan Operations", () => {
 
       await service.AddPlanMessage("def-1", "Plan", "Content");
 
-      const createEvent = getCalledEventAt(1);
+      const createEvent = getBatchedEventAt(1);
       expect(createEvent.messageId).toBeDefined();
       expect(createEvent.messageId).toMatch(/^plan-/);
     });
@@ -79,13 +80,13 @@ describe("ChatService - Plan Operations", () => {
       await service.AddPlanMessage("def-1", "Plan", "Content");
 
       // PlanHidden is always emitted, even if no matching plans exist
-      const hideEvent = getCalledEventAt(0);
+      const hideEvent = getBatchedEventAt(0);
       expect(hideEvent.type).toBe("PlanHidden");
     });
   });
 
   // ---- Test Helpers ----
 
-  const getCalledEventAt = (index: number) =>
-    mockChatEventService.AddChatEvent.mock.calls[index][0];
+  const getBatchedEventAt = (index: number) =>
+    mockChatEventService.AddChatEvents.mock.calls[0][0][index];
 });

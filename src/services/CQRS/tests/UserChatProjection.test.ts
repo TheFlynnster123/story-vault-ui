@@ -141,6 +141,68 @@ describe("UserChatProjection - Core Operations", () => {
     });
   });
 
+  // ---- Batch Processing Tests ----
+  describe("processBatch", () => {
+    it("should process multiple events and notify subscribers only once", () => {
+      const callback = vi.fn();
+      projection.subscribe(callback);
+
+      const events = [
+        {
+          type: "MessageCreated",
+          messageId: "m1",
+          role: "user",
+          content: "first",
+        } as MessageCreatedEvent,
+        {
+          type: "MessageCreated",
+          messageId: "m2",
+          role: "assistant",
+          content: "second",
+        } as MessageCreatedEvent,
+        {
+          type: "MessageCreated",
+          messageId: "m3",
+          role: "user",
+          content: "third",
+        } as MessageCreatedEvent,
+      ];
+
+      projection.processBatch(events);
+
+      expect(projection.Messages).toHaveLength(3);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it("should apply all events in order", () => {
+      projection.processBatch([
+        {
+          type: "MessageCreated",
+          messageId: "m1",
+          role: "user",
+          content: "original",
+        } as MessageCreatedEvent,
+        {
+          type: "MessageEdited",
+          messageId: "m1",
+          newContent: "edited",
+        } as MessageEditedEvent,
+      ]);
+
+      expect(projection.Messages).toHaveLength(1);
+      expect(projection.Messages[0].content).toBe("edited");
+    });
+
+    it("should handle empty batch without notifying", () => {
+      const callback = vi.fn();
+      projection.subscribe(callback);
+
+      projection.processBatch([]);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ---- MessageCreated Event Tests ----
   describe("MessageCreated Event Processing", () => {
     it("should add user message with correct type 'user-message'", () => {

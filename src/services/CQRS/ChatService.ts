@@ -130,13 +130,11 @@ export class ChatService {
     content: string,
   ): Promise<void> {
     const hideEvent = PlanHiddenEventUtil.Create(planDefinitionId);
-    await d.ChatEventService(this.chatId).AddChatEvent(hideEvent);
-
     const createEvent = PlanCreatedEventUtil.Create(
       planDefinitionId,
       planName,
       content,
     );
-    await d.ChatEventService(this.chatId).AddChatEvent(createEvent);
+    await d.ChatEventService(this.chatId).AddChatEvents([hideEvent, createEvent]);
   }
 }
