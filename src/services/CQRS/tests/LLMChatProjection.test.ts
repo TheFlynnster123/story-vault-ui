@@ -132,6 +132,62 @@ describe("LLMChatProjection - Core Operations", () => {
     });
   });
 
+  // ---- Batch Processing Tests ----
+  describe("processBatch", () => {
+    it("should process multiple events and notify subscribers only once", () => {
+      const callback = vi.fn();
+      projection.subscribe(callback);
+
+      projection.processBatch([
+        createMessageEvent("m1", "user", "first"),
+        createMessageEvent("m2", "assistant", "second"),
+        createMessageEvent("m3", "user", "third"),
+      ]);
+
+      const messages = projection.GetMessages();
+      expect(messages).toHaveLength(3);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it("should apply all events in order", () => {
+      projection.processBatch([
+        createMessageEvent("m1", "user", "original"),
+        {
+          type: "MessageEdited",
+          messageId: "m1",
+          newContent: "edited",
+        } as MessageEditedEvent,
+      ]);
+
+      const messages = projection.GetMessages();
+      expect(messages).toHaveLength(1);
+      expect(messages[0].content).toBe("edited");
+    });
+
+    it("should notify once for a batch of only CivitJobCreated events", () => {
+      const callback = vi.fn();
+      projection.subscribe(callback);
+
+      projection.processBatch([
+        { type: "CivitJobCreated", jobId: "j1", prompt: "test" } as CivitJobCreatedEvent,
+      ]);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it("should notify once for a mixed batch including CivitJobCreated", () => {
+      const callback = vi.fn();
+      projection.subscribe(callback);
+
+      projection.processBatch([
+        { type: "CivitJobCreated", jobId: "j1", prompt: "test" } as CivitJobCreatedEvent,
+        createMessageEvent("m1", "user", "hello"),
+      ]);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ---- MessageCreated Event Tests ----
   describe("MessageCreated Event", () => {
     it("should add message to projection", () => {
@@ -375,7 +431,19 @@ describe("LLMChatProjection - Core Operations", () => {
       expect(() => projection.process(event)).not.toThrow();
     });
 
-    it("should not notify subscribers for CivitJobCreated", () => {
+    it("should not add any message for CivitJobCreated", () => {
+      const event: CivitJobCreatedEvent = {
+        type: "CivitJobCreated",
+        jobId: "job-1",
+        prompt: "test prompt",
+      };
+
+      projection.process(event);
+
+      expect(projection.GetMessages()).toHaveLength(0);
+    });
+
+    it("should still notify subscribers for CivitJobCreated", () => {
       const callback = vi.fn();
       projection.subscribe(callback);
 
@@ -387,7 +455,7 @@ describe("LLMChatProjection - Core Operations", () => {
 
       projection.process(event);
 
-      expect(callback).not.toHaveBeenCalled();
+      expect(callback).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -453,6 +521,14 @@ describe("LLMChatProjection - Core Operations", () => {
   });
 
   // ---- Helper Functions ----
+  function createMessageEvent(
+    messageId: string,
+    role: "user" | "assistant" | "system",
+    content: string
+  ): MessageCreatedEvent {
+    return { type: "MessageCreated", messageId, role, content };
+  }
+
   function processMessageCreated(
     proj: LLMChatProjection,
     messageId: string,

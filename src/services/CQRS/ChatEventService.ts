@@ -45,12 +45,19 @@ export class ChatEventService {
     await d.ChatEventStore().addChatEvent(this.chatId, chatEvent);
   }
 
+  public async AddChatEvents(chatEvents: ChatEvent[]): Promise<void> {
+    if (!this.Initialized) await this.Initialize();
+
+    d.UserChatProjection(this.chatId).processBatch(chatEvents);
+    d.LLMChatProjection(this.chatId).processBatch(chatEvents);
+
+    await d.ChatEventStore().addChatEvents(this.chatId, chatEvents);
+  }
+
   initializeProjections(): void {
     if (!this.Events) return;
 
-    for (const event of this.Events) {
-      d.UserChatProjection(this.chatId).process(event);
-      d.LLMChatProjection(this.chatId).process(event);
-    }
+    d.UserChatProjection(this.chatId).processBatch(this.Events);
+    d.LLMChatProjection(this.chatId).processBatch(this.Events);
   }
 }

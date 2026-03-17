@@ -14,7 +14,7 @@ export class CivitJobAPI {
     chatId: string,
     photoName: string,
     photoData: PhotoData,
-  ): Promise<boolean> {
+  ): Promise<void> {
     const accessToken = await d.AuthAPI().getAccessToken();
 
     const photoContent = JSON.stringify(photoData);
@@ -27,11 +27,8 @@ export class CivitJobAPI {
     const requestInit = buildSavePhotoRequest(body, accessToken);
     const response = await fetch(`${this.URL}/api/SavePhoto`, requestInit);
 
-    if (response.ok) {
-      return true;
-    } else {
-      d.ErrorService().log("Failed to save photo: " + response.statusText);
-      return false;
+    if (!response.ok) {
+      throw new Error("Failed to save photo: " + response.statusText);
     }
   }
 

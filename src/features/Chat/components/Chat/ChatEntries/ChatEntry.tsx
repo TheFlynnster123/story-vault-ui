@@ -19,7 +19,7 @@ interface ChatEntryProps {
   isLastMessage?: boolean;
 }
 
-export const ChatEntry: React.FC<ChatEntryProps> = ({
+export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
   chatId,
   message,
   isLastMessage = false,
@@ -68,4 +68,8 @@ export const ChatEntry: React.FC<ChatEntryProps> = ({
       isLastMessage={isLastMessage}
     />
   );
-};
+}, (prev, next) =>
+  prev.chatId === next.chatId &&
+  prev.message === next.message &&
+  prev.isLastMessage === next.isLastMessage
+);

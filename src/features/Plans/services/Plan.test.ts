@@ -96,6 +96,22 @@ describe("applyPlanDefaults", () => {
     expect(result.prompt).toBe(plan.prompt);
   });
 
+  it("should preserve existing model when set", () => {
+    const plan = createPlan({ model: "openai/gpt-4o" });
+
+    const result = applyPlanDefaults(plan);
+
+    expect(result.model).toBe("openai/gpt-4o");
+  });
+
+  it("should preserve undefined model when not set", () => {
+    const plan = createPlan();
+
+    const result = applyPlanDefaults(plan);
+
+    expect(result.model).toBeUndefined();
+  });
+
   it("should strip legacy content field during migration", () => {
     const legacyPlan = {
       id: "plan-1",
