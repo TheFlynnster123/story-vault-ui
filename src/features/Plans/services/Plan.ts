@@ -41,6 +41,7 @@ export const applyPlanDefaults = (
   type: plan.type,
   name: plan.name,
   prompt: plan.prompt,
+  model: plan.model,
   refreshInterval: plan.refreshInterval ?? DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: plan.messagesSinceLastUpdate ?? 0,
 });
