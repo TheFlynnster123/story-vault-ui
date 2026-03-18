@@ -6,7 +6,10 @@ const MODEL_OPTIONS = [
   {
     group: "⭐ Reddit Recommended",
     items: [
-      { value: "deepseek/deepseek-v3.2-speciale", label: "DeepSeek V3.2 Speciale" },
+      {
+        value: "deepseek/deepseek-v3.2-speciale",
+        label: "DeepSeek V3.2 Speciale",
+      },
       { value: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2" },
       { value: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6" },
       { value: "meituan/longcat-flash-chat", label: "LongCat Flash Chat" },
@@ -52,10 +55,16 @@ const MODEL_OPTIONS = [
   {
     group: "Google",
     items: [
-      { value: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview" },
+      {
+        value: "google/gemini-3.1-pro-preview",
+        label: "Gemini 3.1 Pro Preview",
+      },
       { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro" },
       { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-      { value: "google/gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite Preview" },
+      {
+        value: "google/gemini-3.1-flash-lite-preview",
+        label: "Gemini 3.1 Flash Lite Preview",
+      },
       { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
     ],
   },
@@ -72,7 +81,10 @@ const MODEL_OPTIONS = [
     items: [
       { value: "mistralai/mistral-medium-3.1", label: "Mistral Medium 3.1" },
       { value: "mistralai/mistral-large-2512", label: "Mistral Large" },
-      { value: "mistralai/mistral-small-3.2-24b-instruct", label: "Mistral Small 3.2" },
+      {
+        value: "mistralai/mistral-small-3.2-24b-instruct",
+        label: "Mistral Small 3.2",
+      },
     ],
   },
   {
