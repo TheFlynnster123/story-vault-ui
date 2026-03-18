@@ -56,7 +56,10 @@ export const useChatGeneration = (chatId: string) => {
         return await textGeneration.regenerateResponse(messageId, feedback);
       } catch (e) {
         if (!isAlreadyHandled(e)) {
-          d.ErrorService().log("Failed to regenerate response with feedback", e);
+          d.ErrorService().log(
+            "Failed to regenerate response with feedback",
+            e,
+          );
         }
       }
     },

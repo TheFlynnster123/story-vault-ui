@@ -45,9 +45,7 @@ describe("OpenRouterChatAPI", () => {
         new Response(JSON.stringify(responseBody), { status: 200 }),
       );
 
-      const result = await api.postChat([
-        { role: "user", content: "Hi" },
-      ]);
+      const result = await api.postChat([{ role: "user", content: "Hi" }]);
 
       expect(result).toBe("Hello world");
     });
@@ -80,7 +78,10 @@ describe("OpenRouterChatAPI", () => {
       });
 
       vi.spyOn(global, "fetch").mockResolvedValue(
-        new Response(errorBody, { status: 402, statusText: "Payment Required" }),
+        new Response(errorBody, {
+          status: 402,
+          statusText: "Payment Required",
+        }),
       );
 
       await expect(
@@ -94,7 +95,10 @@ describe("OpenRouterChatAPI", () => {
       });
 
       vi.spyOn(global, "fetch").mockResolvedValue(
-        new Response(errorBody, { status: 429, statusText: "Too Many Requests" }),
+        new Response(errorBody, {
+          status: 429,
+          statusText: "Too Many Requests",
+        }),
       );
 
       try {
@@ -163,7 +167,10 @@ describe("OpenRouterChatAPI", () => {
       });
 
       vi.spyOn(global, "fetch").mockResolvedValue(
-        new Response(errorBody, { status: 429, statusText: "Too Many Requests" }),
+        new Response(errorBody, {
+          status: 429,
+          statusText: "Too Many Requests",
+        }),
       );
 
       const mockLog = vi.fn();
@@ -183,7 +190,9 @@ describe("OpenRouterChatAPI", () => {
     });
 
     it("should call ErrorService.log with network message for fetch failures", async () => {
-      vi.spyOn(global, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));
+      vi.spyOn(global, "fetch").mockRejectedValue(
+        new TypeError("Failed to fetch"),
+      );
 
       const mockLog = vi.fn();
       vi.mocked(d.ErrorService).mockReturnValue({ log: mockLog } as any);

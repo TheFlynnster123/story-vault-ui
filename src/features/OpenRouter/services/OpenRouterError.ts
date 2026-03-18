@@ -19,7 +19,11 @@ export class OpenRouterError extends Error {
   /** Optional metadata (moderation reasons, provider details, etc.). */
   readonly metadata?: Record<string, unknown>;
 
-  constructor(code: number, apiMessage: string, metadata?: Record<string, unknown>) {
+  constructor(
+    code: number,
+    apiMessage: string,
+    metadata?: Record<string, unknown>,
+  ) {
     super(getUserFriendlyMessage(code, apiMessage, metadata));
     this.name = "OpenRouterError";
     this.code = code;
@@ -46,8 +50,10 @@ export const parseOpenRouterError = (
     if (!err) return undefined;
 
     const code: number = typeof err.code === "number" ? err.code : httpStatus;
-    const message: string = typeof err.message === "string" ? err.message : "Unknown error";
-    const metadata: Record<string, unknown> | undefined = err.metadata ?? undefined;
+    const message: string =
+      typeof err.message === "string" ? err.message : "Unknown error";
+    const metadata: Record<string, unknown> | undefined =
+      err.metadata ?? undefined;
 
     return new OpenRouterError(code, message, metadata);
   } catch {
