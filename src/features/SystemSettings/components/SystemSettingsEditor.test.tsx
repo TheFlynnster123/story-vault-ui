@@ -49,7 +49,7 @@ describe("SystemSettingsEditor", () => {
     );
   };
 
-  it("should render model select with all model options including Grok 4.1 Mini", async () => {
+  it("should render model select with all model options including Grok 4.20 Beta", async () => {
     renderWithQueryClient(<SystemSettingsEditor />);
 
     await waitFor(() => {
@@ -71,11 +71,11 @@ describe("SystemSettingsEditor", () => {
       );
       const optionTexts = options.map((opt) => opt.textContent);
 
-      expect(optionTexts).toContain("Grok 4.1 Mini (Recommended!)");
+      expect(optionTexts).toContain("Grok 4.20 Beta");
     });
   });
 
-  it("should include Grok 4.1 Mini in the correct position in model options", async () => {
+  it("should include xAI models in the correct order in model options", async () => {
     renderWithQueryClient(<SystemSettingsEditor />);
 
     await waitFor(() => {
@@ -97,14 +97,12 @@ describe("SystemSettingsEditor", () => {
       const optionTexts = options.map((opt) => opt.textContent);
 
       // Verify xAI models appear in correct order within their group
-      const grok4_0709Index = optionTexts.indexOf("Grok 4.0 (0709)");
-      const grok41MiniIndex = optionTexts.indexOf(
-        "Grok 4.1 Mini (Recommended!)",
-      );
-      const grok41MiniFastIndex = optionTexts.indexOf("Grok 4.1 Mini Fast");
+      const grok420BetaIndex = optionTexts.indexOf("Grok 4.20 Beta");
+      const grok4Index = optionTexts.indexOf("Grok 4");
+      const grok4FastIndex = optionTexts.indexOf("Grok 4 Fast");
 
-      expect(grok41MiniIndex).toBeGreaterThan(grok4_0709Index);
-      expect(grok41MiniIndex).toBeLessThan(grok41MiniFastIndex);
+      expect(grok4Index).toBeGreaterThan(grok420BetaIndex);
+      expect(grok4FastIndex).toBeGreaterThan(grok4Index);
 
       // Verify premier models from other providers are present
       expect(optionTexts).toContain("Claude Opus 4");
@@ -113,7 +111,7 @@ describe("SystemSettingsEditor", () => {
       expect(optionTexts).toContain("Gemini 2.5 Pro");
       expect(optionTexts).toContain("DeepSeek V3.2");
       expect(optionTexts).toContain("Llama 4 Maverick");
-      expect(optionTexts).toContain("Kimi K2");
+      expect(optionTexts).toContain("Kimi K2.5");
       expect(optionTexts).toContain("LongCat Flash Chat");
       expect(optionTexts).toContain("Qwen3 235B");
       expect(optionTexts).toContain("GLM 5 Turbo");
