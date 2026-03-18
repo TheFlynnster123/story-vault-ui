@@ -52,6 +52,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
           isImageLoading={isImageLoading}
           onGenerateImage={generateImage}
           onSend={handleSend}
+          isExpanded={isExpanded}
         />
       </Group>
     </Box>
@@ -112,12 +113,14 @@ const ActionButtons = ({
   onGenerateImage,
   onSend,
   onMinimize,
+  isExpanded,
 }: {
   isTextLoading: boolean;
   isImageLoading: boolean;
   onGenerateImage: () => void;
   onSend: () => void;
   onMinimize: () => void;
+  isExpanded: boolean;
 }) => {
   const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
@@ -134,8 +137,8 @@ const ActionButtons = ({
     onMinimize();
   };
 
-  return (
-    <Stack style={{ alignSelf: "center" }} justify="center">
+  const buttons = (
+    <>
       <ActionIcon
         size="input-md"
         radius="xl"
@@ -162,7 +165,17 @@ const ActionButtons = ({
       >
         <SendIcon isLoading={isTextLoading} />
       </ActionIcon>
+    </>
+  );
+
+  return isExpanded ? (
+    <Stack style={{ alignSelf: "center" }} justify="center">
+      {buttons}
     </Stack>
+  ) : (
+    <Group style={{ alignSelf: "center" }} justify="center" gap="xs">
+      {buttons}
+    </Group>
   );
 };
 
