@@ -1,5 +1,8 @@
 import { useCallback, useState, useEffect } from "react";
 import { d } from "../../../services/Dependencies";
+import { OpenRouterError } from "../../OpenRouter/services/OpenRouterError";
+
+const isAlreadyHandled = (e: unknown): boolean => e instanceof OpenRouterError;
 
 export const useChatGeneration = (chatId: string) => {
   const [, forceUpdate] = useState({});
@@ -25,7 +28,9 @@ export const useChatGeneration = (chatId: string) => {
 
         return (await textGeneration.generateResponse()) ?? "";
       } catch (e) {
-        d.ErrorService().log("Failed to generate response", e);
+        if (!isAlreadyHandled(e)) {
+          d.ErrorService().log("Failed to generate response", e);
+        }
         return "";
       }
     },
@@ -37,7 +42,9 @@ export const useChatGeneration = (chatId: string) => {
       try {
         return await textGeneration.regenerateResponse(messageId);
       } catch (e) {
-        d.ErrorService().log("Failed to regenerate response", e);
+        if (!isAlreadyHandled(e)) {
+          d.ErrorService().log("Failed to regenerate response", e);
+        }
       }
     },
     [textGeneration],
@@ -48,7 +55,12 @@ export const useChatGeneration = (chatId: string) => {
       try {
         return await textGeneration.regenerateResponse(messageId, feedback);
       } catch (e) {
-        d.ErrorService().log("Failed to regenerate response with feedback", e);
+        if (!isAlreadyHandled(e)) {
+          d.ErrorService().log(
+            "Failed to regenerate response with feedback",
+            e,
+          );
+        }
       }
     },
     [textGeneration],
@@ -56,7 +68,9 @@ export const useChatGeneration = (chatId: string) => {
 
   const generateImage = useCallback(() => {
     imageGeneration.generateImage().catch((e) => {
-      d.ErrorService().log("Failed to generate image", e);
+      if (!isAlreadyHandled(e)) {
+        d.ErrorService().log("Failed to generate image", e);
+      }
     });
   }, [imageGeneration]);
 

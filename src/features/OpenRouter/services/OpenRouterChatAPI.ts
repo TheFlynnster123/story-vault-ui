@@ -1,6 +1,7 @@
 import { d } from "../../../services/Dependencies";
 import Config from "../../../services/Config";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
+import { OpenRouterError, parseOpenRouterError } from "./OpenRouterError";
 
 interface PostChatRequest {
   messages: LLMMessage[];
@@ -75,33 +76,31 @@ export class OpenRouterChatAPI {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API request failed:", errorText);
-        throw this.createResponseError(response);
+        const errorBody = await response.text();
+        throw this.buildApiError(response.status, errorBody);
       }
 
       return await response.json();
     } catch (e: any) {
-      console.error("Fetch error:", e);
-      if (e.message.includes("429")) {
-        d.ErrorService().log(
-          "OpenRouter rate limit exceeded - check that you have credits!",
-          e,
-        );
+      if (e instanceof OpenRouterError) {
+        d.ErrorService().log(e.message, e);
         throw e;
       }
-      d.ErrorService().log("Failed to make API request", e);
-      throw this.createFetchError(e);
+
+      d.ErrorService().log("Network error — please check your connection", e);
+      throw new OpenRouterError(0, e?.message || "Unknown network error");
     }
   }
 
-  createResponseError(response: Response): Error {
-    return new Error(
-      `API request failed: ${response.status} ${response.statusText}`,
-    );
-  }
+  private buildApiError(httpStatus: number, body: string): OpenRouterError {
+    const parsed = parseOpenRouterError(httpStatus, body);
+    if (parsed) return parsed;
 
-  createFetchError(error: any): Error {
-    return new Error(`Network error: ${error?.message || "Unknown error"}`);
+    // Backend didn't return the expected OpenRouter shape — fall back to a
+    // generic error that still carries the status code.
+    return new OpenRouterError(
+      httpStatus,
+      body || `Request failed with status ${httpStatus}`,
+    );
   }
 }
