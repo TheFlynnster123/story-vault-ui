@@ -7,6 +7,7 @@ import { EditPromptButton } from "../../AI/components/EditPromptButton";
 import { useSystemSettings } from "../../SystemSettings/hooks/useSystemSettings";
 import { useSystemPrompts } from "../../Prompts/hooks/useSystemPrompts";
 import { d } from "../../../services/Dependencies";
+import { OpenRouterError } from "../../OpenRouter/services/OpenRouterError";
 
 interface StoryGeneratorModalProps {
   onStoryGenerated?: (story: string) => void;
@@ -66,7 +67,9 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
       onStoryGenerated?.(generatedStory);
       handleClose();
     } catch (error) {
-      d.ErrorService().log("Failed to generate story", error);
+      if (!(error instanceof OpenRouterError)) {
+        d.ErrorService().log("Failed to generate story", error);
+      }
     } finally {
       setIsGenerating(false);
     }
