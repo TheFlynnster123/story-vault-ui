@@ -37,6 +37,59 @@ export class UserChatProjection {
     this.subscribers.forEach((callback) => callback());
   }
 
+  // ---- Streaming Support ----
+  private streamingMessageId: string | null = null;
+  private isStreamingNewMessage: boolean = false;
+
+  public addStreamingMessage(id: string): void {
+    this.streamingMessageId = id;
+    this.isStreamingNewMessage = true;
+    this.Messages.push({
+      id,
+      type: "assistant",
+      content: "",
+      hiddenByChapterId: undefined,
+      deleted: false,
+      hidden: false,
+    });
+    this.notifySubscribers();
+  }
+
+  /**
+   * Streams into an existing message in-place (used for regeneration).
+   * The message stays at its current position in the list instead of
+   * appearing at the bottom.
+   */
+  public startStreamingExistingMessage(id: string): void {
+    this.streamingMessageId = id;
+    this.isStreamingNewMessage = false;
+    this.replaceMessage(id, { content: "" });
+    this.notifySubscribers();
+  }
+
+  public updateStreamingMessage(content: string): void {
+    if (!this.streamingMessageId) return;
+    this.replaceMessage(this.streamingMessageId, { content });
+    this.notifySubscribers();
+  }
+
+  public removeStreamingMessage(): void {
+    if (!this.streamingMessageId) return;
+
+    if (this.isStreamingNewMessage) {
+      const index = this.Messages.findIndex(
+        (m) => m.id === this.streamingMessageId,
+      );
+      if (index !== -1) {
+        this.Messages.splice(index, 1);
+      }
+    }
+
+    this.streamingMessageId = null;
+    this.isStreamingNewMessage = false;
+    this.notifySubscribers();
+  }
+
   // ---- Event Processing ----
   public process(event: ChatEvent) {
     this.applyEvent(event);
@@ -277,10 +330,7 @@ export class UserChatProjection {
    * Replaces a message in the array with a new object containing the updates.
    * Creates a new object reference so React.memo detects the change.
    */
-  private replaceMessage(
-    id: string,
-    updates: Partial<UserChatMessage>,
-  ): void {
+  private replaceMessage(id: string, updates: Partial<UserChatMessage>): void {
     const index = this.Messages.findIndex((m) => m.id === id);
     if (index !== -1) {
       this.Messages[index] = { ...this.Messages[index], ...updates };

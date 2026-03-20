@@ -165,6 +165,7 @@ describe("LLMMessageContextService", () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildRegenerationRequestMessages(
+        "msg-2",
         "Original content",
         "Make it shorter",
       );
@@ -177,8 +178,10 @@ describe("LLMMessageContextService", () => {
     it("should not include feedback message when feedback is undefined", async () => {
       const service = new LLMMessageContextService(testChatId);
 
-      const result =
-        await service.buildRegenerationRequestMessages("Original content");
+      const result = await service.buildRegenerationRequestMessages(
+        "msg-2",
+        "Original content",
+      );
 
       const lastMessage = result[result.length - 1];
       expect(lastMessage.content).not.toContain("Original content");
@@ -188,6 +191,7 @@ describe("LLMMessageContextService", () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildRegenerationRequestMessages(
+        "msg-2",
         "Original content",
         "   ",
       );
@@ -200,12 +204,28 @@ describe("LLMMessageContextService", () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildRegenerationRequestMessages(
+        "msg-2",
         "Original",
         "Feedback",
       );
 
       const hasStoryPrompt = result.some((m) => m.content === "Test prompt");
       expect(hasStoryPrompt).toBe(false);
+    });
+
+    it("should only include messages before the regenerated message", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildRegenerationRequestMessages(
+        "msg-2",
+        "Original content",
+        "Feedback",
+      );
+
+      const chatMessageIds = result.filter((m) => m.id).map((m) => m.id);
+
+      expect(chatMessageIds).toContain("msg-1");
+      expect(chatMessageIds).not.toContain("msg-2");
     });
   });
 
@@ -277,7 +297,9 @@ describe("LLMMessageContextService", () => {
 
       const lastMessage = result[result.length - 1];
       expect(lastMessage.role).toBe("system");
-      expect(lastMessage.content).toContain("generate a concise, engaging title");
+      expect(lastMessage.content).toContain(
+        "generate a concise, engaging title",
+      );
     });
 
     it("should use user-configured chapter title prompt", async () => {

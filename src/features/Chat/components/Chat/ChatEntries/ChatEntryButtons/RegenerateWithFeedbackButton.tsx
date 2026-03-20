@@ -7,17 +7,19 @@ import { useChatGeneration } from "../../../../hooks/useChatGeneration";
 interface RegenerateWithFeedbackButtonProps {
   chatId: string;
   messageId: string;
+  onRegenerate?: () => void;
 }
 
 export const RegenerateWithFeedbackButton: React.FC<
   RegenerateWithFeedbackButtonProps
-> = ({ chatId, messageId }) => {
+> = ({ chatId, messageId, onRegenerate }) => {
   const [showModal, setShowModal] = useState(false);
   const [feedback, setFeedback] = useState("");
   const { regenerateResponse, regenerateResponseWithFeedback } =
     useChatGeneration(chatId);
 
   const handleSubmit = () => {
+    onRegenerate?.();
     if (feedback.trim()) {
       regenerateResponseWithFeedback(messageId, feedback);
     } else {

@@ -1,4 +1,4 @@
-import styled, { keyframes } from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 import { Theme } from "../../../../../components/Theme";
 
 /* ========================= */
@@ -36,6 +36,11 @@ export const fadeIn = keyframes`
   }
 `;
 
+export const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+`;
+
 /* ========================= */
 /* Wrappers                  */
 /* ========================= */
@@ -44,11 +49,15 @@ export const MessageItem = styled.div<{ $type: "user" | "system" | "story" }>`
   text-align: ${({ $type }) => ($type === "user" ? "right" : "left")};
 `;
 
-export const MessageContentWrapper = styled.div<{ $fullWidth?: boolean }>`
+export const MessageContentWrapper = styled.div<{
+  $fullWidth?: boolean;
+  $fitContent?: boolean;
+}>`
   margin-top: 1rem;
   position: relative;
   display: ${({ $fullWidth }) => ($fullWidth ? "block" : "inline-block")};
-  max-width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "85%")};
+  max-width: ${({ $fullWidth, $fitContent }) =>
+    $fullWidth || $fitContent ? "100%" : "85%"};
 
   /* When overlay exists */
   &:has(.message-overlay) {
@@ -60,7 +69,8 @@ export const MessageContentWrapper = styled.div<{ $fullWidth?: boolean }>`
   }
 
   @media (max-width: 768px) {
-    max-width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "90%")};
+    max-width: ${({ $fullWidth, $fitContent }) =>
+      $fullWidth || $fitContent ? "100%" : "90%"};
 
     &:has(.message-overlay) {
       min-width: 240px;
@@ -72,7 +82,8 @@ export const MessageContentWrapper = styled.div<{ $fullWidth?: boolean }>`
   }
 
   @media (max-width: 480px) {
-    max-width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "95%")};
+    max-width: ${({ $fullWidth, $fitContent }) =>
+      $fullWidth || $fitContent ? "100%" : "95%"};
 
     &:has(.message-overlay) {
       min-width: 240px;
@@ -97,7 +108,10 @@ export const MessageContentWrapper = styled.div<{ $fullWidth?: boolean }>`
 /* ========================= */
 /* Message Text              */
 /* ========================= */
-export const MessageText = styled.div<{ $type: "user" | "system" | "story" }>`
+export const MessageText = styled.div<{
+  $type: "user" | "system" | "story";
+  $isRegenerating?: boolean;
+}>`
   font-size: small;
   padding: 8px 12px;
   border-radius: 10px;
@@ -111,6 +125,13 @@ export const MessageText = styled.div<{ $type: "user" | "system" | "story" }>`
     min-height 0.2s ease,
     min-width 0.2s ease,
     opacity 0.2s ease;
+
+  ${({ $isRegenerating }) =>
+    $isRegenerating &&
+    css`
+      animation: ${pulse} 1.5s ease-in-out infinite;
+      pointer-events: none;
+    `}
 
   ${({ $type }) =>
     $type === "user"
@@ -218,4 +239,12 @@ export const RegenerateButton = styled(DeleteButton)`
     border-color: #0056b3;
     transform: scale(1.05);
   }
+`;
+
+export const RegeneratingLabel = styled.div`
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  padding: 4px 0;
+  animation: ${pulse} 1.5s ease-in-out infinite;
 `;

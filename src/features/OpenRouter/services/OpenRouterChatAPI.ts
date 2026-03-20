@@ -50,6 +50,90 @@ export class OpenRouterChatAPI {
     return response.reply;
   }
 
+  public async postChatStream(
+    messages: LLMMessage[],
+    onToken: (token: string) => void,
+    modelOverride?: string,
+  ): Promise<string> {
+    const openRouterEncryptionKey = await d
+      .EncryptionManager()
+      .getOpenRouterEncryptionKey();
+
+    const systemSettings = await d.SystemSettingsService().Get();
+
+    const requestBody: PostChatRequest = {
+      messages: messages,
+      ...systemSettings?.chatGenerationSettings,
+    };
+
+    if (modelOverride) {
+      requestBody.model = modelOverride;
+    }
+
+    const url = `${this.API_URL}/api/PostChatStream`;
+    const accessToken = await d.AuthAPI().getAccessToken();
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        EncryptionKey: openRouterEncryptionKey,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw this.buildApiError(response.status, errorBody);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new OpenRouterError(0, "Response body is not readable");
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        // Keep the last potentially incomplete line in the buffer
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+
+          const data = line.slice(6);
+          if (data === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            if (typeof parsed === "string") {
+              fullContent += parsed;
+              onToken(fullContent);
+            } else if (parsed.error) {
+              throw new OpenRouterError(0, parsed.error);
+            }
+          } catch (e) {
+            if (e instanceof OpenRouterError) throw e;
+            // Skip malformed SSE lines
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return fullContent;
+  }
+
   buildHeaders(accessToken: string): HeadersInit {
     return {
       "Content-Type": "application/json",
