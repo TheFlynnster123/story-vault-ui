@@ -23,12 +23,28 @@ export class TextGenerationService extends GenerationOrchestrator {
         .buildGenerationRequestMessages();
 
       this.setStatus("Generating response...");
-      const response = await d.OpenRouterChatAPI().postChat(requestMessages);
 
-      this.setStatus("Saving...");
-      await d.ChatService(this.chatId).AddAssistantMessage(response);
+      const streamingId = crypto.randomUUID();
+      const projection = d.UserChatProjection(this.chatId);
+      projection.addStreamingMessage(streamingId);
 
-      return response;
+      try {
+        const response = await d
+          .OpenRouterChatAPI()
+          .postChatStream(requestMessages, (content) => {
+            projection.updateStreamingMessage(content);
+          });
+
+        projection.removeStreamingMessage();
+
+        this.setStatus("Saving...");
+        await d.ChatService(this.chatId).AddAssistantMessage(response);
+
+        return response;
+      } catch (error) {
+        projection.removeStreamingMessage();
+        throw error;
+      }
     });
   }
 
@@ -46,21 +62,34 @@ export class TextGenerationService extends GenerationOrchestrator {
     return this.orchestrate(async () => {
       const originalContent = message.content;
 
-      await d.ChatService(this.chatId).DeleteMessage(messageId);
-
       d.PlanGenerationService(this.chatId).onMessageSent();
 
       const requestMessages = await d
         .LLMMessageContextService(this.chatId)
-        .buildRegenerationRequestMessages(originalContent, feedback);
+        .buildRegenerationRequestMessages(messageId, originalContent, feedback);
 
       this.setStatus("Generating response...");
-      const response = await d.OpenRouterChatAPI().postChat(requestMessages);
 
-      this.setStatus("Saving....");
-      await d.ChatService(this.chatId).AddAssistantMessage(response);
+      const projection = d.UserChatProjection(this.chatId);
+      projection.startStreamingExistingMessage(messageId);
 
-      return response;
+      try {
+        const response = await d
+          .OpenRouterChatAPI()
+          .postChatStream(requestMessages, (content) => {
+            projection.updateStreamingMessage(content);
+          });
+
+        projection.removeStreamingMessage();
+
+        this.setStatus("Saving....");
+        await d.ChatService(this.chatId).EditMessage(messageId, response);
+
+        return response;
+      } catch (error) {
+        projection.removeStreamingMessage();
+        throw error;
+      }
     });
   }
 }

@@ -36,17 +36,29 @@ export class LLMMessageContextService {
   }
 
   async buildRegenerationRequestMessages(
+    messageId: string,
     originalContent: string,
     feedback?: string,
   ): Promise<LLMMessage[]> {
     const baseMessages = await this.buildGenerationRequestMessages(false);
-    return this.appendFeedbackMessage(baseMessages, originalContent, feedback);
+    const truncatedMessages = this.truncateMessagesBeforeId(
+      baseMessages,
+      messageId,
+    );
+    return this.appendFeedbackMessage(
+      truncatedMessages,
+      originalContent,
+      feedback,
+    );
   }
 
   async buildChapterSummaryRequestMessages(): Promise<LLMMessage[]> {
     const chatMessages = this.getChatMessages();
     const chapterSummaryPrompt = await this.fetchChapterSummaryPrompt();
-    return this.assembleChapterSummaryMessages(chatMessages, chapterSummaryPrompt);
+    return this.assembleChapterSummaryMessages(
+      chatMessages,
+      chapterSummaryPrompt,
+    );
   }
 
   async buildChapterTitleRequestMessages(): Promise<LLMMessage[]> {
@@ -155,6 +167,15 @@ export class LLMMessageContextService {
 
   private isNonEmptyContent(content: string): boolean {
     return content.trim().length > 0;
+  }
+
+  private truncateMessagesBeforeId(
+    messages: LLMMessage[],
+    messageId: string,
+  ): LLMMessage[] {
+    const index = messages.findIndex((m) => m.id === messageId);
+    if (index === -1) return messages;
+    return messages.slice(0, index);
   }
 
   private buildTemporaryFeedbackMessage(

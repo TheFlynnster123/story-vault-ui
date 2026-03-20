@@ -5,15 +5,18 @@ import { useChatGeneration } from "../../../../hooks/useChatGeneration";
 interface RegenerateButtonProps {
   chatId: string;
   messageId: string;
+  onRegenerate?: () => void;
 }
 
 export const RegenerateButton: React.FC<RegenerateButtonProps> = ({
   chatId,
   messageId,
+  onRegenerate,
 }) => {
   const { regenerateResponse } = useChatGeneration(chatId);
 
   const handleRegenerate = () => {
+    onRegenerate?.();
     regenerateResponse(messageId);
   };
 

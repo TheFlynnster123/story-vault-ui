@@ -135,7 +135,7 @@ export const CivitJobMessage = ({
 
   return (
     <MessageItem $type="system">
-      <MessageContentWrapper $fullWidth>
+      <MessageContentWrapper $fitContent>
         <MessageContent className="message-text" onClick={toggle}>
           {shouldShowLoadingIndicator() && <LoadingImageIndicator />}
           {getErrorMessage() && (
