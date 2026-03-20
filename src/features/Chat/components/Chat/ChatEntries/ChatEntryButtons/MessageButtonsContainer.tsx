@@ -15,13 +15,21 @@ interface MessageButtonsContainerProps {
 
 export const MessageButtonsContainer: React.FC<
   MessageButtonsContainerProps
-> = ({ chatId, messageId, isLastMessage, showRegenerate = false, onRegenerate }) => {
+> = ({ chatId, messageId, showRegenerate = false, onRegenerate }) => {
   return (
     <Stack gap="xs" justify="center">
       {showRegenerate && (
         <>
-          <RegenerateButton chatId={chatId} messageId={messageId} onRegenerate={onRegenerate} />
-          <RegenerateWithFeedbackButton chatId={chatId} messageId={messageId} onRegenerate={onRegenerate} />
+          <RegenerateButton
+            chatId={chatId}
+            messageId={messageId}
+            onRegenerate={onRegenerate}
+          />
+          <RegenerateWithFeedbackButton
+            chatId={chatId}
+            messageId={messageId}
+            onRegenerate={onRegenerate}
+          />
         </>
       )}
       <EditButton chatId={chatId} messageId={messageId} />
