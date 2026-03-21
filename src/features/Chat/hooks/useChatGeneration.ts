@@ -20,13 +20,13 @@ export const useChatGeneration = (chatId: string) => {
   }, [textGeneration, imageGeneration]);
 
   const generateResponse = useCallback(
-    async (userInput: string): Promise<string> => {
+    async (userInput: string, guidance?: string): Promise<string> => {
       try {
         if (userInput.trim()) {
           await d.ChatService(chatId).AddUserMessage(userInput);
         }
 
-        return (await textGeneration.generateResponse()) ?? "";
+        return (await textGeneration.generateResponse(guidance)) ?? "";
       } catch (e) {
         if (!isAlreadyHandled(e)) {
           d.ErrorService().log("Failed to generate response", e);

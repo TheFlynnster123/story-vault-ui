@@ -22,17 +22,20 @@ export class LLMMessageContextService {
 
   async buildGenerationRequestMessages(
     includeResponsePrompt: boolean = true,
+    guidance?: string,
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
 
-    return this.assembleGenerationMessages(
+    const messages = this.assembleGenerationMessages(
       chatSettings,
       chatMessages,
       memories,
       includeResponsePrompt,
     );
+
+    return this.appendGuidanceMessage(messages, guidance);
   }
 
   async buildRegenerationRequestMessages(
@@ -195,4 +198,15 @@ export class LLMMessageContextService {
     feedback: string,
   ): string =>
     `The previous response was: "${originalContent}"\n\nPlease regenerate with this feedback: ${feedback}`;
+
+  private appendGuidanceMessage(
+    messages: LLMMessage[],
+    guidance?: string,
+  ): LLMMessage[] {
+    if (!this.hasFeedback(guidance)) return messages;
+    return [...messages, toSystemMessage(this.formatGuidanceMessage(guidance!))];
+  }
+
+  private formatGuidanceMessage = (guidance: string): string =>
+    `Guidance for the next response: ${guidance}`;
 }
