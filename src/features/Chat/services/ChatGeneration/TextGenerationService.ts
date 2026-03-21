@@ -14,13 +14,13 @@ export class TextGenerationService extends GenerationOrchestrator {
     this.chatId = chatId;
   }
 
-  async generateResponse(): Promise<string | undefined> {
+  async generateResponse(guidance?: string): Promise<string | undefined> {
     return this.orchestrate(async () => {
       d.PlanGenerationService(this.chatId).onMessageSent();
 
       const requestMessages = await d
         .LLMMessageContextService(this.chatId)
-        .buildGenerationRequestMessages();
+        .buildGenerationRequestMessages(true, guidance);
 
       this.setStatus("Generating response...");
 
