@@ -208,5 +208,5 @@ export class LLMMessageContextService {
   }
 
   private formatGuidanceMessage = (guidance: string): string =>
-    `Guidance for the next response: ${guidance}`;
+    `User guidance for the next response: ${guidance}`;
 }
