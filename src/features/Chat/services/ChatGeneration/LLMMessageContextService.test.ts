@@ -157,6 +157,54 @@ describe("LLMMessageContextService", () => {
       expectMessagesContainMemories(result);
       expectStoryPromptIsLast(result);
     });
+
+    it("should append guidance message when guidance is provided", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(
+        true,
+        "Write a dramatic scene",
+      );
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.content).toContain("Write a dramatic scene");
+    });
+
+    it("should not append guidance message when guidance is undefined", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(true);
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe("Test prompt");
+    });
+
+    it("should not append guidance message when guidance is empty", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(true, "   ");
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe("Test prompt");
+    });
+
+    it("should place guidance message after story prompt", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(
+        true,
+        "Be concise",
+      );
+
+      const storyPromptIndex = result.findIndex(
+        (m) => m.content === "Test prompt",
+      );
+      const guidanceIndex = result.findIndex((m) =>
+        m.content.includes("Be concise"),
+      );
+      expect(guidanceIndex).toBeGreaterThan(storyPromptIndex);
+    });
   });
 
   // ---- buildRegenerationRequestMessages Tests ----
