@@ -22,7 +22,7 @@ import { ModelSampleImage } from "../components/ModelSampleImage";
 import {
   PromptsComponent,
   ParametersComponent,
-  AdditionalNetworksComponent,
+  AdditionalModelsComponent,
 } from "../components/ImageModelViewComponents";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
 import { ConfirmModal } from "../../../components/ConfirmModal";
@@ -101,6 +101,7 @@ const ChatImageModelEditPage: React.FC = () => {
     const updatedModel: ImageModel = {
       ...imageModel,
       name: loadedModel.name,
+      trainedWords: loadedModel.trainedWords,
       input: {
         model: loadedModel.input.model,
         params: {
@@ -199,7 +200,7 @@ const ChatImageModelEditPage: React.FC = () => {
             onChange={handleModelChange}
           />
 
-          <AdditionalNetworksComponent
+          <AdditionalModelsComponent
             imageModel={imageModel}
             onChange={handleModelChange}
           />

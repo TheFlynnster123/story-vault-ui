@@ -20,4 +20,10 @@ export type ImageModel = {
    * If not set, falls back to the system-level defaultImagePrompt.
    */
   imageGenerationPrompt?: string;
+
+  /**
+   * Trained words from additional model resources (e.g. LoRAs).
+   * These can be toggled on/off by the user in the prompt editor.
+   */
+  trainedWords?: string[];
 };

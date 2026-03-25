@@ -35,6 +35,7 @@ import { ImageModelService } from "../features/Images/services/modelGeneration/I
 import { SchedulerMapper } from "../features/Images/services/modelGeneration/SchedulerMapper";
 import { CivitKeyAPI } from "../features/Images/services/api/CivitKeyAPI";
 import { CivitJobAPI } from "../features/Images/services/api/CivitJobAPI";
+import { CivitModelInfoQuery } from "../features/Images/services/api/CivitModelInfoQuery";
 import { ChatEventStore } from "./CQRS/ChatEventStore";
 import { ChatService } from "./CQRS/ChatService";
 import { ChatAPI } from "../features/Chat/services/Chat/ChatAPI";
@@ -112,6 +113,10 @@ export class Dependencies {
   }
   CivitJobAPI() {
     return new CivitJobAPI();
+  }
+
+  CivitModelInfoQuery() {
+    return new CivitModelInfoQuery();
   }
   SystemSettingsService() {
     return new SystemSettingsService();

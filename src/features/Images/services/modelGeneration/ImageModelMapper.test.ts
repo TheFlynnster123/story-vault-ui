@@ -30,9 +30,11 @@ describe("ImageModelMapper", () => {
     strength: 1.0,
     minStrength: 0.5,
     maxStrength: 1.0,
+    trainedWords: [],
+    canGenerate: true,
     model: {
       name: "Realistic Vision XL",
-      type: "CHECKPOINT",
+      type: "Checkpoint",
     },
   });
 
@@ -42,6 +44,8 @@ describe("ImageModelMapper", () => {
     strength: 0.8,
     minStrength: 0.1,
     maxStrength: 1.0,
+    trainedWords: [],
+    canGenerate: true,
     model: {
       name: "Detail Enhancer LoRA",
       type: "LORA",
@@ -79,7 +83,7 @@ describe("ImageModelMapper", () => {
   });
 
   describe("Primary Resource Selection", () => {
-    it("should select CHECKPOINT as primary resource", () => {
+    it("should select Checkpoint as primary resource (mixed case)", () => {
       const checkpointResource = createMockCheckpointResource();
       const loraResource = createMockLoraResource();
       const generatedImage = createMockGeneratedImage([
@@ -90,10 +94,25 @@ describe("ImageModelMapper", () => {
       const result = mapper.getPrimaryResource(generatedImage);
 
       expect(result).toBe(checkpointResource);
-      expect(result.model.type).toBe("CHECKPOINT");
     });
 
-    it("should fallback to first resource when no CHECKPOINT", () => {
+    it("should select CHECKPOINT as primary resource (uppercase)", () => {
+      const checkpointResource = {
+        ...createMockCheckpointResource(),
+        model: { name: "Test", type: "CHECKPOINT" },
+      };
+      const loraResource = createMockLoraResource();
+      const generatedImage = createMockGeneratedImage([
+        loraResource,
+        checkpointResource,
+      ]);
+
+      const result = mapper.getPrimaryResource(generatedImage);
+
+      expect(result).toBe(checkpointResource);
+    });
+
+    it("should fallback to first resource when no Checkpoint", () => {
       const lora1 = createMockLoraResource();
       const lora2 = { ...createMockLoraResource(), name: "Second LoRA" };
       const generatedImage = createMockGeneratedImage([lora1, lora2]);
@@ -110,6 +129,24 @@ describe("ImageModelMapper", () => {
       const result = mapper.getPrimaryResource(generatedImage);
 
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe("isCheckpoint", () => {
+    it("should match 'Checkpoint' (mixed case from API)", () => {
+      expect(mapper.isCheckpoint("Checkpoint")).toBe(true);
+    });
+
+    it("should match 'CHECKPOINT' (uppercase)", () => {
+      expect(mapper.isCheckpoint("CHECKPOINT")).toBe(true);
+    });
+
+    it("should match 'checkpoint' (lowercase)", () => {
+      expect(mapper.isCheckpoint("checkpoint")).toBe(true);
+    });
+
+    it("should not match LORA", () => {
+      expect(mapper.isCheckpoint("LORA")).toBe(false);
     });
   });
 
@@ -189,7 +226,7 @@ describe("ImageModelMapper", () => {
       expect(result["different:air"]).toEqual({ strength: 1.0 });
     });
 
-    it("should exclude primary resource from additional networks", () => {
+    it("should exclude checkpoint from additional networks", () => {
       const checkpointResource = createMockCheckpointResource();
       const loraResource = createMockLoraResource();
       const generatedImage = createMockGeneratedImage([
@@ -203,6 +240,187 @@ describe("ImageModelMapper", () => {
         "urn:air:sdxl:checkpoint:civitai:123456@789012",
       );
       expect(result).toHaveProperty("urn:air:sdxl:lora:civitai:654321@210987");
+    });
+
+    it("should exclude mixed-case Checkpoint from additional networks", () => {
+      const checkpointResource = createMockCheckpointResource();
+      checkpointResource.model.type = "Checkpoint";
+      const loraResource = createMockLoraResource();
+      const generatedImage = createMockGeneratedImage([
+        checkpointResource,
+        loraResource,
+      ]);
+
+      const result = mapper.mapAdditionalNetworks(generatedImage);
+
+      expect(result).not.toHaveProperty(checkpointResource.air);
+      expect(result).toHaveProperty(loraResource.air);
+    });
+  });
+
+  describe("Trained Words Extraction", () => {
+    it("should extract trained words from all resources", () => {
+      const lora1 = {
+        ...createMockLoraResource(),
+        trainedWords: ["building", "tree"],
+      };
+      const lora2 = {
+        ...createMockLoraResource(),
+        air: "another:air",
+        trainedWords: ["sky", "cloud"],
+      };
+      const checkpoint = createMockCheckpointResource();
+      const generatedImage = createMockGeneratedImage([
+        checkpoint,
+        lora1,
+        lora2,
+      ]);
+
+      const result = mapper.extractAllTrainedWords(generatedImage);
+
+      expect(result).toEqual(["building", "tree", "sky", "cloud"]);
+    });
+
+    it("should deduplicate trained words", () => {
+      const lora1 = {
+        ...createMockLoraResource(),
+        trainedWords: ["building", "tree"],
+      };
+      const lora2 = {
+        ...createMockLoraResource(),
+        air: "another:air",
+        trainedWords: ["tree", "sky"],
+      };
+      const generatedImage = createMockGeneratedImage([lora1, lora2]);
+
+      const result = mapper.extractAllTrainedWords(generatedImage);
+
+      expect(result).toEqual(["building", "tree", "sky"]);
+    });
+
+    it("should return empty array when no trained words", () => {
+      const checkpoint = createMockCheckpointResource();
+      const generatedImage = createMockGeneratedImage([checkpoint]);
+
+      const result = mapper.extractAllTrainedWords(generatedImage);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should handle resources with undefined trainedWords", () => {
+      const resource = createMockLoraResource();
+      (resource as any).trainedWords = undefined;
+      const generatedImage = createMockGeneratedImage([resource]);
+
+      const result = mapper.extractAllTrainedWords(generatedImage);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe("Resolve Width/Height", () => {
+    it("should extract width/height from aspectRatio object", () => {
+      const params: GeneratedImageParams = {
+        ...createMockGeneratedImageParams(),
+        aspectRatio: { value: "1248:1824", width: 1248, height: 1824 },
+      };
+
+      const result = mapper.resolveWidthHeight(params);
+
+      expect(result).toEqual({ width: 1248, height: 1824 });
+    });
+
+    it("should fall back to top-level width/height when aspectRatio is string", () => {
+      const params: GeneratedImageParams = {
+        ...createMockGeneratedImageParams(),
+        width: 512,
+        height: 768,
+        aspectRatio: "2:3",
+      };
+
+      const result = mapper.resolveWidthHeight(params);
+
+      expect(result).toEqual({ width: 512, height: 768 });
+    });
+
+    it("should default to 512x512 when no dimensions available", () => {
+      const params: GeneratedImageParams = {
+        ...createMockGeneratedImageParams(),
+        width: undefined,
+        height: undefined,
+        aspectRatio: undefined,
+      };
+
+      const result = mapper.resolveWidthHeight(params);
+
+      expect(result).toEqual({ width: 512, height: 512 });
+    });
+  });
+
+  describe("Resolve Model AIR", () => {
+    it("should use substitute AIR when primary cannot generate", () => {
+      const checkpointResource = {
+        ...createMockCheckpointResource(),
+        canGenerate: false,
+        substitute: {
+          air: "urn:air:sdxl:checkpoint:civitai:999999@888888",
+          name: "Substitute Model",
+          canGenerate: true,
+          strength: 1,
+        },
+      };
+
+      const result = mapper.resolveModelAir(
+        checkpointResource,
+        true,
+        undefined,
+      );
+
+      expect(result).toBe("urn:air:sdxl:checkpoint:civitai:999999@888888");
+    });
+
+    it("should use primary AIR when it can generate", () => {
+      const checkpointResource = createMockCheckpointResource();
+
+      const result = mapper.resolveModelAir(
+        checkpointResource,
+        true,
+        undefined,
+      );
+
+      expect(result).toBe("urn:air:sdxl:checkpoint:civitai:123456@789012");
+    });
+
+    it("should use primary AIR when substitute also cannot generate", () => {
+      const checkpointResource = {
+        ...createMockCheckpointResource(),
+        canGenerate: false,
+        substitute: {
+          air: "urn:air:sdxl:checkpoint:civitai:999999@888888",
+          name: "Substitute Model",
+          canGenerate: false,
+          strength: 1,
+        },
+      };
+
+      const result = mapper.resolveModelAir(
+        checkpointResource,
+        true,
+        undefined,
+      );
+
+      expect(result).toBe("urn:air:sdxl:checkpoint:civitai:123456@789012");
+    });
+
+    it("should use BaseModelMapper when primary is not a checkpoint", () => {
+      BaseModelMapper.mockReturnValue("urn:air:mapped:base");
+      const loraResource = createMockLoraResource();
+      loraResource.baseModel = "Illustrious";
+
+      const result = mapper.resolveModelAir(loraResource, false, "Illustrious");
+
+      expect(BaseModelMapper).toHaveBeenCalledWith("Illustrious");
+      expect(result).toBe("urn:air:mapped:base");
     });
   });
 
@@ -311,7 +529,7 @@ describe("ImageModelMapper", () => {
       });
     });
 
-    it("should use BaseModelMapper when no CHECKPOINT resource available", () => {
+    it("should use BaseModelMapper when no Checkpoint resource available", () => {
       const mockMappedBaseModelAIR = "urn:air:mock:checkpoint:test:123@456";
       BaseModelMapper.mockReturnValue(mockMappedBaseModelAIR);
 
@@ -328,7 +546,7 @@ describe("ImageModelMapper", () => {
       expect(result.model).toBe(mockMappedBaseModelAIR);
     });
 
-    it("should not use BaseModelMapper when CHECKPOINT resource available", () => {
+    it("should not use BaseModelMapper when Checkpoint resource available", () => {
       const checkpointResource = createMockCheckpointResource();
       checkpointResource.baseModel = "TestModel";
       const generatedImage = createMockGeneratedImage([checkpointResource]);
@@ -339,6 +557,40 @@ describe("ImageModelMapper", () => {
       expect(result.model).toBe(
         "urn:air:sdxl:checkpoint:civitai:123456@789012",
       );
+    });
+
+    it("should use substitute AIR when checkpoint canGenerate is false", () => {
+      const checkpointResource = {
+        ...createMockCheckpointResource(),
+        canGenerate: false,
+        substitute: {
+          air: "urn:air:sdxl:checkpoint:civitai:999@888",
+          name: "Substitute",
+          canGenerate: true,
+          strength: 1,
+        },
+      };
+      const generatedImage = createMockGeneratedImage([checkpointResource]);
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(result.model).toBe("urn:air:sdxl:checkpoint:civitai:999@888");
+    });
+
+    it("should extract width/height from aspectRatio object", () => {
+      const params: GeneratedImageParams = {
+        ...createMockGeneratedImageParams(),
+        aspectRatio: { value: "1248:1824", width: 1248, height: 1824 },
+      };
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params,
+      );
+
+      const result = mapper.mapToFromTextInput(generatedImage);
+
+      expect(result.params.width).toBe(1024);
+      expect(result.params.height).toBe(1024);
     });
 
     it("should truncate width to 1024 when over limit", () => {
@@ -420,12 +672,30 @@ describe("ImageModelMapper", () => {
 
       expect(result.params.clipSkip).toBe(2);
     });
+
+    it("should default to Euler a when sampler is undefined", () => {
+      const params = {
+        ...createMockGeneratedImageParams(),
+        sampler: undefined,
+      };
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()],
+        params,
+      );
+
+      mapper.mapToFromTextInput(generatedImage);
+
+      expect(SchedulerMapper).toHaveBeenCalledWith("Euler a");
+    });
   });
 
   describe("FromGeneratedImage", () => {
-    it("should map complete GeneratedImage to ImageModel", () => {
+    it("should map complete GeneratedImage to ImageModel with trainedWords", () => {
       const checkpointResource = createMockCheckpointResource();
-      const loraResource = createMockLoraResource();
+      const loraResource = {
+        ...createMockLoraResource(),
+        trainedWords: ["building", "tree"],
+      };
       const params = createMockGeneratedImageParams();
       const generatedImage = createMockGeneratedImage(
         [checkpointResource, loraResource],
@@ -439,6 +709,7 @@ describe("ImageModelMapper", () => {
         id: expect.any(String),
         name: "Realistic Vision XL - 99999",
         timestampUtcMs: expect.any(Number),
+        trainedWords: ["building", "tree"],
         input: {
           model: "urn:air:sdxl:checkpoint:civitai:123456@789012",
           params: {
@@ -471,6 +742,32 @@ describe("ImageModelMapper", () => {
       expect(result.name).toBe("Generated Model 11111");
       expect(result.input.model).toBe("");
       expect(result.input.additionalNetworks).toEqual({});
+      expect(result.trainedWords).toEqual([]);
+    });
+
+    it("should not include checkpoint in additional networks (case-insensitive)", () => {
+      const checkpoint = {
+        ...createMockCheckpointResource(),
+        model: { name: "Test", type: "Checkpoint" },
+      };
+      const lora = {
+        ...createMockLoraResource(),
+        trainedWords: ["detail"],
+      };
+      const generatedImage = createMockGeneratedImage(
+        [checkpoint, lora],
+        createMockGeneratedImageParams(),
+        55555,
+      );
+
+      const result = mapper.FromGeneratedImage(generatedImage);
+
+      expect(result.input.model).toBe(checkpoint.air);
+      expect(result.input.additionalNetworks).not.toHaveProperty(
+        checkpoint.air,
+      );
+      expect(result.input.additionalNetworks).toHaveProperty(lora.air);
+      expect(result.trainedWords).toEqual(["detail"]);
     });
   });
 });

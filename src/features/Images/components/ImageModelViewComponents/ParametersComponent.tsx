@@ -1,6 +1,15 @@
 import React from "react";
-import { NumberInput, Group, Stack, Title, TextInput } from "@mantine/core";
+import {
+  NumberInput,
+  Group,
+  Stack,
+  Title,
+  TextInput,
+  Slider,
+  Text,
+} from "@mantine/core";
 import { SchedulerCombobox } from "../SchedulerCombobox";
+import { ModelPreviewImage } from "../ModelPreviewImage";
 import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { d } from "../../../../services/Dependencies";
 import type { ImageModel } from "../../services/modelGeneration/ImageModel";
@@ -53,27 +62,47 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
         value={imageModel.input.model}
         onChange={(e) => handleModelChange(e.target.value)}
       />
+      <ModelPreviewImage air={imageModel.input.model} maxHeight="400px" maxWidth="100%" />
       <SchedulerCombobox
         value={imageModel.input.params.scheduler}
         onChange={handleSchedulerChange}
       />
-      <Group grow>
-        <NumberInput
-          label="Steps"
-          value={imageModel.input.params.steps || 0}
-          onChange={(value) =>
-            handleParameterChange("steps", Number(value) || 0)
-          }
+      <Stack gap="xs">
+        <Text size="sm" fw={500}>
+          Steps
+        </Text>
+        <Slider
+          value={imageModel.input.params.steps || 20}
+          onChange={(value) => handleParameterChange("steps", value)}
+          min={10}
+          max={50}
+          step={1}
+          label={(value) => value.toString()}
+          marks={[
+            { value: 10, label: "10" },
+            { value: 30, label: "30" },
+            { value: 50, label: "50" },
+          ]}
         />
-        <NumberInput
-          label="CFG Scale"
-          value={imageModel.input.params.cfgScale || 0}
-          onChange={(value) =>
-            handleParameterChange("cfgScale", Number(value) || 0)
-          }
-          step={0.1}
+      </Stack>
+      <Stack gap="xs">
+        <Text size="sm" fw={500}>
+          CFG Scale
+        </Text>
+        <Slider
+          value={imageModel.input.params.cfgScale || 7}
+          onChange={(value) => handleParameterChange("cfgScale", value)}
+          min={1}
+          max={10}
+          step={0.5}
+          label={(value) => value.toFixed(1)}
+          marks={[
+            { value: 1, label: "1" },
+            { value: 5, label: "5" },
+            { value: 10, label: "10" },
+          ]}
         />
-      </Group>
+      </Stack>
       <Group grow>
         <NumberInput
           label="Width"
