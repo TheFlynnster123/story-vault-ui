@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { IoCamera, IoSend, IoSync } from "react-icons/io5";
 import { Textarea, ActionIcon, Group, Box, Stack, Loader } from "@mantine/core";
 import { SpinningIcon } from "./ChatInput.styled";
@@ -6,6 +6,8 @@ import React from "react";
 import { useChatInputCache } from "../../hooks/useChatInputCache";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
 import { useChatInputExpansion } from "../../hooks/useChatInputExpansion";
+import { useLongPress } from "../../hooks/useLongPress";
+import { SendGuidanceModal } from "./SendGuidanceModal";
 
 export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
   const { inputValue, setInputValue, clearInputValue } =
@@ -19,12 +21,30 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
     status,
   } = useChatGeneration(chatId);
   const chatBoxRef = useRef<HTMLDivElement>(null);
+  const [showGuidanceModal, setShowGuidanceModal] = useState(false);
+  const [guidance, setGuidance] = useState("");
 
-  const handleSend = () => {
+  const handleSend = (guidanceText?: string) => {
     if (isTextLoading) return;
 
-    generateResponse(inputValue);
+    generateResponse(inputValue, guidanceText);
     clearInputValue();
+  };
+
+  const handleLongPress = () => {
+    setShowGuidanceModal(true);
+  };
+
+  const handleGuidanceSubmit = () => {
+    handleSend(guidance.trim() ? guidance : undefined);
+    setShowGuidanceModal(false);
+    setGuidance("");
+    minimize();
+  };
+
+  const handleGuidanceCancel = () => {
+    setShowGuidanceModal(false);
+    setGuidance("");
   };
 
   return (
@@ -52,9 +72,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
           isImageLoading={isImageLoading}
           onGenerateImage={generateImage}
           onSend={handleSend}
+          onLongPress={handleLongPress}
+          isGuidanceMode={showGuidanceModal}
           isExpanded={isExpanded}
         />
       </Group>
+
+      <SendGuidanceModal
+        opened={showGuidanceModal}
+        guidance={guidance}
+        onGuidanceChange={setGuidance}
+        onSubmit={handleGuidanceSubmit}
+        onCancel={handleGuidanceCancel}
+      />
     </Box>
   );
 };
@@ -112,6 +142,8 @@ const ActionButtons = ({
   isImageLoading,
   onGenerateImage,
   onSend,
+  onLongPress,
+  isGuidanceMode,
   onMinimize,
   isExpanded,
 }: {
@@ -119,9 +151,13 @@ const ActionButtons = ({
   isImageLoading: boolean;
   onGenerateImage: () => void;
   onSend: () => void;
+  onLongPress: () => void;
+  isGuidanceMode: boolean;
   onMinimize: () => void;
   isExpanded: boolean;
 }) => {
+  const longPress = useLongPress(onLongPress);
+
   const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -129,13 +165,24 @@ const ActionButtons = ({
     onGenerateImage();
   };
 
-  const handleSend = (e: React.MouseEvent | React.TouchEvent) => {
+  const startSendLongPress = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
-
-    onSend();
-    onMinimize();
+    longPress.start();
   };
+
+  const completeSend = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    longPress.cancel();
+
+    if (!longPress.wasLongPress()) {
+      onSend();
+      onMinimize();
+    }
+  };
+
+  const sendButtonColor = isGuidanceMode ? "orange" : "blue";
 
   const buttons = (
     <>
@@ -156,9 +203,11 @@ const ActionButtons = ({
         size="input-md"
         radius="xl"
         variant="filled"
-        color="blue"
-        onMouseDown={handleSend}
-        onTouchEnd={handleSend}
+        color={sendButtonColor}
+        onMouseDown={startSendLongPress}
+        onMouseUp={completeSend}
+        onTouchStart={startSendLongPress}
+        onTouchEnd={completeSend}
         disabled={isTextLoading}
         aria-label={isTextLoading ? "Sending..." : "Send"}
         tabIndex={0}
