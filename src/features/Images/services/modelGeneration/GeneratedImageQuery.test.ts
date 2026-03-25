@@ -30,9 +30,7 @@ describe("GeneratedImageQuery", () => {
       cfgScale: 7.5,
       steps: 20,
       sampler: "DPM++ 2M",
-      width: 512,
-      height: 768,
-      aspectRatio: "2:3",
+      aspectRatio: { value: "512:768", width: 512, height: 768 },
       clipSkip: 1,
     },
   });

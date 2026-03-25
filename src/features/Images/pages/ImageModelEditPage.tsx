@@ -21,7 +21,7 @@ import { ModelSampleImage } from "../components/ModelSampleImage";
 import {
   PromptsComponent,
   ParametersComponent,
-  AdditionalNetworksComponent,
+  AdditionalModelsComponent,
 } from "../components/ImageModelViewComponents";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
 import { ConfirmModal } from "../../../components/ConfirmModal";
@@ -85,9 +85,10 @@ const ImageModelEditPage: React.FC = () => {
 
   const handleModelFromImage = (loadedModel: ImageModel) => {
     if (!imageModel) return;
-    setImageModel((prev) => ({
-      ...prev!,
+    const updatedModel: ImageModel = {
+      ...imageModel,
       name: loadedModel.name,
+      trainedWords: loadedModel.trainedWords,
       input: {
         model: loadedModel.input.model,
         params: {
@@ -95,7 +96,9 @@ const ImageModelEditPage: React.FC = () => {
         },
         additionalNetworks: loadedModel.input.additionalNetworks || {},
       },
-    }));
+    };
+    setImageModel(updatedModel);
+    d.ImageModelService().SaveImageModel(updatedModel);
   };
 
   const handleDeleteClick = () => {
@@ -174,7 +177,7 @@ const ImageModelEditPage: React.FC = () => {
             onChange={handleModelChange}
           />
 
-          <AdditionalNetworksComponent
+          <AdditionalModelsComponent
             imageModel={imageModel}
             onChange={handleModelChange}
           />

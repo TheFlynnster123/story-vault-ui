@@ -63,9 +63,9 @@ Manages the CivitAI API key (similar to `GrokKeyManager`), displayed in System S
 ### `ImageModelViewComponents/`
 
 Sub-components for the model editor:
-- **PromptsComponent** — positive/negative prompt editors
+- **PromptsComponent** — positive/negative prompt editors with trained word toggles
 - **ParametersComponent** — numeric parameters (steps, CFG scale, dimensions, etc.)
-- **AdditionalNetworksComponent** — LoRA/additional network configuration
+- **AdditionalModelsComponent** — LoRA/additional model configuration
 
 ## Hooks
 
@@ -110,7 +110,7 @@ Images/
     ImageModelListDefault.tsx
     ImageModelListItem.tsx
     ImageModelViewComponents/
-      AdditionalNetworksComponent.tsx
+      AdditionalModelsComponent.tsx
       ParametersComponent.tsx
       PromptsComponent.tsx
     ModelFromImage.tsx

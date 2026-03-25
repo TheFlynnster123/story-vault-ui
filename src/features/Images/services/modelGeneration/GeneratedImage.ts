@@ -11,6 +11,13 @@ export type GeneratedImage = {
   params: GeneratedImageParams;
 };
 
+export type GeneratedImageResourceSubstitute = {
+  air: string;
+  name: string;
+  canGenerate: boolean;
+  strength: number;
+};
+
 export type GeneratedImageResource = {
   /* The unique identifier for the resource eg urn:air:sdxl:checkpoint:civitai:000000@000000 */
   air: string;
@@ -18,11 +25,20 @@ export type GeneratedImageResource = {
   strength: number;
   minStrength: number;
   maxStrength: number;
+  trainedWords: string[];
+  canGenerate: boolean;
   model: {
     name: string;
-    type: "LORA" | "CHECKPOINT";
+    type: string;
   };
   baseModel?: string;
+  substitute?: GeneratedImageResourceSubstitute;
+};
+
+export type GeneratedImageAspectRatio = {
+  value: string;
+  width: number;
+  height: number;
 };
 
 export type GeneratedImageParams = {
@@ -30,9 +46,9 @@ export type GeneratedImageParams = {
   negativePrompt: string;
   cfgScale: number;
   steps: number;
-  sampler: "DPM++ 2M" | "Euler a";
-  width: number;
-  height: number;
-  aspectRatio: string;
+  sampler?: string;
+  width?: number;
+  height?: number;
+  aspectRatio?: string | GeneratedImageAspectRatio;
   clipSkip: number;
 };
