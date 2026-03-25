@@ -62,7 +62,11 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
         value={imageModel.input.model}
         onChange={(e) => handleModelChange(e.target.value)}
       />
-      <ModelPreviewImage air={imageModel.input.model} maxHeight="400px" maxWidth="100%" />
+      <ModelPreviewImage
+        air={imageModel.input.model}
+        maxHeight="400px"
+        maxWidth="100%"
+      />
       <SchedulerCombobox
         value={imageModel.input.params.scheduler}
         onChange={handleSchedulerChange}

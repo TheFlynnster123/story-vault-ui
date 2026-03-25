@@ -27,31 +27,35 @@ export const ModelPreviewImage: React.FC<ModelPreviewImageProps> = ({
 
   if (preview.type === "video") {
     return (
-      <Box style={{ maxWidth, maxHeight, overflow: "hidden" }}>
-        <video
-          src={preview.url}
-          autoPlay
-          loop
-          muted
-          playsInline
-          style={{
-            maxHeight,
-            maxWidth,
-            objectFit: "contain",
-            borderRadius: "8px",
-          }}
-        />
-      </Box>
+      <Center>
+        <Box style={{ maxWidth, maxHeight, overflow: "hidden" }}>
+          <video
+            src={preview.url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            style={{
+              maxHeight,
+              maxWidth,
+              objectFit: "contain",
+              borderRadius: "8px",
+            }}
+          />
+        </Box>
+      </Center>
     );
   }
 
   return (
-    <Image
-      src={preview.url}
-      alt="Model preview"
-      fit="contain"
-      radius="md"
-      style={{ maxHeight, maxWidth }}
-    />
+    <Center>
+      <Image
+        src={preview.url}
+        alt="Model preview"
+        fit="contain"
+        radius="md"
+        style={{ maxHeight, maxWidth }}
+      />
+    </Center>
   );
 };
