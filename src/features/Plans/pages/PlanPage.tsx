@@ -22,6 +22,7 @@ import {
   NumberInput,
   Badge,
   Tooltip,
+  Checkbox,
 } from "@mantine/core";
 import type { Plan } from "../services/Plan";
 import {
@@ -75,7 +76,7 @@ export const PlanPage: React.FC = () => {
   const handlePlanChange = (
     id: string,
     field: keyof Plan,
-    value: string | number,
+    value: string | number | boolean,
   ) => {
     updatePlanDefinition?.(id, field, value);
   };
@@ -160,7 +161,7 @@ const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
 interface PlanListProps {
   plans: Plan[];
   onAdd: () => void;
-  onChange: (id: string, field: keyof Plan, value: string | number) => void;
+  onChange: (id: string, field: keyof Plan, value: string | number | boolean) => void;
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;
@@ -203,7 +204,7 @@ const PlanList: React.FC<PlanListProps> = ({
 
 interface PlanEditorProps {
   plan: Plan;
-  onChange: (id: string, field: keyof Plan, value: string | number) => void;
+  onChange: (id: string, field: keyof Plan, value: string | number | boolean) => void;
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;
@@ -254,6 +255,16 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
       onChange={(value) => onChange(plan.id, "model", value || "")}
       label="Plan Model"
       withDescription={false}
+    />
+    <Checkbox
+      label="Consolidate Message History"
+      checked={plan.consolidateMessageHistory}
+      onChange={(e) =>
+        onChange(plan.id, "consolidateMessageHistory", e.currentTarget.checked)
+      }
+      styles={{
+        label: { color: Theme.page.text },
+      }}
     />
     <Group gap="md" align="flex-end">
       <NumberInput
