@@ -21,6 +21,8 @@ const createPlan = (overrides: Partial<Plan> = {}): Plan => ({
   refreshInterval: 5,
   messagesSinceLastUpdate: 0,
   consolidateMessageHistory: false,
+  hideOtherPlans: false,
+  excludeOwnPlanFromHistory: false,
   ...overrides,
 });
 

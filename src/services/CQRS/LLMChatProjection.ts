@@ -121,6 +121,17 @@ export class LLMChatProjection {
     });
   }
 
+  /**
+   * Returns LLM context messages excluding all plan messages.
+   * Used when a plan has hideOtherPlans enabled to prevent model confusion.
+   */
+  public GetMessagesExcludingAllPlans(): LLMMessage[] {
+    return this.GetMessages().filter((m) => {
+      const state = this.getMessage(m.id ?? "");
+      return state?.type !== "plan";
+    });
+  }
+
   public GetMessage(id: string): LLMMessage | null {
     const msg = this.getMessage(id);
 

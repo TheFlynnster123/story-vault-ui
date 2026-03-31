@@ -167,7 +167,7 @@ export class PlanGenerationService {
     if (!plan) return;
 
     await this.trackGeneration(planId, async () => {
-      const chatMessages = this.getChatMessages();
+      const chatMessages = this.getChatMessages(plan);
       await this.regeneratePlan(plan, chatMessages);
       this.resetCounter(planId);
     });
@@ -190,9 +190,11 @@ export class PlanGenerationService {
     if (!plan) return;
 
     await this.trackGeneration(planDefinitionId, async () => {
-      const chatMessages = d
-        .LLMChatProjection(this.chatId)
-        .GetMessagesExcludingPlan(planDefinitionId);
+      const chatMessages = plan.hideOtherPlans
+        ? d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans()
+        : d
+            .LLMChatProjection(this.chatId)
+            .GetMessagesExcludingPlan(planDefinitionId);
 
       const promptMessages = priorContent
         ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
@@ -209,10 +211,10 @@ export class PlanGenerationService {
   // ---- Private Helpers ----
 
   private regenerateDuePlans = async (duePlans: Plan[]): Promise<void> => {
-    const chatMessages = this.getChatMessages();
     await Promise.all(
       duePlans.map((plan) =>
         this.trackGeneration(plan.id, async () => {
+          const chatMessages = this.getChatMessages(plan);
           await this.regeneratePlan(plan, chatMessages);
           this.resetCounter(plan.id);
         }),
@@ -229,8 +231,15 @@ export class PlanGenerationService {
     planService.savePlans(updatedPlans);
   };
 
-  private getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(this.chatId).GetMessages();
+  private getChatMessages = (plan: Plan): LLMMessage[] => {
+    if (plan.hideOtherPlans) {
+      return d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans();
+    }
+    if (plan.excludeOwnPlanFromHistory) {
+      return d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(plan.id);
+    }
+    return d.LLMChatProjection(this.chatId).GetMessages();
+  };
 
   private findPlanDefinition = (planDefinitionId: string): Plan | undefined =>
     d

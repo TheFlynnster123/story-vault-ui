@@ -302,6 +302,85 @@ describe("LLMChatProjection - Plan Events", () => {
     });
   });
 
+  describe("GetMessagesExcludingAllPlans", () => {
+    it("should exclude all plan messages", () => {
+      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+      projection.process(
+        createPlanEvent("def-1", "Story Plan", "Plan content"),
+      );
+      projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
+      projection.process(
+        createPlanEvent("def-2", "Character Plan", "Character details"),
+      );
+
+      const messages = projection.GetMessagesExcludingAllPlans();
+
+      expect(messages).toHaveLength(2);
+      expect(messages[0].content).toBe("Hello");
+      expect(messages[1].content).toBe("Hi");
+    });
+
+    it("should return all messages when there are no plans", () => {
+      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+      projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
+
+      const messages = projection.GetMessagesExcludingAllPlans();
+
+      expect(messages).toHaveLength(2);
+      expect(messages[0].content).toBe("Hello");
+      expect(messages[1].content).toBe("Hi");
+    });
+
+    it("should return empty array when only plans exist", () => {
+      projection.process(createPlanEvent("def-1", "Plan A", "A content"));
+      projection.process(createPlanEvent("def-2", "Plan B", "B content"));
+
+      const messages = projection.GetMessagesExcludingAllPlans();
+
+      expect(messages).toHaveLength(0);
+    });
+
+    it("should not exclude hidden plan messages (already filtered by GetMessages)", () => {
+      projection.process(createPlanEvent("def-1", "Plan", "v1"));
+      projection.process(PlanHiddenEventUtil.Create("def-1"));
+      projection.process(createPlanEvent("def-1", "Plan", "v2"));
+      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+
+      const messages = projection.GetMessagesExcludingAllPlans();
+
+      // v1 is already hidden by GetMessages, v2 is excluded by the filter
+      expect(messages).toHaveLength(1);
+      expect(messages[0].content).toBe("Hello");
+    });
+
+    it("should preserve message order", () => {
+      projection.process(MessageCreatedEventUtil.Create("user", "First"));
+      projection.process(createPlanEvent("def-1", "Plan", "Plan content"));
+      projection.process(MessageCreatedEventUtil.Create("user", "Second"));
+      projection.process(createPlanEvent("def-2", "Plan B", "Plan B content"));
+      projection.process(MessageCreatedEventUtil.Create("assistant", "Third"));
+
+      const messages = projection.GetMessagesExcludingAllPlans();
+
+      expect(messages).toHaveLength(3);
+      expect(messages[0].content).toBe("First");
+      expect(messages[1].content).toBe("Second");
+      expect(messages[2].content).toBe("Third");
+    });
+
+    it("should exclude plans from all definitions", () => {
+      projection.process(createPlanEvent("arc", "Arc Plan", "Arc"));
+      projection.process(createPlanEvent("theme", "Theme Plan", "Theme"));
+      projection.process(createPlanEvent("plot", "Plot Plan", "Plot"));
+      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+
+      const messages = projection.GetMessagesExcludingAllPlans();
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0].content).toBe("Hello");
+    });
+  });
+
   describe("Chapter-Plan Interaction", () => {
     it("should not hide plan messages when chapter covers their IDs", () => {
       const msg = MessageCreatedEventUtil.Create("user", "Hello");
