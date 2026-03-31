@@ -15,7 +15,7 @@ export const usePlanCache = (chatId: string) => {
     updatePlanDefinition: (
       planId: string,
       field: keyof Plan,
-      value: string | number,
+      value: string | number | boolean,
     ) => cache.updatePlanDefinition(planId, field, value),
     addPlan: (plan: Plan) => cache.addPlan(plan),
     deletePlan: (planId: string) => cache.removePlan(planId),

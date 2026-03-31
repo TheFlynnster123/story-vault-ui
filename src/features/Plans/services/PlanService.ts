@@ -61,11 +61,11 @@ export class PlanService {
   public updatePlanDefinition(
     planId: string,
     field: keyof Plan,
-    value: string | number,
+    value: string | number | boolean,
   ): void {
     const plan = this.Plans.find((p) => p.id === planId);
     if (plan) {
-      (plan[field] as string | number) = value;
+      (plan[field] as string | number | boolean) = value;
       this.notifySubscribers();
       this.savePlansDebounced();
     }
