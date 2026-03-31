@@ -848,6 +848,116 @@ describe("PlanGenerationService", () => {
     });
   });
 
+  // ---- Consolidate Message History Tests ----
+  describe("consolidateMessageHistory", () => {
+    it("should send messages as JSON array when consolidateMessageHistory is false", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({
+        id: "plan-1",
+        consolidateMessageHistory: false,
+      });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.generatePlanNow("plan-1");
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
+      // Should have multiple messages (chat messages + system message)
+      expect(callArgs.length).toBeGreaterThan(1);
+      // First message should be from the chat history
+      expect(callArgs[0]).toEqual({ id: "msg-1", role: "user", content: "Hello" });
+    });
+
+    it("should consolidate messages into a single string when consolidateMessageHistory is true", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({
+        id: "plan-1",
+        name: "Consolidated Plan",
+        prompt: "Analyze this",
+        consolidateMessageHistory: true,
+      });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.generatePlanNow("plan-1");
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
+      // Should have only one system message with consolidated content
+      expect(callArgs.length).toBe(1);
+      expect(callArgs[0].role).toBe("system");
+      expect(callArgs[0].content).toContain("Chat History:");
+      expect(callArgs[0].content).toContain("User: Hello");
+      expect(callArgs[0].content).toContain("Assistant: Hi there!");
+      expect(callArgs[0].content).toContain("# Consolidated Plan");
+      expect(callArgs[0].content).toContain("Analyze this");
+    });
+
+    it("should use consolidation for regeneratePlanFromMessage with prior content", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({
+        id: "plan-1",
+        name: "Update Plan",
+        consolidateMessageHistory: true,
+      });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage(
+        "plan-1",
+        "Prior plan content",
+        "Some feedback",
+      );
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
+      expect(callArgs.length).toBe(1);
+      expect(callArgs[0].role).toBe("system");
+      expect(callArgs[0].content).toContain("Chat History:");
+      expect(callArgs[0].content).toContain("User: Hello");
+      expect(callArgs[0].content).toContain("current version of this plan");
+      expect(callArgs[0].content).toContain("Prior plan content");
+      expect(callArgs[0].content).toContain("Some feedback");
+    });
+
+    it("should format consolidation with proper role labels", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({
+        id: "plan-1",
+        consolidateMessageHistory: true,
+      });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      mockLLMChatProjection.GetMessages.mockReturnValue([
+        { id: "1", role: "user", content: "User message" },
+        { id: "2", role: "assistant", content: "Assistant response" },
+        { id: "3", role: "system", content: "System note" },
+      ]);
+
+      await service.generatePlanNow("plan-1");
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
+      const content = callArgs[0].content;
+      expect(content).toContain("User: User message");
+      expect(content).toContain("Assistant: Assistant response");
+      expect(content).toContain("System: System note");
+    });
+
+    it("should work with consolidation in cadence-based regeneration", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const duePlan = createPlan({
+        id: "plan-1",
+        consolidateMessageHistory: true,
+        refreshInterval: 1,
+        messagesSinceLastUpdate: 0,
+      });
+      mockPlanService.getPlans.mockReturnValue([duePlan]);
+
+      service.onMessageSent();
+      await flushPromises();
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
+      expect(callArgs.length).toBe(1);
+      expect(callArgs[0].role).toBe("system");
+      expect(callArgs[0].content).toContain("Chat History:");
+    });
+  });
+
   // ---- Per-Plan Model Override Tests ----
   describe("per-plan model override", () => {
     it("should pass plan model to postChat for generatePlanNow", async () => {
@@ -938,6 +1048,7 @@ describe("PlanGenerationService", () => {
       prompt: "Test prompt",
       refreshInterval: 5,
       messagesSinceLastUpdate: 0,
+      consolidateMessageHistory: false,
       ...overrides,
     };
   }

@@ -20,6 +20,7 @@ const createPlan = (overrides: Partial<Plan> = {}): Plan => ({
   prompt: "Test prompt",
   refreshInterval: 5,
   messagesSinceLastUpdate: 0,
+  consolidateMessageHistory: false,
   ...overrides,
 });
 
@@ -124,6 +125,35 @@ describe("applyPlanDefaults", () => {
     const result = applyPlanDefaults(legacyPlan);
 
     expect((result as any).content).toBeUndefined();
+  });
+
+  it("should add default consolidateMessageHistory when missing", () => {
+    const legacyPlan = {
+      id: "plan-1",
+      type: "planning" as const,
+      name: "Old Plan",
+      prompt: "Old prompt",
+    };
+
+    const result = applyPlanDefaults(legacyPlan);
+
+    expect(result.consolidateMessageHistory).toBe(false);
+  });
+
+  it("should preserve existing consolidateMessageHistory when true", () => {
+    const plan = createPlan({ consolidateMessageHistory: true });
+
+    const result = applyPlanDefaults(plan);
+
+    expect(result.consolidateMessageHistory).toBe(true);
+  });
+
+  it("should preserve existing consolidateMessageHistory when false", () => {
+    const plan = createPlan({ consolidateMessageHistory: false });
+
+    const result = applyPlanDefaults(plan);
+
+    expect(result.consolidateMessageHistory).toBe(false);
   });
 });
 

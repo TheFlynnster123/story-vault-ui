@@ -46,6 +46,7 @@ const createNewPlan = (): Plan => ({
   prompt: DEFAULT_PLAN_PROMPT,
   refreshInterval: DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: 0,
+  consolidateMessageHistory: false,
 });
 
 const inputStyles = {

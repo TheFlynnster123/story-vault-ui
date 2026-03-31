@@ -9,6 +9,19 @@ export const getPlanGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new PlanGenerationService(chatId),
 );
 
+const consolidateMessagesToString = (messages: LLMMessage[]): string =>
+  messages
+    .map((msg) => {
+      const roleLabel =
+        msg.role === "user"
+          ? "User"
+          : msg.role === "assistant"
+            ? "Assistant"
+            : "System";
+      return `${roleLabel}: ${msg.content}`;
+    })
+    .join("\n\n");
+
 const buildPlanPrompt = (plan: Plan): string =>
   [
     `# ${plan.name}`,
@@ -47,17 +60,37 @@ const buildUpdatePlanPrompt = (
 const buildPromptMessages = (
   chatMessages: LLMMessage[],
   plan: Plan,
-): LLMMessage[] => [...chatMessages, toSystemMessage(buildPlanPrompt(plan))];
+): LLMMessage[] => {
+  if (plan.consolidateMessageHistory) {
+    const consolidatedHistory = consolidateMessagesToString(chatMessages);
+    return [
+      toSystemMessage(
+        `Chat History:\n\n${consolidatedHistory}\n\n---\n\n${buildPlanPrompt(plan)}`,
+      ),
+    ];
+  }
+  return [...chatMessages, toSystemMessage(buildPlanPrompt(plan))];
+};
 
 const buildUpdatePromptMessages = (
   chatMessages: LLMMessage[],
   plan: Plan,
   priorContent: string,
   feedback?: string,
-): LLMMessage[] => [
-  ...chatMessages,
-  toSystemMessage(buildUpdatePlanPrompt(plan, priorContent, feedback)),
-];
+): LLMMessage[] => {
+  if (plan.consolidateMessageHistory) {
+    const consolidatedHistory = consolidateMessagesToString(chatMessages);
+    return [
+      toSystemMessage(
+        `Chat History:\n\n${consolidatedHistory}\n\n---\n\n${buildUpdatePlanPrompt(plan, priorContent, feedback)}`,
+      ),
+    ];
+  }
+  return [
+    ...chatMessages,
+    toSystemMessage(buildUpdatePlanPrompt(plan, priorContent, feedback)),
+  ];
+};
 
 export class PlanGenerationService {
   private chatId: string;
