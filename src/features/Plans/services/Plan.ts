@@ -6,6 +6,7 @@ export interface Plan {
   model?: string;
   refreshInterval: number;
   messagesSinceLastUpdate: number;
+  consolidateMessageHistory: boolean;
 }
 
 /**
@@ -44,6 +45,7 @@ export const applyPlanDefaults = (
   model: plan.model,
   refreshInterval: plan.refreshInterval ?? DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: plan.messagesSinceLastUpdate ?? 0,
+  consolidateMessageHistory: plan.consolidateMessageHistory ?? false,
 });
 
 export const isDueForRefresh = (plan: Plan): boolean =>
