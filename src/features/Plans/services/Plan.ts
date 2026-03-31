@@ -7,6 +7,7 @@ export interface Plan {
   refreshInterval: number;
   messagesSinceLastUpdate: number;
   consolidateMessageHistory: boolean;
+  hideOtherPlans: boolean;
 }
 
 /**
@@ -46,6 +47,7 @@ export const applyPlanDefaults = (
   refreshInterval: plan.refreshInterval ?? DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: plan.messagesSinceLastUpdate ?? 0,
   consolidateMessageHistory: plan.consolidateMessageHistory ?? false,
+  hideOtherPlans: plan.hideOtherPlans ?? false,
 });
 
 export const isDueForRefresh = (plan: Plan): boolean =>

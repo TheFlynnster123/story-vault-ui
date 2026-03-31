@@ -48,6 +48,7 @@ const createNewPlan = (): Plan => ({
   refreshInterval: DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: 0,
   consolidateMessageHistory: false,
+  hideOtherPlans: false,
 });
 
 const inputStyles = {
@@ -261,6 +262,16 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
       checked={plan.consolidateMessageHistory}
       onChange={(e) =>
         onChange(plan.id, "consolidateMessageHistory", e.currentTarget.checked)
+      }
+      styles={{
+        label: { color: Theme.page.text },
+      }}
+    />
+    <Checkbox
+      label="Hide Other Plans"
+      checked={plan.hideOtherPlans}
+      onChange={(e) =>
+        onChange(plan.id, "hideOtherPlans", e.currentTarget.checked)
       }
       styles={{
         label: { color: Theme.page.text },
