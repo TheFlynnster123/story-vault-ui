@@ -49,6 +49,7 @@ const createNewPlan = (): Plan => ({
   messagesSinceLastUpdate: 0,
   consolidateMessageHistory: false,
   hideOtherPlans: false,
+  excludeOwnPlanFromHistory: false,
 });
 
 const inputStyles = {
@@ -272,6 +273,16 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
       checked={plan.hideOtherPlans}
       onChange={(e) =>
         onChange(plan.id, "hideOtherPlans", e.currentTarget.checked)
+      }
+      styles={{
+        label: { color: Theme.page.text },
+      }}
+    />
+    <Checkbox
+      label="Exclude Own Plan From History"
+      checked={plan.excludeOwnPlanFromHistory}
+      onChange={(e) =>
+        onChange(plan.id, "excludeOwnPlanFromHistory", e.currentTarget.checked)
       }
       styles={{
         label: { color: Theme.page.text },

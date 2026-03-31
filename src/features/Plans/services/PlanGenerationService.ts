@@ -235,6 +235,9 @@ export class PlanGenerationService {
     if (plan.hideOtherPlans) {
       return d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans();
     }
+    if (plan.excludeOwnPlanFromHistory) {
+      return d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(plan.id);
+    }
     return d.LLMChatProjection(this.chatId).GetMessages();
   };
 
