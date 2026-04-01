@@ -11,8 +11,6 @@ import type {
   StoryEditedEvent,
   PlanCreatedEvent,
   PlanHiddenEvent,
-  ChainOfThoughtStepCreatedEvent,
-  ChainOfThoughtHiddenEvent,
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
@@ -90,12 +88,6 @@ export class LLMChatProjection {
         break;
       case "PlanHidden":
         this.processPlanHidden(event);
-        break;
-      case "ChainOfThoughtStepCreated":
-        this.processChainOfThoughtStepCreated(event);
-        break;
-      case "ChainOfThoughtHidden":
-        this.processChainOfThoughtHidden(event);
         break;
     }
   }
@@ -311,57 +303,6 @@ export class LLMChatProjection {
   formatPlanContent = (planName: string, content: string): string =>
     `[Plan: ${planName}]\n${content}\n[End of Plan]`;
 
-  /**
-   * Adds a chain of thought step message to the LLM context.
-   * Chain of thought messages are hidden by default (not shown to LLM)
-   * as they are only used during the reasoning process.
-   */
-  processChainOfThoughtStepCreated(event: ChainOfThoughtStepCreatedEvent) {
-    const formattedContent = this.formatChainOfThoughtStepContent(
-      event.chainOfThoughtName,
-      event.stepIndex,
-      event.content,
-    );
-    const cotMessage = this.createMessageState(
-      event.messageId,
-      "chainOfThought",
-      "system",
-      formattedContent,
-    );
-    cotMessage.data = {
-      chainOfThoughtId: event.chainOfThoughtId,
-      chainOfThoughtName: event.chainOfThoughtName,
-      stepIndex: event.stepIndex,
-      stepPrompt: event.stepPrompt,
-      rawContent: event.content,
-    };
-    // Chain of thought messages are hidden from LLM context by default
-    cotMessage.hidden = true;
-    this.messages.push(cotMessage);
-  }
-
-  /**
-   * Hides all existing chain of thought messages for a definition.
-   */
-  processChainOfThoughtHidden(event: ChainOfThoughtHiddenEvent) {
-    this.messages
-      .filter(
-        (m) =>
-          m.type === "chainOfThought" &&
-          m.data?.chainOfThoughtId === event.chainOfThoughtId,
-      )
-      .forEach((m) => {
-        m.hidden = true;
-      });
-  }
-
-  formatChainOfThoughtStepContent = (
-    name: string,
-    stepIndex: number,
-    content: string,
-  ): string =>
-    `[Chain of Thought: ${name} - Step ${stepIndex + 1}]\n${content}\n[End of Step]`;
-
   // ---- Helpers ----
   formatStoryContent = (content: string): string => `# Story\r\n${content}`;
 
@@ -529,7 +470,7 @@ export class LLMChatProjection {
 
   createMessageState(
     id: string,
-    type: "message" | "chapter" | "plan" | "chainOfThought",
+    type: "message" | "chapter" | "plan",
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[],
@@ -550,7 +491,7 @@ export class LLMChatProjection {
 // ---- Types ----
 interface MessageState {
   id: string;
-  type: "message" | "chapter" | "plan" | "chainOfThought";
+  type: "message" | "chapter" | "plan";
   role: "user" | "assistant" | "system";
   content: string;
   hiddenByChapterId: string | null;

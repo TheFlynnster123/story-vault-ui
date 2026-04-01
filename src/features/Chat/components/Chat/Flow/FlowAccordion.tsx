@@ -18,7 +18,7 @@ interface FlowAccordionProps {
 export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
   const navigate = useNavigate();
   const { plans } = usePlanCache(chatId);
-  const { chainOfThoughts } = useChainOfThoughtCache(chatId);
+  const { chainOfThought } = useChainOfThoughtCache(chatId);
 
   const navigateToChatSettings = () => navigate(`/chat/${chatId}/edit`);
   const navigateToPlan = () => navigate(`/chat/${chatId}/plan`);
@@ -51,7 +51,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
               />
               <ChainOfThoughtSection
                 chatId={chatId}
-                chainOfThoughts={chainOfThoughts}
+                chainOfThought={chainOfThought}
                 onNavigate={navigateToChainOfThought}
               />
               <MemoriesSection

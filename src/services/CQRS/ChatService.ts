@@ -14,10 +14,6 @@ import {
   PlanCreatedEventUtil,
   PlanHiddenEventUtil,
 } from "./events/PlanEventUtils";
-import {
-  ChainOfThoughtStepCreatedEventUtil,
-  ChainOfThoughtHiddenEventUtil,
-} from "./events/ChainOfThoughtEventUtils";
 import { d } from "../Dependencies";
 
 export class ChatService {
@@ -140,35 +136,5 @@ export class ChatService {
       content,
     );
     await d.ChatEventService(this.chatId).AddChatEvents([hideEvent, createEvent]);
-  }
-
-  // ---- Chain of Thought Operations ----
-
-  /**
-   * Hides all prior chain of thought messages for this definition.
-   */
-  public async HideChainOfThought(chainOfThoughtId: string): Promise<void> {
-    const hideEvent = ChainOfThoughtHiddenEventUtil.Create(chainOfThoughtId);
-    await d.ChatEventService(this.chatId).AddChatEvent(hideEvent);
-  }
-
-  /**
-   * Adds a chain of thought step message to the chat timeline.
-   */
-  public async AddChainOfThoughtStepMessage(
-    chainOfThoughtId: string,
-    chainOfThoughtName: string,
-    stepIndex: number,
-    stepPrompt: string,
-    content: string,
-  ): Promise<void> {
-    const createEvent = ChainOfThoughtStepCreatedEventUtil.Create(
-      chainOfThoughtId,
-      chainOfThoughtName,
-      stepIndex,
-      stepPrompt,
-      content,
-    );
-    await d.ChatEventService(this.chatId).AddChatEvent(createEvent);
   }
 }

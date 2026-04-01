@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { d } from "../../../services/Dependencies";
-import type { ChainOfThought, ChainOfThoughtStep } from "../services/ChainOfThought";
+import type { ChainOfThoughtStep } from "../services/ChainOfThought";
 
 export const useChainOfThoughtCache = (chatId: string) => {
   const [, forceUpdate] = useState({});
@@ -11,26 +11,19 @@ export const useChainOfThoughtCache = (chatId: string) => {
   }, [service]);
 
   return {
-    chainOfThoughts: service.getChainOfThoughts(),
+    chainOfThought: service.getChainOfThought(),
     isLoading: service.IsLoading,
-    addChainOfThought: (cot: ChainOfThought) => service.addChainOfThought(cot),
-    removeChainOfThought: (cotId: string) =>
-      service.removeChainOfThought(cotId),
     updateChainOfThoughtDefinition: (
-      cotId: string,
-      field: keyof ChainOfThought,
+      field: keyof Pick<import("../services/ChainOfThought").ChainOfThought, "name" | "steps">,
       value: string | ChainOfThoughtStep[],
-    ) => service.updateChainOfThoughtDefinition(cotId, field, value),
+    ) => service.updateChainOfThoughtDefinition(field, value),
     updateStep: (
-      cotId: string,
       stepId: string,
       field: keyof ChainOfThoughtStep,
       value: string | boolean,
-    ) => service.updateStep(cotId, stepId, field, value),
-    addStep: (cotId: string, step: ChainOfThoughtStep) =>
-      service.addStep(cotId, step),
-    removeStep: (cotId: string, stepId: string) =>
-      service.removeStep(cotId, stepId),
+    ) => service.updateStep(stepId, field, value),
+    addStep: (step: ChainOfThoughtStep) => service.addStep(step),
+    removeStep: (stepId: string) => service.removeStep(stepId),
     savePendingChanges: () => service.savePendingChanges(),
   };
 };

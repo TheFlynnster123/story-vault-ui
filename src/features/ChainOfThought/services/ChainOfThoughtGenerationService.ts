@@ -2,7 +2,7 @@ import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
-import type { ChainOfThought } from "./ChainOfThought";
+import type { ChainOfThoughtStepResult } from "./ChainOfThought";
 
 export const getChainOfThoughtGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new ChainOfThoughtGenerationService(chatId),
@@ -21,9 +21,14 @@ const consolidateMessagesToString = (messages: LLMMessage[]): string =>
     })
     .join("\n\n");
 
+/**
+ * Service for executing chain of thought reasoning.
+ * This is a pre-message process - the final step becomes the actual message.
+ * Execution results are stored in ChainOfThoughtService, not as CQRS events.
+ */
 export class ChainOfThoughtGenerationService {
   private chatId: string;
-  private generatingCotIds = new Set<string>();
+  private isGenerating = false;
   private subscribers = new Set<() => void>();
 
   constructor(chatId: string) {
@@ -37,22 +42,17 @@ export class ChainOfThoughtGenerationService {
     return () => this.subscribers.delete(callback);
   };
 
-  public isGenerating = (cotId: string): boolean =>
-    this.generatingCotIds.has(cotId);
-
-  public getGeneratingCotIds = (): ReadonlySet<string> =>
-    this.generatingCotIds;
+  public getIsGenerating = (): boolean => this.isGenerating;
 
   private trackGeneration = async (
-    cotId: string,
     operation: () => Promise<void>,
   ): Promise<void> => {
-    this.generatingCotIds.add(cotId);
+    this.isGenerating = true;
     this.notifySubscribers();
     try {
       await operation();
     } finally {
-      this.generatingCotIds.delete(cotId);
+      this.isGenerating = false;
       this.notifySubscribers();
     }
   };
@@ -64,25 +64,26 @@ export class ChainOfThoughtGenerationService {
   // ---- Public API ----
 
   /**
-   * Execute a chain of thought reasoning process.
-   * Each step is executed sequentially, with the output of each step
-   * being temporarily stored in memory and used as context for the next step.
+   * Execute the chain of thought reasoning process.
+   * Each step is executed sequentially, building upon previous steps.
+   * The final step output becomes the actual message (if the caller chooses to use it).
+   * Results are stored in ChainOfThoughtService, not as CQRS events.
    */
-  public executeChainOfThought = async (cotId: string): Promise<void> => {
-    const cot = this.findChainOfThought(cotId);
-    if (!cot) return;
+  public executeChainOfThought = async (): Promise<string | undefined> => {
+    const cot = d.ChainOfThoughtService(this.chatId).getChainOfThought();
+    if (!cot) return undefined;
 
-    await this.trackGeneration(cotId, async () => {
-      // First, hide any previous chain of thought messages for this definition
-      await d.ChatService(this.chatId).HideChainOfThought(cotId);
+    let finalMessage: string | undefined;
 
-      // Get the base chat messages (excluding plan messages if needed)
+    await this.trackGeneration(async () => {
+      // Get the base chat messages
       const baseChatMessages = d.LLMChatProjection(this.chatId).GetMessages();
 
       // Execute each step sequentially
-      const stepOutputs: { stepId: string; content: string }[] = [];
+      const stepResults: ChainOfThoughtStepResult[] = [];
 
-      for (const step of cot.steps) {
+      for (let i = 0; i < cot.steps.length; i++) {
+        const step = cot.steps[i];
         if (!step.enabled) continue;
 
         // Build the context for this step
@@ -96,10 +97,10 @@ export class ChainOfThoughtGenerationService {
         }
 
         // Add previous step outputs as system messages
-        const previousStepsContext = stepOutputs
+        const previousStepsContext = stepResults
           .map(
-            (output) =>
-              `--- Step ${cot.steps.findIndex((s) => s.id === output.stepId) + 1} Output ---\n${output.content}`,
+            (result) =>
+              `--- Step ${result.stepIndex + 1} Output ---\n${result.content}`,
           )
           .join("\n\n");
 
@@ -129,31 +130,32 @@ export class ChainOfThoughtGenerationService {
           .postChat(promptMessages, step.model || undefined);
         const content = stripMarkdownCodeFence(response);
 
-        // Store the step output
-        stepOutputs.push({ stepId: step.id, content });
+        // Store the step result
+        stepResults.push({
+          stepId: step.id,
+          stepIndex: i,
+          stepPrompt: step.prompt,
+          content,
+        });
 
-        // Save this step as a CQRS event
-        const stepIndex = cot.steps.indexOf(step);
-        await d
-          .ChatService(this.chatId)
-          .AddChainOfThoughtStepMessage(
-            cotId,
-            cot.name,
-            stepIndex,
-            step.prompt,
-            content,
-          );
+        // If this is the last enabled step, save it as the final message
+        const remainingSteps = cot.steps.slice(i + 1);
+        const hasMoreEnabledSteps = remainingSteps.some((s) => s.enabled);
+        if (!hasMoreEnabledSteps) {
+          finalMessage = content;
+        }
       }
+
+      // Store the execution result in the service
+      d.ChainOfThoughtService(this.chatId).setLastExecution({
+        executedAt: new Date().toISOString(),
+        stepResults,
+        finalMessage,
+      });
     });
+
+    return finalMessage;
   };
-
-  // ---- Private Helpers ----
-
-  private findChainOfThought = (cotId: string): ChainOfThought | undefined =>
-    d
-      .ChainOfThoughtService(this.chatId)
-      .getChainOfThoughts()
-      .find((c) => c.id === cotId);
 }
 
 /**
