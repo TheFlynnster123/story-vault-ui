@@ -10,7 +10,6 @@ export const useChainOfThoughtGenerationStatus = (chatId: string) => {
   }, [service]);
 
   return {
-    isGenerating: (cotId: string) => service.isGenerating(cotId),
-    generatingCotIds: service.getGeneratingCotIds(),
+    isGenerating: service.getIsGenerating(),
   };
 };

@@ -10,9 +10,7 @@ export type ChatEvent =
   | StoryCreatedEvent
   | StoryEditedEvent
   | PlanCreatedEvent
-  | PlanHiddenEvent
-  | ChainOfThoughtStepCreatedEvent
-  | ChainOfThoughtHiddenEvent;
+  | PlanHiddenEvent;
 
 export interface MessageCreatedEvent {
   type: "MessageCreated";
@@ -98,27 +96,4 @@ export interface PlanCreatedEvent {
 export interface PlanHiddenEvent {
   type: "PlanHidden";
   planDefinitionId: string;
-}
-
-/**
- * Creates a chain of thought step message in the chat timeline.
- * Each step in the reasoning process is stored as a separate message.
- */
-export interface ChainOfThoughtStepCreatedEvent {
-  type: "ChainOfThoughtStepCreated";
-  messageId: string;
-  chainOfThoughtId: string;
-  chainOfThoughtName: string;
-  stepIndex: number;
-  stepPrompt: string;
-  content: string;
-}
-
-/**
- * Hides all previous chain of thought messages for a given definition.
- * When a new chain of thought is executed, prior instances are hidden (not deleted).
- */
-export interface ChainOfThoughtHiddenEvent {
-  type: "ChainOfThoughtHidden";
-  chainOfThoughtId: string;
 }

@@ -13,14 +13,36 @@ export interface ChainOfThoughtStep {
 }
 
 /**
- * A Chain of Thought template that defines a multi-step reasoning process.
- * The template is stored in blob storage, while the actual reasoning outputs
- * are temporarily stored in memory (CQRS events).
+ * The result of executing a single step in the chain of thought.
+ */
+export interface ChainOfThoughtStepResult {
+  stepId: string;
+  stepIndex: number;
+  stepPrompt: string;
+  content: string;
+}
+
+/**
+ * The result of executing the entire chain of thought.
+ * This represents a single execution instance.
+ */
+export interface ChainOfThoughtExecution {
+  executedAt: string; // ISO timestamp
+  stepResults: ChainOfThoughtStepResult[];
+  finalMessage?: string; // The final step output that becomes the actual message
+}
+
+/**
+ * A Chain of Thought defines a multi-step reasoning process for a chat.
+ * There is only one chain of thought per chat (not multiple templates).
+ * The chain of thought is a pre-message process - the final step becomes the actual message.
+ * Execution results are stored here, not in CQRS events.
  */
 export interface ChainOfThought {
   id: string;
   name: string;
   steps: ChainOfThoughtStep[];
+  lastExecution?: ChainOfThoughtExecution; // Most recent execution result
 }
 
 export const DEFAULT_CHAIN_OF_THOUGHT_NAME = "Chain of Thought";

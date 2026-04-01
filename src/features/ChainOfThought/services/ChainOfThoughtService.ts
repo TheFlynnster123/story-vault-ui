@@ -1,21 +1,44 @@
 import { d } from "../../../services/Dependencies";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
-import type { ChainOfThought, ChainOfThoughtStep } from "./ChainOfThought";
-import { applyChainOfThoughtDefaults } from "./ChainOfThought";
+import type {
+  ChainOfThought,
+  ChainOfThoughtExecution,
+  ChainOfThoughtStep,
+} from "./ChainOfThought";
+import {
+  applyChainOfThoughtDefaults,
+  DEFAULT_CHAIN_OF_THOUGHT_NAME,
+  DEFAULT_CHAIN_OF_THOUGHT_STEPS,
+} from "./ChainOfThought";
 
 export const getChainOfThoughtServiceInstance = createInstanceCache(
   (chatId: string) => new ChainOfThoughtService(chatId),
 );
 
-const migrateLoadedChainOfThoughts = (
-  chainOfThoughts: ChainOfThought[],
-): ChainOfThought[] => chainOfThoughts.map(applyChainOfThoughtDefaults);
+const migrateLoadedChainOfThought = (
+  data: ChainOfThought | null | undefined,
+): ChainOfThought => {
+  if (!data) {
+    // Create default chain of thought if none exists
+    return {
+      id: "default",
+      name: DEFAULT_CHAIN_OF_THOUGHT_NAME,
+      steps: DEFAULT_CHAIN_OF_THOUGHT_STEPS,
+    };
+  }
+  return applyChainOfThoughtDefaults(data);
+};
 
+/**
+ * Manages the single Chain of Thought for a chat.
+ * There is only one chain of thought per chat (not multiple templates).
+ * Stores both the definition (steps) and execution results.
+ */
 export class ChainOfThoughtService {
   private chatId: string;
   private subscribers = new Set<() => void>();
   private initialized: boolean = false;
-  public ChainOfThoughts: ChainOfThought[] = [];
+  public ChainOfThought: ChainOfThought | null = null;
   public IsLoading = false;
 
   constructor(chatId: string) {
@@ -38,99 +61,90 @@ export class ChainOfThoughtService {
 
   private async initializeIfNeeded(): Promise<void> {
     if (!this.initialized) {
-      await this.loadChainOfThoughts();
+      await this.loadChainOfThought();
       this.initialized = true;
     }
   }
 
-  private async loadChainOfThoughts(): Promise<void> {
+  private async loadChainOfThought(): Promise<void> {
     this.IsLoading = true;
     try {
-      this.ChainOfThoughts = await this.fetchChainOfThoughts();
+      this.ChainOfThought = await this.fetchChainOfThought();
       this.notifySubscribers();
     } finally {
       this.IsLoading = false;
     }
   }
 
-  public fetchChainOfThoughts = async (): Promise<ChainOfThought[]> => {
+  public fetchChainOfThought = async (): Promise<ChainOfThought> => {
     const data = await d.ChainOfThoughtManagedBlob(this.chatId).get();
-    return migrateLoadedChainOfThoughts(data ?? []);
+    return migrateLoadedChainOfThought(data);
   };
 
   // ---- Public API ----
 
-  public getChainOfThoughts = (): ChainOfThought[] => this.ChainOfThoughts;
-
-  public addChainOfThought = (cot: ChainOfThought): void => {
-    this.ChainOfThoughts = [...this.ChainOfThoughts, cot];
-    this.notifySubscribers();
-    this.savePlansDebounced();
-  };
-
-  public removeChainOfThought = (cotId: string): void => {
-    this.ChainOfThoughts = this.ChainOfThoughts.filter((c) => c.id !== cotId);
-    this.notifySubscribers();
-    this.savePlansDebounced();
-  };
+  public getChainOfThought = (): ChainOfThought | null => this.ChainOfThought;
 
   public updateChainOfThoughtDefinition = (
-    cotId: string,
-    field: keyof ChainOfThought,
+    field: keyof Pick<ChainOfThought, "name" | "steps">,
     value: string | ChainOfThoughtStep[],
   ): void => {
-    this.ChainOfThoughts = this.ChainOfThoughts.map((cot) =>
-      cot.id === cotId ? { ...cot, [field]: value } : cot,
-    );
+    if (!this.ChainOfThought) return;
+    this.ChainOfThought = { ...this.ChainOfThought, [field]: value };
     this.notifySubscribers();
-    this.savePlansDebounced();
+    this.saveDebounced();
   };
 
   public updateStep = (
-    cotId: string,
     stepId: string,
     field: keyof ChainOfThoughtStep,
     value: string | boolean,
   ): void => {
-    this.ChainOfThoughts = this.ChainOfThoughts.map((cot) =>
-      cot.id === cotId
-        ? {
-            ...cot,
-            steps: cot.steps.map((step) =>
-              step.id === stepId ? { ...step, [field]: value } : step,
-            ),
-          }
-        : cot,
-    );
+    if (!this.ChainOfThought) return;
+    this.ChainOfThought = {
+      ...this.ChainOfThought,
+      steps: this.ChainOfThought.steps.map((step) =>
+        step.id === stepId ? { ...step, [field]: value } : step,
+      ),
+    };
     this.notifySubscribers();
-    this.savePlansDebounced();
+    this.saveDebounced();
   };
 
-  public addStep = (cotId: string, step: ChainOfThoughtStep): void => {
-    this.ChainOfThoughts = this.ChainOfThoughts.map((cot) =>
-      cot.id === cotId
-        ? {
-            ...cot,
-            steps: [...cot.steps, step],
-          }
-        : cot,
-    );
+  public addStep = (step: ChainOfThoughtStep): void => {
+    if (!this.ChainOfThought) return;
+    this.ChainOfThought = {
+      ...this.ChainOfThought,
+      steps: [...this.ChainOfThought.steps, step],
+    };
     this.notifySubscribers();
-    this.savePlansDebounced();
+    this.saveDebounced();
   };
 
-  public removeStep = (cotId: string, stepId: string): void => {
-    this.ChainOfThoughts = this.ChainOfThoughts.map((cot) =>
-      cot.id === cotId
-        ? {
-            ...cot,
-            steps: cot.steps.filter((step) => step.id !== stepId),
-          }
-        : cot,
-    );
+  public removeStep = (stepId: string): void => {
+    if (!this.ChainOfThought) return;
+    this.ChainOfThought = {
+      ...this.ChainOfThought,
+      steps: this.ChainOfThought.steps.filter((step) => step.id !== stepId),
+    };
     this.notifySubscribers();
-    this.savePlansDebounced();
+    this.saveDebounced();
   };
+
+  // ---- Execution Results ----
+
+  public setLastExecution = (execution: ChainOfThoughtExecution): void => {
+    if (!this.ChainOfThought) return;
+    this.ChainOfThought = {
+      ...this.ChainOfThought,
+      lastExecution: execution,
+    };
+    this.notifySubscribers();
+    this.saveDebounced();
+  };
+
+  public getLastExecution = (): ChainOfThoughtExecution | undefined =>
+    this.ChainOfThought?.lastExecution;
 
   // ---- Persistence ----
 
@@ -138,17 +152,15 @@ export class ChainOfThoughtService {
     await d.ChainOfThoughtManagedBlob(this.chatId).savePendingChanges();
   }
 
-  public savePlans = async (
-    chainOfThoughts?: ChainOfThought[],
-  ): Promise<void> => {
+  public save = async (chainOfThought?: ChainOfThought): Promise<void> => {
     this.IsLoading = true;
 
     try {
-      const data = chainOfThoughts ?? this.ChainOfThoughts;
+      const data = chainOfThought ?? this.ChainOfThought;
       await d.ChainOfThoughtManagedBlob(this.chatId).save(data);
 
-      if (chainOfThoughts) {
-        this.ChainOfThoughts = chainOfThoughts;
+      if (chainOfThought) {
+        this.ChainOfThought = chainOfThought;
       }
 
       this.notifySubscribers();
@@ -157,14 +169,14 @@ export class ChainOfThoughtService {
     }
   };
 
-  public savePlansDebounced = async (
-    chainOfThoughts?: ChainOfThought[],
+  public saveDebounced = async (
+    chainOfThought?: ChainOfThought,
   ): Promise<void> => {
-    const data = chainOfThoughts ?? this.ChainOfThoughts;
+    const data = chainOfThought ?? this.ChainOfThought;
     await d.ChainOfThoughtManagedBlob(this.chatId).saveDebounced(data);
 
-    if (chainOfThoughts) {
-      this.ChainOfThoughts = chainOfThoughts;
+    if (chainOfThought) {
+      this.ChainOfThought = chainOfThought;
       this.notifySubscribers();
     }
   };
