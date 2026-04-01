@@ -10,6 +10,7 @@ import ImageModelEditPage from "./features/Images/pages/ImageModelEditPage";
 import { ChatEditorPage } from "./features/Chat/pages/ChatEditorPage";
 import ChatPage from "./features/Chat/pages/ChatPage";
 import { PlanPage } from "./features/Plans/pages/PlanPage";
+import { ChainOfThoughtPage } from "./features/ChainOfThought/pages/ChainOfThoughtPage";
 import { MemoriesPage } from "./features/Memories/pages/MemoriesPage";
 import { StoryEditorPage } from "./features/StoryEditor/pages/StoryEditorPage";
 import { ChatImageModelsPage } from "./features/Images/pages/ChatImageModelsPage";
@@ -56,6 +57,14 @@ const App: React.FC<AppProps> = () => {
             element={
               <ProtectedRoute>
                 <PlanPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/chain-of-thought"
+            element={
+              <ProtectedRoute>
+                <ChainOfThoughtPage />
               </ProtectedRoute>
             }
           />

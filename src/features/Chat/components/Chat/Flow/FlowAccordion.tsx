@@ -7,6 +7,8 @@ import { ChatSettingsButton } from "./ChatSettingsButton";
 import { ChatImageModelsSection } from "./ChatImageModelsSection";
 import { usePlanCache } from "../../../../Plans/hooks/usePlanCache";
 import { PlanSection } from "../../../../Plans/components/PlanSection";
+import { useChainOfThoughtCache } from "../../../../ChainOfThought/hooks/useChainOfThoughtCache";
+import { ChainOfThoughtSection } from "../../../../ChainOfThought/components/ChainOfThoughtSection";
 import { MemoriesSection } from "../../../../Memories/components/MemoriesSection";
 
 interface FlowAccordionProps {
@@ -16,9 +18,12 @@ interface FlowAccordionProps {
 export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
   const navigate = useNavigate();
   const { plans } = usePlanCache(chatId);
+  const { chainOfThoughts } = useChainOfThoughtCache(chatId);
 
   const navigateToChatSettings = () => navigate(`/chat/${chatId}/edit`);
   const navigateToPlan = () => navigate(`/chat/${chatId}/plan`);
+  const navigateToChainOfThought = () =>
+    navigate(`/chat/${chatId}/chain-of-thought`);
   const navigateToMemories = () => navigate(`/chat/${chatId}/memories`);
   const navigateToChatImageModels = () =>
     navigate(`/chat/${chatId}/image-models`);
@@ -43,6 +48,11 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
                 chatId={chatId}
                 plans={plans}
                 onNavigate={navigateToPlan}
+              />
+              <ChainOfThoughtSection
+                chatId={chatId}
+                chainOfThoughts={chainOfThoughts}
+                onNavigate={navigateToChainOfThought}
               />
               <MemoriesSection
                 chatId={chatId}

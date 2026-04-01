@@ -7,15 +7,20 @@ export const getChainOfThoughtServiceInstance = createInstanceCache(
   (chatId: string) => new ChainOfThoughtService(chatId),
 );
 
+const migrateLoadedChainOfThoughts = (
+  chainOfThoughts: ChainOfThought[],
+): ChainOfThought[] => chainOfThoughts.map(applyChainOfThoughtDefaults);
+
 export class ChainOfThoughtService {
   private chatId: string;
   private subscribers = new Set<() => void>();
+  private initialized: boolean = false;
   public ChainOfThoughts: ChainOfThought[] = [];
-  public IsLoading = true;
+  public IsLoading = false;
 
   constructor(chatId: string) {
     this.chatId = chatId;
-    this.initialize();
+    this.initializeIfNeeded();
   }
 
   // ---- Observable Pattern ----
@@ -31,18 +36,26 @@ export class ChainOfThoughtService {
 
   // ---- Initialization ----
 
-  private initialize = async (): Promise<void> => {
-    try {
-      const blob = d.ChainOfThoughtManagedBlob(this.chatId);
-      const data = await blob.load();
-      this.ChainOfThoughts = data.map(applyChainOfThoughtDefaults);
-      this.IsLoading = false;
-      this.notifySubscribers();
-    } catch (error) {
-      d.ErrorService().log("Failed to load chain of thoughts", error);
-      this.IsLoading = false;
-      this.notifySubscribers();
+  private async initializeIfNeeded(): Promise<void> {
+    if (!this.initialized) {
+      await this.loadChainOfThoughts();
+      this.initialized = true;
     }
+  }
+
+  private async loadChainOfThoughts(): Promise<void> {
+    this.IsLoading = true;
+    try {
+      this.ChainOfThoughts = await this.fetchChainOfThoughts();
+      this.notifySubscribers();
+    } finally {
+      this.IsLoading = false;
+    }
+  }
+
+  public fetchChainOfThoughts = async (): Promise<ChainOfThought[]> => {
+    const data = await d.ChainOfThoughtManagedBlob(this.chatId).get();
+    return migrateLoadedChainOfThoughts(data ?? []);
   };
 
   // ---- Public API ----
@@ -121,21 +134,38 @@ export class ChainOfThoughtService {
 
   // ---- Persistence ----
 
+  public async savePendingChanges(): Promise<void> {
+    await d.ChainOfThoughtManagedBlob(this.chatId).savePendingChanges();
+  }
+
   public savePlans = async (
     chainOfThoughts?: ChainOfThought[],
   ): Promise<void> => {
-    const data = chainOfThoughts ?? this.ChainOfThoughts;
-    await d.ChainOfThoughtManagedBlob(this.chatId).save(data);
+    this.IsLoading = true;
+
+    try {
+      const data = chainOfThoughts ?? this.ChainOfThoughts;
+      await d.ChainOfThoughtManagedBlob(this.chatId).save(data);
+
+      if (chainOfThoughts) {
+        this.ChainOfThoughts = chainOfThoughts;
+      }
+
+      this.notifySubscribers();
+    } finally {
+      this.IsLoading = false;
+    }
   };
 
-  public savePlansDebounced = (
+  public savePlansDebounced = async (
     chainOfThoughts?: ChainOfThought[],
-  ): void => {
+  ): Promise<void> => {
     const data = chainOfThoughts ?? this.ChainOfThoughts;
-    d.ChainOfThoughtManagedBlob(this.chatId).saveDebounced(data);
-  };
+    await d.ChainOfThoughtManagedBlob(this.chatId).saveDebounced(data);
 
-  public savePendingChanges = (): void => {
-    d.ChainOfThoughtManagedBlob(this.chatId).flushPendingSave();
+    if (chainOfThoughts) {
+      this.ChainOfThoughts = chainOfThoughts;
+      this.notifySubscribers();
+    }
   };
 }

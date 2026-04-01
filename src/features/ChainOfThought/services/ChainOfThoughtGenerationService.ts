@@ -2,7 +2,7 @@ import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
-import type { ChainOfThought, ChainOfThoughtStep } from "./ChainOfThought";
+import type { ChainOfThought } from "./ChainOfThought";
 
 export const getChainOfThoughtGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new ChainOfThoughtGenerationService(chatId),

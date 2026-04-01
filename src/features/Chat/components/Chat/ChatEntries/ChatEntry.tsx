@@ -5,10 +5,12 @@ import { CivitJobMessage } from "./CivitJobMessage";
 import { ChapterMessage } from "./ChapterMessage";
 import { StoryMessage } from "./StoryMessage";
 import { PlanMessage } from "./PlanMessage";
+import { ChainOfThoughtMessage } from "./ChainOfThoughtMessage";
 import type {
   ChapterChatMessage,
   CivitJobChatMessage,
   PlanChatMessage,
+  ChainOfThoughtChatMessage,
   StoryChatMessage,
   UserChatMessage,
 } from "../../../../../services/CQRS/UserChatProjection";
@@ -48,6 +50,12 @@ export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
 
   if (message.type === "plan") {
     return <PlanMessage chatId={chatId} message={message as PlanChatMessage} />;
+  }
+
+  if (message.type === "chainOfThought") {
+    return (
+      <ChainOfThoughtMessage message={message as ChainOfThoughtChatMessage} />
+    );
   }
 
   if (message.type === "user-message") {
