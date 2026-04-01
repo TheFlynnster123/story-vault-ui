@@ -21,19 +21,37 @@ const SpinningRefreshIcon = styled.span`
 
 interface ChainOfThoughtSectionProps {
   chatId: string;
-  chainOfThoughts: ChainOfThought[];
+  chainOfThought: ChainOfThought | null;
   onNavigate: () => void;
 }
 
 const buildChainOfThoughtDescription = (cot: ChainOfThought): string => {
   const enabledSteps = cot.steps.filter((step) => step.enabled).length;
+  const lastExecution = cot.lastExecution;
+
+  if (lastExecution) {
+    const executedDate = new Date(lastExecution.executedAt);
+    const now = new Date();
+    const diffMs = now.getTime() - executedDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return `${enabledSteps} steps • Just now`;
+    if (diffMins < 60) return `${enabledSteps} steps • ${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${enabledSteps} steps • ${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${enabledSteps} steps • ${diffDays}d ago`;
+  }
+
   return `${enabledSteps} step${enabledSteps !== 1 ? "s" : ""}`;
 };
 
 export const ChainOfThoughtSection: React.FC<
   ChainOfThoughtSectionProps
-> = ({ chatId, chainOfThoughts, onNavigate }) => {
+> = ({ chatId, chainOfThought, onNavigate }) => {
   const { isGenerating } = useChainOfThoughtGenerationStatus(chatId);
+
+  if (!chainOfThought) return null;
 
   return (
     <Box>
@@ -43,26 +61,16 @@ export const ChainOfThoughtSection: React.FC<
           <RiBrainLine size={18} color={Theme.chainOfThought.primary} />
         }
       >
-        <Group gap="xs">
-          <Text size="sm" fw={500}>
-            Chain of Thought
-          </Text>
-          <Text size="xs" c="dimmed">
-            ({chainOfThoughts.length})
-          </Text>
-        </Group>
+        <Text size="sm" fw={500}>
+          Chain of Thought
+        </Text>
       </FlowButton>
-      {chainOfThoughts.length > 0 && (
-        <Box pl="md" pt={4}>
-          {chainOfThoughts.map((cot) => (
-            <ChainOfThoughtStatusLine
-              key={cot.id}
-              cot={cot}
-              isGenerating={isGenerating(cot.id)}
-            />
-          ))}
-        </Box>
-      )}
+      <Box pl="md" pt={4}>
+        <ChainOfThoughtStatusLine
+          cot={chainOfThought}
+          isGenerating={isGenerating}
+        />
+      </Box>
     </Box>
   );
 };

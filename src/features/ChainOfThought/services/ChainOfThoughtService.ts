@@ -157,7 +157,9 @@ export class ChainOfThoughtService {
 
     try {
       const data = chainOfThought ?? this.ChainOfThought;
-      await d.ChainOfThoughtManagedBlob(this.chatId).save(data);
+      if (data) {
+        await d.ChainOfThoughtManagedBlob(this.chatId).save(data);
+      }
 
       if (chainOfThought) {
         this.ChainOfThought = chainOfThought;
@@ -173,7 +175,9 @@ export class ChainOfThoughtService {
     chainOfThought?: ChainOfThought,
   ): Promise<void> => {
     const data = chainOfThought ?? this.ChainOfThought;
-    await d.ChainOfThoughtManagedBlob(this.chatId).saveDebounced(data);
+    if (data) {
+      await d.ChainOfThoughtManagedBlob(this.chatId).saveDebounced(data);
+    }
 
     if (chainOfThought) {
       this.ChainOfThought = chainOfThought;
