@@ -11,6 +11,8 @@ import type {
   StoryEditedEvent,
   PlanCreatedEvent,
   PlanHiddenEvent,
+  ChainOfThoughtStepCreatedEvent,
+  ChainOfThoughtHiddenEvent,
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
@@ -140,6 +142,12 @@ export class UserChatProjection {
         break;
       case "PlanHidden":
         this.processPlanHidden(event);
+        break;
+      case "ChainOfThoughtStepCreated":
+        this.processChainOfThoughtStepCreated(event);
+        break;
+      case "ChainOfThoughtHidden":
+        this.processChainOfThoughtHidden(event);
         break;
     }
   }
@@ -315,6 +323,42 @@ export class UserChatProjection {
     });
   }
 
+  /**
+   * Adds a chain of thought step message to the chat timeline.
+   */
+  private processChainOfThoughtStepCreated(
+    event: ChainOfThoughtStepCreatedEvent,
+  ) {
+    this.Messages.push({
+      id: event.messageId,
+      type: "chainOfThought",
+      content: event.content,
+      data: {
+        chainOfThoughtId: event.chainOfThoughtId,
+        chainOfThoughtName: event.chainOfThoughtName,
+        stepIndex: event.stepIndex,
+        stepPrompt: event.stepPrompt,
+      },
+      hiddenByChapterId: undefined,
+      deleted: false,
+      hidden: false,
+    });
+  }
+
+  /**
+   * Hides all existing chain of thought messages for a given definition.
+   */
+  private processChainOfThoughtHidden(event: ChainOfThoughtHiddenEvent) {
+    this.Messages.forEach((m, index) => {
+      if (
+        m.type === "chainOfThought" &&
+        m.data?.chainOfThoughtId === event.chainOfThoughtId
+      ) {
+        this.Messages[index] = { ...m, hidden: true };
+      }
+    });
+  }
+
   private static HIDEABLE_TYPES: ReadonlySet<string> = new Set([
     "user-message",
     "system-message",
@@ -348,7 +392,8 @@ export interface UserChatMessage {
     | "assistant"
     | "civit-job"
     | "chapter"
-    | "plan";
+    | "plan"
+    | "chainOfThought";
 
   content?: string; // Text-based content of the message
 
@@ -390,6 +435,17 @@ export interface PlanChatMessage extends UserChatMessage {
   data: {
     planDefinitionId: string;
     planName: string;
+  };
+}
+
+export interface ChainOfThoughtChatMessage extends UserChatMessage {
+  type: "chainOfThought";
+  content: string;
+  data: {
+    chainOfThoughtId: string;
+    chainOfThoughtName: string;
+    stepIndex: number;
+    stepPrompt: string;
   };
 }
 
