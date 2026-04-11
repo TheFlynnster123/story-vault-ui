@@ -21,6 +21,21 @@ export const Theme = {
     backgroundSecondary: "rgba(126, 92, 0, 0.8)",
   },
 
+  /** Colors for book-related UI elements - Deep Green/Emerald theme */
+  book: {
+    /** Primary emerald color for books */
+    primary: "rgba(16, 185, 129, 1)",
+    /** Secondary darker emerald */
+    secondary: "rgba(5, 150, 105, 1)",
+    /** Border color for book elements */
+    border: "rgba(16, 185, 129, 0.5)",
+    /** Text color for book headers */
+    headerText: "rgba(255, 255, 255, 1)",
+    /** Transparent version for backgrounds */
+    backgroundPrimary: "rgba(16, 185, 129, 0.8)",
+    backgroundSecondary: "rgba(5, 150, 105, 0.8)",
+  },
+
   /** Colors for chat settings UI elements - Purple/Violet theme */
   chatSettings: {
     /** Primary purple color */

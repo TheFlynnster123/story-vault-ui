@@ -70,6 +70,20 @@ export class LLMMessageContextService {
     return this.assembleChapterTitleMessages(chatMessages, chapterTitlePrompt);
   }
 
+  async buildBookSummaryRequestMessages(
+    chapterSummaries: string[],
+  ): Promise<LLMMessage[]> {
+    const bookSummaryPrompt = await this.fetchBookSummaryPrompt();
+    return this.assembleBookSummaryMessages(chapterSummaries, bookSummaryPrompt);
+  }
+
+  async buildBookTitleRequestMessages(
+    chapterSummaries: string[],
+  ): Promise<LLMMessage[]> {
+    const bookTitlePrompt = await this.fetchBookTitlePrompt();
+    return this.assembleBookTitleMessages(chapterSummaries, bookTitlePrompt);
+  }
+
   buildMemoryMessages(memories: Memory[]): LLMMessage[] {
     const content = this.combineMemoryContent(memories);
     if (!content) return [];
@@ -107,6 +121,22 @@ export class LLMMessageContextService {
     );
   }
 
+  private async fetchBookSummaryPrompt(): Promise<string> {
+    const systemPrompts = await d.SystemPromptsService().Get();
+    return (
+      systemPrompts?.bookSummaryPrompt ||
+      DEFAULT_SYSTEM_PROMPTS.bookSummaryPrompt
+    );
+  }
+
+  private async fetchBookTitlePrompt(): Promise<string> {
+    const systemPrompts = await d.SystemPromptsService().Get();
+    return (
+      systemPrompts?.bookTitlePrompt ||
+      DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt
+    );
+  }
+
   // ---- Private: Message Assembly ----
 
   private assembleGenerationMessages(
@@ -138,6 +168,32 @@ export class LLMMessageContextService {
     chapterTitlePrompt: string,
   ): LLMMessage[] {
     return [...chatMessages, toSystemMessage(chapterTitlePrompt)];
+  }
+
+  private assembleBookSummaryMessages(
+    chapterSummaries: string[],
+    bookSummaryPrompt: string,
+  ): LLMMessage[] {
+    const summariesContent = chapterSummaries
+      .map((s, i) => `Chapter ${i + 1}:\n${s}`)
+      .join("\n\n");
+    return [
+      toSystemMessage(summariesContent),
+      toSystemMessage(bookSummaryPrompt),
+    ];
+  }
+
+  private assembleBookTitleMessages(
+    chapterSummaries: string[],
+    bookTitlePrompt: string,
+  ): LLMMessage[] {
+    const summariesContent = chapterSummaries
+      .map((s, i) => `Chapter ${i + 1}:\n${s}`)
+      .join("\n\n");
+    return [
+      toSystemMessage(summariesContent),
+      toSystemMessage(bookTitlePrompt),
+    ];
   }
 
   private appendFeedbackMessage(

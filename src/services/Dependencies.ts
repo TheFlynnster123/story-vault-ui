@@ -21,6 +21,7 @@ import { getChainOfThoughtGenerationServiceInstance } from "../features/ChainOfT
 import { getTextGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/TextGenerationService";
 import { getImageGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ImageGenerationService";
 import { getChapterGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ChapterGenerationService";
+import { getBookGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/BookGenerationService";
 import { getLLMMessageContextServiceInstance } from "../features/Chat/services/ChatGeneration/LLMMessageContextService";
 import { ImageGenerator } from "../features/Images/services/ImageGenerator";
 import { getChatImageModelServiceInstance } from "../features/Images/services/ChatImageModelService";
@@ -101,6 +102,9 @@ export class Dependencies {
   }
   ChapterGenerationService(chatId: string) {
     return getChapterGenerationServiceInstance(chatId);
+  }
+  BookGenerationService(chatId: string) {
+    return getBookGenerationServiceInstance(chatId);
   }
   PlanService(chatId: string) {
     return getPlanServiceInstance(chatId);

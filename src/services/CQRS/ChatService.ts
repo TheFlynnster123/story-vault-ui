@@ -6,6 +6,11 @@ import {
   ChapterEditedEventUtil,
   ChapterDeletedEventUtil,
 } from "./events/ChapterEventUtils";
+import {
+  BookCreatedEventUtil,
+  BookEditedEventUtil,
+  BookDeletedEventUtil,
+} from "./events/BookEventUtils";
 import { CivitJobCreatedEventUtil } from "./events/CivitJobCreatedEventUtil";
 import { MessagesDeletedEventUtil } from "./events/MessagesDeletedEventUtil";
 import { StoryCreatedEventUtil } from "./events/StoryCreatedEventUtil";
@@ -115,6 +120,30 @@ export class ChatService {
 
   public async DeleteChapter(chapterId: string): Promise<void> {
     const event = ChapterDeletedEventUtil.Create(chapterId);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  // ---- Book Operations ----
+  public async AddBook(
+    title: string,
+    summary: string,
+    coveredChapterIds: string[],
+  ): Promise<void> {
+    const event = BookCreatedEventUtil.Create(title, summary, coveredChapterIds);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  public async EditBook(
+    bookId: string,
+    title: string,
+    summary: string,
+  ): Promise<void> {
+    const event = BookEditedEventUtil.Create(bookId, title, summary);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  public async DeleteBook(bookId: string): Promise<void> {
+    const event = BookDeletedEventUtil.Create(bookId);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 

@@ -34,6 +34,16 @@ export interface SystemPrompts {
   chapterTitlePrompt: string;
   /** Model override for chapter title generation (empty = use default) */
   chapterTitleModel?: string;
+
+  /** Prompt for generating book summaries (summaries of multiple chapters) */
+  bookSummaryPrompt: string;
+  /** Model override for book summary generation (empty = use default) */
+  bookSummaryModel?: string;
+
+  /** Prompt for generating book titles */
+  bookTitlePrompt: string;
+  /** Model override for book title generation (empty = use default) */
+  bookTitleModel?: string;
 }
 
 export const DEFAULT_SYSTEM_PROMPTS: SystemPrompts = {
@@ -68,4 +78,10 @@ Example:
 
   chapterTitlePrompt:
     "Review the conversation above and generate a concise, engaging title for the current chapter. The title should capture the essence of what happened. Keep it short (3-7 words). Provide only the title without formatting or any preamble.",
+
+  bookSummaryPrompt:
+    "Review the chapter summaries above and generate a comprehensive summary that combines them into a single cohesive book summary. Focus on the overarching narrative arc, major character developments, and key plot points across all chapters. Keep the summary to 2-3 paragraphs. Provide your summary directly without formatting or a preamble.",
+
+  bookTitlePrompt:
+    "Review the chapter summaries above and generate a concise, engaging title for this collection of chapters as a book. The title should capture the overarching theme or narrative arc. Keep it short (3-7 words). Provide only the title without formatting or any preamble.",
 };
