@@ -6,6 +6,9 @@ export type ChatEvent =
   | ChapterCreatedEvent
   | ChapterEditedEvent
   | ChapterDeletedEvent
+  | BookCreatedEvent
+  | BookEditedEvent
+  | BookDeletedEvent
   | CivitJobCreatedEvent
   | StoryCreatedEvent
   | StoryEditedEvent
@@ -96,4 +99,29 @@ export interface PlanCreatedEvent {
 export interface PlanHiddenEvent {
   type: "PlanHidden";
   planDefinitionId: string;
+}
+
+/**
+ * Creates a book that summarizes a contiguous group of chapters.
+ * Books compress multiple chapters into a single summary,
+ * similar to how chapters compress individual messages.
+ */
+export interface BookCreatedEvent {
+  type: "BookCreated";
+  bookId: string;
+  title: string;
+  summary: string;
+  coveredChapterIds: string[];
+}
+
+export interface BookEditedEvent {
+  type: "BookEdited";
+  bookId: string;
+  title: string;
+  summary: string;
+}
+
+export interface BookDeletedEvent {
+  type: "BookDeleted";
+  bookId: string;
 }

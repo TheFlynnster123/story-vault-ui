@@ -17,6 +17,8 @@ export const useSystemPrompts = (): UseSystemPromptsResult => {
     defaultImagePrompt: "",
     chapterSummaryPrompt: "",
     chapterTitlePrompt: "",
+    bookSummaryPrompt: "",
+    bookTitlePrompt: "",
   });
   const [isLoading, setIsLoading] = useState(true);
 

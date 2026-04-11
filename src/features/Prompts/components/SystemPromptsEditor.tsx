@@ -201,6 +201,50 @@ export const SystemPromptsEditor: React.FC = () => {
         label="Chapter Title Model"
         withDescription={false}
       />
+
+      <PromptInput
+        id="bookSummaryPrompt"
+        label="Book Summary Prompt"
+        helpText="This prompt instructs the AI how to generate book summaries when compressing multiple chapters into a book."
+        value={localPrompts.bookSummaryPrompt || ""}
+        isHighlighted={highlightedPrompt === "bookSummaryPrompt"}
+        onChange={(value) =>
+          handlePromptChange({ bookSummaryPrompt: value })
+        }
+        onReset={() =>
+          handleResetClick("bookSummaryPrompt", "Book Summary Prompt")
+        }
+      />
+      <ModelSelect
+        value={localPrompts.bookSummaryModel || ""}
+        onChange={(value) =>
+          handlePromptChange({ bookSummaryModel: value || undefined })
+        }
+        label="Book Summary Model"
+        withDescription={false}
+      />
+
+      <PromptInput
+        id="bookTitlePrompt"
+        label="Book Title Prompt"
+        helpText="This prompt instructs the AI how to generate concise, engaging titles for books."
+        value={localPrompts.bookTitlePrompt || ""}
+        isHighlighted={highlightedPrompt === "bookTitlePrompt"}
+        onChange={(value) =>
+          handlePromptChange({ bookTitlePrompt: value })
+        }
+        onReset={() =>
+          handleResetClick("bookTitlePrompt", "Book Title Prompt")
+        }
+      />
+      <ModelSelect
+        value={localPrompts.bookTitleModel || ""}
+        onChange={(value) =>
+          handlePromptChange({ bookTitleModel: value || undefined })
+        }
+        label="Book Title Model"
+        withDescription={false}
+      />
     </Stack>
   );
 };

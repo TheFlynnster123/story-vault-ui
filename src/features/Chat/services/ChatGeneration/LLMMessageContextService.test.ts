@@ -377,6 +377,97 @@ describe("LLMMessageContextService", () => {
     });
   });
 
+  // ---- buildBookSummaryRequestMessages Tests ----
+  describe("buildBookSummaryRequestMessages", () => {
+    it("should include chapter summaries as system message", async () => {
+      const service = new LLMMessageContextService(testChatId);
+      const summaries = ["Chapter 1 summary", "Chapter 2 summary"];
+
+      const result = await service.buildBookSummaryRequestMessages(summaries);
+
+      // Should have summaries message + prompt message
+      expect(result).toHaveLength(2);
+      expect(result[0].content).toContain("Chapter 1:");
+      expect(result[0].content).toContain("Chapter 1 summary");
+      expect(result[0].content).toContain("Chapter 2:");
+      expect(result[0].content).toContain("Chapter 2 summary");
+    });
+
+    it("should include default book summary prompt as last message", async () => {
+      SystemPromptsService.Get.mockResolvedValue(undefined);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildBookSummaryRequestMessages([
+        "Summary 1",
+      ]);
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe(
+        DEFAULT_SYSTEM_PROMPTS.bookSummaryPrompt,
+      );
+    });
+
+    it("should use user-configured book summary prompt", async () => {
+      const customPrompt = "Custom book summary instructions";
+      SystemPromptsService.Get.mockResolvedValue({
+        ...DEFAULT_SYSTEM_PROMPTS,
+        bookSummaryPrompt: customPrompt,
+      });
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildBookSummaryRequestMessages([
+        "Summary 1",
+      ]);
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe(customPrompt);
+    });
+  });
+
+  // ---- buildBookTitleRequestMessages Tests ----
+  describe("buildBookTitleRequestMessages", () => {
+    it("should include chapter summaries as system message", async () => {
+      const service = new LLMMessageContextService(testChatId);
+      const summaries = ["Chapter 1 summary", "Chapter 2 summary"];
+
+      const result = await service.buildBookTitleRequestMessages(summaries);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].content).toContain("Chapter 1:");
+      expect(result[0].content).toContain("Chapter 2:");
+    });
+
+    it("should include default book title prompt as last message", async () => {
+      SystemPromptsService.Get.mockResolvedValue(undefined);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildBookTitleRequestMessages([
+        "Summary 1",
+      ]);
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe(
+        DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt,
+      );
+    });
+
+    it("should use user-configured book title prompt", async () => {
+      const customPrompt = "Custom book title instructions";
+      SystemPromptsService.Get.mockResolvedValue({
+        ...DEFAULT_SYSTEM_PROMPTS,
+        bookTitlePrompt: customPrompt,
+      });
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildBookTitleRequestMessages([
+        "Summary 1",
+      ]);
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe(customPrompt);
+    });
+  });
+
   // ---- Helper Functions ----
   function createDefaultChatSettings(): ChatSettings {
     return {

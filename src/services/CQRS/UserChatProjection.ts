@@ -7,6 +7,9 @@ import type {
   ChapterCreatedEvent,
   ChapterEditedEvent,
   ChapterDeletedEvent,
+  BookCreatedEvent,
+  BookEditedEvent,
+  BookDeletedEvent,
   StoryCreatedEvent,
   StoryEditedEvent,
   PlanCreatedEvent,
@@ -132,6 +135,15 @@ export class UserChatProjection {
       case "ChapterDeleted":
         this.processChapterDeleted(event);
         break;
+      case "BookCreated":
+        this.processBookCreated(event);
+        break;
+      case "BookEdited":
+        this.processBookEdited(event);
+        break;
+      case "BookDeleted":
+        this.processBookDeleted(event);
+        break;
       case "CivitJobCreated":
         this.processCivitJobCreated(event);
         break;
@@ -151,7 +163,8 @@ export class UserChatProjection {
 
   public GetMessages(): UserChatMessage[] {
     return this.Messages.filter(
-      (m) => !m.hiddenByChapterId && !m.deleted && !m.hidden,
+      (m) =>
+        !m.hiddenByChapterId && !m.hiddenByBookId && !m.deleted && !m.hidden,
     );
   }
 
@@ -164,6 +177,18 @@ export class UserChatProjection {
 
     return this.Messages.filter((m) =>
       chapter.data.coveredMessageIds!.includes(m.id),
+    );
+  }
+
+  public getBookChapters(bookId: string): UserChatMessage[] {
+    const book = this.Messages.find(
+      (m) => m.id === bookId && m.type === "book",
+    ) as BookChatMessage;
+
+    if (!book || !book.data.coveredChapterIds) return [];
+
+    return this.Messages.filter((m) =>
+      book.data.coveredChapterIds!.includes(m.id),
     );
   }
 
@@ -268,6 +293,69 @@ export class UserChatProjection {
 
     this.Messages[chapterIndex] = { ...chapter, deleted: true };
   }
+
+  private processBookCreated(event: BookCreatedEvent) {
+    event.coveredChapterIds.forEach((id) => {
+      const index = this.Messages.findIndex(
+        (m) => m.id === id && m.type === "chapter",
+      );
+      if (index !== -1) {
+        this.Messages[index] = {
+          ...this.Messages[index],
+          hiddenByBookId: event.bookId,
+        };
+      }
+    });
+
+    this.Messages.push({
+      id: event.bookId,
+      type: "book",
+      content: event.summary,
+      hiddenByChapterId: undefined,
+      hiddenByBookId: undefined,
+      deleted: false,
+      hidden: false,
+      data: {
+        title: event.title,
+        coveredChapterIds: [...event.coveredChapterIds],
+      },
+    });
+  }
+
+  private processBookEdited(event: BookEditedEvent) {
+    const index = this.Messages.findIndex(
+      (m) => m.id === event.bookId && m.type === "book",
+    );
+    if (index !== -1) {
+      const book = this.Messages[index] as BookChatMessage;
+      this.Messages[index] = {
+        ...book,
+        content: event.summary,
+        data: {
+          ...book.data,
+          title: event.title,
+        },
+      };
+    }
+  }
+
+  private processBookDeleted(event: BookDeletedEvent) {
+    const bookIndex = this.Messages.findIndex(
+      (m) => m.id === event.bookId && m.type === "book",
+    );
+    if (bookIndex === -1) return;
+
+    const book = this.Messages[bookIndex] as BookChatMessage;
+
+    if (book.data.coveredChapterIds) {
+      book.data.coveredChapterIds.forEach((id: string) => {
+        this.replaceMessage(id, { hiddenByBookId: undefined });
+      });
+    }
+
+    this.Messages[bookIndex] = { ...book, deleted: true };
+  }
+
   private processCivitJobCreated(event: { jobId: string; prompt: string }) {
     this.Messages.push({
       id: event.jobId,
@@ -348,6 +436,7 @@ export interface UserChatMessage {
     | "assistant"
     | "civit-job"
     | "chapter"
+    | "book"
     | "plan"
     | "chainOfThought";
 
@@ -356,6 +445,10 @@ export interface UserChatMessage {
   data?: any; // Data specific to message type
 
   hiddenByChapterId: string | undefined;
+
+  /** When set, the message is hidden because it's covered by a book */
+  hiddenByBookId?: string | undefined;
+
   deleted: boolean;
 
   /**
@@ -391,6 +484,15 @@ export interface PlanChatMessage extends UserChatMessage {
   data: {
     planDefinitionId: string;
     planName: string;
+  };
+}
+
+export interface BookChatMessage extends UserChatMessage {
+  type: "book";
+  content: string;
+  data: {
+    title: string;
+    coveredChapterIds: string[];
   };
 }
 

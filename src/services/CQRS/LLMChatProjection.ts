@@ -7,6 +7,9 @@ import type {
   ChapterCreatedEvent,
   ChapterEditedEvent,
   ChapterDeletedEvent,
+  BookCreatedEvent,
+  BookEditedEvent,
+  BookDeletedEvent,
   StoryCreatedEvent,
   StoryEditedEvent,
   PlanCreatedEvent,
@@ -80,6 +83,15 @@ export class LLMChatProjection {
         break;
       case "ChapterDeleted":
         this.processChapterDeleted(event);
+        break;
+      case "BookCreated":
+        this.processBookCreated(event);
+        break;
+      case "BookEdited":
+        this.processBookEdited(event);
+        break;
+      case "BookDeleted":
+        this.processBookDeleted(event);
         break;
       case "CivitJobCreated":
         break;
@@ -260,6 +272,57 @@ export class LLMChatProjection {
   }
 
   /**
+   * Creates a book that summarizes contiguous chapters.
+   * Hides covered chapters and adds a book summary to the LLM context.
+   */
+  processBookCreated(event: BookCreatedEvent) {
+    event.coveredChapterIds.forEach((id) => {
+      const msg = this.getMessage(id);
+      if (msg && msg.type === "chapter") msg.hiddenByBookId = event.bookId;
+    });
+
+    const bookContent = this.formatBookContent(event.title, event.summary);
+    const bookMessage = this.createMessageState(
+      event.bookId,
+      "book",
+      "system",
+      bookContent,
+    );
+    bookMessage.data = {
+      title: event.title,
+      summary: event.summary,
+    };
+    this.messages.push(bookMessage);
+  }
+
+  processBookEdited(event: BookEditedEvent) {
+    const book = this.getMessage(event.bookId);
+    if (!book) return;
+
+    book.data = {
+      ...book.data,
+      title: event.title,
+      summary: event.summary,
+    };
+    book.content = this.formatBookContent(event.title, event.summary);
+  }
+
+  processBookDeleted(event: BookDeletedEvent) {
+    const book = this.getMessage(event.bookId);
+    if (!book) return;
+
+    this.messages
+      .filter(
+        (m) => m.type === "chapter" && m.hiddenByBookId === event.bookId,
+      )
+      .forEach((m) => {
+        m.hiddenByBookId = null;
+      });
+
+    book.deleted = true;
+  }
+
+  /**
    * Adds a plan message to the LLM context with formatted markers.
    * Format: [Plan: Name]\n{content}\n[End of Plan]
    * This ensures the LLM recognizes plan content as distinct from conversation.
@@ -303,6 +366,9 @@ export class LLMChatProjection {
   formatPlanContent = (planName: string, content: string): string =>
     `[Plan: ${planName}]\n${content}\n[End of Plan]`;
 
+  formatBookContent = (title: string, summary: string): string =>
+    `[Book Summary: ${title}]\n${summary}\n[End of Book Summary]`;
+
   // ---- Helpers ----
   formatStoryContent = (content: string): string => `# Story\r\n${content}`;
 
@@ -329,7 +395,7 @@ export class LLMChatProjection {
 
   getVisibleMessages = (): MessageState[] =>
     this.messages.filter(
-      (m) => !m.hiddenByChapterId && !m.deleted && !m.hidden,
+      (m) => !m.hiddenByChapterId && !m.hiddenByBookId && !m.deleted && !m.hidden,
     );
 
   getVisibleMessagesWithBufferBeforeLastChapter(
@@ -470,7 +536,7 @@ export class LLMChatProjection {
 
   createMessageState(
     id: string,
-    type: "message" | "chapter" | "plan",
+    type: "message" | "chapter" | "book" | "plan",
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[],
@@ -481,6 +547,7 @@ export class LLMChatProjection {
       role,
       content,
       hiddenByChapterId: null,
+      hiddenByBookId: null,
       deleted: false,
       hidden: false,
       coveredMessageIds,
@@ -491,10 +558,12 @@ export class LLMChatProjection {
 // ---- Types ----
 interface MessageState {
   id: string;
-  type: "message" | "chapter" | "plan";
+  type: "message" | "chapter" | "book" | "plan";
   role: "user" | "assistant" | "system";
   content: string;
   hiddenByChapterId: string | null;
+  /** When set, the chapter is hidden because it's covered by a book */
+  hiddenByBookId?: string | null;
   deleted: boolean;
   /**
    * When true, the message is excluded from LLM context.
@@ -504,7 +573,7 @@ interface MessageState {
    */
   hidden: boolean;
   coveredMessageIds?: string[] | null;
-  // Store chapter/plan/chain-of-thought metadata
+  // Store chapter/plan/chain-of-thought/book metadata
   data?: {
     title?: string;
     summary?: string;
