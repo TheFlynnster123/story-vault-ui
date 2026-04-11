@@ -3,6 +3,7 @@ import { Accordion, Stack, Box } from "@mantine/core";
 import { useNavigate } from "react-router-dom";
 import { FlowStyles } from "./FlowStyles";
 import { ChapterSection } from "./ChapterSection";
+import { BookSection } from "./BookSection";
 import { ChatSettingsButton } from "./ChatSettingsButton";
 import { ChatImageModelsSection } from "./ChatImageModelsSection";
 import { usePlanCache } from "../../../../Plans/hooks/usePlanCache";
@@ -43,6 +44,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
           <Accordion.Panel>
             <Stack gap="xs" p="md">
               <ChapterSection chatId={chatId} />
+              <BookSection chatId={chatId} />
               <ChatSettingsButton onClick={navigateToChatSettings} />
               <PlanSection
                 chatId={chatId}
