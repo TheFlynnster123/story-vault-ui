@@ -453,8 +453,7 @@ export interface UserChatMessage {
     | "civit-job"
     | "chapter"
     | "book"
-    | "plan"
-    | "chainOfThought";
+    | "plan";
 
   content?: string; // Text-based content of the message
 

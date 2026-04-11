@@ -66,20 +66,6 @@ export const Theme = {
     backgroundSecondary: "rgba(0, 131, 143, 0.8)",
   },
 
-  /** Colors for chain of thought UI elements - Indigo/Blue theme */
-  chainOfThought: {
-    /** Primary indigo color */
-    primary: "rgba(63, 81, 181, 1)",
-    /** Secondary darker indigo */
-    secondary: "rgba(48, 63, 159, 1)",
-    /** Border color for chain of thought elements */
-    border: "rgba(63, 81, 181, 0.5)",
-    /** Text color for headers */
-    headerText: "rgba(255, 255, 255, 1)",
-    /** Transparent version for backgrounds */
-    backgroundPrimary: "rgba(63, 81, 181, 0.8)",
-    backgroundSecondary: "rgba(48, 63, 159, 0.8)",
-  },
 
   /** Colors for memories UI elements - Rose/Pink theme */
   memories: {

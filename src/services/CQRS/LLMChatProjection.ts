@@ -585,11 +585,10 @@ interface MessageState {
    * When true, the message is excluded from LLM context.
    * Used by plan messages: prior plan instances are hidden
    * when a new plan is generated for the same definition.
-   * Chain of thought messages are always hidden from LLM context.
    */
   hidden: boolean;
   coveredMessageIds?: string[] | null;
-  // Store chapter/plan/chain-of-thought/book metadata
+  // Store chapter/plan/book metadata
   data?: {
     title?: string;
     summary?: string;
@@ -597,10 +596,6 @@ interface MessageState {
     planDefinitionId?: string;
     planName?: string;
     rawContent?: string;
-    chainOfThoughtId?: string;
-    chainOfThoughtName?: string;
-    stepIndex?: number;
-    stepPrompt?: string;
   };
 }
 
