@@ -9,6 +9,7 @@ import {
   Checkbox,
 } from "@mantine/core";
 import type { ChapterChatMessage } from "../../../../../services/CQRS/UserChatProjection";
+import { areChapterIdsContiguous } from "./areChapterIdsContiguous";
 
 interface CreateBookModalProps {
   opened: boolean;
@@ -150,20 +151,4 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
   );
 };
 
-function areChapterIdsContiguous(
-  allChapters: ChapterChatMessage[],
-  selectedIds: string[],
-): boolean {
-  if (selectedIds.length <= 1) return true;
 
-  const indices = selectedIds
-    .map((id) => allChapters.findIndex((ch) => ch.id === id))
-    .filter((idx) => idx !== -1)
-    .sort((a, b) => a - b);
-
-  for (let i = 1; i < indices.length; i++) {
-    if (indices[i] !== indices[i - 1] + 1) return false;
-  }
-
-  return true;
-}

@@ -273,9 +273,14 @@ export class LLMChatProjection {
 
   /**
    * Creates a book that summarizes contiguous chapters.
-   * Hides covered chapters and adds a book summary to the LLM context.
+   * Hides covered chapters and inserts the book summary at the position
+   * of the first covered chapter so the history reads chronologically.
    */
   processBookCreated(event: BookCreatedEvent) {
+    const firstChapterIndex = this.findFirstCoveredChapterIndex(
+      event.coveredChapterIds,
+    );
+
     event.coveredChapterIds.forEach((id) => {
       const msg = this.getMessage(id);
       if (msg && msg.type === "chapter") msg.hiddenByBookId = event.bookId;
@@ -292,7 +297,18 @@ export class LLMChatProjection {
       title: event.title,
       summary: event.summary,
     };
-    this.messages.push(bookMessage);
+
+    if (firstChapterIndex !== -1) {
+      this.messages.splice(firstChapterIndex, 0, bookMessage);
+    } else {
+      this.messages.push(bookMessage);
+    }
+  }
+
+  private findFirstCoveredChapterIndex(coveredChapterIds: string[]): number {
+    return this.messages.findIndex(
+      (m) => coveredChapterIds.includes(m.id) && m.type === "chapter",
+    );
   }
 
   processBookEdited(event: BookEditedEvent) {
