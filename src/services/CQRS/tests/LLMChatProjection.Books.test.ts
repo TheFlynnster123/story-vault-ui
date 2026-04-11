@@ -231,6 +231,124 @@ describe("LLMChatProjection - Book Operations", () => {
     });
   });
 
+  // ---- Book Chronological Insertion Tests ----
+  describe("Book Chronological Insertion", () => {
+    it("should insert book at the position of its first covered chapter", () => {
+      createMessage(projection, "msg-1", "user", "Hello");
+      createMessage(projection, "msg-2", "assistant", "World");
+      createChapter(projection, "ch-1", "Chapter 1", "Summary 1", [
+        "msg-1",
+        "msg-2",
+      ]);
+      createMessage(projection, "msg-3", "user", "More");
+      createMessage(projection, "msg-4", "assistant", "Content");
+      createChapter(projection, "ch-2", "Chapter 2", "Summary 2", [
+        "msg-3",
+        "msg-4",
+      ]);
+      createMessage(projection, "msg-5", "user", "After chapters");
+
+      createBook(projection, "book-1", "Book One", "Book summary", [
+        "ch-1",
+        "ch-2",
+      ]);
+
+      const messages = projection.GetMessages();
+
+      // Book should appear before msg-5
+      const bookIndex = messages.findIndex((m) => m.id === "book-1");
+      const msg5Index = messages.findIndex((m) => m.id === "msg-5");
+
+      expect(bookIndex).toBeLessThan(msg5Index);
+    });
+
+    it("should preserve chronological order when book covers early chapters", () => {
+      createMessage(projection, "msg-1", "user", "Hello");
+      createChapter(projection, "ch-1", "Chapter 1", "Summary 1", ["msg-1"]);
+      createMessage(projection, "msg-2", "user", "More");
+      createChapter(projection, "ch-2", "Chapter 2", "Summary 2", ["msg-2"]);
+      createMessage(projection, "msg-3", "user", "Even more");
+      createChapter(projection, "ch-3", "Chapter 3", "Summary 3", ["msg-3"]);
+
+      // Compress ch-1 and ch-2 into a book
+      createBook(projection, "book-1", "Book One", "Book summary", [
+        "ch-1",
+        "ch-2",
+      ]);
+
+      const messages = projection.GetMessages();
+
+      // Expected order: book-1, ch-3
+      const bookMsg = messages.find((m) => m.id === "book-1");
+      const ch3Msg = messages.find((m) =>
+        m.content?.includes("Chapter 3"),
+      );
+
+      expect(bookMsg).toBeDefined();
+      expect(ch3Msg).toBeDefined();
+
+      const bookIdx = messages.indexOf(bookMsg!);
+      const ch3Idx = messages.indexOf(ch3Msg!);
+      expect(bookIdx).toBeLessThan(ch3Idx);
+    });
+
+    it("should maintain correct order with multiple books", () => {
+      createMessage(projection, "msg-1", "user", "Hello");
+      createChapter(projection, "ch-1", "Chapter 1", "S1", ["msg-1"]);
+      createMessage(projection, "msg-2", "user", "More");
+      createChapter(projection, "ch-2", "Chapter 2", "S2", ["msg-2"]);
+      createMessage(projection, "msg-3", "user", "Even more");
+      createChapter(projection, "ch-3", "Chapter 3", "S3", ["msg-3"]);
+      createMessage(projection, "msg-4", "user", "Final");
+      createChapter(projection, "ch-4", "Chapter 4", "S4", ["msg-4"]);
+
+      createBook(projection, "book-1", "Book 1", "BS1", ["ch-1", "ch-2"]);
+      createBook(projection, "book-2", "Book 2", "BS2", ["ch-3", "ch-4"]);
+
+      const messages = projection.GetMessages();
+      const bookMessages = messages.filter((m) =>
+        m.content?.includes("[Book Summary:"),
+      );
+
+      expect(bookMessages).toHaveLength(2);
+      expect(bookMessages[0].content).toContain("Book 1");
+      expect(bookMessages[1].content).toContain("Book 2");
+    });
+
+    it("should insert book at end when no covered chapters found", () => {
+      createMessage(projection, "msg-1", "user", "Hello");
+
+      createBook(projection, "book-1", "Empty Book", "Summary", []);
+
+      const messages = projection.GetMessages();
+      const lastMsg = messages[messages.length - 1];
+      expect(lastMsg.id).toBe("book-1");
+    });
+
+    it("should place book before later uncovered chapters and messages", () => {
+      createMessage(projection, "msg-1", "user", "Hello");
+      createChapter(projection, "ch-1", "Chapter 1", "S1", ["msg-1"]);
+      createMessage(projection, "msg-2", "user", "More");
+      createChapter(projection, "ch-2", "Chapter 2", "S2", ["msg-2"]);
+      createMessage(projection, "msg-3", "user", "After");
+
+      // Only compress ch-1
+      createBook(projection, "book-1", "Book One", "Book summary", ["ch-1"]);
+
+      const messages = projection.GetMessages();
+
+      // Book should come before ch-2 and msg-3
+      const bookIdx = messages.findIndex((m) => m.id === "book-1");
+      const ch2Idx = messages.findIndex((m) =>
+        m.content?.includes("Chapter 2"),
+      );
+      const msg3Idx = messages.findIndex((m) => m.id === "msg-3");
+
+      expect(bookIdx).toBeLessThan(ch2Idx);
+      expect(bookIdx).toBeLessThan(msg3Idx);
+    });
+  });
+
   // ---- Complex Scenarios ----
   describe("Complex Book Scenarios", () => {
     it("should handle book creation → edit → delete workflow", () => {

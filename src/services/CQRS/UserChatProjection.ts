@@ -295,6 +295,10 @@ export class UserChatProjection {
   }
 
   private processBookCreated(event: BookCreatedEvent) {
+    const firstChapterIndex = this.findFirstCoveredChapterIndex(
+      event.coveredChapterIds,
+    );
+
     event.coveredChapterIds.forEach((id) => {
       const index = this.Messages.findIndex(
         (m) => m.id === id && m.type === "chapter",
@@ -307,7 +311,7 @@ export class UserChatProjection {
       }
     });
 
-    this.Messages.push({
+    const bookMessage: BookChatMessage = {
       id: event.bookId,
       type: "book",
       content: event.summary,
@@ -319,7 +323,19 @@ export class UserChatProjection {
         title: event.title,
         coveredChapterIds: [...event.coveredChapterIds],
       },
-    });
+    };
+
+    if (firstChapterIndex !== -1) {
+      this.Messages.splice(firstChapterIndex, 0, bookMessage);
+    } else {
+      this.Messages.push(bookMessage);
+    }
+  }
+
+  private findFirstCoveredChapterIndex(coveredChapterIds: string[]): number {
+    return this.Messages.findIndex(
+      (m) => coveredChapterIds.includes(m.id) && m.type === "chapter",
+    );
   }
 
   private processBookEdited(event: BookEditedEvent) {
