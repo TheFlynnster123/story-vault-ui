@@ -4,7 +4,6 @@ import { getChatImageModelsManagedBlobInstance } from "../features/Images/servic
 import { getImageModelsManagedBlobInstance } from "../features/Images/services/ImageModelsManagedBlob";
 import { getMemoriesManagedBlobInstance } from "../features/Memories/services/MemoriesManagedBlob";
 import { getPlansManagedBlobInstance } from "../features/Plans/services/PlansManagedBlob";
-import { getChainOfThoughtManagedBlobInstance } from "../features/ChainOfThought/services/ChainOfThoughtManagedBlob";
 import { getRecentChatsManagedBlobInstance } from "../features/Chat/services/Chat/RecentChatsManagedBlob";
 import { getSystemSettingsManagedBlobInstance } from "../features/SystemSettings/services/SystemSettingsManagedBlob";
 import { getSystemPromptsManagedBlobInstance } from "../features/Prompts/services/SystemPromptsManagedBlob";
@@ -16,8 +15,6 @@ import { getChatSettingsServiceInstance } from "../features/Chat/services/Chat/C
 import { OpenRouterChatAPI } from "../features/OpenRouter/services/OpenRouterChatAPI";
 import { getPlanServiceInstance } from "../features/Plans/services/PlanService";
 import { getPlanGenerationServiceInstance } from "../features/Plans/services/PlanGenerationService";
-import { getChainOfThoughtServiceInstance } from "../features/ChainOfThought/services/ChainOfThoughtService";
-import { getChainOfThoughtGenerationServiceInstance } from "../features/ChainOfThought/services/ChainOfThoughtGenerationService";
 import { getTextGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/TextGenerationService";
 import { getImageGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ImageGenerationService";
 import { getChapterGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ChapterGenerationService";
@@ -112,12 +109,6 @@ export class Dependencies {
   PlanGenerationService(chatId: string) {
     return getPlanGenerationServiceInstance(chatId);
   }
-  ChainOfThoughtService(chatId: string) {
-    return getChainOfThoughtServiceInstance(chatId);
-  }
-  ChainOfThoughtGenerationService(chatId: string) {
-    return getChainOfThoughtGenerationServiceInstance(chatId);
-  }
   LLMMessageContextService(chatId: string) {
     return getLLMMessageContextServiceInstance(chatId);
   }
@@ -159,9 +150,6 @@ export class Dependencies {
     return getPlansManagedBlobInstance(chatId);
   }
 
-  ChainOfThoughtManagedBlob(chatId: string) {
-    return getChainOfThoughtManagedBlobInstance(chatId);
-  }
 
   RecentChatsManagedBlob() {
     return getRecentChatsManagedBlobInstance();
