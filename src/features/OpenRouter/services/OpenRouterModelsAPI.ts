@@ -1,4 +1,5 @@
-const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
+const OPENROUTER_MODELS_URL =
+  "https://openrouter.ai/api/v1/models?output_modalities=text";
 
 export interface OpenRouterModel {
   id: string;
@@ -15,9 +16,6 @@ interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 
-const isTextModel = (model: OpenRouterModel): boolean =>
-  !model.id.includes("vision") || model.id.includes("chat");
-
 export class OpenRouterModelsAPI {
   async getModels(): Promise<OpenRouterModel[]> {
     const response = await fetch(OPENROUTER_MODELS_URL);
@@ -30,6 +28,6 @@ export class OpenRouterModelsAPI {
 
     const json: OpenRouterModelsResponse = await response.json();
 
-    return json.data.filter(isTextModel);
+    return json.data;
   }
 }

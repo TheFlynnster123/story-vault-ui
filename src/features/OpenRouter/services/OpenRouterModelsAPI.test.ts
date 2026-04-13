@@ -53,30 +53,8 @@ describe("OpenRouterModelsAPI", () => {
       await api.getModels();
 
       expect(fetchSpy).toHaveBeenCalledWith(
-        "https://openrouter.ai/api/v1/models",
+        "https://openrouter.ai/api/v1/models?output_modalities=text",
       );
-    });
-
-    it("should filter out vision-only models", async () => {
-      const responseData = {
-        data: [
-          { id: "openai/gpt-4", name: "GPT-4" },
-          { id: "openai/gpt-4-vision", name: "GPT-4 Vision" },
-          { id: "openai/gpt-4-chat", name: "GPT-4 Chat" },
-        ],
-      };
-
-      vi.spyOn(global, "fetch").mockResolvedValue(
-        new Response(JSON.stringify(responseData), { status: 200 }),
-      );
-
-      const models = await api.getModels();
-
-      expect(models).toHaveLength(2);
-      expect(models.map((m) => m.id)).toEqual([
-        "openai/gpt-4",
-        "openai/gpt-4-chat",
-      ]);
     });
   });
 });

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { Loader, Select, Stack, Text } from "@mantine/core";
 import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
 import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
@@ -107,20 +107,29 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
   withDescription = true,
 }) => {
   const { models, isLoading } = useOpenRouterModels();
-  const recentModelsService = d.RecentModelsService();
-  const recentIds = recentModelsService.getRecentModels();
+  const recentModelsService = useRef(d.RecentModelsService()).current;
+
+  const recentIds = useMemo(
+    () => recentModelsService.getRecentModels(),
+    // Re-read recent models when the fetched model list changes (i.e., once on load)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [models],
+  );
 
   const selectData = useMemo(
     () => buildSelectData(models, recentIds),
     [models, recentIds],
   );
 
-  const handleChange = (newValue: string | null) => {
-    if (newValue) {
-      recentModelsService.trackModel(newValue);
-    }
-    onChange(newValue);
-  };
+  const handleChange = useCallback(
+    (newValue: string | null) => {
+      if (newValue) {
+        recentModelsService.trackModel(newValue);
+      }
+      onChange(newValue);
+    },
+    [recentModelsService, onChange],
+  );
 
   return (
     <Stack gap="xs">
