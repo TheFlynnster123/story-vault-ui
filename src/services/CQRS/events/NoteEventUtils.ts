@@ -13,7 +13,7 @@ export class NoteCreatedEventUtil {
     };
   }
 
-  static generateNoteId(): string {
+  private static generateNoteId(): string {
     return `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   }
 }

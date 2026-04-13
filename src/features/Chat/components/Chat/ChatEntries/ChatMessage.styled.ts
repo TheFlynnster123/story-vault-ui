@@ -240,7 +240,7 @@ export const NoteMessageText = styled.div<{ $expired?: boolean }>`
           Theme.chatEntry.transparency,
         )
       : applyTransparency(
-          "rgba(204, 78, 66, 0.8)",
+          Theme.note.backgroundSecondary,
           Theme.chatEntry.transparency,
         )};
   color: ${Theme.messages.assistant.text};
