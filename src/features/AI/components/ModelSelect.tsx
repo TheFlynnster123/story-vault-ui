@@ -47,8 +47,10 @@ const buildRecentGroup = (
 
 const buildRecommendedGroup = (
   modelsById: Map<string, OpenRouterModel>,
+  excludeIds: Set<string>,
 ): SelectGroup | null => {
   const items = [...REDDIT_RECOMMENDED_IDS]
+    .filter((id) => !excludeIds.has(id))
     .map((id) => modelsById.get(id))
     .filter((m): m is OpenRouterModel => m !== undefined)
     .map(toSelectItem);
@@ -70,25 +72,36 @@ const buildAllModelsGroup = (
   return { group: "All Models", items };
 };
 
+const deduplicateModels = (models: OpenRouterModel[]): OpenRouterModel[] => {
+  const seen = new Set<string>();
+  return models.filter((m) => {
+    if (!m.id || !m.name || seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
+};
+
 const buildSelectData = (
   models: OpenRouterModel[],
   recentIds: string[],
 ): SelectData => {
-  const modelsById = new Map(models.map((m) => [m.id, m]));
+  const uniqueModels = deduplicateModels(models);
+  const modelsById = new Map(uniqueModels.map((m) => [m.id, m]));
 
   const recentGroup = buildRecentGroup(recentIds, modelsById);
-  const recommendedGroup = buildRecommendedGroup(modelsById);
+  const recentIdSet = new Set(recentIds);
+  const recommendedGroup = buildRecommendedGroup(modelsById, recentIdSet);
 
   const promotedIds = new Set([
     ...recentIds,
     ...REDDIT_RECOMMENDED_IDS,
   ]);
-  const allModelsGroup = buildAllModelsGroup(models, promotedIds);
+  const allModelsGroup = buildAllModelsGroup(uniqueModels, promotedIds);
 
   const groups: SelectData = [{ value: "", label: "Default" }];
   if (recentGroup) groups.push(recentGroup);
   if (recommendedGroup) groups.push(recommendedGroup);
-  groups.push(allModelsGroup);
+  if (allModelsGroup.items.length > 0) groups.push(allModelsGroup);
 
   return groups;
 };
