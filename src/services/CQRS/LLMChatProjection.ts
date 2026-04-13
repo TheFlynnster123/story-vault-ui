@@ -14,6 +14,8 @@ import type {
   StoryEditedEvent,
   PlanCreatedEvent,
   PlanHiddenEvent,
+  NoteCreatedEvent,
+  NoteEditedEvent,
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
@@ -101,21 +103,32 @@ export class LLMChatProjection {
       case "PlanHidden":
         this.processPlanHidden(event);
         break;
+      case "NoteCreated":
+        this.processNoteCreated(event);
+        break;
+      case "NoteEdited":
+        this.processNoteEdited(event);
+        break;
     }
   }
 
   // ---- LLM Message Retrieval ----
   public GetMessages(): LLMMessage[] {
     const lastChapter = this.getLastChapter();
-    if (!lastChapter) return this.getVisibleMessages();
-
-    const messagesSinceChapter = this.getMessagesSinceChapter(lastChapter);
-
-    if (!this.shouldIncludePreviousChapterBuffer(messagesSinceChapter)) {
-      return this.getVisibleMessagesWithBufferBeforeLastChapter(lastChapter);
+    let messages: MessageState[];
+    if (!lastChapter) {
+      messages = this.getVisibleMessages();
+    } else {
+      const messagesSinceChapter = this.getMessagesSinceChapter(lastChapter);
+      if (!this.shouldIncludePreviousChapterBuffer(messagesSinceChapter)) {
+        messages =
+          this.getVisibleMessagesWithBufferBeforeLastChapter(lastChapter);
+      } else {
+        messages = this.getVisibleMessages();
+      }
     }
 
-    return this.getVisibleMessages();
+    return this.excludeExpiredNotes(messages);
   }
 
   /**
@@ -379,6 +392,44 @@ export class LLMChatProjection {
       });
   }
 
+  /**
+   * Adds a note message to the LLM context with formatted markers.
+   * Format: [Note]\n{content}\n[End of Note]
+   * Notes relay persistent user feedback to the LLM.
+   */
+  processNoteCreated(event: NoteCreatedEvent) {
+    const formattedContent = this.formatNoteContent(event.content);
+    const noteMessage = this.createMessageState(
+      event.noteId,
+      "note",
+      "system",
+      formattedContent,
+    );
+    noteMessage.data = {
+      expiresAfterMessages: event.expiresAfterMessages,
+      rawContent: event.content,
+    };
+    this.messages.push(noteMessage);
+  }
+
+  /**
+   * Edits an existing note's content and/or expiration in the LLM context.
+   */
+  processNoteEdited(event: NoteEditedEvent) {
+    const note = this.getMessage(event.noteId);
+    if (!note) return;
+
+    note.data = {
+      ...note.data,
+      expiresAfterMessages: event.expiresAfterMessages,
+      rawContent: event.content,
+    };
+    note.content = this.formatNoteContent(event.content);
+  }
+
+  formatNoteContent = (content: string): string =>
+    `[Note]\n${content}\n[End of Note]`;
+
   formatPlanContent = (planName: string, content: string): string =>
     `[Plan: ${planName}]\n${content}\n[End of Plan]`;
 
@@ -387,6 +438,32 @@ export class LLMChatProjection {
 
   // ---- Helpers ----
   formatStoryContent = (content: string): string => `# Story\r\n${content}`;
+
+  /** Message types that count toward note expiration */
+  private static NOTE_EXPIRATION_TYPES: ReadonlySet<string> = new Set([
+    "message",
+  ]);
+
+  /**
+   * Filters out expired notes from the message list.
+   * A note is expired when the number of qualifying messages after it
+   * meets or exceeds its expiresAfterMessages threshold.
+   */
+  private excludeExpiredNotes(messages: MessageState[]): MessageState[] {
+    return messages.filter((msg) => {
+      if (msg.type !== "note") return true;
+      if (msg.data?.expiresAfterMessages === null || msg.data?.expiresAfterMessages === undefined) return true;
+
+      const noteIndex = messages.indexOf(msg);
+      let count = 0;
+      for (let i = noteIndex + 1; i < messages.length; i++) {
+        if (LLMChatProjection.NOTE_EXPIRATION_TYPES.has(messages[i].type)) {
+          count++;
+        }
+      }
+      return count < msg.data.expiresAfterMessages;
+    });
+  }
 
   getMessagesSinceChapter = (lastChapter: MessageState) =>
     this.getVisibleMessages().filter(
@@ -552,7 +629,7 @@ export class LLMChatProjection {
 
   createMessageState(
     id: string,
-    type: "message" | "chapter" | "book" | "plan",
+    type: "message" | "chapter" | "book" | "plan" | "note",
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[],
@@ -574,7 +651,7 @@ export class LLMChatProjection {
 // ---- Types ----
 interface MessageState {
   id: string;
-  type: "message" | "chapter" | "book" | "plan";
+  type: "message" | "chapter" | "book" | "plan" | "note";
   role: "user" | "assistant" | "system";
   content: string;
   hiddenByChapterId: string | null;
@@ -588,7 +665,7 @@ interface MessageState {
    */
   hidden: boolean;
   coveredMessageIds?: string[] | null;
-  // Store chapter/plan/book metadata
+  // Store chapter/plan/book/note metadata
   data?: {
     title?: string;
     summary?: string;
@@ -596,6 +673,7 @@ interface MessageState {
     planDefinitionId?: string;
     planName?: string;
     rawContent?: string;
+    expiresAfterMessages?: number | null;
   };
 }
 

@@ -14,6 +14,8 @@ import type {
   StoryEditedEvent,
   PlanCreatedEvent,
   PlanHiddenEvent,
+  NoteCreatedEvent,
+  NoteEditedEvent,
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
@@ -153,6 +155,12 @@ export class UserChatProjection {
       case "PlanHidden":
         this.processPlanHidden(event);
         break;
+      case "NoteCreated":
+        this.processNoteCreated(event);
+        break;
+      case "NoteEdited":
+        this.processNoteEdited(event);
+        break;
     }
   }
 
@@ -162,10 +170,12 @@ export class UserChatProjection {
   }
 
   public GetMessages(): UserChatMessage[] {
-    return this.Messages.filter(
+    const visible = this.Messages.filter(
       (m) =>
         !m.hiddenByChapterId && !m.hiddenByBookId && !m.deleted && !m.hidden,
     );
+
+    return this.computeNoteExpiration(visible);
   }
 
   public getChapterMessages(chapterId: string): UserChatMessage[] {
@@ -419,6 +429,45 @@ export class UserChatProjection {
     });
   }
 
+  /**
+   * Adds a note message to the chat timeline.
+   * Notes relay persistent feedback to the LLM and appear inline.
+   */
+  private processNoteCreated(event: NoteCreatedEvent) {
+    this.Messages.push({
+      id: event.noteId,
+      type: "note",
+      content: event.content,
+      data: {
+        expiresAfterMessages: event.expiresAfterMessages,
+        expired: false,
+      },
+      hiddenByChapterId: undefined,
+      deleted: false,
+      hidden: false,
+    });
+  }
+
+  /**
+   * Edits an existing note's content and/or expiration.
+   */
+  private processNoteEdited(event: NoteEditedEvent) {
+    const index = this.Messages.findIndex(
+      (m) => m.id === event.noteId && m.type === "note",
+    );
+    if (index !== -1) {
+      const note = this.Messages[index] as NoteChatMessage;
+      this.Messages[index] = {
+        ...note,
+        content: event.content,
+        data: {
+          ...note.data,
+          expiresAfterMessages: event.expiresAfterMessages,
+        },
+      };
+    }
+  }
+
   private static HIDEABLE_TYPES: ReadonlySet<string> = new Set([
     "user-message",
     "system-message",
@@ -427,8 +476,68 @@ export class UserChatProjection {
     "story",
   ]);
 
+  /** Message types that count toward note expiration */
+  private static NOTE_EXPIRATION_TYPES: ReadonlySet<string> = new Set([
+    "user-message",
+    "system-message",
+    "assistant",
+  ]);
+
   private isHideableByChapter = (msg: UserChatMessage): boolean =>
     UserChatProjection.HIDEABLE_TYPES.has(msg.type);
+
+  /**
+   * Computes note expiration based on the number of qualifying messages
+   * that follow each note. Returns a new array with expired flags updated.
+   */
+  private computeNoteExpiration(messages: UserChatMessage[]): UserChatMessage[] {
+    const result: UserChatMessage[] = [];
+    const noteIndices: number[] = [];
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (msg.type === "note") {
+        result.push(msg);
+        noteIndices.push(i);
+      } else {
+        result.push(msg);
+
+        if (UserChatProjection.NOTE_EXPIRATION_TYPES.has(msg.type)) {
+          for (const noteIdx of noteIndices) {
+            const note = result[noteIdx] as NoteChatMessage;
+            if (note.data.expiresAfterMessages === null || note.data.expired)
+              continue;
+
+            const messagesAfterNote = this.countMessagesSinceIndex(
+              messages,
+              noteIdx,
+            );
+            if (messagesAfterNote >= note.data.expiresAfterMessages) {
+              result[noteIdx] = {
+                ...note,
+                data: { ...note.data, expired: true },
+              };
+            }
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  private countMessagesSinceIndex(
+    messages: UserChatMessage[],
+    noteIndex: number,
+  ): number {
+    let count = 0;
+    for (let i = noteIndex + 1; i < messages.length; i++) {
+      if (UserChatProjection.NOTE_EXPIRATION_TYPES.has(messages[i].type)) {
+        count++;
+      }
+    }
+    return count;
+  }
 
   /**
    * Replaces a message in the array with a new object containing the updates.
@@ -453,7 +562,8 @@ export interface UserChatMessage {
     | "civit-job"
     | "chapter"
     | "book"
-    | "plan";
+    | "plan"
+    | "note";
 
   content?: string; // Text-based content of the message
 
@@ -508,6 +618,15 @@ export interface BookChatMessage extends UserChatMessage {
   data: {
     title: string;
     coveredChapterIds: string[];
+  };
+}
+
+export interface NoteChatMessage extends UserChatMessage {
+  type: "note";
+  content: string;
+  data: {
+    expiresAfterMessages: number | null;
+    expired: boolean;
   };
 }
 
