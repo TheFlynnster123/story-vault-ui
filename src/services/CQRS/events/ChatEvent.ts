@@ -13,7 +13,9 @@ export type ChatEvent =
   | StoryCreatedEvent
   | StoryEditedEvent
   | PlanCreatedEvent
-  | PlanHiddenEvent;
+  | PlanHiddenEvent
+  | NoteCreatedEvent
+  | NoteEditedEvent;
 
 export interface MessageCreatedEvent {
   type: "MessageCreated";
@@ -124,4 +126,27 @@ export interface BookEditedEvent {
 export interface BookDeletedEvent {
   type: "BookDeleted";
   bookId: string;
+}
+
+/**
+ * Creates a note in the chat timeline.
+ * Notes relay persistent feedback to the LLM and appear inline with messages.
+ * They expire after a set number of messages (or never, when expiresAfterMessages is null).
+ */
+export interface NoteCreatedEvent {
+  type: "NoteCreated";
+  noteId: string;
+  content: string;
+  /** Number of messages after which the note expires. Null means no expiration. */
+  expiresAfterMessages: number | null;
+}
+
+/**
+ * Edits an existing note's content and/or expiration.
+ */
+export interface NoteEditedEvent {
+  type: "NoteEdited";
+  noteId: string;
+  content: string;
+  expiresAfterMessages: number | null;
 }

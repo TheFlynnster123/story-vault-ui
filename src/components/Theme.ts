@@ -66,6 +66,23 @@ export const Theme = {
     backgroundSecondary: "rgba(0, 131, 143, 0.8)",
   },
 
+  /** Colors for note UI elements - Coral/Salmon theme */
+  note: {
+    /** Primary coral color */
+    primary: "rgba(255, 111, 97, 1)",
+    /** Secondary darker coral */
+    secondary: "rgba(204, 78, 66, 1)",
+    /** Border color for note elements */
+    border: "rgba(255, 111, 97, 0.5)",
+    /** Text color for headers */
+    headerText: "rgba(255, 255, 255, 1)",
+    /** Transparent version for backgrounds */
+    backgroundPrimary: "rgba(255, 111, 97, 0.8)",
+    backgroundSecondary: "rgba(204, 78, 66, 0.8)",
+    /** Muted color for expired notes */
+    expired: "rgba(120, 120, 120, 0.6)",
+  },
+
 
   /** Colors for memories UI elements - Rose/Pink theme */
   memories: {

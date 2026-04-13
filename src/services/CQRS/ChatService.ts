@@ -19,6 +19,10 @@ import {
   PlanCreatedEventUtil,
   PlanHiddenEventUtil,
 } from "./events/PlanEventUtils";
+import {
+  NoteCreatedEventUtil,
+  NoteEditedEventUtil,
+} from "./events/NoteEventUtils";
 import { d } from "../Dependencies";
 
 export class ChatService {
@@ -90,7 +94,7 @@ export class ChatService {
   ): Promise<void> {
     const allMessages = d.UserChatProjection(this.chatId).GetMessages();
     const coveredMessageIds = allMessages
-      .filter((m) => m.type !== "chapter" && m.type !== "story" && !m.deleted)
+      .filter((m) => m.type !== "chapter" && m.type !== "story" && m.type !== "note" && !m.deleted)
       .map((m) => m.id);
 
     const event = ChapterCreatedEventUtil.Create(
@@ -165,5 +169,28 @@ export class ChatService {
       content,
     );
     await d.ChatEventService(this.chatId).AddChatEvents([hideEvent, createEvent]);
+  }
+
+  // ---- Note Operations ----
+
+  public async AddNote(
+    content: string,
+    expiresAfterMessages: number | null,
+  ): Promise<void> {
+    const event = NoteCreatedEventUtil.Create(content, expiresAfterMessages);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  public async EditNote(
+    noteId: string,
+    content: string,
+    expiresAfterMessages: number | null,
+  ): Promise<void> {
+    const event = NoteEditedEventUtil.Create(
+      noteId,
+      content,
+      expiresAfterMessages,
+    );
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 }

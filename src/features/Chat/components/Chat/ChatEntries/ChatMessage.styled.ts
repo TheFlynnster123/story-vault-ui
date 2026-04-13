@@ -214,6 +214,76 @@ export const PlanMessageHeader = styled.div`
   padding: 2px 0;
 `;
 
+/**
+ * Styled text container for note messages in the chat timeline.
+ * Uses the coral/salmon theme to visually distinguish notes from conversation.
+ */
+export const NoteMessageText = styled.div<{ $expired?: boolean }>`
+  font-size: small;
+  padding: 8px 12px;
+  border-radius: 10px;
+  display: inline-block;
+  width: 100%;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5);
+  white-space: pre-wrap;
+  cursor: default;
+  box-sizing: border-box;
+  transition:
+    min-height 0.2s ease,
+    min-width 0.2s ease,
+    opacity 0.2s ease;
+
+  background-color: ${({ $expired }) =>
+    $expired
+      ? applyTransparency(
+          Theme.note.expired,
+          Theme.chatEntry.transparency,
+        )
+      : applyTransparency(
+          Theme.note.backgroundSecondary,
+          Theme.chatEntry.transparency,
+        )};
+  color: ${Theme.messages.assistant.text};
+  border-left: 4px solid ${({ $expired }) =>
+    $expired ? Theme.note.expired : Theme.note.primary};
+
+  ${({ $expired }) =>
+    $expired &&
+    `
+    opacity: 0.6;
+  `}
+
+  .clickable {
+    cursor: pointer;
+  }
+`;
+
+/**
+ * Header for note messages showing the note icon and expiration info.
+ */
+export const NoteMessageHeader = styled.div`
+  font-weight: 600;
+  user-select: none;
+  padding: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+/**
+ * Small badge showing expiration status of a note.
+ */
+export const NoteExpirationBadge = styled.span<{ $expired?: boolean }>`
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.8;
+  ${({ $expired }) =>
+    $expired &&
+    `
+    font-style: italic;
+  `}
+`;
+
 export const DeleteButton = styled.button`
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #ddd;
