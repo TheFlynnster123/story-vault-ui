@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   RiArrowLeftLine,
@@ -42,11 +42,12 @@ export const StoryDirectionPage: React.FC = () => {
   const [chatModel, setChatModel] = useState<string | null>(null);
   const [modelInitialized, setModelInitialized] = useState(false);
 
-  // Initialize chatModel from planModel once it's available
-  if (!modelInitialized && planModel !== undefined) {
-    setChatModel(planModel || "");
-    setModelInitialized(true);
-  }
+  useEffect(() => {
+    if (!modelInitialized && planModel !== undefined) {
+      setChatModel(planModel || "");
+      setModelInitialized(true);
+    }
+  }, [planModel, modelInitialized]);
 
   const handleGoBack = () => {
     navigate(`/chat/${chatId}`);
