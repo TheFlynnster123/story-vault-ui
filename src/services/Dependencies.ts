@@ -26,6 +26,7 @@ import { getUserChatProjectionInstance } from "./CQRS/UserChatProjection";
 import { getLLMChatProjectionInstance } from "./CQRS/LLMChatProjection";
 import { getChatEventServiceInstance } from "./CQRS/ChatEventService";
 import { getRecentChatsServiceInstance } from "../features/Chat/services/Chat/RecentChatsService";
+import { StoryDirectionService } from "../features/Plans/services/StoryDirectionService";
 import { PhotoStorageService } from "../features/Images/services/PhotoStorageService";
 import { getAuthApiSingleton } from "./Auth/AuthAPI";
 import { getEncryptionManagerSingleton } from "./Auth/EncryptionManager";
@@ -220,6 +221,10 @@ export class Dependencies {
 
   ChatInputCache(chatId: string) {
     return getChatInputCacheInstance(chatId);
+  }
+
+  StoryDirectionService(chatId: string, planId: string) {
+    return new StoryDirectionService(chatId, planId);
   }
 
   RecentChatsService() {

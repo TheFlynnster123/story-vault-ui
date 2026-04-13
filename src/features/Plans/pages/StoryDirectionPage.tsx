@@ -172,10 +172,10 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
 
   background-color: ${({ $isUser }) =>
-    $isUser ? "rgba(0, 195, 255, 0.8)" : "rgba(0, 131, 143, 0.6)"};
-  color: #ffffff;
+    $isUser ? Theme.messages.user.background : Theme.plan.backgroundSecondary};
+  color: ${Theme.messages.user.text};
   border-left: ${({ $isUser }) =>
-    $isUser ? "none" : "3px solid rgba(0, 188, 212, 1)"};
+    $isUser ? "none" : `3px solid ${Theme.plan.primary}`};
   text-align: left;
 `;
 

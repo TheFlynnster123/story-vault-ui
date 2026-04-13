@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { StoryDirectionService } from "../services/StoryDirectionService";
+import { d } from "../../../services/Dependencies";
 
 export const useStoryDirectionChat = (chatId: string, planId: string) => {
   const [, forceUpdate] = useState({});
 
   const service = useMemo(
-    () => new StoryDirectionService(chatId, planId),
+    () => d.StoryDirectionService(chatId, planId),
     [chatId, planId],
   );
 
