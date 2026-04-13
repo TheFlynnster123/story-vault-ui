@@ -203,6 +203,32 @@ describe("StoryDirectionService", () => {
       );
     });
 
+    it("should use explicit model override over plan model", async () => {
+      const planWithModel: Plan = { ...defaultPlan, model: "plan-model" };
+      mockPlanService.getPlans.mockReturnValue([planWithModel]);
+
+      const service = new StoryDirectionService(testChatId, testPlanId);
+      await service.sendMessage("Hello", "user-selected-model");
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "user-selected-model",
+      );
+    });
+
+    it("should fall back to plan model when no explicit override", async () => {
+      const planWithModel: Plan = { ...defaultPlan, model: "plan-model" };
+      mockPlanService.getPlans.mockReturnValue([planWithModel]);
+
+      const service = new StoryDirectionService(testChatId, testPlanId);
+      await service.sendMessage("Hello", undefined);
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "plan-model",
+      );
+    });
+
     it("should exclude plan messages from context when hideOtherPlans is true", async () => {
       const planWithHide: Plan = { ...defaultPlan, hideOtherPlans: true };
       mockPlanService.getPlans.mockReturnValue([planWithHide]);
@@ -328,6 +354,28 @@ describe("StoryDirectionService", () => {
     it("should be false initially", () => {
       const service = new StoryDirectionService(testChatId, testPlanId);
       expect(service.isGenerating()).toBe(false);
+    });
+  });
+
+  describe("getPlanModel", () => {
+    it("should return the plan model when set", () => {
+      const planWithModel: Plan = { ...defaultPlan, model: "plan-model" };
+      mockPlanService.getPlans.mockReturnValue([planWithModel]);
+
+      const service = new StoryDirectionService(testChatId, testPlanId);
+      expect(service.getPlanModel()).toBe("plan-model");
+    });
+
+    it("should return undefined when plan has no model", () => {
+      const service = new StoryDirectionService(testChatId, testPlanId);
+      expect(service.getPlanModel()).toBeUndefined();
+    });
+
+    it("should return undefined when plan is not found", () => {
+      mockPlanService.getPlans.mockReturnValue([]);
+
+      const service = new StoryDirectionService(testChatId, testPlanId);
+      expect(service.getPlanModel()).toBeUndefined();
     });
   });
 });

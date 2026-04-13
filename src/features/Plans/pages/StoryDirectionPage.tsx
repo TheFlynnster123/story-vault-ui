@@ -23,6 +23,7 @@ import {
 import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
 import { useStoryDirectionChat } from "../hooks/useStoryDirectionChat";
+import { ModelSelect } from "../../AI/components/ModelSelect";
 import type { DirectionMessage } from "../services/StoryDirectionService";
 import ReactMarkdown from "react-markdown";
 import styled from "styled-components";
@@ -31,8 +32,21 @@ export const StoryDirectionPage: React.FC = () => {
   const { chatId, planId } = useParams<{ chatId: string; planId: string }>();
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
-  const { messages, isGenerating, sendMessage, generateUpdatedPlan } =
-    useStoryDirectionChat(chatId!, planId!);
+  const {
+    messages,
+    isGenerating,
+    planModel,
+    sendMessage,
+    generateUpdatedPlan,
+  } = useStoryDirectionChat(chatId!, planId!);
+  const [chatModel, setChatModel] = useState<string | null>(null);
+  const [modelInitialized, setModelInitialized] = useState(false);
+
+  // Initialize chatModel from planModel once it's available
+  if (!modelInitialized && planModel !== undefined) {
+    setChatModel(planModel || "");
+    setModelInitialized(true);
+  }
 
   const handleGoBack = () => {
     navigate(`/chat/${chatId}`);
@@ -43,7 +57,7 @@ export const StoryDirectionPage: React.FC = () => {
 
     const message = inputValue;
     setInputValue("");
-    await sendMessage(message);
+    await sendMessage(message, chatModel || undefined);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -62,6 +76,15 @@ export const StoryDirectionPage: React.FC = () => {
     <Page>
       <Paper mt={30}>
         <DirectionHeader onGoBack={handleGoBack} />
+
+        <Box mb="md">
+          <ModelSelect
+            value={chatModel}
+            onChange={setChatModel}
+            label="Chat Model"
+            withDescription={false}
+          />
+        </Box>
 
         <DirectionChatArea messages={messages} isGenerating={isGenerating} />
 

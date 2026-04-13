@@ -16,6 +16,7 @@ export const useStoryDirectionChat = (chatId: string, planId: string) => {
   return {
     messages: service.getMessages(),
     isGenerating: service.isGenerating(),
+    planModel: service.getPlanModel(),
     sendMessage: service.sendMessage,
     generateUpdatedPlan: service.generateUpdatedPlan,
   };

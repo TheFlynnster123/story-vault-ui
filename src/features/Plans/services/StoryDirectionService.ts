@@ -38,11 +38,17 @@ export class StoryDirectionService {
 
   public isGenerating = (): boolean => this.generating;
 
+  public getPlanModel = (): string | undefined => this.findPlan()?.model;
+
   /**
    * Sends a user message and gets an LLM response in the context of the
    * story's current state and plan.
+   * @param modelOverride - When provided, overrides the plan's model for this call.
    */
-  public sendMessage = async (userMessage: string): Promise<void> => {
+  public sendMessage = async (
+    userMessage: string,
+    modelOverride?: string,
+  ): Promise<void> => {
     if (!userMessage.trim() || this.generating) return;
 
     const plan = this.findPlan();
@@ -54,9 +60,10 @@ export class StoryDirectionService {
 
     try {
       const promptMessages = this.buildConversationPrompt(plan);
+      const model = modelOverride || plan.model || undefined;
       const response = await d
         .OpenRouterChatAPI()
-        .postChat(promptMessages, plan.model || undefined);
+        .postChat(promptMessages, model);
 
       this.messages = [
         ...this.messages,
