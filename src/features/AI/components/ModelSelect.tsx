@@ -1,108 +1,97 @@
-import React from "react";
-import { Select, Stack, Text } from "@mantine/core";
+import React, { useMemo } from "react";
+import { Loader, Select, Stack, Text } from "@mantine/core";
+import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
+import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
+import { d } from "../../../services/Dependencies";
 
-const MODEL_OPTIONS = [
-  { value: "", label: "Default" },
-  {
-    group: "⭐ Reddit Recommended",
-    items: [
-      {
-        value: "deepseek/deepseek-v3.2-speciale",
-        label: "DeepSeek V3.2 Speciale",
-      },
-      { value: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2" },
-      { value: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6" },
-      { value: "meituan/longcat-flash-chat", label: "LongCat Flash Chat" },
-      { value: "moonshotai/kimi-k2.5", label: "Kimi K2.5" },
-      { value: "z-ai/glm-5-turbo", label: "GLM 5 Turbo" },
-      { value: "z-ai/glm-5", label: "GLM 5" },
-      { value: "qwen/qwen3.5-122b-a10b", label: "Qwen3.5 122B" },
-      { value: "writer/palmyra-x5", label: "Palmyra X5" },
-    ],
-  },
-  {
-    group: "xAI",
-    items: [
-      { value: "x-ai/grok-4.20-beta", label: "Grok 4.20 Beta" },
-      { value: "x-ai/grok-4", label: "Grok 4" },
-      { value: "x-ai/grok-4-fast", label: "Grok 4 Fast" },
-      { value: "x-ai/grok-4.1-fast", label: "Grok 4.1 Fast" },
-      { value: "x-ai/grok-3-mini", label: "Grok 3 Mini" },
-    ],
-  },
-  {
-    group: "Anthropic",
-    items: [
-      { value: "anthropic/claude-opus-4.6", label: "Claude Opus 4.6" },
-      { value: "anthropic/claude-opus-4.5", label: "Claude Opus 4.5" },
-      { value: "anthropic/claude-opus-4.1", label: "Claude Opus 4.1" },
-      { value: "anthropic/claude-opus-4", label: "Claude Opus 4" },
-      { value: "anthropic/claude-sonnet-4.5", label: "Claude Sonnet 4.5" },
-      { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
-      { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5" },
-    ],
-  },
-  {
-    group: "OpenAI",
-    items: [
-      { value: "openai/gpt-5-pro", label: "GPT-5 Pro" },
-      { value: "openai/gpt-5", label: "GPT-5" },
-      { value: "openai/gpt-5-chat", label: "GPT-5 Chat" },
-      { value: "openai/gpt-5-mini", label: "GPT-5 Mini" },
-      { value: "openai/gpt-5-nano", label: "GPT-5 Nano" },
-    ],
-  },
-  {
-    group: "Google",
-    items: [
-      {
-        value: "google/gemini-3.1-pro-preview",
-        label: "Gemini 3.1 Pro Preview",
-      },
-      { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-      { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-      {
-        value: "google/gemini-3.1-flash-lite-preview",
-        label: "Gemini 3.1 Flash Lite Preview",
-      },
-      { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
-    ],
-  },
-  {
-    group: "DeepSeek",
-    items: [
-      { value: "deepseek/deepseek-chat-v3.1", label: "DeepSeek Chat V3.1" },
-      { value: "deepseek/deepseek-v3.2-exp", label: "DeepSeek V3.2 Exp" },
-      { value: "deepseek/deepseek-r1", label: "DeepSeek R1" },
-    ],
-  },
-  {
-    group: "Mistral",
-    items: [
-      { value: "mistralai/mistral-medium-3.1", label: "Mistral Medium 3.1" },
-      { value: "mistralai/mistral-large-2512", label: "Mistral Large" },
-      {
-        value: "mistralai/mistral-small-3.2-24b-instruct",
-        label: "Mistral Small 3.2",
-      },
-    ],
-  },
-  {
-    group: "Qwen",
-    items: [
-      { value: "qwen/qwen3.5-397b-a17b", label: "Qwen3.5 397B" },
-      { value: "qwen/qwen3-235b-a22b", label: "Qwen3 235B" },
-      { value: "qwen/qwen3-max", label: "Qwen3 Max" },
-      { value: "qwen/qwen3-coder", label: "Qwen3 Coder" },
-    ],
-  },
-  {
-    group: "Meta",
-    items: [
-      { value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick" },
-    ],
-  },
-];
+const REDDIT_RECOMMENDED_IDS = new Set([
+  "deepseek/deepseek-v3.2-speciale",
+  "deepseek/deepseek-v3.2",
+  "anthropic/claude-sonnet-4.6",
+  "meituan/longcat-flash-chat",
+  "moonshotai/kimi-k2.5",
+  "z-ai/glm-5-turbo",
+  "z-ai/glm-5",
+  "qwen/qwen3.5-122b-a10b",
+  "writer/palmyra-x5",
+]);
+
+interface SelectItem {
+  value: string;
+  label: string;
+}
+
+interface SelectGroup {
+  group: string;
+  items: SelectItem[];
+}
+
+type SelectData = (SelectItem | SelectGroup)[];
+
+const toSelectItem = (model: OpenRouterModel): SelectItem => ({
+  value: model.id,
+  label: model.name,
+});
+
+const buildRecentGroup = (
+  recentIds: string[],
+  modelsById: Map<string, OpenRouterModel>,
+): SelectGroup | null => {
+  const items = recentIds
+    .map((id) => modelsById.get(id))
+    .filter((m): m is OpenRouterModel => m !== undefined)
+    .map(toSelectItem);
+
+  return items.length > 0 ? { group: "🕐 Recent", items } : null;
+};
+
+const buildRecommendedGroup = (
+  modelsById: Map<string, OpenRouterModel>,
+): SelectGroup | null => {
+  const items = [...REDDIT_RECOMMENDED_IDS]
+    .map((id) => modelsById.get(id))
+    .filter((m): m is OpenRouterModel => m !== undefined)
+    .map(toSelectItem);
+
+  return items.length > 0
+    ? { group: "⭐ Reddit Recommended", items }
+    : null;
+};
+
+const buildAllModelsGroup = (
+  models: OpenRouterModel[],
+  excludeIds: Set<string>,
+): SelectGroup => {
+  const items = models
+    .filter((m) => !excludeIds.has(m.id))
+    .map(toSelectItem)
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  return { group: "All Models", items };
+};
+
+const buildSelectData = (
+  models: OpenRouterModel[],
+  recentIds: string[],
+): SelectData => {
+  const modelsById = new Map(models.map((m) => [m.id, m]));
+
+  const recentGroup = buildRecentGroup(recentIds, modelsById);
+  const recommendedGroup = buildRecommendedGroup(modelsById);
+
+  const promotedIds = new Set([
+    ...recentIds,
+    ...REDDIT_RECOMMENDED_IDS,
+  ]);
+  const allModelsGroup = buildAllModelsGroup(models, promotedIds);
+
+  const groups: SelectData = [{ value: "", label: "Default" }];
+  if (recentGroup) groups.push(recentGroup);
+  if (recommendedGroup) groups.push(recommendedGroup);
+  groups.push(allModelsGroup);
+
+  return groups;
+};
 
 interface ModelSelectProps {
   value: string | null;
@@ -116,21 +105,43 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
   onChange,
   label = "Model",
   withDescription = true,
-}) => (
-  <Stack gap="xs">
-    <Select
-      label={label}
-      value={value}
-      onChange={onChange}
-      data={MODEL_OPTIONS}
-      clearable
-    />
-    {withDescription && (
-      <Text size="sm" c="dimmed">
-        Select which model to use for chat generation via OpenRouter. Different
-        models offer varying levels of speed and reasoning capabilities. Leave
-        empty to use the default model.
-      </Text>
-    )}
-  </Stack>
-);
+}) => {
+  const { models, isLoading } = useOpenRouterModels();
+  const recentModelsService = d.RecentModelsService();
+  const recentIds = recentModelsService.getRecentModels();
+
+  const selectData = useMemo(
+    () => buildSelectData(models, recentIds),
+    [models, recentIds],
+  );
+
+  const handleChange = (newValue: string | null) => {
+    if (newValue) {
+      recentModelsService.trackModel(newValue);
+    }
+    onChange(newValue);
+  };
+
+  return (
+    <Stack gap="xs">
+      <Select
+        label={label}
+        value={value}
+        onChange={handleChange}
+        data={selectData}
+        searchable
+        clearable
+        nothingFoundMessage="No models found"
+        rightSection={isLoading ? <Loader size="xs" /> : undefined}
+        limit={200}
+      />
+      {withDescription && (
+        <Text size="sm" c="dimmed">
+          Select which model to use for chat generation via OpenRouter.
+          Different models offer varying levels of speed and reasoning
+          capabilities. Leave empty to use the default model.
+        </Text>
+      )}
+    </Stack>
+  );
+};
