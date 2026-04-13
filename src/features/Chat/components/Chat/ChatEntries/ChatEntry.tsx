@@ -6,10 +6,12 @@ import { ChapterMessage } from "./ChapterMessage";
 import { BookMessage } from "./BookMessage";
 import { StoryMessage } from "./StoryMessage";
 import { PlanMessage } from "./PlanMessage";
+import { NoteMessage } from "./NoteMessage";
 import type {
   BookChatMessage,
   ChapterChatMessage,
   CivitJobChatMessage,
+  NoteChatMessage,
   PlanChatMessage,
   StoryChatMessage,
   UserChatMessage,
@@ -54,6 +56,10 @@ export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
 
   if (message.type === "plan") {
     return <PlanMessage chatId={chatId} message={message as PlanChatMessage} />;
+  }
+
+  if (message.type === "note") {
+    return <NoteMessage chatId={chatId} message={message as NoteChatMessage} />;
   }
 
   if (message.type === "user-message") {

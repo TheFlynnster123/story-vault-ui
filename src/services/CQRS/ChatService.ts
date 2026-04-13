@@ -94,7 +94,7 @@ export class ChatService {
   ): Promise<void> {
     const allMessages = d.UserChatProjection(this.chatId).GetMessages();
     const coveredMessageIds = allMessages
-      .filter((m) => m.type !== "chapter" && m.type !== "story" && !m.deleted)
+      .filter((m) => m.type !== "chapter" && m.type !== "story" && m.type !== "note" && !m.deleted)
       .map((m) => m.id);
 
     const event = ChapterCreatedEventUtil.Create(
