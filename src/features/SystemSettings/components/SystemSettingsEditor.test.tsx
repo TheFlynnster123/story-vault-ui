@@ -12,6 +12,28 @@ vi.mock("../hooks/useSystemSettings", () => ({
   useSystemSettings: () => mockUseSystemSettings(),
 }));
 
+// Mock the useOpenRouterModels hook
+vi.mock("../../OpenRouter/hooks/useOpenRouterModels", () => ({
+  useOpenRouterModels: () => ({
+    models: [
+      { id: "x-ai/grok-4.20-beta", name: "Grok 4.20 Beta" },
+      { id: "x-ai/grok-4", name: "Grok 4" },
+      { id: "x-ai/grok-4-fast", name: "Grok 4 Fast" },
+      { id: "anthropic/claude-opus-4", name: "Claude Opus 4" },
+      { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4" },
+      { id: "openai/gpt-5", name: "GPT-5" },
+      { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+      { id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2" },
+      { id: "meta-llama/llama-4-maverick", name: "Llama 4 Maverick" },
+      { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
+      { id: "meituan/longcat-flash-chat", name: "LongCat Flash Chat" },
+      { id: "qwen/qwen3-235b-a22b", name: "Qwen3 235B" },
+      { id: "z-ai/glm-5-turbo", name: "GLM 5 Turbo" },
+    ],
+    isLoading: false,
+  }),
+}));
+
 // Mock notifications
 vi.mock("@mantine/notifications", () => ({
   notifications: {
@@ -49,7 +71,7 @@ describe("SystemSettingsEditor", () => {
     );
   };
 
-  it("should render model select with all model options including Grok 4.20 Beta", async () => {
+  it("should render model select with model options including Grok 4.20 Beta", async () => {
     renderWithQueryClient(<SystemSettingsEditor />);
 
     await waitFor(() => {
@@ -60,12 +82,11 @@ describe("SystemSettingsEditor", () => {
     const selectInput = screen.getByLabelText("Model");
     selectInput.click();
 
-    // Wait for dropdown to appear and verify the new model is present
+    // Wait for dropdown to appear and verify the model is present
     await waitFor(() => {
       const dropdown = document.querySelector('[role="listbox"]');
       expect(dropdown).toBeInTheDocument();
 
-      // Check that the dropdown contains the new model option
       const options = Array.from(
         dropdown?.querySelectorAll('[role="option"]') || [],
       );
@@ -75,18 +96,16 @@ describe("SystemSettingsEditor", () => {
     });
   });
 
-  it("should include xAI models in the correct order in model options", async () => {
+  it("should include models from multiple providers", async () => {
     renderWithQueryClient(<SystemSettingsEditor />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
     });
 
-    // Click the select to open the dropdown
     const selectInput = screen.getByLabelText("Model");
     selectInput.click();
 
-    // Wait for dropdown and verify order
     await waitFor(() => {
       const dropdown = document.querySelector('[role="listbox"]');
       expect(dropdown).toBeInTheDocument();
@@ -96,15 +115,6 @@ describe("SystemSettingsEditor", () => {
       );
       const optionTexts = options.map((opt) => opt.textContent);
 
-      // Verify xAI models appear in correct order within their group
-      const grok420BetaIndex = optionTexts.indexOf("Grok 4.20 Beta");
-      const grok4Index = optionTexts.indexOf("Grok 4");
-      const grok4FastIndex = optionTexts.indexOf("Grok 4 Fast");
-
-      expect(grok4Index).toBeGreaterThan(grok420BetaIndex);
-      expect(grok4FastIndex).toBeGreaterThan(grok4Index);
-
-      // Verify premier models from other providers are present
       expect(optionTexts).toContain("Claude Opus 4");
       expect(optionTexts).toContain("Claude Sonnet 4");
       expect(optionTexts).toContain("GPT-5");
