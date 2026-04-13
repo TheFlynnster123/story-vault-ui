@@ -75,7 +75,7 @@ const buildAllModelsGroup = (
 const deduplicateModels = (models: OpenRouterModel[]): OpenRouterModel[] => {
   const seen = new Set<string>();
   return models.filter((m) => {
-    if (!m.id || seen.has(m.id)) return false;
+    if (!m.id || !m.name || seen.has(m.id)) return false;
     seen.add(m.id);
     return true;
   });

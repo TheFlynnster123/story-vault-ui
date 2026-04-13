@@ -152,7 +152,7 @@ describe("ModelSelect with real useOpenRouterModels hook", () => {
     });
   });
 
-  it("should render without crashing when API returns models with null name", async () => {
+  it("should filter out models with null or missing IDs from the dropdown", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -172,6 +172,25 @@ describe("ModelSelect with real useOpenRouterModels hook", () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
+    });
+
+    // Open the dropdown and verify malformed models are excluded
+    const selectInput = screen.getByLabelText("Model");
+    selectInput.click();
+
+    await waitFor(() => {
+      const dropdown = document.querySelector('[role="listbox"]');
+      expect(dropdown).toBeInTheDocument();
+
+      const options = Array.from(
+        dropdown?.querySelectorAll('[role="option"]') || [],
+      );
+      const optionTexts = options.map((opt) => opt.textContent);
+
+      // Valid model should appear
+      expect(optionTexts).toContain("GPT-4");
+      // Model with null id should be filtered out by deduplicateModels
+      expect(optionTexts).not.toContain("Broken ID");
     });
   });
 
