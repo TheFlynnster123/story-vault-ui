@@ -10,7 +10,10 @@ import ImageModelEditPage from "./features/Images/pages/ImageModelEditPage";
 import { ChatEditorPage } from "./features/Chat/pages/ChatEditorPage";
 import ChatPage from "./features/Chat/pages/ChatPage";
 import { PlanPage } from "./features/Plans/pages/PlanPage";
-import { StoryDirectionPage } from "./features/Plans/pages/StoryDirectionPage";
+import { DiscussPlanPage } from "./features/Discussion/pages/DiscussPlanPage";
+import { DiscussChapterPage } from "./features/Discussion/pages/DiscussChapterPage";
+import { DiscussBookPage } from "./features/Discussion/pages/DiscussBookPage";
+import { DiscussStoryPage } from "./features/Discussion/pages/DiscussStoryPage";
 import { MemoriesPage } from "./features/Memories/pages/MemoriesPage";
 import { StoryEditorPage } from "./features/StoryEditor/pages/StoryEditorPage";
 import { ChatImageModelsPage } from "./features/Images/pages/ChatImageModelsPage";
@@ -61,10 +64,34 @@ const App: React.FC<AppProps> = () => {
             }
           />
           <Route
-            path="/chat/:chatId/plan/:planId/direction"
+            path="/chat/:chatId/plan/:planId/discuss"
             element={
               <ProtectedRoute>
-                <StoryDirectionPage />
+                <DiscussPlanPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/chapter/:chapterId/discuss"
+            element={
+              <ProtectedRoute>
+                <DiscussChapterPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/book/:bookId/discuss"
+            element={
+              <ProtectedRoute>
+                <DiscussBookPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/story/discuss"
+            element={
+              <ProtectedRoute>
+                <DiscussStoryPage />
               </ProtectedRoute>
             }
           />

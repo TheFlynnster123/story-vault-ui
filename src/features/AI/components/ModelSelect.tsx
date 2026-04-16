@@ -1,110 +1,15 @@
-import React, { useCallback, useMemo, useRef } from "react";
-import { Loader, Select, Stack, Text } from "@mantine/core";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { Loader, Stack, Text } from "@mantine/core";
 import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
 import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
 import { d } from "../../../services/Dependencies";
+import { ModelSelectorModal } from "./ModelSelectorModal";
 
-const REDDIT_RECOMMENDED_IDS = new Set([
-  "deepseek/deepseek-v3.2-speciale",
-  "deepseek/deepseek-v3.2",
-  "anthropic/claude-sonnet-4.6",
-  "meituan/longcat-flash-chat",
-  "moonshotai/kimi-k2.5",
-  "z-ai/glm-5-turbo",
-  "z-ai/glm-5",
-  "qwen/qwen3.5-122b-a10b",
-  "writer/palmyra-x5",
-]);
-
-interface SelectItem {
-  value: string;
-  label: string;
-}
-
-interface SelectGroup {
-  group: string;
-  items: SelectItem[];
-}
-
-type SelectData = (SelectItem | SelectGroup)[];
-
-const toSelectItem = (model: OpenRouterModel): SelectItem => ({
-  value: model.id,
-  label: model.name,
-});
-
-const buildRecentGroup = (
-  recentIds: string[],
-  modelsById: Map<string, OpenRouterModel>,
-): SelectGroup | null => {
-  const items = recentIds
-    .map((id) => modelsById.get(id))
-    .filter((m): m is OpenRouterModel => m !== undefined)
-    .map(toSelectItem);
-
-  return items.length > 0 ? { group: "🕐 Recent", items } : null;
-};
-
-const buildRecommendedGroup = (
-  modelsById: Map<string, OpenRouterModel>,
-  excludeIds: Set<string>,
-): SelectGroup | null => {
-  const items = [...REDDIT_RECOMMENDED_IDS]
-    .filter((id) => !excludeIds.has(id))
-    .map((id) => modelsById.get(id))
-    .filter((m): m is OpenRouterModel => m !== undefined)
-    .map(toSelectItem);
-
-  return items.length > 0
-    ? { group: "⭐ Reddit Recommended", items }
-    : null;
-};
-
-const buildAllModelsGroup = (
+const findModelName = (
   models: OpenRouterModel[],
-  excludeIds: Set<string>,
-): SelectGroup => {
-  const items = models
-    .filter((m) => !excludeIds.has(m.id))
-    .map(toSelectItem)
-    .sort((a, b) => a.label.localeCompare(b.label));
-
-  return { group: "All Models", items };
-};
-
-const deduplicateModels = (models: OpenRouterModel[]): OpenRouterModel[] => {
-  const seen = new Set<string>();
-  return models.filter((m) => {
-    if (!m.id || !m.name || seen.has(m.id)) return false;
-    seen.add(m.id);
-    return true;
-  });
-};
-
-const buildSelectData = (
-  models: OpenRouterModel[],
-  recentIds: string[],
-): SelectData => {
-  const uniqueModels = deduplicateModels(models);
-  const modelsById = new Map(uniqueModels.map((m) => [m.id, m]));
-
-  const recentGroup = buildRecentGroup(recentIds, modelsById);
-  const recentIdSet = new Set(recentIds);
-  const recommendedGroup = buildRecommendedGroup(modelsById, recentIdSet);
-
-  const promotedIds = new Set([
-    ...recentIds,
-    ...REDDIT_RECOMMENDED_IDS,
-  ]);
-  const allModelsGroup = buildAllModelsGroup(uniqueModels, promotedIds);
-
-  const groups: SelectData = [{ value: "", label: "Default" }];
-  if (recentGroup) groups.push(recentGroup);
-  if (recommendedGroup) groups.push(recommendedGroup);
-  if (allModelsGroup.items.length > 0) groups.push(allModelsGroup);
-
-  return groups;
-};
+  modelId: string | null,
+): string | undefined =>
+  modelId ? models.find((m) => m.id === modelId)?.name : undefined;
 
 interface ModelSelectProps {
   value: string | null;
@@ -121,42 +26,115 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
 }) => {
   const { models, isLoading } = useOpenRouterModels();
   const recentModelsService = useRef(d.RecentModelsService()).current;
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const recentIds = useMemo(
-    () => recentModelsService.getRecentModels(),
-    // Re-read recent models when the fetched model list changes (i.e., once on load)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [models],
+  const displayName = useMemo(
+    () => findModelName(models, value) ?? (value || "Default"),
+    [models, value],
   );
 
-  const selectData = useMemo(
-    () => buildSelectData(models, recentIds),
-    [models, recentIds],
-  );
-
-  const handleChange = useCallback(
-    (newValue: string | null) => {
-      if (newValue) {
-        recentModelsService.trackModel(newValue);
-      }
-      onChange(newValue);
+  const handleSelect = useCallback(
+    (modelId: string) => {
+      recentModelsService.trackModel(modelId);
+      onChange(modelId);
     },
     [recentModelsService, onChange],
   );
 
+  const handleClear = useCallback(() => {
+    onChange(null);
+  }, [onChange]);
+
   return (
     <Stack gap="xs">
-      <Select
-        label={label}
-        value={value}
-        onChange={handleChange}
-        data={selectData}
-        searchable
-        clearable
-        nothingFoundMessage="No models found"
-        rightSection={isLoading ? <Loader size="xs" /> : undefined}
-        limit={200}
-      />
+      <div>
+        {label && (
+          <Text
+            component="label"
+            size="sm"
+            fw={500}
+            style={{ display: "block", marginBottom: 4 }}
+          >
+            {label}
+          </Text>
+        )}
+        <button
+          type="button"
+          aria-label={label}
+          onClick={() => setIsModalOpen(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            padding: "8px 12px",
+            backgroundColor: "rgba(255, 255, 255, 0.06)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            borderRadius: "6px",
+            color: value ? "#fff" : "#888",
+            fontSize: "14px",
+            cursor: "pointer",
+            textAlign: "left",
+            minHeight: "36px",
+            transition: "border-color 0.15s",
+            boxSizing: "border-box",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "rgba(100, 100, 255, 0.4)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+          }}
+        >
+          <span
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              flex: 1,
+            }}
+          >
+            {displayName}
+          </span>
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              flexShrink: 0,
+            }}
+          >
+            {isLoading && <Loader size="xs" />}
+            {value && (
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label="Clear model selection"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClear();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation();
+                    handleClear();
+                  }
+                }}
+                style={{
+                  color: "#888",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  lineHeight: 1,
+                  padding: "0 2px",
+                }}
+              >
+                ✕
+              </span>
+            )}
+            <span style={{ color: "#666", fontSize: "12px" }}>▼</span>
+          </span>
+        </button>
+      </div>
       {withDescription && (
         <Text size="sm" c="dimmed">
           Select which model to use for chat generation via OpenRouter.
@@ -164,6 +142,12 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
           capabilities. Leave empty to use the default model.
         </Text>
       )}
+      <ModelSelectorModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        selectedModelId={value || undefined}
+        onSelect={handleSelect}
+      />
     </Stack>
   );
 };

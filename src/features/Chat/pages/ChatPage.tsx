@@ -14,7 +14,9 @@ const ChatPage: React.FC = () => {
 
   useEnsureChatInitialization(chatId ?? "");
 
-  const { backgroundPhotoBase64 } = useChatSettings(chatId ?? "");
+  const { backgroundPhotoBase64, messageTransparency } = useChatSettings(
+    chatId ?? "",
+  );
 
   if (!chatId) {
     navigate("/chat");
@@ -25,6 +27,11 @@ const ChatPage: React.FC = () => {
     <ChatContainer
       $chatId={chatId}
       $backgroundPhotoBase64={backgroundPhotoBase64}
+      style={
+        {
+          "--message-transparency": messageTransparency,
+        } as React.CSSProperties
+      }
     >
       <ChatControls />
 

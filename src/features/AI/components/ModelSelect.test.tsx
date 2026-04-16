@@ -14,11 +14,13 @@ vi.mock("@mantine/notifications", () => ({
   },
 }));
 
-const createMockModelsResponse = (models: Array<{ id: string; name: string }>) => ({
+const createMockModelsResponse = (
+  models: Array<{ id: string; name: string }>,
+) => ({
   data: models,
 });
 
-describe("ModelSelect with real useOpenRouterModels hook", () => {
+describe("ModelSelect with ModelSelectorModal", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -58,40 +60,53 @@ describe("ModelSelect with real useOpenRouterModels hook", () => {
       ),
     );
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
     });
   });
 
-  it("should render without crashing when API returns empty data", async () => {
+  it("should display selected model name when value is set", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
-        JSON.stringify(createMockModelsResponse([])),
+        JSON.stringify(
+          createMockModelsResponse([
+            { id: "openai/gpt-4", name: "GPT-4" },
+            { id: "anthropic/claude-3", name: "Claude 3" },
+          ]),
+        ),
         { status: 200 },
       ),
     );
 
     renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
+      <ModelSelect value="openai/gpt-4" onChange={() => {}} />,
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Model")).toBeInTheDocument();
+      expect(screen.getByText("GPT-4")).toBeInTheDocument();
+    });
+  });
+
+  it("should display 'Default' when value is empty", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(createMockModelsResponse([])), {
+        status: 200,
+      }),
+    );
+
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Default")).toBeInTheDocument();
     });
   });
 
   it("should render without crashing when API fails", async () => {
-    vi.spyOn(global, "fetch").mockRejectedValue(
-      new Error("Network error"),
-    );
+    vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network error"));
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
@@ -103,94 +118,97 @@ describe("ModelSelect with real useOpenRouterModels hook", () => {
       new Response("Server Error", { status: 500 }),
     );
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
     });
   });
 
-  it("should render without crashing when recent model overlaps with recommended", async () => {
-    // Pre-populate localStorage with a recent model that's also in REDDIT_RECOMMENDED_IDS
-    localStorage.setItem(
-      "story-vault-recent-models",
-      JSON.stringify(["deepseek/deepseek-v3.2", "moonshotai/kimi-k2.5"]),
-    );
-
+  it("should open modal when button is clicked", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify(
-          createMockModelsResponse([
-            { id: "openai/gpt-4", name: "GPT-4" },
-            { id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2" },
-            { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
-            { id: "z-ai/glm-5-turbo", name: "GLM 5 Turbo" },
-          ]),
+          createMockModelsResponse([{ id: "openai/gpt-4", name: "GPT-4" }]),
+        ),
+        { status: 200 },
+      ),
+    );
+
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Model")).toBeInTheDocument();
+    });
+
+    screen.getByLabelText("Model").click();
+
+    await waitFor(() => {
+      expect(screen.getByText("Select Model")).toBeInTheDocument();
+    });
+  });
+
+  it("should show clear button when a model is selected", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify(
+          createMockModelsResponse([{ id: "openai/gpt-4", name: "GPT-4" }]),
         ),
         { status: 200 },
       ),
     );
 
     renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
+      <ModelSelect value="openai/gpt-4" onChange={() => {}} />,
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Model")).toBeInTheDocument();
-    });
-
-    // Click to open dropdown
-    const selectInput = screen.getByLabelText("Model");
-    selectInput.click();
-
-    // Verify no crash when dropdown opens
-    await waitFor(() => {
-      const dropdown = document.querySelector('[role="listbox"]');
-      expect(dropdown).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Clear model selection"),
+      ).toBeInTheDocument();
     });
   });
 
-  it("should filter out models with null or missing IDs from the dropdown", async () => {
+  it("should call onChange with null when clear is clicked", async () => {
+    const handleChange = vi.fn();
+
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
-        JSON.stringify({
-          data: [
-            { id: "openai/gpt-4", name: "GPT-4" },
-            { id: "broken-model", name: null },
-            { id: null, name: "Broken ID" },
-          ],
-        }),
+        JSON.stringify(
+          createMockModelsResponse([{ id: "openai/gpt-4", name: "GPT-4" }]),
+        ),
         { status: 200 },
       ),
     );
 
     renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
+      <ModelSelect value="openai/gpt-4" onChange={handleChange} />,
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Model")).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Clear model selection"),
+      ).toBeInTheDocument();
     });
 
-    // Open the dropdown and verify malformed models are excluded
-    const selectInput = screen.getByLabelText("Model");
-    selectInput.click();
+    screen.getByLabelText("Clear model selection").click();
+
+    expect(handleChange).toHaveBeenCalledWith(null);
+  });
+
+  it("should use custom label when provided", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(createMockModelsResponse([])), {
+        status: 200,
+      }),
+    );
+
+    renderWithProviders(
+      <ModelSelect value="" onChange={() => {}} label="Plan Model" />,
+    );
 
     await waitFor(() => {
-      const dropdown = document.querySelector('[role="listbox"]');
-      expect(dropdown).toBeInTheDocument();
-
-      const options = Array.from(
-        dropdown?.querySelectorAll('[role="option"]') || [],
-      );
-      const optionTexts = options.map((opt) => opt.textContent);
-
-      // Valid model should appear
-      expect(optionTexts).toContain("GPT-4");
-      // Model with null id should be filtered out by deduplicateModels
-      expect(optionTexts).not.toContain("Broken ID");
+      expect(screen.getByText("Plan Model")).toBeInTheDocument();
     });
   });
 
@@ -208,9 +226,7 @@ describe("ModelSelect with real useOpenRouterModels hook", () => {
       ),
     );
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();

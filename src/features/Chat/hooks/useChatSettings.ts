@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useCivitJob } from "../../Images/hooks/useCivitJob";
 import type { ChatSettings } from "../services/Chat/ChatSettings";
 import { d } from "../../../services/Dependencies";
+import { Theme } from "../../../components/Theme";
 
 interface UseChatSettingsResult {
   chatSettings: ChatSettings | undefined;
   /** Resolved background photo - from CivitJob if present, otherwise from settings */
   backgroundPhotoBase64: string | undefined;
+  /** Per-chat message transparency (0-1), defaults to theme default */
+  messageTransparency: number;
   isLoading: boolean;
 }
 
@@ -38,9 +41,13 @@ export const useChatSettings = (chatId: string): UseChatSettingsResult => {
   const backgroundPhotoBase64 =
     civitJobPhoto || chatSettings?.backgroundPhotoBase64;
 
+  const messageTransparency =
+    chatSettings?.messageTransparency ?? Theme.chatEntry.transparency;
+
   return {
     chatSettings,
     backgroundPhotoBase64,
+    messageTransparency,
     isLoading,
   };
 };

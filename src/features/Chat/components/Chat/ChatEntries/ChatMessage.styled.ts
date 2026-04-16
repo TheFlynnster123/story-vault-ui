@@ -5,19 +5,18 @@ import { Theme } from "../../../../../components/Theme";
 /* Helper Functions          */
 /* ========================= */
 /**
- * Applies transparency to an rgba color string
+ * Creates an rgba color string that uses the --message-transparency CSS variable
+ * for real-time transparency adjustment via a slider.
  * @param color - rgba color string like "rgba(r, g, b, a)"
- * @param transparency - transparency value (0-1) to multiply with existing alpha
- * @returns modified rgba string with adjusted alpha
+ * @returns rgba string with alpha multiplied by the CSS variable
  */
-const applyTransparency = (color: string, transparency: number): string => {
+const transparencyColor = (color: string): string => {
   const match = color.match(
     /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/,
   );
   if (match) {
     const [, r, g, b, a = "1"] = match;
-    const newAlpha = parseFloat(a) * transparency;
-    return `rgba(${r}, ${g}, ${b}, ${newAlpha})`;
+    return `rgba(${r}, ${g}, ${b}, calc(${parseFloat(a)} * var(--message-transparency, ${Theme.chatEntry.transparency})))`;
   }
   return color;
 };
@@ -136,26 +135,17 @@ export const MessageText = styled.div<{
   ${({ $type }) =>
     $type === "user"
       ? `
-    background-color: ${applyTransparency(
-      Theme.messages.user.background,
-      Theme.chatEntry.transparency,
-    )};
+    background-color: ${transparencyColor(Theme.messages.user.background)};
     color: ${Theme.messages.user.text};
   `
       : $type === "story"
         ? `
-    background-color: ${applyTransparency(
-      Theme.messages.assistant.background,
-      Theme.chatEntry.transparency,
-    )};
+    background-color: ${transparencyColor(Theme.messages.assistant.background)};
     color: ${Theme.messages.assistant.text};
     border-left: 4px solid #7950f2;
   `
         : `
-    background-color: ${applyTransparency(
-      Theme.messages.assistant.background,
-      Theme.chatEntry.transparency,
-    )};
+    background-color: ${transparencyColor(Theme.messages.assistant.background)};
     color: ${Theme.messages.assistant.text};
   `}
 
@@ -191,10 +181,7 @@ export const PlanMessageText = styled.div`
     min-width 0.2s ease,
     opacity 0.2s ease;
 
-  background-color: ${applyTransparency(
-    "rgba(0, 131, 143, 0.8)",
-    Theme.chatEntry.transparency,
-  )};
+  background-color: ${transparencyColor("rgba(0, 131, 143, 0.8)")};
   color: ${Theme.messages.assistant.text};
   border-left: 4px solid rgba(0, 188, 212, 1);
 
@@ -235,17 +222,11 @@ export const NoteMessageText = styled.div<{ $expired?: boolean }>`
 
   background-color: ${({ $expired }) =>
     $expired
-      ? applyTransparency(
-          Theme.note.expired,
-          Theme.chatEntry.transparency,
-        )
-      : applyTransparency(
-          Theme.note.backgroundSecondary,
-          Theme.chatEntry.transparency,
-        )};
+      ? transparencyColor(Theme.note.expired)
+      : transparencyColor(Theme.note.backgroundSecondary)};
   color: ${Theme.messages.assistant.text};
-  border-left: 4px solid ${({ $expired }) =>
-    $expired ? Theme.note.expired : Theme.note.primary};
+  border-left: 4px solid
+    ${({ $expired }) => ($expired ? Theme.note.expired : Theme.note.primary)};
 
   ${({ $expired }) =>
     $expired &&

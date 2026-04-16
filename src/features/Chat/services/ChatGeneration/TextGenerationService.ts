@@ -14,6 +14,11 @@ export class TextGenerationService extends GenerationOrchestrator {
     this.chatId = chatId;
   }
 
+  private async getChatModelOverride(): Promise<string | undefined> {
+    const chatSettings = await d.ChatSettingsService(this.chatId).Get();
+    return chatSettings?.modelOverride;
+  }
+
   async generateResponse(guidance?: string): Promise<string | undefined> {
     return this.orchestrate(async () => {
       d.PlanGenerationService(this.chatId).onMessageSent();
@@ -24,21 +29,23 @@ export class TextGenerationService extends GenerationOrchestrator {
 
       this.setStatus("Generating response...");
 
+      const modelOverride = await this.getChatModelOverride();
       const streamingId = crypto.randomUUID();
       const projection = d.UserChatProjection(this.chatId);
       projection.addStreamingMessage(streamingId);
 
       try {
-        const response = await d
-          .OpenRouterChatAPI()
-          .postChatStream(requestMessages, (content) => {
+        const response = await d.OpenRouterChatAPI().postChatStream(
+          requestMessages,
+          (content) => {
             projection.updateStreamingMessage(content);
-          });
-
-        projection.removeStreamingMessage();
+          },
+          modelOverride,
+        );
 
         this.setStatus("Saving...");
         await d.ChatService(this.chatId).AddAssistantMessage(response);
+        projection.removeStreamingMessage();
 
         return response;
       } catch (error) {
@@ -70,20 +77,22 @@ export class TextGenerationService extends GenerationOrchestrator {
 
       this.setStatus("Generating response...");
 
+      const modelOverride = await this.getChatModelOverride();
       const projection = d.UserChatProjection(this.chatId);
       projection.startStreamingExistingMessage(messageId);
 
       try {
-        const response = await d
-          .OpenRouterChatAPI()
-          .postChatStream(requestMessages, (content) => {
+        const response = await d.OpenRouterChatAPI().postChatStream(
+          requestMessages,
+          (content) => {
             projection.updateStreamingMessage(content);
-          });
-
-        projection.removeStreamingMessage();
+          },
+          modelOverride,
+        );
 
         this.setStatus("Saving....");
         await d.ChatService(this.chatId).EditMessage(messageId, response);
+        projection.removeStreamingMessage();
 
         return response;
       } catch (error) {

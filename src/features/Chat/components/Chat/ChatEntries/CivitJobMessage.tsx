@@ -35,7 +35,12 @@ const StoryPhoto = styled.img`
 `;
 
 const LoadingBubble = styled.div`
-  background-color: rgba(0, 0, 0, ${Theme.chatEntry.transparency});
+  background-color: rgba(
+    0,
+    0,
+    0,
+    var(--message-transparency, ${Theme.chatEntry.transparency})
+  );
   color: white;
   padding: 10px 20px;
   border-radius: 20px;
