@@ -33,9 +33,7 @@ const createMockChatSettingsService = () => ({
 });
 
 describe("useChatModelOverride", () => {
-  let mockChatSettingsService: ReturnType<
-    typeof createMockChatSettingsService
-  >;
+  let mockChatSettingsService: ReturnType<typeof createMockChatSettingsService>;
 
   beforeEach(() => {
     vi.clearAllMocks();

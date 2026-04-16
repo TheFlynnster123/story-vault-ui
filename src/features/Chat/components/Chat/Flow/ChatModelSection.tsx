@@ -38,9 +38,7 @@ export const ChatModelSection: React.FC<ChatModelSectionProps> = ({
     <Box>
       <FlowButton
         onClick={() => setIsModalOpen(true)}
-        leftSection={
-          <RiRobot2Line size={18} color="rgba(100, 149, 237, 1)" />
-        }
+        leftSection={<RiRobot2Line size={18} color="rgba(100, 149, 237, 1)" />}
       >
         <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
           <Text size="sm" fw={500}>

@@ -35,11 +35,13 @@ export class TextGenerationService extends GenerationOrchestrator {
       projection.addStreamingMessage(streamingId);
 
       try {
-        const response = await d
-          .OpenRouterChatAPI()
-          .postChatStream(requestMessages, (content) => {
+        const response = await d.OpenRouterChatAPI().postChatStream(
+          requestMessages,
+          (content) => {
             projection.updateStreamingMessage(content);
-          }, modelOverride);
+          },
+          modelOverride,
+        );
 
         this.setStatus("Saving...");
         await d.ChatService(this.chatId).AddAssistantMessage(response);
@@ -80,11 +82,13 @@ export class TextGenerationService extends GenerationOrchestrator {
       projection.startStreamingExistingMessage(messageId);
 
       try {
-        const response = await d
-          .OpenRouterChatAPI()
-          .postChatStream(requestMessages, (content) => {
+        const response = await d.OpenRouterChatAPI().postChatStream(
+          requestMessages,
+          (content) => {
             projection.updateStreamingMessage(content);
-          }, modelOverride);
+          },
+          modelOverride,
+        );
 
         this.setStatus("Saving....");
         await d.ChatService(this.chatId).EditMessage(messageId, response);

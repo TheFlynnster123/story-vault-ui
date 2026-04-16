@@ -14,7 +14,8 @@ const mockClearModelOverride = vi.fn();
 const mockUseChatModelOverride = vi.fn();
 
 vi.mock("../../../hooks/useChatModelOverride", () => ({
-  useChatModelOverride: (...args: unknown[]) => mockUseChatModelOverride(...args),
+  useChatModelOverride: (...args: unknown[]) =>
+    mockUseChatModelOverride(...args),
 }));
 
 // Mock useOpenRouterModels (used by ModelSelectorModal)

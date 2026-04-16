@@ -96,7 +96,14 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
           >
             {displayName}
           </span>
-          <span style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              flexShrink: 0,
+            }}
+          >
             {isLoading && <Loader size="xs" />}
             {value && (
               <span

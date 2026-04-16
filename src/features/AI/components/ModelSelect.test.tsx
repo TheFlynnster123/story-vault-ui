@@ -14,7 +14,9 @@ vi.mock("@mantine/notifications", () => ({
   },
 }));
 
-const createMockModelsResponse = (models: Array<{ id: string; name: string }>) => ({
+const createMockModelsResponse = (
+  models: Array<{ id: string; name: string }>,
+) => ({
   data: models,
 });
 
@@ -58,9 +60,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
       ),
     );
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
@@ -91,15 +91,12 @@ describe("ModelSelect with ModelSelectorModal", () => {
 
   it("should display 'Default' when value is empty", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify(createMockModelsResponse([])),
-        { status: 200 },
-      ),
+      new Response(JSON.stringify(createMockModelsResponse([])), {
+        status: 200,
+      }),
     );
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText("Default")).toBeInTheDocument();
@@ -107,13 +104,9 @@ describe("ModelSelect with ModelSelectorModal", () => {
   });
 
   it("should render without crashing when API fails", async () => {
-    vi.spyOn(global, "fetch").mockRejectedValue(
-      new Error("Network error"),
-    );
+    vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network error"));
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
@@ -125,9 +118,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
       new Response("Server Error", { status: 500 }),
     );
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
@@ -138,17 +129,13 @@ describe("ModelSelect with ModelSelectorModal", () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify(
-          createMockModelsResponse([
-            { id: "openai/gpt-4", name: "GPT-4" },
-          ]),
+          createMockModelsResponse([{ id: "openai/gpt-4", name: "GPT-4" }]),
         ),
         { status: 200 },
       ),
     );
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
@@ -165,9 +152,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify(
-          createMockModelsResponse([
-            { id: "openai/gpt-4", name: "GPT-4" },
-          ]),
+          createMockModelsResponse([{ id: "openai/gpt-4", name: "GPT-4" }]),
         ),
         { status: 200 },
       ),
@@ -178,7 +163,9 @@ describe("ModelSelect with ModelSelectorModal", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Clear model selection")).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Clear model selection"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -188,9 +175,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify(
-          createMockModelsResponse([
-            { id: "openai/gpt-4", name: "GPT-4" },
-          ]),
+          createMockModelsResponse([{ id: "openai/gpt-4", name: "GPT-4" }]),
         ),
         { status: 200 },
       ),
@@ -201,7 +186,9 @@ describe("ModelSelect with ModelSelectorModal", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Clear model selection")).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Clear model selection"),
+      ).toBeInTheDocument();
     });
 
     screen.getByLabelText("Clear model selection").click();
@@ -211,10 +198,9 @@ describe("ModelSelect with ModelSelectorModal", () => {
 
   it("should use custom label when provided", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify(createMockModelsResponse([])),
-        { status: 200 },
-      ),
+      new Response(JSON.stringify(createMockModelsResponse([])), {
+        status: 200,
+      }),
     );
 
     renderWithProviders(
@@ -240,9 +226,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
       ),
     );
 
-    renderWithProviders(
-      <ModelSelect value="" onChange={() => {}} />,
-    );
+    renderWithProviders(<ModelSelect value="" onChange={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();

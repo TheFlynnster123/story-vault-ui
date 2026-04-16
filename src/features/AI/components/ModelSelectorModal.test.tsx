@@ -72,7 +72,9 @@ describe("ModelSelectorModal", () => {
     );
   };
 
-  const renderModal = (props: Partial<React.ComponentProps<typeof ModelSelectorModal>> = {}) =>
+  const renderModal = (
+    props: Partial<React.ComponentProps<typeof ModelSelectorModal>> = {},
+  ) =>
     render(
       <QueryClientProvider client={queryClient}>
         <ModelSelectorModal
@@ -109,7 +111,9 @@ describe("ModelSelectorModal", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByPlaceholderText("Search models by name, ID, or description..."),
+        screen.getByPlaceholderText(
+          "Search models by name, ID, or description...",
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -234,9 +238,7 @@ describe("ModelSelectorModal", () => {
     await user.type(searchInput, "nonexistent-xyz");
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/No models found matching/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/No models found matching/)).toBeInTheDocument();
     });
   });
 

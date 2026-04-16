@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
 import { d } from "../../../services/Dependencies";
 import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
@@ -112,9 +118,12 @@ const buildGroups = (
     .sort((a, b) => b.name.localeCompare(a.name));
 
   const groups: ModelGroup[] = [];
-  if (recentModels.length > 0) groups.push({ label: "🕐 Recent", models: recentModels });
-  if (recommendedModels.length > 0) groups.push({ label: "⭐ Reddit Recommended", models: recommendedModels });
-  if (allModels.length > 0) groups.push({ label: "All Models", models: allModels });
+  if (recentModels.length > 0)
+    groups.push({ label: "🕐 Recent", models: recentModels });
+  if (recommendedModels.length > 0)
+    groups.push({ label: "⭐ Reddit Recommended", models: recommendedModels });
+  if (allModels.length > 0)
+    groups.push({ label: "All Models", models: allModels });
 
   return groups;
 };
@@ -152,7 +161,9 @@ const ModelItem: React.FC<{
       width: "100%",
       padding: "10px 14px",
       backgroundColor: isSelected ? "rgba(100, 100, 255, 0.15)" : "transparent",
-      border: isSelected ? "1px solid rgba(100, 100, 255, 0.4)" : "1px solid transparent",
+      border: isSelected
+        ? "1px solid rgba(100, 100, 255, 0.4)"
+        : "1px solid transparent",
       borderRadius: "6px",
       cursor: "pointer",
       textAlign: "left",
@@ -160,7 +171,8 @@ const ModelItem: React.FC<{
       transition: "background-color 0.15s",
     }}
     onMouseEnter={(e) => {
-      if (!isSelected) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
+      if (!isSelected)
+        e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
     }}
     onMouseLeave={(e) => {
       if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
@@ -242,7 +254,10 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
     [models],
   );
 
-  const groups = useMemo(() => buildGroups(models, recentIds), [models, recentIds]);
+  const groups = useMemo(
+    () => buildGroups(models, recentIds),
+    [models, recentIds],
+  );
 
   const filteredGroups = useMemo(() => {
     if (!search.trim()) return groups;
