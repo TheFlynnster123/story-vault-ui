@@ -1,5 +1,4 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
-import type { DiscussionMessage } from "./DiscussionMessage";
 
 /**
  * Configuration that defines how a specific discussion variant behaves.
