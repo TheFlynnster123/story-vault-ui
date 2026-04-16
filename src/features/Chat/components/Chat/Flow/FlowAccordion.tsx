@@ -7,9 +7,11 @@ import { BookSection } from "./BookSection";
 import { NoteSection } from "./NoteSection";
 import { ChatSettingsButton } from "./ChatSettingsButton";
 import { ChatImageModelsSection } from "./ChatImageModelsSection";
+import { ChatModelSection } from "./ChatModelSection";
 import { usePlanCache } from "../../../../Plans/hooks/usePlanCache";
 import { PlanSection } from "../../../../Plans/components/PlanSection";
 import { MemoriesSection } from "../../../../Memories/components/MemoriesSection";
+import { TransparencySlider } from "./TransparencySlider";
 
 interface FlowAccordionProps {
   chatId: string;
@@ -42,6 +44,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
               <ChapterSection chatId={chatId} />
               <BookSection chatId={chatId} />
               <NoteSection chatId={chatId} />
+              <ChatModelSection chatId={chatId} />
               <ChatSettingsButton onClick={navigateToChatSettings} />
               <PlanSection
                 chatId={chatId}
@@ -56,6 +59,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
                 chatId={chatId}
                 onNavigate={navigateToChatImageModels}
               />
+              <TransparencySlider chatId={chatId} />
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>

@@ -1,7 +1,7 @@
 import { Stack } from "@mantine/core";
 import { RegeneratePlanButton } from "./RegeneratePlanButton";
 import { RegeneratePlanWithFeedbackButton } from "./RegeneratePlanWithFeedbackButton";
-import { DiscussDirectionButton } from "./DiscussDirectionButton";
+import { DiscussPlanButton } from "./DiscussPlanButton";
 import { EditButton } from "./EditButton";
 import { DeleteButton } from "./DeleteButton";
 
@@ -27,10 +27,7 @@ export const PlanMessageButtonsContainer: React.FC<
         planDefinitionId={planDefinitionId}
         priorContent={priorContent}
       />
-      <DiscussDirectionButton
-        chatId={chatId}
-        planDefinitionId={planDefinitionId}
-      />
+      <DiscussPlanButton chatId={chatId} planDefinitionId={planDefinitionId} />
       <EditButton chatId={chatId} messageId={messageId} />
       <DeleteButton chatId={chatId} messageId={messageId} />
     </Stack>

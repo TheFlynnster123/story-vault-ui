@@ -2,38 +2,38 @@ import { Button } from "@mantine/core";
 import { RiChat3Line } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 
-interface DiscussDirectionButtonProps {
+interface DiscussChapterButtonProps {
   chatId: string;
-  planDefinitionId: string;
+  chapterId: string;
 }
 
-export const DiscussDirectionButton: React.FC<DiscussDirectionButtonProps> = ({
+export const DiscussChapterButton: React.FC<DiscussChapterButtonProps> = ({
   chatId,
-  planDefinitionId,
+  chapterId,
 }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/chat/${chatId}/plan/${planDefinitionId}/direction`);
+    navigate(`/chat/${chatId}/chapter/${chapterId}/discuss`);
   };
 
   return (
     <Button
       size="xs"
       variant="light"
-      color="teal"
+      color="yellow"
       onClick={handleClick}
       leftSection={<RiChat3Line size={14} />}
       styles={{
         root: {
-          backgroundColor: "rgba(0, 188, 212, 0.25)",
+          backgroundColor: "rgba(199, 152, 0, 0.25)",
           "&:hover": {
-            backgroundColor: "rgba(0, 188, 212, 0.35)",
+            backgroundColor: "rgba(199, 152, 0, 0.35)",
           },
         },
       }}
     >
-      Discuss Direction
+      Discuss Summary
     </Button>
   );
 };

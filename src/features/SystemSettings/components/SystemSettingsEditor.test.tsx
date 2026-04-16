@@ -78,21 +78,13 @@ describe("SystemSettingsEditor", () => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
     });
 
-    // Click the select to open the dropdown
-    const selectInput = screen.getByLabelText("Model");
-    selectInput.click();
+    // Click to open the model selector modal
+    screen.getByLabelText("Model").click();
 
-    // Wait for dropdown to appear and verify the model is present
+    // Wait for modal to appear and verify the model is present
     await waitFor(() => {
-      const dropdown = document.querySelector('[role="listbox"]');
-      expect(dropdown).toBeInTheDocument();
-
-      const options = Array.from(
-        dropdown?.querySelectorAll('[role="option"]') || [],
-      );
-      const optionTexts = options.map((opt) => opt.textContent);
-
-      expect(optionTexts).toContain("Grok 4.20 Beta");
+      expect(screen.getByText("Select Model")).toBeInTheDocument();
+      expect(screen.getByText("Grok 4.20 Beta")).toBeInTheDocument();
     });
   });
 
@@ -103,28 +95,21 @@ describe("SystemSettingsEditor", () => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
     });
 
-    const selectInput = screen.getByLabelText("Model");
-    selectInput.click();
+    screen.getByLabelText("Model").click();
 
     await waitFor(() => {
-      const dropdown = document.querySelector('[role="listbox"]');
-      expect(dropdown).toBeInTheDocument();
+      expect(screen.getByText("Select Model")).toBeInTheDocument();
 
-      const options = Array.from(
-        dropdown?.querySelectorAll('[role="option"]') || [],
-      );
-      const optionTexts = options.map((opt) => opt.textContent);
-
-      expect(optionTexts).toContain("Claude Opus 4");
-      expect(optionTexts).toContain("Claude Sonnet 4");
-      expect(optionTexts).toContain("GPT-5");
-      expect(optionTexts).toContain("Gemini 2.5 Pro");
-      expect(optionTexts).toContain("DeepSeek V3.2");
-      expect(optionTexts).toContain("Llama 4 Maverick");
-      expect(optionTexts).toContain("Kimi K2.5");
-      expect(optionTexts).toContain("LongCat Flash Chat");
-      expect(optionTexts).toContain("Qwen3 235B");
-      expect(optionTexts).toContain("GLM 5 Turbo");
+      expect(screen.getByText("Claude Opus 4")).toBeInTheDocument();
+      expect(screen.getByText("Claude Sonnet 4")).toBeInTheDocument();
+      expect(screen.getByText("GPT-5")).toBeInTheDocument();
+      expect(screen.getByText("Gemini 2.5 Pro")).toBeInTheDocument();
+      expect(screen.getByText("DeepSeek V3.2")).toBeInTheDocument();
+      expect(screen.getByText("Llama 4 Maverick")).toBeInTheDocument();
+      expect(screen.getByText("Kimi K2.5")).toBeInTheDocument();
+      expect(screen.getByText("LongCat Flash Chat")).toBeInTheDocument();
+      expect(screen.getByText("Qwen3 235B")).toBeInTheDocument();
+      expect(screen.getByText("GLM 5 Turbo")).toBeInTheDocument();
     });
   });
 });

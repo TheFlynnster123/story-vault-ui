@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import {
-  RiArrowLeftLine,
-  RiSendPlane2Line,
-  RiFileList2Line,
-} from "react-icons/ri";
+import { useNavigate } from "react-router-dom";
+import { RiArrowLeftLine, RiSendPlane2Line } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
 import {
   Title,
@@ -22,32 +18,43 @@ import {
 } from "@mantine/core";
 import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
-import { useStoryDirectionChat } from "../hooks/useStoryDirectionChat";
 import { ModelSelect } from "../../AI/components/ModelSelect";
-import type { DirectionMessage } from "../services/StoryDirectionService";
+import { useDiscussionChat } from "../hooks/useDiscussionChat";
+import type { DiscussionService } from "../services/DiscussionService";
+import type { DiscussionMessage } from "../services/DiscussionMessage";
+import type { DiscussionPageConfig } from "./DiscussionPageConfig";
 import ReactMarkdown from "react-markdown";
 import styled from "styled-components";
 
-export const StoryDirectionPage: React.FC = () => {
-  const { chatId, planId } = useParams<{ chatId: string; planId: string }>();
+interface DiscussionPageProps {
+  chatId: string;
+  service: DiscussionService;
+  config: DiscussionPageConfig;
+}
+
+export const DiscussionPage: React.FC<DiscussionPageProps> = ({
+  chatId,
+  service,
+  config,
+}) => {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
   const {
     messages,
     isGenerating,
-    planModel,
+    defaultModel,
     sendMessage,
-    generateUpdatedPlan,
-  } = useStoryDirectionChat(chatId!, planId!);
+    generateFromFeedback,
+  } = useDiscussionChat(service);
   const [chatModel, setChatModel] = useState<string | null>(null);
   const [modelInitialized, setModelInitialized] = useState(false);
 
   useEffect(() => {
-    if (!modelInitialized && planModel !== undefined) {
-      setChatModel(planModel || "");
+    if (!modelInitialized && defaultModel !== undefined) {
+      setChatModel(defaultModel || "");
       setModelInitialized(true);
     }
-  }, [planModel, modelInitialized]);
+  }, [defaultModel, modelInitialized]);
 
   const handleGoBack = () => {
     navigate(`/chat/${chatId}`);
@@ -68,15 +75,15 @@ export const StoryDirectionPage: React.FC = () => {
     }
   };
 
-  const handleGeneratePlan = async () => {
-    await generateUpdatedPlan();
+  const handleGenerate = async () => {
+    await generateFromFeedback();
     navigate(`/chat/${chatId}`);
   };
 
   return (
     <Page>
       <Paper mt={30}>
-        <DirectionHeader onGoBack={handleGoBack} />
+        <DiscussionHeader config={config} onGoBack={handleGoBack} />
 
         <Box mb="md">
           <ModelSelect
@@ -87,76 +94,87 @@ export const StoryDirectionPage: React.FC = () => {
           />
         </Box>
 
-        <DirectionChatArea messages={messages} isGenerating={isGenerating} />
+        <DiscussionChatArea
+          messages={messages}
+          isGenerating={isGenerating}
+          config={config}
+        />
 
-        <DirectionInput
+        <DiscussionInput
           value={inputValue}
           onChange={setInputValue}
           onSend={handleSend}
           onKeyDown={handleKeyDown}
           isGenerating={isGenerating}
+          config={config}
         />
 
-        <GeneratePlanButton
-          onClick={handleGeneratePlan}
+        <GenerateButton
+          onClick={handleGenerate}
           disabled={messages.length === 0 || isGenerating}
           isGenerating={isGenerating}
+          config={config}
         />
       </Paper>
     </Page>
   );
 };
 
-interface DirectionHeaderProps {
+// ---- Sub-components ----
+
+interface DiscussionHeaderProps {
+  config: DiscussionPageConfig;
   onGoBack: () => void;
 }
 
-const DirectionHeader: React.FC<DirectionHeaderProps> = ({ onGoBack }) => (
+const DiscussionHeader: React.FC<DiscussionHeaderProps> = ({
+  config,
+  onGoBack,
+}) => (
   <>
     <Group justify="space-between" align="center" mb="md">
       <Group>
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
           <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <RiFileList2Line size={24} color={Theme.plan.primary} />
-        <Title order={2} fw={400} style={{ color: Theme.plan.primary }}>
-          Story Direction
+        {config.icon}
+        <Title order={2} fw={400} style={{ color: config.primaryColor }}>
+          {config.title}
         </Title>
       </Group>
     </Group>
     <Text size="sm" c="dimmed" mb="md">
-      Discuss the direction of your story with the AI. When you&apos;re
-      satisfied, click &quot;Generate Updated Story Plan&quot; to regenerate the
-      plan using this conversation as feedback.
+      {config.description}
     </Text>
-    <Divider mb="md" style={{ borderColor: Theme.plan.border }} />
+    <Divider mb="md" style={{ borderColor: config.borderColor }} />
   </>
 );
 
-interface DirectionChatAreaProps {
-  messages: ReadonlyArray<DirectionMessage>;
+interface DiscussionChatAreaProps {
+  messages: ReadonlyArray<DiscussionMessage>;
   isGenerating: boolean;
+  config: DiscussionPageConfig;
 }
 
-const DirectionChatArea: React.FC<DirectionChatAreaProps> = ({
+const DiscussionChatArea: React.FC<DiscussionChatAreaProps> = ({
   messages,
   isGenerating,
+  config,
 }) => (
   <ScrollArea h={400} mb="md" offsetScrollbars>
     <Stack gap="sm" p="xs">
       {messages.length === 0 && (
         <Text c="dimmed" ta="center" py="xl">
-          Start a conversation about your story&apos;s direction. Ask questions,
-          suggest ideas, or discuss what should happen next.
+          {config.emptyStateText}
         </Text>
       )}
       {messages.map((msg, index) => (
-        <DirectionMessageBubble key={index} message={msg} />
+        <DiscussionMessageBubble key={index} message={msg} config={config} />
       ))}
       {isGenerating && (
         <Group gap="xs" align="center">
-          <Loader size="xs" color={Theme.plan.primary} />
-          <Text size="sm" c={Theme.plan.primary}>
+          <Loader size="xs" color={config.primaryColor} />
+          <Text size="sm" c={config.primaryColor}>
             Thinking…
           </Text>
         </Group>
@@ -165,18 +183,24 @@ const DirectionChatArea: React.FC<DirectionChatAreaProps> = ({
   </ScrollArea>
 );
 
-interface DirectionMessageBubbleProps {
-  message: DirectionMessage;
+interface DiscussionMessageBubbleProps {
+  message: DiscussionMessage;
+  config: DiscussionPageConfig;
 }
 
-const DirectionMessageBubble: React.FC<DirectionMessageBubbleProps> = ({
+const DiscussionMessageBubble: React.FC<DiscussionMessageBubbleProps> = ({
   message,
+  config,
 }) => {
   const isUser = message.role === "user";
 
   return (
     <Box style={{ textAlign: isUser ? "right" : "left" }}>
-      <MessageBubble $isUser={isUser}>
+      <MessageBubble
+        $isUser={isUser}
+        $assistantBg={config.assistantBubbleBackground}
+        $primaryColor={config.primaryColor}
+      >
         {isUser ? (
           <Text size="sm">{message.content}</Text>
         ) : (
@@ -187,7 +211,11 @@ const DirectionMessageBubble: React.FC<DirectionMessageBubbleProps> = ({
   );
 };
 
-const MessageBubble = styled.div<{ $isUser: boolean }>`
+const MessageBubble = styled.div<{
+  $isUser: boolean;
+  $assistantBg: string;
+  $primaryColor: string;
+}>`
   display: inline-block;
   max-width: 85%;
   padding: 8px 12px;
@@ -195,35 +223,37 @@ const MessageBubble = styled.div<{ $isUser: boolean }>`
   font-size: small;
   box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
 
-  background-color: ${({ $isUser }) =>
-    $isUser ? Theme.messages.user.background : Theme.plan.backgroundSecondary};
+  background-color: ${({ $isUser, $assistantBg }) =>
+    $isUser ? Theme.messages.user.background : $assistantBg};
   color: ${Theme.messages.user.text};
-  border-left: ${({ $isUser }) =>
-    $isUser ? "none" : `3px solid ${Theme.plan.primary}`};
+  border-left: ${({ $isUser, $primaryColor }) =>
+    $isUser ? "none" : `3px solid ${$primaryColor}`};
   text-align: left;
 `;
 
-interface DirectionInputProps {
+interface DiscussionInputProps {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   isGenerating: boolean;
+  config: DiscussionPageConfig;
 }
 
-const DirectionInput: React.FC<DirectionInputProps> = ({
+const DiscussionInput: React.FC<DiscussionInputProps> = ({
   value,
   onChange,
   onSend,
   onKeyDown,
   isGenerating,
+  config,
 }) => (
   <Group gap="xs" align="flex-end" mb="md">
     <Textarea
       value={value}
       onChange={(e) => onChange(e.currentTarget.value)}
       onKeyDown={onKeyDown}
-      placeholder="Discuss story direction…"
+      placeholder={config.inputPlaceholder}
       disabled={isGenerating}
       minRows={2}
       autosize
@@ -232,7 +262,7 @@ const DirectionInput: React.FC<DirectionInputProps> = ({
       styles={{
         input: {
           backgroundColor: "rgba(0, 0, 0, 0.3)",
-          borderColor: Theme.plan.border,
+          borderColor: config.borderColor,
           color: Theme.page.text,
         },
       }}
@@ -241,7 +271,7 @@ const DirectionInput: React.FC<DirectionInputProps> = ({
       size="input-md"
       radius="xl"
       variant="filled"
-      color="teal"
+      color={config.accentColor}
       onClick={onSend}
       disabled={!value.trim() || isGenerating}
       aria-label="Send"
@@ -251,26 +281,28 @@ const DirectionInput: React.FC<DirectionInputProps> = ({
   </Group>
 );
 
-interface GeneratePlanButtonProps {
+interface GenerateButtonProps {
   onClick: () => void;
   disabled: boolean;
   isGenerating: boolean;
+  config: DiscussionPageConfig;
 }
 
-const GeneratePlanButton: React.FC<GeneratePlanButtonProps> = ({
+const GenerateButton: React.FC<GenerateButtonProps> = ({
   onClick,
   disabled,
   isGenerating,
+  config,
 }) => (
   <Button
     fullWidth
     size="lg"
-    color="teal"
+    color={config.accentColor}
     onClick={onClick}
     disabled={disabled}
     loading={isGenerating}
     leftSection={<VscRefresh size={20} />}
   >
-    Generate Updated Story Plan
+    {config.generateButtonLabel}
   </Button>
 );

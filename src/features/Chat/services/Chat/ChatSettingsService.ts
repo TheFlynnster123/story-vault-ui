@@ -52,4 +52,30 @@ export class ChatSettingsService {
       backgroundPhotoCivitJobId: jobId,
     });
   }
+
+  /**
+   * Sets a per-chat model override, overriding the system default model for this chat.
+   */
+  async setModelOverride(modelId: string | undefined): Promise<void> {
+    const currentSettings = await this.Get();
+    if (!currentSettings) return;
+
+    await this.save({
+      ...currentSettings,
+      modelOverride: modelId,
+    });
+  }
+
+  /**
+   * Sets the per-chat message transparency (0-1).
+   */
+  async setMessageTransparency(value: number): Promise<void> {
+    const currentSettings = await this.Get();
+    if (!currentSettings) return;
+
+    await this.saveDebounced({
+      ...currentSettings,
+      messageTransparency: value,
+    });
+  }
 }
