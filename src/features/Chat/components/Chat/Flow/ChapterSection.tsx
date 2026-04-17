@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { CreateChapterModal } from "../ChatControls/CreateChapterModal";
 import { useAddChapter } from "../ChatControls/useAddChapter";
 import { CompressToChapterButton } from "./CompressToChapterButton";
@@ -8,6 +9,7 @@ interface ChapterSectionProps {
 }
 
 export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
+  const navigate = useNavigate();
   const {
     showModal,
     title,
@@ -21,7 +23,15 @@ export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
     handleCloseModal,
     handleGenerateSummary,
     handleSubmit,
+    handleDiscuss,
   } = useAddChapter({ chatId });
+
+  const onDiscuss = async () => {
+    const chapterId = await handleDiscuss();
+    if (chapterId) {
+      navigate(`/chat/${chatId}/chapter/${chapterId}/discuss`);
+    }
+  };
 
   return (
     <>
@@ -36,6 +46,7 @@ export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
         onSummaryChange={setSummary}
         onNextChapterDirectionChange={setNextChapterDirection}
         onGenerateSummary={handleGenerateSummary}
+        onDiscuss={onDiscuss}
         onSubmit={handleSubmit}
         onCancel={handleCloseModal}
       />

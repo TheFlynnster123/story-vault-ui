@@ -91,7 +91,7 @@ export class ChatService {
     title: string,
     summary: string,
     nextChapterDirection?: string,
-  ): Promise<void> {
+  ): Promise<string> {
     const allMessages = d.UserChatProjection(this.chatId).GetMessages();
     const coveredMessageIds = allMessages
       .filter((m) => m.type !== "chapter" && m.type !== "story" && m.type !== "note" && !m.deleted)
@@ -105,6 +105,7 @@ export class ChatService {
     );
 
     await d.ChatEventService(this.chatId).AddChatEvent(event);
+    return event.chapterId;
   }
 
   public async EditChapter(

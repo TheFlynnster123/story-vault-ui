@@ -71,6 +71,21 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     }
   };
 
+  const handleDiscuss = async (): Promise<string | undefined> => {
+    if (!title.trim() || !summary.trim()) return undefined;
+
+    try {
+      const chapterId = await d
+        .ChatService(chatId)
+        .AddChapter(title, summary, nextChapterDirection || undefined);
+      handleCloseModal();
+      return chapterId;
+    } catch (error) {
+      d.ErrorService().log("Failed to create chapter for discussion", error);
+      return undefined;
+    }
+  };
+
   return {
     showModal,
     title,
@@ -84,5 +99,6 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     handleCloseModal,
     handleGenerateSummary,
     handleSubmit,
+    handleDiscuss,
   };
 };

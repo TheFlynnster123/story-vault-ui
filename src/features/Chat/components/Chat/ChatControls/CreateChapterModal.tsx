@@ -7,6 +7,7 @@ import {
   Button,
   Group,
 } from "@mantine/core";
+import { RiChat3Line } from "react-icons/ri";
 
 interface CreateChapterModalProps {
   opened: boolean;
@@ -18,6 +19,7 @@ interface CreateChapterModalProps {
   onSummaryChange: (summary: string) => void;
   onNextChapterDirectionChange: (direction: string) => void;
   onGenerateSummary: () => void;
+  onDiscuss: () => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -32,6 +34,7 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
   onSummaryChange,
   onNextChapterDirectionChange,
   onGenerateSummary,
+  onDiscuss,
   onSubmit,
   onCancel,
 }) => {
@@ -68,14 +71,24 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
             autosize
             required
           />
-          <Button
-            variant="light"
-            onClick={onGenerateSummary}
-            loading={isGenerating}
-            fullWidth
-          >
-            Generate Summary
-          </Button>
+          <Group grow>
+            <Button
+              variant="light"
+              onClick={onGenerateSummary}
+              loading={isGenerating}
+            >
+              Generate Summary
+            </Button>
+            <Button
+              variant="light"
+              color="yellow"
+              onClick={onDiscuss}
+              disabled={!canSubmit}
+              leftSection={<RiChat3Line size={14} />}
+            >
+              Discuss this Summary
+            </Button>
+          </Group>
         </Stack>
 
         <Textarea

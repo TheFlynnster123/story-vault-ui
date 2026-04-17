@@ -1,10 +1,12 @@
 import React, { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { RiBookOpenLine } from "react-icons/ri";
+import { Loader, Center } from "@mantine/core";
 import { Theme } from "../../../components/Theme";
 import { DiscussionPage } from "./DiscussionPage";
 import { DiscussionService } from "../services/DiscussionService";
 import { createChapterDiscussionConfig } from "../services/ChapterDiscussionConfig";
+import { useSystemPrompts } from "../../Prompts/hooks/useSystemPrompts";
 import type { DiscussionPageConfig } from "./DiscussionPageConfig";
 
 const pageConfig: DiscussionPageConfig = {
@@ -28,11 +30,28 @@ export const DiscussChapterPage: React.FC = () => {
     chapterId: string;
   }>();
 
+  const { systemPrompts, isLoading } = useSystemPrompts();
+
   const service = useMemo(
     () =>
-      new DiscussionService(createChapterDiscussionConfig(chatId!, chapterId!)),
-    [chatId, chapterId],
+      new DiscussionService(
+        createChapterDiscussionConfig(
+          chatId!,
+          chapterId!,
+          systemPrompts.chapterSummaryModel,
+          systemPrompts.chapterSummaryPrompt,
+        ),
+      ),
+    [chatId, chapterId, systemPrompts.chapterSummaryModel, systemPrompts.chapterSummaryPrompt],
   );
+
+  if (isLoading) {
+    return (
+      <Center h="100vh">
+        <Loader size="lg" />
+      </Center>
+    );
+  }
 
   return (
     <DiscussionPage chatId={chatId!} service={service} config={pageConfig} />
