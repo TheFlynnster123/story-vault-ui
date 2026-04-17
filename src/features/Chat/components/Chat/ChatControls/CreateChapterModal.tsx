@@ -38,7 +38,7 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const canSubmit = title.trim() && summary.trim() && !isGenerating;
+  const isFormValid = title.trim() && summary.trim() && !isGenerating;
 
   return (
     <Modal
@@ -83,7 +83,7 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
               variant="light"
               color="yellow"
               onClick={onDiscuss}
-              disabled={!canSubmit}
+              disabled={!isFormValid}
               leftSection={<RiChat3Line size={14} />}
             >
               Discuss this Summary
@@ -104,7 +104,7 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
           <Button variant="default" onClick={onCancel} disabled={isGenerating}>
             Cancel
           </Button>
-          <Button color="blue" onClick={onSubmit} disabled={!canSubmit}>
+          <Button color="blue" onClick={onSubmit} disabled={!isFormValid}>
             Create Chapter
           </Button>
         </Group>
