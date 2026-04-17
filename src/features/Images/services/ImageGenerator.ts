@@ -2,6 +2,7 @@ import { d } from "../../../services/Dependencies";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { ImageModel } from "./modelGeneration/ImageModel";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 
 export class ImageGenerator {
   private chatId: string;
@@ -61,7 +62,7 @@ export class ImageGenerator {
   /**
    * Resolves the image generation prompt using the hierarchy:
    * 1. Selected model's imageGenerationPrompt (if set)
-   * 2. System-level defaultImagePrompt
+   * 2. System-level defaultImagePrompt (user-saved or built-in default)
    */
   private async resolveImageGenerationPrompt(): Promise<string> {
     const selectedModel = await d
@@ -73,14 +74,12 @@ export class ImageGenerator {
       return selectedModel.imageGenerationPrompt;
     }
 
-    // Fall back to system default
+    // Fall back to user-saved system prompt, then to the built-in default
     const systemPrompts = await d.SystemPromptsService().Get();
-    if (systemPrompts?.defaultImagePrompt?.trim()) {
-      return systemPrompts.defaultImagePrompt;
-    }
-
-    // Ultimate fallback to hardcoded default (shouldn't happen in practice)
-    return DEFAULT_IMAGE_GENERATION_PROMPT;
+    return (
+      systemPrompts?.defaultImagePrompt?.trim() ||
+      DEFAULT_SYSTEM_PROMPTS.defaultImagePrompt
+    );
   }
 
   /**
@@ -91,18 +90,6 @@ export class ImageGenerator {
     return systemPrompts?.defaultImageModel || undefined;
   }
 }
-
-const DEFAULT_IMAGE_GENERATION_PROMPT = `Consider setting and the character present.
-
-For each reply, include 3–5 words for:
-- **Setting** (where the scene takes place)
-- **Description of person involved** (appearance, clothing, notable traits)
-- **Description of what they are doing** (their action or posture)
-
-Respond with ONLY a detailed, comma separated list depicting the current characters for image generation purposes.
-DEFAULT_SYSTEM_PROMPTS
-Example:
-"restaurant, evening, italian, woman, black dress, classy, sitting, touching face, at table, sitting in chair"`;
 
 const hasFeedback = (feedback?: string): boolean =>
   feedback !== undefined && feedback.trim().length > 0;
