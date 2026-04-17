@@ -208,6 +208,24 @@ describe("LLMChatProjection - Core Operations", () => {
       expectMessageContent(message!, "assistant", "Hi there");
     });
 
+    it("should return only LLM-safe fields from GetMessages", () => {
+      processMessageCreated(projection, "msg-1", "user", "Hello");
+
+      const messages = projection.GetMessages();
+      const keys = Object.keys(messages[0]);
+
+      expect(keys).toEqual(["id", "role", "content"]);
+    });
+
+    it("should return only LLM-safe fields from GetMessage", () => {
+      processMessageCreated(projection, "msg-1", "user", "Hello");
+
+      const message = projection.GetMessage("msg-1")!;
+      const keys = Object.keys(message);
+
+      expect(keys).toEqual(["id", "role", "content"]);
+    });
+
     it("should notify subscribers after processing", () => {
       const callback = vi.fn();
       projection.subscribe(callback);

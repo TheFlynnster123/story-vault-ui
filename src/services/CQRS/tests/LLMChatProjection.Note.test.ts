@@ -52,8 +52,8 @@ describe("LLMChatProjection - Note Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.noteId) as any;
-      expect(message?.data?.expiresAfterMessages).toBe(5);
+      const state = projection.getMessage(event.noteId);
+      expect(state?.data?.expiresAfterMessages).toBe(5);
     });
 
     it("should store raw content in message data", () => {
@@ -61,8 +61,8 @@ describe("LLMChatProjection - Note Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.noteId) as any;
-      expect(message?.data?.rawContent).toBe("Raw note content");
+      const state = projection.getMessage(event.noteId);
+      expect(state?.data?.rawContent).toBe("Raw note content");
     });
 
     it("should be retrievable by noteId", () => {
@@ -79,8 +79,8 @@ describe("LLMChatProjection - Note Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.noteId) as any;
-      expect(message?.hidden).toBe(false);
+      const state = projection.getMessage(event.noteId);
+      expect(state?.hidden).toBe(false);
     });
 
     it("should mark note as not deleted", () => {
@@ -88,8 +88,8 @@ describe("LLMChatProjection - Note Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.noteId) as any;
-      expect(message?.deleted).toBe(false);
+      const state = projection.getMessage(event.noteId);
+      expect(state?.deleted).toBe(false);
     });
   });
 
@@ -114,8 +114,8 @@ describe("LLMChatProjection - Note Events", () => {
         NoteEditedEventUtil.Create(createEvent.noteId, "Note", 20),
       );
 
-      const message = projection.GetMessage(createEvent.noteId) as any;
-      expect(message?.data?.expiresAfterMessages).toBe(20);
+      const state = projection.getMessage(createEvent.noteId);
+      expect(state?.data?.expiresAfterMessages).toBe(20);
     });
 
     it("should update raw content in data", () => {
@@ -126,8 +126,8 @@ describe("LLMChatProjection - Note Events", () => {
         NoteEditedEventUtil.Create(createEvent.noteId, "New raw", 10),
       );
 
-      const message = projection.GetMessage(createEvent.noteId) as any;
-      expect(message?.data?.rawContent).toBe("New raw");
+      const state = projection.getMessage(createEvent.noteId);
+      expect(state?.data?.rawContent).toBe("New raw");
     });
   });
 

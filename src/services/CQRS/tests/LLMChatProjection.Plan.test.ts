@@ -52,9 +52,8 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      // Access internal state via cast since GetMessage returns LLMMessage
-      const message = projection.GetMessage(event.messageId) as any;
-      expect(message?.data?.planDefinitionId).toBe("def-42");
+      const state = projection.getMessage(event.messageId);
+      expect(state?.data?.planDefinitionId).toBe("def-42");
     });
 
     it("should store planName in message data", () => {
@@ -62,8 +61,8 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.messageId) as any;
-      expect(message?.data?.planName).toBe("Character Arc");
+      const state = projection.getMessage(event.messageId);
+      expect(state?.data?.planName).toBe("Character Arc");
     });
 
     it("should store raw content in message data", () => {
@@ -71,8 +70,8 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.messageId) as any;
-      expect(message?.data?.rawContent).toBe("Raw plan content");
+      const state = projection.getMessage(event.messageId);
+      expect(state?.data?.rawContent).toBe("Raw plan content");
     });
 
     it("should be retrievable by messageId", () => {
@@ -89,8 +88,8 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.messageId) as any;
-      expect(message?.hidden).toBe(false);
+      const state = projection.getMessage(event.messageId);
+      expect(state?.hidden).toBe(false);
     });
 
     it("should mark plan as not deleted", () => {
@@ -98,8 +97,8 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.messageId) as any;
-      expect(message?.deleted).toBe(false);
+      const state = projection.getMessage(event.messageId);
+      expect(state?.deleted).toBe(false);
     });
   });
 
@@ -157,9 +156,9 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(PlanHiddenEventUtil.Create("def-1"));
 
-      const message = projection.GetMessage(planEvent.messageId) as any;
-      expect(message?.hidden).toBe(true);
-      expect(message?.deleted).toBe(false);
+      const state = projection.getMessage(planEvent.messageId);
+      expect(state?.hidden).toBe(true);
+      expect(state?.deleted).toBe(false);
     });
   });
 

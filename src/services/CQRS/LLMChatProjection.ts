@@ -128,7 +128,7 @@ export class LLMChatProjection {
       }
     }
 
-    return this.excludeExpiredNotes(messages);
+    return this.excludeExpiredNotes(messages).map(toLLMMessage);
   }
 
   /**
@@ -161,7 +161,7 @@ export class LLMChatProjection {
     const msg = this.getMessage(id);
 
     if (!msg || msg.deleted) return null;
-    return msg;
+    return toLLMMessage(msg);
   }
 
   // ---- Event Handlers ----
@@ -647,6 +647,15 @@ export class LLMChatProjection {
     };
   }
 }
+
+// ---- Helpers ----
+
+/** Strips internal bookkeeping fields so only LLM-safe properties are sent to the API. */
+const toLLMMessage = (state: MessageState): LLMMessage => ({
+  id: state.id,
+  role: state.role,
+  content: state.content,
+});
 
 // ---- Types ----
 interface MessageState {
