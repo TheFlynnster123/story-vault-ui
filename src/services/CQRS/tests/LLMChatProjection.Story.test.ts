@@ -20,7 +20,7 @@ describe("LLMChatProjection - Story Events", () => {
       const messages = projection.GetMessages();
       expect(messages).toHaveLength(1);
       expect(messages[0].role).toBe("system");
-      expect(messages[0].content).toBe(`# Story\r\n${storyContent}`);
+      expect(messages[0].content).toBe(`# Story\n${storyContent}`);
     });
 
     it("should place story at beginning of messages", () => {
@@ -39,7 +39,7 @@ describe("LLMChatProjection - Story Events", () => {
       projection.process(event);
 
       const story = projection.GetMessage(event.storyId);
-      expect(story?.content).toBe(`# Story\r\n${content}`);
+      expect(story?.content).toBe(`# Story\n${content}`);
     });
   });
 
@@ -56,7 +56,7 @@ describe("LLMChatProjection - Story Events", () => {
       projection.process(editEvent);
 
       const story = projection.GetMessage(createEvent.storyId);
-      expect(story?.content).toBe(`# Story\r\n${newContent}`);
+      expect(story?.content).toBe(`# Story\n${newContent}`);
     });
 
     it("should maintain system role after edit", () => {

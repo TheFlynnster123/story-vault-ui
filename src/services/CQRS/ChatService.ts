@@ -80,6 +80,7 @@ export class ChatService {
   public async DeleteMessageAndAllBelow(messageId: string): Promise<void> {
     const allMessages = d.UserChatProjection(this.chatId).GetMessages();
     const messageIndex = allMessages.findIndex((m) => m.id === messageId);
+    if (messageIndex === -1) return;
     const messageIdsToDelete = allMessages.slice(messageIndex).map((m) => m.id);
 
     const event = MessagesDeletedEventUtil.Create(messageIdsToDelete);

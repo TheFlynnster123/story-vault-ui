@@ -108,28 +108,25 @@ describe("ChatService - DeleteMessageAndAllBelow", () => {
       expect(calledEvent.messageIds).toEqual(["msg-4"]);
     });
 
-    it("should handle deleting non-existent message (index -1)", async () => {
+    it("should not delete any messages when ID is not found", async () => {
       const messages = createMockMessages(3);
       mockUserChatProjection.GetMessages.mockReturnValue(messages);
 
       const service = new ChatService(testChatId);
       await service.DeleteMessageAndAllBelow("non-existent");
 
-      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
-      // When findIndex returns -1, slice(-1) returns the last element
-      expect(calledEvent.messageIds).toHaveLength(1);
-      expect(calledEvent.messageIds).toEqual(["msg-2"]);
+      // Should not create any event when the message ID is not found
+      expect(mockChatEventService.AddChatEvent).not.toHaveBeenCalled();
     });
 
-    it("should handle empty message list", async () => {
+    it("should not delete any messages for empty message list", async () => {
       mockUserChatProjection.GetMessages.mockReturnValue([]);
 
       const service = new ChatService(testChatId);
       await service.DeleteMessageAndAllBelow("msg-1");
 
-      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
-      expect(calledEvent.messageIds).toHaveLength(0);
-      expect(calledEvent.messageIds).toEqual([]);
+      // Should not create any event when the message ID is not found
+      expect(mockChatEventService.AddChatEvent).not.toHaveBeenCalled();
     });
 
     it("should handle single message list", async () => {

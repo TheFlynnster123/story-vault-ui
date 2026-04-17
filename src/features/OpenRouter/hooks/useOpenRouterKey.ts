@@ -10,14 +10,20 @@ const notifyListeners = () => {
 };
 
 const fetchOpenRouterKeyStatus = async () => {
-  const api = d.OpenRouterKeyAPI();
+  try {
+    const api = d.OpenRouterKeyAPI();
 
-  const isValid = await api.hasValidOpenRouterKey();
-  openRouterKeyStatusSingleton = isValid;
+    const isValid = await api.hasValidOpenRouterKey();
+    openRouterKeyStatusSingleton = isValid;
 
-  if (isValid) await d.EncryptionManager().ensureKeysInitialized();
+    if (isValid) await d.EncryptionManager().ensureKeysInitialized();
 
-  notifyListeners();
+    notifyListeners();
+  } catch (e) {
+    openRouterKeyStatusSingleton = false;
+    notifyListeners();
+    d.ErrorService().log("Failed to check OpenRouter key status", e);
+  }
 };
 
 export const useOpenRouterKey = () => {

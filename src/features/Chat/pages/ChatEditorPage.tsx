@@ -100,7 +100,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   useEffect(() => {
     if (chatSettings) {
       const values = {
-        timestampCreatedUtcMs: Date.now(),
+        timestampCreatedUtcMs: chatSettings.timestampCreatedUtcMs || Date.now(),
         chatTitle: chatSettings.chatTitle || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
         backgroundPhotoCivitJobId: chatSettings.backgroundPhotoCivitJobId,

@@ -437,7 +437,7 @@ export class LLMChatProjection {
     `[Book Summary: ${title}]\n${summary}\n[End of Book Summary]`;
 
   // ---- Helpers ----
-  formatStoryContent = (content: string): string => `# Story\r\n${content}`;
+  formatStoryContent = (content: string): string => `# Story\n${content}`;
 
   /** Message types that count toward note expiration */
   private static NOTE_EXPIRATION_TYPES: ReadonlySet<string> = new Set([

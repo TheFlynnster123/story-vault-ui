@@ -42,7 +42,7 @@ export class ChatAPI {
       return true;
     } else {
       console.error("Failed to delete chat:", response.statusText);
-      return false;
+      throw new Error(`Failed to delete chat: ${response.statusText}`);
     }
   }
 }

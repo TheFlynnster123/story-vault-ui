@@ -13,6 +13,7 @@ export class EncryptionManager {
   private chatEncryptionKey?: string;
   private civitaiEncryptionKey?: string;
   private encryptionGuid?: string;
+  private initPromise: Promise<void> | null = null;
 
   async getOpenRouterEncryptionKey() {
     await this.ensureKeysInitialized();
@@ -35,13 +36,22 @@ export class EncryptionManager {
   }
 
   async ensureKeysInitialized() {
-    if (!this.encryptionGuid) {
-      this.encryptionGuid = await d.AuthAPI().getEncryptionGuid();
+    if (this.civitaiEncryptionKey) return;
+    if (this.initPromise) return this.initPromise;
 
-      this.openRouterEncryptionKey = await this.deriveKey("openrouter");
-      this.chatEncryptionKey = await this.deriveKey("chat");
-      this.civitaiEncryptionKey = await this.deriveKey("civitai");
-    }
+    this.initPromise = this.doInitializeKeys().catch((error) => {
+      this.initPromise = null;
+      throw error;
+    });
+    await this.initPromise;
+  }
+
+  private async doInitializeKeys() {
+    this.encryptionGuid = await d.AuthAPI().getEncryptionGuid();
+
+    this.openRouterEncryptionKey = await this.deriveKey("openrouter");
+    this.chatEncryptionKey = await this.deriveKey("chat");
+    this.civitaiEncryptionKey = await this.deriveKey("civitai");
   }
 
   async encryptString(keyType: EncryptionKeyType, data: string) {

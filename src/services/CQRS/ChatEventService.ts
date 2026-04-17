@@ -26,7 +26,11 @@ export class ChatEventService {
     if (this.Initialized) return;
 
     // Store the promise to prevent race conditions
-    this.InitializePromise = this.doInitialize();
+    this.InitializePromise = this.doInitialize().catch((error) => {
+      // Clear the cached promise so initialization can be retried
+      this.InitializePromise = null;
+      throw error;
+    });
     await this.InitializePromise;
   }
 

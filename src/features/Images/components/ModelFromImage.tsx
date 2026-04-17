@@ -44,7 +44,7 @@ export const ModelFromImage: React.FC<ModelFromImageProps> = ({
       }
     } catch (e) {
       d.ErrorService().log(
-        "Failed to load RL we'll just need to end of the model from image",
+        "Failed to load model from image",
         e,
       );
       setError(
