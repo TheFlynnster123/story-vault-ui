@@ -1,6 +1,7 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { ChapterChatMessage } from "../../../services/CQRS/UserChatProjection";
 import { d } from "../../../services/Dependencies";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
 
 /**
@@ -8,10 +9,15 @@ import type { DiscussionConfig } from "./DiscussionConfig";
  * When the user clicks "Generate", the chapter summary is regenerated
  * using the conversation as feedback, then the chapter is updated via
  * ChatService.EditChapter.
+ *
+ * @param chapterSummaryModel - Model override from SystemPrompts for chapter summary generation
+ * @param chapterSummaryPrompt - Prompt from SystemPrompts for chapter summary generation
  */
 export const createChapterDiscussionConfig = (
   chatId: string,
   chapterId: string,
+  chapterSummaryModel?: string,
+  chapterSummaryPrompt?: string,
 ): DiscussionConfig => {
   const findChapter = (): ChapterChatMessage | undefined =>
     d
@@ -21,6 +27,9 @@ export const createChapterDiscussionConfig = (
 
   const getChatMessages = (): LLMMessage[] =>
     d.LLMChatProjection(chatId).GetMessages();
+
+  const resolvedPrompt = (): string =>
+    chapterSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt;
 
   const buildSystemPrompt = (): string => {
     const chapter = findChapter();
@@ -57,7 +66,8 @@ export const createChapterDiscussionConfig = (
     return lines.join("\n");
   };
 
-  const getDefaultModel = (): string | undefined => undefined;
+  const getDefaultModel = (): string | undefined =>
+    chapterSummaryModel || undefined;
 
   const generateFromFeedback = async (feedback: string): Promise<void> => {
     const chapter = findChapter();
@@ -69,7 +79,7 @@ export const createChapterDiscussionConfig = (
 
     const chatMessages = getChatMessages();
     const systemPrompt = [
-      `Review the conversation above and generate an updated chapter summary.`,
+      resolvedPrompt(),
       ``,
       `Current chapter title: ${title}`,
       `Current summary:`,
@@ -91,7 +101,8 @@ export const createChapterDiscussionConfig = (
       { role: "system", content: systemPrompt },
     ];
 
-    const response = await d.OpenRouterChatAPI().postChat(messages);
+    const model = chapterSummaryModel || undefined;
+    const response = await d.OpenRouterChatAPI().postChat(messages, model);
 
     await d
       .ChatService(chatId)
