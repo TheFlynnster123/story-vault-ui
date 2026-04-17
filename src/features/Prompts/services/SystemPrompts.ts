@@ -11,12 +11,10 @@ export interface SystemPrompts {
   /** Model override for story generation (empty = use default) */
   newStoryModel?: string;
 
-  // TODO: Wire this to first-person narrative generation flow
-  /** Prompt for generating first-person narrative content */
+  /** Prompt for generating first-person narrative content. Pre-filled into ChatSettings.prompt at chat creation. */
   defaultFirstPersonPrompt: string;
 
-  // TODO: Wire this to third-person narrative generation flow
-  /** Prompt for generating third-person narrative content */
+  /** Prompt for generating third-person narrative content. Pre-filled into ChatSettings.prompt at chat creation. */
   defaultThirdPersonPrompt: string;
 
   // TODO: Wire this to image generation flow
