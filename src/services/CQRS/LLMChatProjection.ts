@@ -132,6 +132,23 @@ export class LLMChatProjection {
   }
 
   /**
+   * Returns all LLM context messages with the specified chapter's covered messages
+   * un-hidden. Used during chapter summary discussion so the LLM has the full
+   * chapter content instead of only the last 6 messages from the buffer.
+   */
+  public GetMessagesIncludingChapter(chapterId: string): LLMMessage[] {
+    const messages = this.messages.filter(
+      (m) =>
+        !m.deleted &&
+        !m.hidden &&
+        !m.hiddenByBookId &&
+        (!m.hiddenByChapterId || m.hiddenByChapterId === chapterId),
+    );
+
+    return this.excludeExpiredNotes(messages);
+  }
+
+  /**
    * Returns LLM context messages excluding plan messages for a specific plan definition.
    * Used during plan regeneration so the plan's own content isn't in the context
    * (it's provided separately in the prompt instead).

@@ -27,4 +27,6 @@ export interface DiscussionPageConfig {
   finalFeedbackButtonLabel: string;
   /** Empty state text when no messages */
   emptyStateText: string;
+  /** Optional label for the approve button (shown when a pending result exists) */
+  approveButtonLabel?: string;
 }

@@ -17,12 +17,22 @@ export interface DiscussionConfig {
   /**
    * Execute the "generate" action using the conversation as feedback.
    * e.g. regenerate plan, update chapter summary, update book summary, regenerate story.
+   *
+   * When a string is returned, the result is treated as a preview that requires
+   * user approval before being applied. The DiscussionService will store the
+   * preview and expose it via `getPendingResult()`.
    */
-  generateFromFeedback: (feedback: string) => Promise<void>;
+  generateFromFeedback: (feedback: string) => Promise<string | void>;
 
   /**
    * Optional prompt used to auto-generate the first assistant message
    * when the discussion starts. If undefined, no initial message is generated.
    */
   buildInitialPrompt?: () => string | undefined;
+
+  /**
+   * Optional — applies a previously generated preview result.
+   * Only needed when `generateFromFeedback` returns a preview string.
+   */
+  applyGenerated?: (preview: string) => Promise<void>;
 }

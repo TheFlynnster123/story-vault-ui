@@ -747,4 +747,112 @@ describe("LLMChatProjection - Chapter Operations", () => {
       expect(bufferMessageIndex).toBeLessThan(chapter3Index);
     });
   });
+
+  // ---- GetMessagesIncludingChapter Tests ----
+  describe("GetMessagesIncludingChapter", () => {
+    it("includes all covered messages for the specified chapter", () => {
+      const messageIds = createMessagesSequence(projection, 10);
+      createChapter(
+        projection,
+        "chapter-1",
+        "Chapter One",
+        "Summary",
+        messageIds,
+      );
+
+      const messages = projection.GetMessagesIncludingChapter("chapter-1");
+
+      // All 10 messages + the chapter itself
+      expect(messages).toHaveLength(11);
+    });
+
+    it("includes all messages even when GetMessages would only return buffer", () => {
+      const messageIds = createMessagesSequence(projection, 20);
+      createChapter(
+        projection,
+        "chapter-1",
+        "Chapter One",
+        "Summary",
+        messageIds,
+      );
+
+      // GetMessages returns only 6 buffer + 1 chapter = 7
+      const compressed = projection.GetMessages();
+      expect(compressed).toHaveLength(7);
+
+      // GetMessagesIncludingChapter returns all 20 + 1 chapter = 21
+      const full = projection.GetMessagesIncludingChapter("chapter-1");
+      expect(full).toHaveLength(21);
+    });
+
+    it("works with empty summary chapter", () => {
+      const messageIds = createMessagesSequence(projection, 10);
+      createChapter(projection, "chapter-1", "Chapter One", "", messageIds);
+
+      const messages = projection.GetMessagesIncludingChapter("chapter-1");
+
+      // All 10 messages + the chapter
+      expect(messages).toHaveLength(11);
+    });
+
+    it("only un-hides messages for the specified chapter", () => {
+      const firstBatch = createMessagesSequence(projection, 5, 1);
+      createChapter(
+        projection,
+        "chapter-1",
+        "Chapter One",
+        "Summary 1",
+        firstBatch,
+      );
+
+      const secondBatch = createMessagesSequence(projection, 5, 6);
+      createChapter(
+        projection,
+        "chapter-2",
+        "Chapter Two",
+        "Summary 2",
+        secondBatch,
+      );
+
+      // Request messages including chapter-2 only
+      const messages = projection.GetMessagesIncludingChapter("chapter-2");
+
+      // Should include: chapter-1 (visible) + 5 un-hidden from chapter-2 + chapter-2
+      // Chapter-1's covered messages should remain hidden
+      const messageContents = messages.map((m) => m.content);
+      expect(messageContents).not.toContain("Message 1");
+      expect(messageContents).not.toContain("Message 5");
+
+      // Chapter-2's covered messages should be visible
+      expect(messageContents).toContain("Message 6");
+      expect(messageContents).toContain("Message 10");
+    });
+
+    it("preserves chronological order of messages", () => {
+      const messageIds = createMessagesSequence(projection, 5);
+      createChapter(projection, "chapter-1", "Chapter One", "", messageIds);
+
+      const messages = projection.GetMessagesIncludingChapter("chapter-1");
+      const contents = messages.map((m) => m.content);
+
+      // Messages should be in order, with chapter at the end
+      expect(contents[0]).toBe("Message 1");
+      expect(contents[4]).toBe("Message 5");
+      expect(contents[5]).toContain("Chapter One");
+    });
+
+    it("excludes deleted messages", () => {
+      const messageIds = createMessagesSequence(projection, 5);
+      projection.process({
+        type: "MessageDeleted",
+        messageId: "msg-3",
+      });
+      createChapter(projection, "chapter-1", "Chapter One", "", messageIds);
+
+      const messages = projection.GetMessagesIncludingChapter("chapter-1");
+
+      // 4 remaining messages + chapter
+      expect(messages).toHaveLength(5);
+    });
+  });
 });

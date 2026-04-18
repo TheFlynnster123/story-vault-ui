@@ -15,6 +15,7 @@ describe("ChapterDiscussionConfig", () => {
 
   let mockLLMChatProjection: {
     GetMessages: ReturnType<typeof vi.fn>;
+    GetMessagesIncludingChapter: ReturnType<typeof vi.fn>;
   };
 
   let mockOpenRouterChatAPI: {
@@ -41,6 +42,10 @@ describe("ChapterDiscussionConfig", () => {
 
     mockLLMChatProjection = {
       GetMessages: vi.fn().mockReturnValue([
+        { role: "user", content: "Hello" },
+        { role: "assistant", content: "World" },
+      ]),
+      GetMessagesIncludingChapter: vi.fn().mockReturnValue([
         { role: "user", content: "Hello" },
         { role: "assistant", content: "World" },
       ]),
@@ -158,16 +163,13 @@ describe("ChapterDiscussionConfig", () => {
       ).toBe(true);
     });
 
-    it("should call EditChapter with the generated response", async () => {
+    it("should return the generated summary as a preview", async () => {
       const config = createChapterDiscussionConfig(testChatId, testChapterId);
 
-      await config.generateFromFeedback("Make it better");
+      const result = await config.generateFromFeedback("Make it better");
 
-      expect(mockChatService.EditChapter).toHaveBeenCalledWith(
-        testChapterId,
-        "Chapter One",
-        "Updated chapter summary.",
-      );
+      expect(result).toBe("Updated chapter summary.");
+      expect(mockChatService.EditChapter).not.toHaveBeenCalled();
     });
 
     it("should not call postChat when chapter is not found", async () => {
@@ -224,6 +226,46 @@ describe("ChapterDiscussionConfig", () => {
     it("should be defined on the config", () => {
       const config = createChapterDiscussionConfig(testChatId, testChapterId);
       expect(config.buildInitialPrompt).toBeDefined();
+    });
+  });
+
+  describe("getChatMessages", () => {
+    it("should use GetMessagesIncludingChapter for full chapter context", () => {
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
+      config.getChatMessages();
+
+      expect(
+        mockLLMChatProjection.GetMessagesIncludingChapter,
+      ).toHaveBeenCalledWith(testChapterId);
+      expect(mockLLMChatProjection.GetMessages).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("applyGenerated", () => {
+    it("should call EditChapter with the preview summary", async () => {
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
+
+      await config.applyGenerated!("The approved summary.");
+
+      expect(mockChatService.EditChapter).toHaveBeenCalledWith(
+        testChapterId,
+        "Chapter One",
+        "The approved summary.",
+      );
+    });
+
+    it("should not call EditChapter when chapter is not found", async () => {
+      mockUserChatProjection.GetMessages.mockReturnValue([]);
+
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
+      await config.applyGenerated!("Some summary");
+
+      expect(mockChatService.EditChapter).not.toHaveBeenCalled();
+    });
+
+    it("should be defined on the config", () => {
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
+      expect(config.applyGenerated).toBeDefined();
     });
   });
 });

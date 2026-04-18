@@ -6,9 +6,12 @@ import type { DiscussionConfig } from "./DiscussionConfig";
 
 /**
  * Creates a DiscussionConfig for discussing a specific chapter's summary.
- * When the user clicks "Generate", the chapter summary is regenerated
- * using the conversation as feedback, then the chapter is updated via
- * ChatService.EditChapter.
+ * When the user clicks "Generate", the chapter summary is generated
+ * and returned as a preview for user approval. When the user approves,
+ * the chapter is updated via ChatService.EditChapter.
+ *
+ * Uses GetMessagesIncludingChapter so the LLM sees the full chapter
+ * messages instead of the compressed 6-message buffer.
  *
  * @param chapterSummaryModel - Model override from SystemPrompts for chapter summary generation
  * @param chapterSummaryPrompt - Prompt from SystemPrompts for chapter summary generation
@@ -26,7 +29,7 @@ export const createChapterDiscussionConfig = (
       .find((m) => m.id === chapterId) as ChapterChatMessage | undefined;
 
   const getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(chatId).GetMessages();
+    d.LLMChatProjection(chatId).GetMessagesIncludingChapter(chapterId);
 
   const resolvedPrompt = (): string =>
     chapterSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt;
@@ -73,7 +76,9 @@ export const createChapterDiscussionConfig = (
   const getDefaultModel = (): string | undefined =>
     chapterSummaryModel || undefined;
 
-  const generateFromFeedback = async (feedback: string): Promise<void> => {
+  const generateFromFeedback = async (
+    feedback: string,
+  ): Promise<string | void> => {
     const chapter = findChapter();
     if (!chapter) return;
 
@@ -107,7 +112,15 @@ export const createChapterDiscussionConfig = (
     const model = chapterSummaryModel || undefined;
     const response = await d.OpenRouterChatAPI().postChat(messages, model);
 
-    await d.ChatService(chatId).EditChapter(chapterId, title, response);
+    return response;
+  };
+
+  const applyGenerated = async (preview: string): Promise<void> => {
+    const chapter = findChapter();
+    if (!chapter) return;
+
+    const title = chapter.data?.title ?? "";
+    await d.ChatService(chatId).EditChapter(chapterId, title, preview);
   };
 
   return {
@@ -116,5 +129,6 @@ export const createChapterDiscussionConfig = (
     getDefaultModel,
     generateFromFeedback,
     buildInitialPrompt,
+    applyGenerated,
   };
 };

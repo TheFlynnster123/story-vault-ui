@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RiArrowLeftLine, RiSendPlane2Line } from "react-icons/ri";
+import { RiArrowLeftLine, RiSendPlane2Line, RiCheckLine } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
 import {
   Title,
@@ -44,9 +44,12 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     messages,
     isGenerating,
     defaultModel,
+    pendingResult,
+    requiresApproval,
     sendMessage,
     generateInitialMessage,
     sendFinalFeedbackAndGenerate,
+    applyPendingResult,
   } = useDiscussionChat(service);
   const [chatModel, setChatModel] = useState<string | null>(null);
   const [modelInitialized, setModelInitialized] = useState(false);
@@ -85,7 +88,17 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     const finalFeedback = inputValue.trim() ? inputValue : undefined;
     setInputValue("");
     await sendFinalFeedbackAndGenerate(finalFeedback);
-    navigate(`/chat/${chatId}`);
+
+    if (!requiresApproval) {
+      navigate(`/chat/${chatId}`);
+    }
+  };
+
+  const handleApprove = async () => {
+    const applied = await applyPendingResult();
+    if (applied) {
+      navigate(`/chat/${chatId}`);
+    }
   };
 
   return (
@@ -119,12 +132,21 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
           config={config}
         />
 
-        <GenerateButton
-          onClick={handleGenerate}
-          disabled={messages.length === 0 || isGenerating}
-          isGenerating={isGenerating}
-          config={config}
-        />
+        {pendingResult && config.approveButtonLabel ? (
+          <ApproveButton
+            onClick={handleApprove}
+            disabled={isGenerating}
+            isGenerating={isGenerating}
+            label={config.approveButtonLabel}
+          />
+        ) : (
+          <GenerateButton
+            onClick={handleGenerate}
+            disabled={messages.length === 0 || isGenerating}
+            isGenerating={isGenerating}
+            config={config}
+          />
+        )}
       </Paper>
     </Page>
   );
@@ -331,5 +353,31 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({
     leftSection={<VscRefresh size={20} />}
   >
     {config.generateButtonLabel}
+  </Button>
+);
+
+interface ApproveButtonProps {
+  onClick: () => void;
+  disabled: boolean;
+  isGenerating: boolean;
+  label: string;
+}
+
+const ApproveButton: React.FC<ApproveButtonProps> = ({
+  onClick,
+  disabled,
+  isGenerating,
+  label,
+}) => (
+  <Button
+    fullWidth
+    size="lg"
+    color="green"
+    onClick={onClick}
+    disabled={disabled}
+    loading={isGenerating}
+    leftSection={<RiCheckLine size={20} />}
+  >
+    {label}
   </Button>
 );

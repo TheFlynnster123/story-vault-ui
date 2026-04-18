@@ -12,11 +12,16 @@ import type { DiscussionMessage } from "./DiscussionMessage";
  * This is the generic base — each variant (Plan, Chapter, Book, Story)
  * supplies a DiscussionConfig that controls prompt building and the
  * generate action.
+ *
+ * When a config's `generateFromFeedback` returns a string, the result is
+ * treated as a preview requiring user approval. Call `applyPendingResult()`
+ * to persist the preview.
  */
 export class DiscussionService {
   private config: DiscussionConfig;
   private messages: DiscussionMessage[] = [];
   private generating: boolean = false;
+  private pendingResult: string | null = null;
   private subscribers = new Set<() => void>();
 
   constructor(config: DiscussionConfig) {
@@ -36,11 +41,14 @@ export class DiscussionService {
 
   public isGenerating = (): boolean => this.generating;
 
+  public getPendingResult = (): string | null => this.pendingResult;
+
   public getDefaultModel = (): string | undefined =>
     this.config.getDefaultModel();
 
   /**
    * Sends a user message and gets an LLM response in context.
+   * Clears any pending result since the conversation has changed.
    * @param modelOverride - When provided, overrides the default model for this call.
    */
   public sendMessage = async (
@@ -49,6 +57,7 @@ export class DiscussionService {
   ): Promise<void> => {
     if (!userMessage.trim() || this.generating) return;
 
+    this.pendingResult = null;
     this.messages = [...this.messages, { role: "user", content: userMessage }];
     this.generating = true;
     this.notifySubscribers();
@@ -82,6 +91,10 @@ export class DiscussionService {
   /**
    * Triggers the variant-specific generate action using the conversation
    * formatted as feedback text.
+   *
+   * When the config returns a preview string, it is stored as a pending
+   * result and shown as an assistant message. Call `applyPendingResult()`
+   * to persist the preview.
    */
   public generateFromFeedback = async (): Promise<void> => {
     if (this.messages.length === 0) return;
@@ -91,12 +104,49 @@ export class DiscussionService {
 
     try {
       const feedback = this.formatConversationAsFeedback();
-      await this.config.generateFromFeedback(feedback);
+      const result = await this.config.generateFromFeedback(feedback);
+
+      if (typeof result === "string") {
+        this.pendingResult = result;
+        this.messages = [
+          ...this.messages,
+          {
+            role: "assistant",
+            content: `**Generated Summary:**\n\n${result}`,
+          },
+        ];
+      }
     } finally {
       this.generating = false;
       this.notifySubscribers();
     }
   };
+
+  /**
+   * Applies the pending generated result via the config's `applyGenerated`.
+   * Returns true if the result was applied, false if there was nothing to apply.
+   */
+  public applyPendingResult = async (): Promise<boolean> => {
+    if (!this.pendingResult || !this.config.applyGenerated) return false;
+
+    this.generating = true;
+    this.notifySubscribers();
+
+    try {
+      await this.config.applyGenerated(this.pendingResult);
+      this.pendingResult = null;
+      return true;
+    } finally {
+      this.generating = false;
+      this.notifySubscribers();
+    }
+  };
+
+  /**
+   * Returns true when the config supports the approval flow
+   * (i.e. generateFromFeedback returns a preview requiring approval).
+   */
+  public requiresApproval = (): boolean => !!this.config.applyGenerated;
 
   /**
    * Generates the first assistant message when a discussion starts.
@@ -150,6 +200,7 @@ export class DiscussionService {
     if (this.generating) return;
 
     if (userMessage?.trim()) {
+      this.pendingResult = null;
       this.messages = [
         ...this.messages,
         { role: "user", content: userMessage.trim() },

@@ -17,12 +17,13 @@ const pageConfig: DiscussionPageConfig = {
   icon: <RiBookOpenLine size={24} color={Theme.chapter.primary} />,
   title: "Discuss Chapter Summary",
   description:
-    'Discuss the chapter summary with the AI. When you\'re satisfied, click "Generate Updated Chapter Summary" to regenerate the summary using this conversation as feedback.',
+    'Discuss the chapter summary with the AI. When you\'re satisfied, click "Generate Summary" to preview, then "Approve & Save" to apply it.',
   inputPlaceholder: "Discuss chapter summary…",
-  generateButtonLabel: "Generate Updated Chapter Summary",
-  finalFeedbackButtonLabel: "Send & Generate Chapter Summary",
+  generateButtonLabel: "Generate Summary",
+  finalFeedbackButtonLabel: "Send & Generate Summary",
   emptyStateText:
     "Start a conversation about this chapter's summary. Discuss what happened, suggest corrections, or refine the narrative.",
+  approveButtonLabel: "Approve & Save Chapter Summary",
 };
 
 export const DiscussChapterPage: React.FC = () => {

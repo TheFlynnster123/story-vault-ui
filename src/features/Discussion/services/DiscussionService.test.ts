@@ -489,4 +489,126 @@ describe("DiscussionService", () => {
       );
     });
   });
+
+  describe("approval flow", () => {
+    it("should store pending result when generateFromFeedback returns a string", async () => {
+      vi.mocked(mockConfig.generateFromFeedback).mockResolvedValue(
+        "Generated summary preview",
+      );
+
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Discuss the chapter");
+      await service.generateFromFeedback();
+
+      expect(service.getPendingResult()).toBe("Generated summary preview");
+    });
+
+    it("should add preview as assistant message when generateFromFeedback returns a string", async () => {
+      vi.mocked(mockConfig.generateFromFeedback).mockResolvedValue(
+        "Generated summary preview",
+      );
+
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Discuss the chapter");
+      await service.generateFromFeedback();
+
+      const messages = service.getMessages();
+      const lastMessage = messages[messages.length - 1];
+      expect(lastMessage.role).toBe("assistant");
+      expect(lastMessage.content).toContain("Generated summary preview");
+    });
+
+    it("should not store pending result when generateFromFeedback returns void", async () => {
+      vi.mocked(mockConfig.generateFromFeedback).mockResolvedValue(undefined);
+
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Discuss the chapter");
+      await service.generateFromFeedback();
+
+      expect(service.getPendingResult()).toBeNull();
+    });
+
+    it("should clear pending result when sendMessage is called", async () => {
+      vi.mocked(mockConfig.generateFromFeedback).mockResolvedValue(
+        "Generated summary preview",
+      );
+
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("First message");
+      await service.generateFromFeedback();
+
+      expect(service.getPendingResult()).toBe("Generated summary preview");
+
+      await service.sendMessage("Continue discussion");
+      expect(service.getPendingResult()).toBeNull();
+    });
+
+    it("should apply pending result via config.applyGenerated", async () => {
+      const mockApply = vi.fn().mockResolvedValue(undefined);
+      mockConfig.applyGenerated = mockApply;
+
+      vi.mocked(mockConfig.generateFromFeedback).mockResolvedValue(
+        "The approved summary",
+      );
+
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Discuss");
+      await service.generateFromFeedback();
+
+      const applied = await service.applyPendingResult();
+
+      expect(applied).toBe(true);
+      expect(mockApply).toHaveBeenCalledWith("The approved summary");
+      expect(service.getPendingResult()).toBeNull();
+    });
+
+    it("should return false when no pending result to apply", async () => {
+      mockConfig.applyGenerated = vi.fn();
+
+      const service = new DiscussionService(mockConfig);
+      const applied = await service.applyPendingResult();
+
+      expect(applied).toBe(false);
+    });
+
+    it("should return false when config has no applyGenerated", async () => {
+      vi.mocked(mockConfig.generateFromFeedback).mockResolvedValue(
+        "Some preview",
+      );
+
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Test");
+      await service.generateFromFeedback();
+
+      const applied = await service.applyPendingResult();
+
+      expect(applied).toBe(false);
+    });
+
+    it("should report requiresApproval correctly", () => {
+      const serviceWithout = new DiscussionService(mockConfig);
+      expect(serviceWithout.requiresApproval()).toBe(false);
+
+      mockConfig.applyGenerated = vi.fn();
+      const serviceWith = new DiscussionService(mockConfig);
+      expect(serviceWith.requiresApproval()).toBe(true);
+    });
+
+    it("should notify subscribers during applyPendingResult", async () => {
+      mockConfig.applyGenerated = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(mockConfig.generateFromFeedback).mockResolvedValue("Preview");
+
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Test");
+      await service.generateFromFeedback();
+
+      const subscriber = vi.fn();
+      service.subscribe(subscriber);
+
+      await service.applyPendingResult();
+
+      // Called: generating=true, then generating=false
+      expect(subscriber).toHaveBeenCalledTimes(2);
+    });
+  });
 });
