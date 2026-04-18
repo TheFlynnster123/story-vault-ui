@@ -32,11 +32,7 @@ export const EditChapterButton: React.FC<EditChapterButtonProps> = ({
 
   const handleSubmit = () => {
     if (title.trim() && summary.trim()) {
-      d.ChatService(chatId).EditChapter(
-        chapterId,
-        title,
-        summary,
-      );
+      d.ChatService(chatId).EditChapter(chapterId, title, summary);
     }
     setShowModal(false);
   };

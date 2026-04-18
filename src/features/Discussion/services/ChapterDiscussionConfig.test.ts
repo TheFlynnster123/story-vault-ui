@@ -72,10 +72,7 @@ describe("ChapterDiscussionConfig", () => {
 
   describe("getDefaultModel", () => {
     it("should return undefined when no model is provided", () => {
-      const config = createChapterDiscussionConfig(
-        testChatId,
-        testChapterId,
-      );
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
       expect(config.getDefaultModel()).toBeUndefined();
     });
 
@@ -115,10 +112,7 @@ describe("ChapterDiscussionConfig", () => {
     });
 
     it("should pass undefined model when no model provided", async () => {
-      const config = createChapterDiscussionConfig(
-        testChatId,
-        testChapterId,
-      );
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
 
       await config.generateFromFeedback("Make it more dramatic");
 
@@ -149,10 +143,7 @@ describe("ChapterDiscussionConfig", () => {
     });
 
     it("should use default chapter summary prompt when none provided", async () => {
-      const config = createChapterDiscussionConfig(
-        testChatId,
-        testChapterId,
-      );
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
 
       await config.generateFromFeedback("Add more detail");
 
@@ -162,18 +153,13 @@ describe("ChapterDiscussionConfig", () => {
       );
       expect(
         systemMessages.some((m: any) =>
-          m.content.includes(
-            DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt,
-          ),
+          m.content.includes(DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt),
         ),
       ).toBe(true);
     });
 
     it("should call EditChapter with the generated response", async () => {
-      const config = createChapterDiscussionConfig(
-        testChatId,
-        testChapterId,
-      );
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
 
       await config.generateFromFeedback("Make it better");
 
@@ -187,10 +173,7 @@ describe("ChapterDiscussionConfig", () => {
     it("should not call postChat when chapter is not found", async () => {
       mockUserChatProjection.GetMessages.mockReturnValue([]);
 
-      const config = createChapterDiscussionConfig(
-        testChatId,
-        testChapterId,
-      );
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
 
       await config.generateFromFeedback("Make it better");
 
@@ -200,19 +183,13 @@ describe("ChapterDiscussionConfig", () => {
 
   describe("buildSystemPrompt", () => {
     it("should include chapter title in system prompt", () => {
-      const config = createChapterDiscussionConfig(
-        testChatId,
-        testChapterId,
-      );
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
       const prompt = config.buildSystemPrompt();
       expect(prompt).toContain("Chapter One");
     });
 
     it("should include current summary in system prompt", () => {
-      const config = createChapterDiscussionConfig(
-        testChatId,
-        testChapterId,
-      );
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
       const prompt = config.buildSystemPrompt();
       expect(prompt).toContain("Existing chapter summary.");
     });
@@ -220,10 +197,7 @@ describe("ChapterDiscussionConfig", () => {
     it("should return empty string when chapter not found", () => {
       mockUserChatProjection.GetMessages.mockReturnValue([]);
 
-      const config = createChapterDiscussionConfig(
-        testChatId,
-        testChapterId,
-      );
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
       expect(config.buildSystemPrompt()).toBe("");
     });
   });

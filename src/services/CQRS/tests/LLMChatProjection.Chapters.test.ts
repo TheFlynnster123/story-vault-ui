@@ -19,7 +19,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
     proj: LLMChatProjection,
     id: string,
     role: "user" | "assistant" | "system",
-    content: string
+    content: string,
   ): void {
     const event: MessageCreatedEvent = {
       type: "MessageCreated",
@@ -73,7 +73,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
   function createMessagesSequence(
     proj: LLMChatProjection,
     count: number,
-    startId: number = 1
+    startId: number = 1,
   ): string[] {
     const ids: string[] = [];
     for (let i = 0; i < count; i++) {
@@ -82,7 +82,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         proj,
         id,
         i % 2 === 0 ? "user" : "assistant",
-        `Message ${startId + i}`
+        `Message ${startId + i}`,
       );
       ids.push(id);
     }
@@ -99,7 +99,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary of chapter one",
-        messageIds
+        messageIds,
       );
 
       const messages = projection.GetMessages();
@@ -124,7 +124,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       const messages = projection.GetMessages();
@@ -144,7 +144,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       const messages = projection.GetMessages();
@@ -162,7 +162,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       const messages = projection.GetMessages();
@@ -180,7 +180,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       const messages = projection.GetMessages();
@@ -201,7 +201,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       // Add 6 new messages
@@ -223,7 +223,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       // Add 5 new messages (not enough to hide prior messages)
@@ -242,7 +242,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       // Add 5 messages
@@ -267,7 +267,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter Title",
         "This is the chapter summary",
-        messageIds
+        messageIds,
       );
 
       const messages = projection.GetMessages();
@@ -283,13 +283,13 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Epic Chapter",
         "Summary content",
-        messageIds
+        messageIds,
       );
 
       const messages = projection.GetMessages();
       const chapter = messages[messages.length - 1];
       expect(chapter.content).toContain(
-        "[Previous Chapter Summary: Epic Chapter]"
+        "[Previous Chapter Summary: Epic Chapter]",
       );
       expect(chapter.content).toContain("[End of Chapter Summary]");
     });
@@ -305,7 +305,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary 1",
-        messageIds1
+        messageIds1,
       );
 
       const messageIds2 = createMessagesSequence(projection, 5, 6);
@@ -315,14 +315,14 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Chapter Two",
         "Summary 2",
-        messageIds2
+        messageIds2,
       );
 
       const messages = projection.GetMessages();
       // Should have: chapter-1, last 5 buffer msgs from chapter-2, chapter-2 = 7 total
       // Find chapter-1 in the messages
       const chapter1 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Summary 1")
+        (m) => m.role === "system" && m.content.includes("Summary 1"),
       );
       expect(chapter1).toBeDefined();
       expect(chapter1!.content).toContain("Summary 1");
@@ -336,7 +336,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary 1",
-        messageIds1
+        messageIds1,
       );
 
       const messageIds2 = createMessagesSequence(projection, 5, 11);
@@ -346,14 +346,14 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Chapter Two",
         "Summary 2",
-        messageIds2
+        messageIds2,
       );
 
       const messages = projection.GetMessages();
       // First chapter should be simplified (no prior messages)
       const chapter1 = messages[0];
       expect(chapter1.content).not.toContain(
-        "[Previous Chapter Final Messages]"
+        "[Previous Chapter Final Messages]",
       );
       expect(chapter1.content).not.toContain("Message 5");
     });
@@ -366,7 +366,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "First Chapter",
         "Important summary from first chapter",
-        messageIds1
+        messageIds1,
       );
 
       const messageIds2 = createMessagesSequence(projection, 5, 6);
@@ -376,21 +376,21 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Second Chapter",
         "Summary 2",
-        messageIds2
+        messageIds2,
       );
 
       const messages = projection.GetMessages();
       const chapter1 = messages.find(
         (m) =>
           m.role === "system" &&
-          m.content.includes("Important summary from first chapter")
+          m.content.includes("Important summary from first chapter"),
       );
       expect(chapter1).toBeDefined();
       expect(chapter1!.content).toContain(
-        "Important summary from first chapter"
+        "Important summary from first chapter",
       );
       expect(chapter1!.content).toContain(
-        "[Previous Chapter Summary: First Chapter]"
+        "[Previous Chapter Summary: First Chapter]",
       );
     });
 
@@ -402,7 +402,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary 1",
-        messageIds1
+        messageIds1,
       );
 
       const messageIds2 = createMessagesSequence(projection, 10, 6);
@@ -412,7 +412,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Chapter Two",
         "Summary 2",
-        messageIds2
+        messageIds2,
       );
 
       const messages = projection.GetMessages();
@@ -422,31 +422,13 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
     it("handles three chapters correctly", () => {
       const messageIds1 = createMessagesSequence(projection, 5);
-      createChapter(
-        projection,
-        "chapter-1",
-        "Ch1",
-        "Sum1",
-        messageIds1
-      );
+      createChapter(projection, "chapter-1", "Ch1", "Sum1", messageIds1);
 
       const messageIds2 = createMessagesSequence(projection, 5, 6);
-      createChapter(
-        projection,
-        "chapter-2",
-        "Ch2",
-        "Sum2",
-        messageIds2
-      );
+      createChapter(projection, "chapter-2", "Ch2", "Sum2", messageIds2);
 
       const messageIds3 = createMessagesSequence(projection, 5, 11);
-      createChapter(
-        projection,
-        "chapter-3",
-        "Ch3",
-        "Sum3",
-        messageIds3
-      );
+      createChapter(projection, "chapter-3", "Ch3", "Sum3", messageIds3);
 
       const messages = projection.GetMessages();
       // Should have: chapter-1, chapter-2, last 5 buffer from chapter-3, chapter-3 = 8 total
@@ -454,13 +436,13 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       // All chapters contain their summaries
       const chapter1 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Sum1")
+        (m) => m.role === "system" && m.content.includes("Sum1"),
       );
       const chapter2 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Sum2")
+        (m) => m.role === "system" && m.content.includes("Sum2"),
       );
       const chapter3 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Sum3")
+        (m) => m.role === "system" && m.content.includes("Sum3"),
       );
 
       expect(chapter1).toBeDefined();
@@ -479,7 +461,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Original Title",
         "Original Summary",
-        messageIds
+        messageIds,
       );
 
       editChapter(projection, "chapter-1", "Updated Title", "Updated Summary");
@@ -489,27 +471,16 @@ describe("LLMChatProjection - Chapter Operations", () => {
       expect(chapter).toBeDefined();
       expect(chapter!.content).toContain("Updated Summary");
       expect(chapter!.content).toContain(
-        "[Previous Chapter Summary: Updated Title]"
+        "[Previous Chapter Summary: Updated Title]",
       );
     });
 
     it("maintains format for last chapter after edit", () => {
       const messageIds = createMessagesSequence(projection, 10);
 
-      createChapter(
-        projection,
-        "chapter-1",
-        "Title",
-        "Summary",
-        messageIds
-      );
+      createChapter(projection, "chapter-1", "Title", "Summary", messageIds);
 
-      editChapter(
-        projection,
-        "chapter-1",
-        "New Title",
-        "New Summary"
-      );
+      editChapter(projection, "chapter-1", "New Title", "New Summary");
 
       const messages = projection.GetMessages();
       const chapter = messages[messages.length - 1];
@@ -518,38 +489,21 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
     it("maintains simple format for previous chapter after edit", () => {
       const messageIds1 = createMessagesSequence(projection, 10);
-      createChapter(
-        projection,
-        "chapter-1",
-        "Ch1",
-        "Sum1",
-        messageIds1
-      );
+      createChapter(projection, "chapter-1", "Ch1", "Sum1", messageIds1);
 
       const messageIds2 = createMessagesSequence(projection, 5, 11);
-      createChapter(
-        projection,
-        "chapter-2",
-        "Ch2",
-        "Sum2",
-        messageIds2
-      );
+      createChapter(projection, "chapter-2", "Ch2", "Sum2", messageIds2);
 
-      editChapter(
-        projection,
-        "chapter-1",
-        "Updated Ch1",
-        "Updated Sum1"
-      );
+      editChapter(projection, "chapter-1", "Updated Ch1", "Updated Sum1");
 
       const messages = projection.GetMessages();
       const chapter1 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Updated Sum1")
+        (m) => m.role === "system" && m.content.includes("Updated Sum1"),
       );
       expect(chapter1).toBeDefined();
       expect(chapter1!.content).toContain("Updated Sum1");
       expect(chapter1!.content).not.toContain(
-        "[Previous Chapter Final Messages]"
+        "[Previous Chapter Final Messages]",
       );
     });
   });
@@ -564,7 +518,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       deleteChapter(projection, "chapter-1");
@@ -577,7 +531,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       expect(messages.every((m) => m.role !== "system")).toBe(true);
       // Verify all original messages are present
       expect(
-        messages.filter((m) => m.content.startsWith("Message")).length
+        messages.filter((m) => m.content.startsWith("Message")).length,
       ).toBeGreaterThanOrEqual(10);
     });
 
@@ -589,7 +543,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       deleteChapter(projection, "chapter-1");
@@ -611,7 +565,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "Ch1",
         "Sum1",
         messageIds1,
-        "Dir1"
+        "Dir1",
       );
 
       const messageIds2 = createMessagesSequence(projection, 10, 6);
@@ -621,7 +575,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "Ch2",
         "Sum2",
         messageIds2,
-        "Dir2"
+        "Dir2",
       );
 
       deleteChapter(projection, "chapter-2");
@@ -643,7 +597,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Empty Chapter",
         "No messages",
-        []
+        [],
       );
 
       const messages = projection.GetMessages();
@@ -659,7 +613,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Single Message Chapter",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       const messages = projection.GetMessages();
@@ -731,7 +685,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter Title",
         "Summary",
-        messageIds
+        messageIds,
       );
 
       const chapter = projection.GetMessage("chapter-1");
@@ -762,7 +716,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter 1",
         "Summary 1",
-        chapter1MessageIds
+        chapter1MessageIds,
       );
 
       // Create messages for chapter 2
@@ -772,7 +726,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Chapter 2",
         "Summary 2",
-        chapter2MessageIds
+        chapter2MessageIds,
       );
 
       // Create messages for chapter 3
@@ -782,23 +736,23 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-3",
         "Chapter 3",
         "Summary 3",
-        chapter3MessageIds
+        chapter3MessageIds,
       );
 
       const messages = projection.GetMessages();
 
       // Find indices
       const chapter1Index = messages.findIndex(
-        (m) => m.role === "system" && m.content.includes("Summary 1")
+        (m) => m.role === "system" && m.content.includes("Summary 1"),
       );
       const chapter2Index = messages.findIndex(
-        (m) => m.role === "system" && m.content.includes("Summary 2")
+        (m) => m.role === "system" && m.content.includes("Summary 2"),
       );
       const chapter3Index = messages.findIndex(
-        (m) => m.role === "system" && m.content.includes("Summary 3")
+        (m) => m.role === "system" && m.content.includes("Summary 3"),
       );
       const bufferMessageIndex = messages.findIndex(
-        (m) => m.content === "Message 11"
+        (m) => m.content === "Message 11",
       );
 
       // Buffer messages from chapter 3 should come after chapter 2 but before chapter 3

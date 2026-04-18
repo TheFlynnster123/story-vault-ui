@@ -338,9 +338,7 @@ export class LLMChatProjection {
     if (!book) return;
 
     this.messages
-      .filter(
-        (m) => m.type === "chapter" && m.hiddenByBookId === event.bookId,
-      )
+      .filter((m) => m.type === "chapter" && m.hiddenByBookId === event.bookId)
       .forEach((m) => {
         m.hiddenByBookId = null;
       });
@@ -449,7 +447,11 @@ export class LLMChatProjection {
   private excludeExpiredNotes(messages: MessageState[]): MessageState[] {
     return messages.filter((msg) => {
       if (msg.type !== "note") return true;
-      if (msg.data?.expiresAfterMessages === null || msg.data?.expiresAfterMessages === undefined) return true;
+      if (
+        msg.data?.expiresAfterMessages === null ||
+        msg.data?.expiresAfterMessages === undefined
+      )
+        return true;
 
       const noteIndex = messages.indexOf(msg);
       let count = 0;
@@ -485,7 +487,8 @@ export class LLMChatProjection {
 
   getVisibleMessages = (): MessageState[] =>
     this.messages.filter(
-      (m) => !m.hiddenByChapterId && !m.hiddenByBookId && !m.deleted && !m.hidden,
+      (m) =>
+        !m.hiddenByChapterId && !m.hiddenByBookId && !m.deleted && !m.hidden,
     );
 
   getVisibleMessagesWithBufferBeforeLastChapter(
@@ -535,10 +538,7 @@ export class LLMChatProjection {
       summary ?? ""
     }\n[End of Chapter Summary]`;
 
-  formatChapterContentFull = (
-    title?: string,
-    summary?: string,
-  ): string => {
+  formatChapterContentFull = (title?: string, summary?: string): string => {
     const content = `[Previous Chapter Summary: ${title ?? ""}]\n${
       summary ?? ""
     }\n[End of Chapter Summary]`;
@@ -568,10 +568,7 @@ export class LLMChatProjection {
     if (!chapter) return;
 
     const { title, summary } = chapter.data || {};
-    chapter.content = this.formatChapterContentFull(
-      title,
-      summary,
-    );
+    chapter.content = this.formatChapterContentFull(title, summary);
   }
 
   updateLastChapterFormat(): void {

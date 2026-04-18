@@ -20,9 +20,7 @@ const createMockChatSettingsService = () => ({
 });
 
 describe("useChatSettings", () => {
-  let mockChatSettingsService: ReturnType<
-    typeof createMockChatSettingsService
-  >;
+  let mockChatSettingsService: ReturnType<typeof createMockChatSettingsService>;
 
   beforeEach(() => {
     vi.clearAllMocks();

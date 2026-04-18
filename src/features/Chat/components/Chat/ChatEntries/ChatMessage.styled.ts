@@ -225,8 +225,8 @@ export const NoteMessageText = styled.div<{ $expired?: boolean }>`
       ? transparencyColor(Theme.note.expired)
       : transparencyColor(Theme.note.backgroundSecondary)};
   color: ${Theme.messages.assistant.text};
-  border-left: 4px solid ${({ $expired }) =>
-    $expired ? Theme.note.expired : Theme.note.primary};
+  border-left: 4px solid
+    ${({ $expired }) => ($expired ? Theme.note.expired : Theme.note.primary)};
 
   ${({ $expired }) =>
     $expired &&

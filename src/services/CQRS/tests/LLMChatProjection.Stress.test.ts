@@ -68,7 +68,7 @@ describe("LLMChatProjection - Performance", () => {
         processMessageEdited(
           projection,
           `msg-${i * 5}`,
-          `Updated content ${i}`
+          `Updated content ${i}`,
         );
       }
 
@@ -107,14 +107,14 @@ describe("LLMChatProjection - Performance", () => {
         createMessages(projection, 10);
         const coveredIds = Array.from(
           { length: 10 },
-          (_, i) => `msg-${(chapter - 1) * 10 + i + 1}`
+          (_, i) => `msg-${(chapter - 1) * 10 + i + 1}`,
         );
         processChapterCreated(
           projection,
           `chapter-${chapter}`,
           `Chapter ${chapter}`,
           `Summary ${chapter}`,
-          coveredIds
+          coveredIds,
         );
       }
 
@@ -130,14 +130,14 @@ describe("LLMChatProjection - Performance", () => {
         createMessages(projection, 20);
         const coveredIds = Array.from(
           { length: 20 },
-          (_, i) => `msg-${(chapter - 1) * 20 + i + 1}`
+          (_, i) => `msg-${(chapter - 1) * 20 + i + 1}`,
         );
         processChapterCreated(
           projection,
           `chapter-${chapter}`,
           `Chapter ${chapter}`,
           `Summary ${chapter}`,
-          coveredIds
+          coveredIds,
         );
       }
 
@@ -152,7 +152,7 @@ describe("LLMChatProjection - Performance", () => {
       expectReasonablePerformance(
         duration,
         50,
-        "message retrieval with chapters"
+        "message retrieval with chapters",
       );
     });
 
@@ -175,7 +175,7 @@ describe("LLMChatProjection - Performance", () => {
           projection,
           `new-msg-${i}`,
           "user",
-          `Content ${i}`
+          `Content ${i}`,
         );
       }
 
@@ -193,7 +193,7 @@ describe("LLMChatProjection - Performance", () => {
         "chapter-1",
         "Large Chapter",
         "Summary",
-        coveredIds
+        coveredIds,
       );
 
       const startTime = performance.now();
@@ -203,7 +203,7 @@ describe("LLMChatProjection - Performance", () => {
           projection,
           "chapter-1",
           `Updated ${i}`,
-          `New summary ${i}`
+          `New summary ${i}`,
         );
       }
 
@@ -280,14 +280,14 @@ describe("LLMChatProjection - Performance", () => {
       for (let i = 1; i <= 5; i++) {
         const coveredIds = Array.from(
           { length: 10 },
-          (_, j) => `msg-${(i - 1) * 10 + j + 1}`
+          (_, j) => `msg-${(i - 1) * 10 + j + 1}`,
         );
         processChapterCreated(
           projection,
           `chapter-${i}`,
           `Chapter ${i}`,
           `Summary ${i}`,
-          coveredIds
+          coveredIds,
         );
       }
 
@@ -312,7 +312,7 @@ describe("LLMChatProjection - Performance", () => {
           projection,
           `chapter-${i}`,
           `Updated Chapter ${i}`,
-          `Updated summary ${i}`
+          `Updated summary ${i}`,
         );
       }
 
@@ -335,14 +335,14 @@ describe("LLMChatProjection - Performance", () => {
         createMessages(projection, 10);
         const coveredIds = Array.from(
           { length: 10 },
-          (_, i) => `msg-${(chapter - 1) * 10 + i + 1}`
+          (_, i) => `msg-${(chapter - 1) * 10 + i + 1}`,
         );
         processChapterCreated(
           projection,
           `chapter-${chapter}`,
           `Chapter ${chapter}`,
           `Summary ${chapter}`,
-          coveredIds
+          coveredIds,
         );
       }
 
@@ -401,7 +401,7 @@ describe("LLMChatProjection - Performance", () => {
       expectReasonablePerformance(
         endTime - startTime,
         50,
-        "access after deletions"
+        "access after deletions",
       );
     });
 
@@ -411,14 +411,14 @@ describe("LLMChatProjection - Performance", () => {
         createMessages(projection, 5);
         const coveredIds = Array.from(
           { length: 5 },
-          (_, i) => `msg-${(chapter - 1) * 5 + i + 1}`
+          (_, i) => `msg-${(chapter - 1) * 5 + i + 1}`,
         );
         processChapterCreated(
           projection,
           `chapter-${chapter}`,
           `Chapter ${chapter}`,
           `Summary ${chapter}`,
-          coveredIds
+          coveredIds,
         );
       }
 
@@ -430,7 +430,7 @@ describe("LLMChatProjection - Performance", () => {
       expectReasonablePerformance(
         endTime - startTime,
         100,
-        "many chapters retrieval"
+        "many chapters retrieval",
       );
     });
   });
@@ -443,7 +443,7 @@ describe("LLMChatProjection - Performance", () => {
         proj,
         `msg-${startIndex + i}`,
         i % 2 === 0 ? "user" : "assistant",
-        `Content ${startIndex + i}`
+        `Content ${startIndex + i}`,
       );
     }
   }
@@ -458,7 +458,7 @@ describe("LLMChatProjection - Performance", () => {
     proj: LLMChatProjection,
     messageId: string,
     role: "user" | "assistant" | "system",
-    content: string
+    content: string,
   ): void {
     const event: MessageCreatedEvent = {
       type: "MessageCreated",
@@ -472,7 +472,7 @@ describe("LLMChatProjection - Performance", () => {
   function processMessageEdited(
     proj: LLMChatProjection,
     messageId: string,
-    newContent: string
+    newContent: string,
   ): void {
     const event: MessageEditedEvent = {
       type: "MessageEdited",
@@ -484,7 +484,7 @@ describe("LLMChatProjection - Performance", () => {
 
   function processMessageDeleted(
     proj: LLMChatProjection,
-    messageId: string
+    messageId: string,
   ): void {
     const event: MessageDeletedEvent = {
       type: "MessageDeleted",
@@ -528,7 +528,7 @@ describe("LLMChatProjection - Performance", () => {
   function expectReasonablePerformance(
     durationMs: number,
     thresholdMs: number,
-    operation: string
+    operation: string,
   ): void {
     // Log performance for visibility
     console.log(`${operation}: ${durationMs.toFixed(2)}ms`);
@@ -537,8 +537,8 @@ describe("LLMChatProjection - Performance", () => {
     if (durationMs > thresholdMs) {
       console.warn(
         `Performance warning: ${operation} took ${durationMs.toFixed(
-          2
-        )}ms (threshold: ${thresholdMs}ms)`
+          2,
+        )}ms (threshold: ${thresholdMs}ms)`,
       );
     }
 

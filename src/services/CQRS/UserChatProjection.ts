@@ -488,7 +488,9 @@ export class UserChatProjection {
    * Computes note expiration based on the number of qualifying messages
    * that follow each note. Returns a new array with expired flags updated.
    */
-  private computeNoteExpiration(messages: UserChatMessage[]): UserChatMessage[] {
+  private computeNoteExpiration(
+    messages: UserChatMessage[],
+  ): UserChatMessage[] {
     const result: UserChatMessage[] = [];
     const noteIndices: number[] = [];
 

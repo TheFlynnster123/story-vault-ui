@@ -60,9 +60,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     if (!title.trim() || !summary.trim()) return;
 
     try {
-      await d
-        .ChatService(chatId)
-        .AddChapter(title, summary);
+      await d.ChatService(chatId).AddChapter(title, summary);
       handleCloseModal();
     } catch (error) {
       d.ErrorService().log("Failed to create chapter", error);
@@ -73,9 +71,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     if (!title.trim() || !summary.trim()) return undefined;
 
     try {
-      const chapterId = await d
-        .ChatService(chatId)
-        .AddChapter(title, summary);
+      const chapterId = await d.ChatService(chatId).AddChapter(title, summary);
       handleCloseModal();
       return chapterId;
     } catch (error) {
