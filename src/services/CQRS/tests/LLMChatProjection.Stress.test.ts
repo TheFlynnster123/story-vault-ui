@@ -499,7 +499,6 @@ describe("LLMChatProjection - Performance", () => {
     title: string,
     summary: string,
     coveredMessageIds: string[],
-    nextChapterDirection?: string
   ): void {
     const event: ChapterCreatedEvent = {
       type: "ChapterCreated",
@@ -507,7 +506,6 @@ describe("LLMChatProjection - Performance", () => {
       title,
       summary,
       coveredMessageIds,
-      nextChapterDirection,
     };
     proj.process(event);
   }
@@ -517,14 +515,12 @@ describe("LLMChatProjection - Performance", () => {
     chapterId: string,
     title: string,
     summary: string,
-    nextChapterDirection?: string
   ): void {
     const event = {
       type: "ChapterEdited" as const,
       chapterId,
       title,
       summary,
-      nextChapterDirection,
     };
     proj.process(event);
   }

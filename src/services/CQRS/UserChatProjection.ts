@@ -263,7 +263,6 @@ export class UserChatProjection {
       hidden: false,
       data: {
         title: event.title,
-        nextChapterDirection: event.nextChapterDirection,
         coveredMessageIds: [...event.coveredMessageIds],
       },
     });
@@ -281,7 +280,6 @@ export class UserChatProjection {
         data: {
           ...chapter.data,
           title: event.title,
-          nextChapterDirection: event.nextChapterDirection,
         },
       };
     }
@@ -593,7 +591,6 @@ export interface CivitJobChatMessage extends UserChatMessage {
 export interface ChapterChatMessage extends UserChatMessage {
   data: {
     title: string;
-    nextChapterDirection?: string;
     coveredMessageIds: string[];
   };
 }

@@ -13,11 +13,9 @@ interface CreateChapterModalProps {
   opened: boolean;
   title: string;
   summary: string;
-  nextChapterDirection: string;
   isGenerating: boolean;
   onTitleChange: (title: string) => void;
   onSummaryChange: (summary: string) => void;
-  onNextChapterDirectionChange: (direction: string) => void;
   onGenerateSummary: () => void;
   onDiscuss: () => void;
   onSubmit: () => void;
@@ -28,11 +26,9 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
   opened,
   title,
   summary,
-  nextChapterDirection,
   isGenerating,
   onTitleChange,
   onSummaryChange,
-  onNextChapterDirectionChange,
   onGenerateSummary,
   onDiscuss,
   onSubmit,
@@ -90,15 +86,6 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
             </Button>
           </Group>
         </Stack>
-
-        <Textarea
-          label="Next Chapter Direction (Optional)"
-          placeholder="Enter guidance for where the next chapter should go..."
-          value={nextChapterDirection}
-          onChange={(e) => onNextChapterDirectionChange(e.currentTarget.value)}
-          minRows={4}
-          autosize
-        />
 
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={onCancel} disabled={isGenerating}>

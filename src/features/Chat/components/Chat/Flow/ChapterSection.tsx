@@ -14,11 +14,9 @@ export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
     showModal,
     title,
     summary,
-    nextChapterDirection,
     isGenerating,
     setTitle,
     setSummary,
-    setNextChapterDirection,
     handleOpenModal,
     handleCloseModal,
     handleGenerateSummary,
@@ -40,11 +38,9 @@ export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
         opened={showModal}
         title={title}
         summary={summary}
-        nextChapterDirection={nextChapterDirection}
         isGenerating={isGenerating}
         onTitleChange={setTitle}
         onSummaryChange={setSummary}
-        onNextChapterDirectionChange={setNextChapterDirection}
         onGenerateSummary={handleGenerateSummary}
         onDiscuss={onDiscuss}
         onSubmit={handleSubmit}

@@ -3,8 +3,13 @@ import Config from "../../../services/Config";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { OpenRouterError, parseOpenRouterError } from "./OpenRouterError";
 
+interface CleanMessage {
+  role: string;
+  content: string;
+}
+
 interface PostChatRequest {
-  messages: LLMMessage[];
+  messages: CleanMessage[];
   model?: string;
 }
 
@@ -30,7 +35,7 @@ export class OpenRouterChatAPI {
     const systemSettings = await d.SystemSettingsService().Get();
 
     const requestBody: PostChatRequest = {
-      messages: messages,
+      messages: cleanMessages(messages),
       ...systemSettings?.chatGenerationSettings,
     };
 
@@ -62,7 +67,7 @@ export class OpenRouterChatAPI {
     const systemSettings = await d.SystemSettingsService().Get();
 
     const requestBody: PostChatRequest = {
-      messages: messages,
+      messages: cleanMessages(messages),
       ...systemSettings?.chatGenerationSettings,
     };
 
@@ -188,3 +193,6 @@ export class OpenRouterChatAPI {
     );
   }
 }
+
+export const cleanMessages = (messages: LLMMessage[]): CleanMessage[] =>
+  messages.map(({ role, content }) => ({ role, content }));

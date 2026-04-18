@@ -36,14 +36,12 @@ describe("LLMChatProjection - Chapter Operations", () => {
     title: string,
     summary: string,
     coveredMessageIds: string[],
-    nextChapterDirection?: string
   ): void {
     const event: ChapterCreatedEvent = {
       type: "ChapterCreated",
       chapterId,
       title,
       summary,
-      nextChapterDirection,
       coveredMessageIds,
     };
     proj.process(event);
@@ -54,14 +52,12 @@ describe("LLMChatProjection - Chapter Operations", () => {
     chapterId: string,
     title: string,
     summary: string,
-    nextChapterDirection?: string
   ): void {
     const event: ChapterEditedEvent = {
       type: "ChapterEdited",
       chapterId,
       title,
       summary,
-      nextChapterDirection,
     };
     proj.process(event);
   }
@@ -261,85 +257,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
     });
   });
 
-  // ---- Next Chapter Direction Tests ----
-  describe("Next Chapter Direction", () => {
-    it("includes next chapter direction in chapter content", () => {
-      const messageIds = createMessagesSequence(projection, 5);
-
-      createChapter(
-        projection,
-        "chapter-1",
-        "Chapter One",
-        "Summary",
-        messageIds,
-        "Continue with action and suspense"
-      );
-
-      const messages = projection.GetMessages();
-      const chapter = messages[messages.length - 1];
-      expect(chapter.content).toContain(
-        "[Directions for continuing the story:]"
-      );
-      expect(chapter.content).toContain("Continue with action and suspense");
-    });
-
-    it("excludes direction when not provided", () => {
-      const messageIds = createMessagesSequence(projection, 5);
-
-      createChapter(
-        projection,
-        "chapter-1",
-        "Chapter One",
-        "Summary",
-        messageIds
-      );
-
-      const messages = projection.GetMessages();
-      const chapter = messages[messages.length - 1];
-      expect(chapter.content).not.toContain(
-        "[Directions for continuing the story:]"
-      );
-    });
-
-    it("excludes direction with empty string", () => {
-      const messageIds = createMessagesSequence(projection, 5);
-
-      createChapter(
-        projection,
-        "chapter-1",
-        "Chapter One",
-        "Summary",
-        messageIds,
-        ""
-      );
-
-      const messages = projection.GetMessages();
-      const chapter = messages[messages.length - 1];
-      expect(chapter.content).not.toContain(
-        "[Directions for continuing the story:]"
-      );
-    });
-
-    it("keeps direction after 6 new messages", () => {
-      const messageIds = createMessagesSequence(projection, 10);
-
-      createChapter(
-        projection,
-        "chapter-1",
-        "Chapter One",
-        "Summary",
-        messageIds,
-        "Important direction"
-      );
-
-      createMessagesSequence(projection, 6, 11);
-
-      const messages = projection.GetMessages();
-      const chapter = messages[0];
-      expect(chapter.content).toContain("Important direction");
-    });
-  });
-
   // ---- Chapter Summary Tests ----
   describe("Chapter Summary", () => {
     it("displays chapter summary", () => {
@@ -380,7 +297,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
   // ---- Multiple Chapters Tests ----
   describe("Multiple Chapters", () => {
-    it("removes direction when new chapter is added", () => {
+    it("removes prior messages from first chapter when new chapter is added", () => {
       const messageIds1 = createMessagesSequence(projection, 5);
 
       createChapter(
@@ -388,8 +305,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Chapter One",
         "Summary 1",
-        messageIds1,
-        "Direction for next chapter"
+        messageIds1
       );
 
       const messageIds2 = createMessagesSequence(projection, 5, 6);
@@ -399,8 +315,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Chapter Two",
         "Summary 2",
-        messageIds2,
-        "New direction"
+        messageIds2
       );
 
       const messages = projection.GetMessages();
@@ -411,10 +326,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
       );
       expect(chapter1).toBeDefined();
       expect(chapter1!.content).toContain("Summary 1");
-      expect(chapter1!.content).not.toContain("Direction for next chapter");
-      expect(chapter1!.content).not.toContain(
-        "[Directions for continuing the story:]"
-      );
     });
 
     it("removes prior messages when new chapter is added", () => {
@@ -501,13 +412,12 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Chapter Two",
         "Summary 2",
-        messageIds2,
-        "New direction"
+        messageIds2
       );
 
       const messages = projection.GetMessages();
       const chapter2 = messages[messages.length - 1];
-      expect(chapter2.content).toContain("New direction");
+      expect(chapter2.content).toContain("Summary 2");
     });
 
     it("handles three chapters correctly", () => {
@@ -517,8 +427,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Ch1",
         "Sum1",
-        messageIds1,
-        "Dir1"
+        messageIds1
       );
 
       const messageIds2 = createMessagesSequence(projection, 5, 6);
@@ -527,8 +436,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Ch2",
         "Sum2",
-        messageIds2,
-        "Dir2"
+        messageIds2
       );
 
       const messageIds3 = createMessagesSequence(projection, 5, 11);
@@ -537,15 +445,14 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-3",
         "Ch3",
         "Sum3",
-        messageIds3,
-        "Dir3"
+        messageIds3
       );
 
       const messages = projection.GetMessages();
       // Should have: chapter-1, chapter-2, last 5 buffer from chapter-3, chapter-3 = 8 total
       expect(messages).toHaveLength(8);
 
-      // First two chapters simplified
+      // All chapters contain their summaries
       const chapter1 = messages.find(
         (m) => m.role === "system" && m.content.includes("Sum1")
       );
@@ -556,11 +463,9 @@ describe("LLMChatProjection - Chapter Operations", () => {
         (m) => m.role === "system" && m.content.includes("Sum3")
       );
 
-      expect(chapter1!.content).not.toContain("Dir1");
-      expect(chapter2!.content).not.toContain("Dir2");
-
-      // Last chapter with full format
-      expect(chapter3!.content).toContain("Dir3");
+      expect(chapter1).toBeDefined();
+      expect(chapter2).toBeDefined();
+      expect(chapter3).toBeDefined();
     });
   });
 
@@ -588,26 +493,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
       );
     });
 
-    it("updates chapter direction", () => {
-      const messageIds = createMessagesSequence(projection, 5);
-
-      createChapter(
-        projection,
-        "chapter-1",
-        "Title",
-        "Summary",
-        messageIds,
-        "Original direction"
-      );
-
-      editChapter(projection, "chapter-1", "Title", "Summary", "New direction");
-
-      const messages = projection.GetMessages();
-      const chapter = messages[messages.length - 1];
-      expect(chapter.content).toContain("New direction");
-      expect(chapter.content).not.toContain("Original direction");
-    });
-
     it("maintains format for last chapter after edit", () => {
       const messageIds = createMessagesSequence(projection, 10);
 
@@ -616,21 +501,19 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Title",
         "Summary",
-        messageIds,
-        "Direction"
+        messageIds
       );
 
       editChapter(
         projection,
         "chapter-1",
         "New Title",
-        "New Summary",
-        "New Direction"
+        "New Summary"
       );
 
       const messages = projection.GetMessages();
       const chapter = messages[messages.length - 1];
-      expect(chapter.content).toContain("New Direction");
+      expect(chapter.content).toContain("New Summary");
     });
 
     it("maintains simple format for previous chapter after edit", () => {
@@ -640,8 +523,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-1",
         "Ch1",
         "Sum1",
-        messageIds1,
-        "Dir1"
+        messageIds1
       );
 
       const messageIds2 = createMessagesSequence(projection, 5, 11);
@@ -650,16 +532,14 @@ describe("LLMChatProjection - Chapter Operations", () => {
         "chapter-2",
         "Ch2",
         "Sum2",
-        messageIds2,
-        "Dir2"
+        messageIds2
       );
 
       editChapter(
         projection,
         "chapter-1",
         "Updated Ch1",
-        "Updated Sum1",
-        "Updated Dir1"
+        "Updated Sum1"
       );
 
       const messages = projection.GetMessages();
@@ -668,7 +548,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
       );
       expect(chapter1).toBeDefined();
       expect(chapter1!.content).toContain("Updated Sum1");
-      expect(chapter1!.content).not.toContain("Updated Dir1");
       expect(chapter1!.content).not.toContain(
         "[Previous Chapter Final Messages]"
       );

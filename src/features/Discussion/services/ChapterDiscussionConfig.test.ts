@@ -31,7 +31,6 @@ describe("ChapterDiscussionConfig", () => {
     content: "Existing chapter summary.",
     data: {
       title: "Chapter One",
-      nextChapterDirection: "Head north",
     },
   };
 
@@ -182,7 +181,6 @@ describe("ChapterDiscussionConfig", () => {
         testChapterId,
         "Chapter One",
         "Updated chapter summary.",
-        "Head north",
       );
     });
 

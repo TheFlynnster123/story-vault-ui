@@ -9,7 +9,6 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [nextChapterDirection, setNextChapterDirection] = useState("");
   const [, forceUpdate] = useState({});
   const chapterGeneration = d.ChapterGenerationService(chatId);
 
@@ -42,7 +41,6 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     setShowModal(false);
     setTitle("");
     setSummary("");
-    setNextChapterDirection("");
   };
 
   const handleGenerateSummary = async () => {
@@ -64,7 +62,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     try {
       await d
         .ChatService(chatId)
-        .AddChapter(title, summary, nextChapterDirection || undefined);
+        .AddChapter(title, summary);
       handleCloseModal();
     } catch (error) {
       d.ErrorService().log("Failed to create chapter", error);
@@ -77,7 +75,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     try {
       const chapterId = await d
         .ChatService(chatId)
-        .AddChapter(title, summary, nextChapterDirection || undefined);
+        .AddChapter(title, summary);
       handleCloseModal();
       return chapterId;
     } catch (error) {
@@ -90,11 +88,9 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     showModal,
     title,
     summary,
-    nextChapterDirection,
     isGenerating: chapterGeneration?.IsLoading || false,
     setTitle,
     setSummary,
-    setNextChapterDirection,
     handleOpenModal,
     handleCloseModal,
     handleGenerateSummary,

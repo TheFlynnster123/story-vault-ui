@@ -219,7 +219,6 @@ export class LLMChatProjection {
     const chapterContent = this.formatChapterContentFull(
       event.title,
       event.summary,
-      event.nextChapterDirection,
     );
 
     const chapterMessage = this.createMessageState(
@@ -234,7 +233,6 @@ export class LLMChatProjection {
     chapterMessage.data = {
       title: event.title,
       summary: event.summary,
-      nextChapterDirection: event.nextChapterDirection,
     };
 
     this.messages.push(chapterMessage);
@@ -259,7 +257,6 @@ export class LLMChatProjection {
     chapter.data = {
       title: event.title,
       summary: event.summary,
-      nextChapterDirection: event.nextChapterDirection,
     };
 
     // Determine if this is the last chapter
@@ -538,32 +535,13 @@ export class LLMChatProjection {
       summary ?? ""
     }\n[End of Chapter Summary]`;
 
-  formatChapterContentWithDirection = (
-    title: string,
-    summary: string,
-    nextChapterDirection: string | undefined,
-  ): string => {
-    let content = `[Previous Chapter Summary: ${title}]\n${summary}\n[End of Chapter Summary]`;
-
-    if (nextChapterDirection?.trim())
-      content += `\n[Directions for continuing the story:]\n${nextChapterDirection}\n`;
-
-    return content;
-  };
-
   formatChapterContentFull = (
     title?: string,
     summary?: string,
-    nextChapterDirection?: string,
   ): string => {
-    let content = "";
-
-    content += `[Previous Chapter Summary: ${title ?? ""}]\n${
+    const content = `[Previous Chapter Summary: ${title ?? ""}]\n${
       summary ?? ""
     }\n[End of Chapter Summary]`;
-
-    if (nextChapterDirection?.trim())
-      content += `\n[Directions for continuing the story:]\n${nextChapterDirection}\n`;
 
     return content;
   };
@@ -589,11 +567,10 @@ export class LLMChatProjection {
     const chapter = this.getMessage(chapterId);
     if (!chapter) return;
 
-    const { title, summary, nextChapterDirection } = chapter.data || {};
+    const { title, summary } = chapter.data || {};
     chapter.content = this.formatChapterContentFull(
       title,
       summary,
-      nextChapterDirection,
     );
   }
 
@@ -601,7 +578,7 @@ export class LLMChatProjection {
     const lastChapter = this.getLastChapter();
     if (!lastChapter?.data || !lastChapter.coveredMessageIds) return;
 
-    const { title, summary, nextChapterDirection } = lastChapter.data;
+    const { title, summary } = lastChapter.data;
     if (!title || !summary) return;
 
     // Count visible messages after the last chapter
@@ -611,15 +588,10 @@ export class LLMChatProjection {
     );
 
     // If we have 6 or more messages after chapter, don't include covered messages
-    // but still include the direction if it exists
     if (messagesAfterChapter.length >= this.numberOfPreviousChapterMessages) {
       const chapter = this.getMessage(lastChapter.id);
       if (chapter) {
-        chapter.content = this.formatChapterContentWithDirection(
-          title,
-          summary,
-          nextChapterDirection,
-        );
+        chapter.content = this.formatChapterContentSimple(title, summary);
       }
     } else {
       // Use full format with last 6 covered messages
@@ -669,7 +641,6 @@ interface MessageState {
   data?: {
     title?: string;
     summary?: string;
-    nextChapterDirection?: string;
     planDefinitionId?: string;
     planName?: string;
     rawContent?: string;

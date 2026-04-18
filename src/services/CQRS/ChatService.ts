@@ -90,7 +90,6 @@ export class ChatService {
   public async AddChapter(
     title: string,
     summary: string,
-    nextChapterDirection?: string,
   ): Promise<string> {
     const allMessages = d.UserChatProjection(this.chatId).GetMessages();
     const coveredMessageIds = allMessages
@@ -101,7 +100,6 @@ export class ChatService {
       title,
       summary,
       coveredMessageIds,
-      nextChapterDirection,
     );
 
     await d.ChatEventService(this.chatId).AddChatEvent(event);
@@ -112,13 +110,11 @@ export class ChatService {
     chapterId: string,
     title: string,
     summary: string,
-    nextChapterDirection?: string,
   ): Promise<void> {
     const event = ChapterEditedEventUtil.Create(
       chapterId,
       title,
       summary,
-      nextChapterDirection,
     );
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }

@@ -9,14 +9,12 @@ export class ChapterCreatedEventUtil {
     title: string,
     summary: string,
     coveredMessageIds: string[],
-    nextChapterDirection?: string
   ): ChapterCreatedEvent {
     return {
       type: "ChapterCreated",
       chapterId: this.generateChapterId(),
       title,
       summary,
-      nextChapterDirection,
       coveredMessageIds,
     };
   }
@@ -33,14 +31,12 @@ export class ChapterEditedEventUtil {
     chapterId: string,
     title: string,
     summary: string,
-    nextChapterDirection?: string
   ): ChapterEditedEvent {
     return {
       type: "ChapterEdited",
       chapterId,
       title,
       summary,
-      nextChapterDirection,
     };
   }
 }

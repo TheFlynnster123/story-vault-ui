@@ -40,7 +40,8 @@ describe("TransparencySlider", () => {
     vi.clearAllMocks();
   });
 
-  const renderSlider = () => render(<TransparencySlider chatId={CHAT_ID} />);
+  const renderSlider = () =>
+    render(<TransparencySlider chatId={CHAT_ID} />);
 
   it("should render the Message Transparency label", () => {
     renderSlider();

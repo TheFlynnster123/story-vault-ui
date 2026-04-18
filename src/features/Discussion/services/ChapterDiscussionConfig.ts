@@ -75,7 +75,6 @@ export const createChapterDiscussionConfig = (
 
     const title = chapter.data?.title ?? "";
     const currentSummary = chapter.content ?? "";
-    const nextChapterDirection = chapter.data?.nextChapterDirection;
 
     const chatMessages = getChatMessages();
     const systemPrompt = [
@@ -106,7 +105,7 @@ export const createChapterDiscussionConfig = (
 
     await d
       .ChatService(chatId)
-      .EditChapter(chapterId, title, response, nextChapterDirection);
+      .EditChapter(chapterId, title, response);
   };
 
   return {
