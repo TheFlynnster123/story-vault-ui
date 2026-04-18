@@ -5,12 +5,14 @@ import { FlowStyles } from "./FlowStyles";
 interface FlowButtonProps {
   onClick: () => void;
   leftSection?: React.ReactNode;
+  rightSection?: React.ReactNode;
   children: React.ReactNode;
 }
 
 export const FlowButton: React.FC<FlowButtonProps> = ({
   onClick,
   leftSection,
+  rightSection,
   children,
 }) => (
   <Button
@@ -19,6 +21,7 @@ export const FlowButton: React.FC<FlowButtonProps> = ({
     fullWidth
     justify="flex-start"
     leftSection={leftSection}
+    rightSection={rightSection}
     onClick={onClick}
     styles={{
       root: {

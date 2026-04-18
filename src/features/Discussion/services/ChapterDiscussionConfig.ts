@@ -41,7 +41,7 @@ export const createChapterDiscussionConfig = (
     const lines = [
       `# Chapter Summary Discussion — ${title}`,
       ``,
-      `You are helping the user discuss and refine the summary for this chapter.`,
+      `You are helping the user create and refine the summary for this chapter.`,
       `Consider the full chat history above for context.`,
     ];
 
@@ -57,7 +57,9 @@ export const createChapterDiscussionConfig = (
 
     lines.push(
       ``,
-      `The user would like to discuss what the chapter summary should contain.`,
+      summary
+        ? `The user would like to discuss what the chapter summary should contain.`
+        : `The chapter does not have a summary yet. Help the user create one.`,
       `Engage in a helpful conversation about what happened in this chapter.`,
       `Suggest improvements, ask clarifying questions, and help them refine the summary.`,
       `Keep responses concise and focused on accurately capturing the chapter's events.`,
@@ -65,6 +67,8 @@ export const createChapterDiscussionConfig = (
 
     return lines.join("\n");
   };
+
+  const buildInitialPrompt = (): string => resolvedPrompt();
 
   const getDefaultModel = (): string | undefined =>
     chapterSummaryModel || undefined;
@@ -75,7 +79,6 @@ export const createChapterDiscussionConfig = (
 
     const title = chapter.data?.title ?? "";
     const currentSummary = chapter.content ?? "";
-    const nextChapterDirection = chapter.data?.nextChapterDirection;
 
     const chatMessages = getChatMessages();
     const systemPrompt = [
@@ -104,9 +107,7 @@ export const createChapterDiscussionConfig = (
     const model = chapterSummaryModel || undefined;
     const response = await d.OpenRouterChatAPI().postChat(messages, model);
 
-    await d
-      .ChatService(chatId)
-      .EditChapter(chapterId, title, response, nextChapterDirection);
+    await d.ChatService(chatId).EditChapter(chapterId, title, response);
   };
 
   return {
@@ -114,5 +115,6 @@ export const createChapterDiscussionConfig = (
     getChatMessages,
     getDefaultModel,
     generateFromFeedback,
+    buildInitialPrompt,
   };
 };

@@ -23,6 +23,8 @@ export interface DiscussionPageConfig {
   inputPlaceholder: string;
   /** Label for the generate button */
   generateButtonLabel: string;
+  /** Label for the send & generate button */
+  finalFeedbackButtonLabel: string;
   /** Empty state text when no messages */
   emptyStateText: string;
 }

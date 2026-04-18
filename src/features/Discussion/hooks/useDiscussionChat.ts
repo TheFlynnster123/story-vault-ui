@@ -14,5 +14,7 @@ export const useDiscussionChat = (service: DiscussionService) => {
     defaultModel: service.getDefaultModel(),
     sendMessage: service.sendMessage,
     generateFromFeedback: service.generateFromFeedback,
+    generateInitialMessage: service.generateInitialMessage,
+    sendFinalFeedbackAndGenerate: service.sendFinalFeedbackAndGenerate,
   };
 };

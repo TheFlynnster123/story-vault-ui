@@ -6,20 +6,22 @@ import {
   TextInput,
   Button,
   Group,
+  ActionIcon,
+  Tooltip,
 } from "@mantine/core";
-import { RiChat3Line } from "react-icons/ri";
+import { RiSparklingLine } from "react-icons/ri";
+import { VscRefresh } from "react-icons/vsc";
 
 interface CreateChapterModalProps {
   opened: boolean;
   title: string;
   summary: string;
-  nextChapterDirection: string;
-  isGenerating: boolean;
+  isGeneratingTitle: boolean;
+  isCreating: boolean;
   onTitleChange: (title: string) => void;
   onSummaryChange: (summary: string) => void;
-  onNextChapterDirectionChange: (direction: string) => void;
-  onGenerateSummary: () => void;
-  onDiscuss: () => void;
+  onGenerateTitle: () => void;
+  onGenerate: () => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -28,17 +30,18 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
   opened,
   title,
   summary,
-  nextChapterDirection,
-  isGenerating,
+  isGeneratingTitle,
+  isCreating,
   onTitleChange,
   onSummaryChange,
-  onNextChapterDirectionChange,
-  onGenerateSummary,
-  onDiscuss,
+  onGenerateTitle,
+  onGenerate,
   onSubmit,
   onCancel,
 }) => {
-  const isFormValid = title.trim() && summary.trim() && !isGenerating;
+  const canGenerate = !!title.trim() && !isGeneratingTitle && !isCreating;
+  const canCreate =
+    !!title.trim() && !!summary.trim() && !isGeneratingTitle && !isCreating;
 
   return (
     <Modal
@@ -50,64 +53,76 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
     >
       <Stack>
         <Text size="sm" c="dimmed">
-          Create a new chapter to summarize the story so far.
+          Create a new chapter to summarize the story so far. Click "Generate"
+          to workshop the summary with the AI, or enter a summary manually and
+          click "Create Chapter".
         </Text>
 
-        <TextInput
-          label="Chapter Title"
-          placeholder="Enter a title for this chapter..."
-          value={title}
-          onChange={(e) => onTitleChange(e.currentTarget.value)}
-          required
-        />
-
-        <Stack gap="xs">
-          <Textarea
-            label="Chapter Summary"
-            placeholder="Click 'Generate Summary' or enter manually..."
-            value={summary}
-            onChange={(e) => onSummaryChange(e.currentTarget.value)}
-            minRows={12}
-            autosize
+        <Group align="flex-end" gap="xs">
+          <TextInput
+            label="Chapter Title"
+            placeholder="Enter a title for this chapter..."
+            value={title}
+            onChange={(e) => onTitleChange(e.currentTarget.value)}
             required
+            style={{ flex: 1 }}
           />
-          <Group grow>
-            <Button
-              variant="light"
-              onClick={onGenerateSummary}
-              loading={isGenerating}
-            >
-              Generate Summary
-            </Button>
-            <Button
+          <Tooltip label="Generate title with AI">
+            <ActionIcon
               variant="light"
               color="yellow"
-              onClick={onDiscuss}
-              disabled={!isFormValid}
-              leftSection={<RiChat3Line size={14} />}
+              size="input-sm"
+              onClick={onGenerateTitle}
+              loading={isGeneratingTitle}
+              aria-label="Generate title with AI"
             >
-              Discuss this Summary
-            </Button>
-          </Group>
-        </Stack>
+              <RiSparklingLine size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
 
         <Textarea
-          label="Next Chapter Direction (Optional)"
-          placeholder="Enter guidance for where the next chapter should go..."
-          value={nextChapterDirection}
-          onChange={(e) => onNextChapterDirectionChange(e.currentTarget.value)}
-          minRows={4}
+          label="Chapter Summary (optional for Generate)"
+          placeholder="Enter a summary or click Generate to workshop one with the AI..."
+          value={summary}
+          onChange={(e) => onSummaryChange(e.currentTarget.value)}
+          minRows={8}
           autosize
         />
 
-        <Group justify="flex-end" mt="md">
-          <Button variant="default" onClick={onCancel} disabled={isGenerating}>
-            Cancel
-          </Button>
-          <Button color="blue" onClick={onSubmit} disabled={!isFormValid}>
-            Create Chapter
-          </Button>
-        </Group>
+        <Stack gap={4} align="flex-end" mt="md">
+          {!title.trim() && (
+            <Text size="xs" c="red">
+              Enter a chapter title before generating
+            </Text>
+          )}
+          <Group justify="flex-end">
+            <Button
+              variant="default"
+              onClick={onCancel}
+              disabled={isCreating || isGeneratingTitle}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="blue"
+              onClick={onSubmit}
+              disabled={!canCreate}
+              loading={isCreating}
+            >
+              Create Chapter
+            </Button>
+            <Button
+              color="yellow"
+              onClick={onGenerate}
+              disabled={!canGenerate}
+              loading={isCreating}
+              leftSection={<VscRefresh size={16} />}
+            >
+              Generate
+            </Button>
+          </Group>
+        </Stack>
       </Stack>
     </Modal>
   );

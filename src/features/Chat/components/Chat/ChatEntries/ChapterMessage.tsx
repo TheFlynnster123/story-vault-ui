@@ -7,7 +7,6 @@ import { Theme } from "../../../../../components/Theme";
 import type { ChapterChatMessage } from "../../../../../services/CQRS/UserChatProjection";
 import { ChapterContent } from "./Chapter/ChapterContent.tsx";
 import { ChapterExpandedDetails } from "./Chapter/ChapterExpandedMessages.tsx";
-import { NextChapterDirection } from "./Chapter/NextChapterDirection.tsx";
 
 const MessageContainer = styled.div`
   padding: 1rem;
@@ -77,8 +76,6 @@ export const ChapterMessage: React.FC<ChapterMessageProps> = ({
           <ChapterExpandedDetails chatId={chatId} chapterId={chapter.id} />
         )}
       </MessageContainer>
-
-      <NextChapterDirection chapter={chapter} />
     </div>
   );
 };

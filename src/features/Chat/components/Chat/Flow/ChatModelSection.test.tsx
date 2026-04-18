@@ -78,10 +78,10 @@ describe("ChatModelSection", () => {
     expect(screen.getByText("Default")).toBeInTheDocument();
   });
 
-  it("should show (default) label when using system default", () => {
+  it("should show (using system default) label when using system default", () => {
     renderSection();
 
-    expect(screen.getByText("(default)")).toBeInTheDocument();
+    expect(screen.getByText("(using system default)")).toBeInTheDocument();
   });
 
   it("should not show clear button when using system default", () => {
@@ -105,7 +105,7 @@ describe("ChatModelSection", () => {
     renderSection();
 
     expect(screen.getByText("GPT-4")).toBeInTheDocument();
-    expect(screen.getByText("(default)")).toBeInTheDocument();
+    expect(screen.getByText("(using system default)")).toBeInTheDocument();
   });
 
   // --- With chat-specific override ---
@@ -121,7 +121,7 @@ describe("ChatModelSection", () => {
     renderSection();
 
     expect(screen.getByText("Claude 3")).toBeInTheDocument();
-    expect(screen.getByText("(chat)")).toBeInTheDocument();
+    expect(screen.getByText("(overridden for this chat)")).toBeInTheDocument();
   });
 
   it("should show clear button when model is overridden", () => {

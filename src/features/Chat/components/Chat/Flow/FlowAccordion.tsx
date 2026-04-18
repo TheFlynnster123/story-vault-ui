@@ -2,8 +2,7 @@ import React from "react";
 import { Accordion, Stack, Box } from "@mantine/core";
 import { useNavigate } from "react-router-dom";
 import { FlowStyles } from "./FlowStyles";
-import { ChapterSection } from "./ChapterSection";
-import { BookSection } from "./BookSection";
+import { CompressSection } from "./CompressSection";
 import { NoteSection } from "./NoteSection";
 import { ChatSettingsButton } from "./ChatSettingsButton";
 import { ChatImageModelsSection } from "./ChatImageModelsSection";
@@ -41,25 +40,24 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
           <Accordion.Control>Flow</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="xs" p="md">
-              <ChapterSection chatId={chatId} />
-              <BookSection chatId={chatId} />
-              <NoteSection chatId={chatId} />
+              <TransparencySlider chatId={chatId} />
               <ChatModelSection chatId={chatId} />
+              <ChatImageModelsSection
+                chatId={chatId}
+                onNavigate={navigateToChatImageModels}
+              />
               <ChatSettingsButton onClick={navigateToChatSettings} />
               <PlanSection
                 chatId={chatId}
                 plans={plans}
                 onNavigate={navigateToPlan}
               />
+              <CompressSection chatId={chatId} />
+              <NoteSection chatId={chatId} />
               <MemoriesSection
                 chatId={chatId}
                 onNavigate={navigateToMemories}
               />
-              <ChatImageModelsSection
-                chatId={chatId}
-                onNavigate={navigateToChatImageModels}
-              />
-              <TransparencySlider chatId={chatId} />
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>

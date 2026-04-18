@@ -87,21 +87,22 @@ export class ChatService {
   }
 
   // ---- Chapter Operations ----
-  public async AddChapter(
-    title: string,
-    summary: string,
-    nextChapterDirection?: string,
-  ): Promise<string> {
+  public async AddChapter(title: string, summary: string): Promise<string> {
     const allMessages = d.UserChatProjection(this.chatId).GetMessages();
     const coveredMessageIds = allMessages
-      .filter((m) => m.type !== "chapter" && m.type !== "story" && m.type !== "note" && !m.deleted)
+      .filter(
+        (m) =>
+          m.type !== "chapter" &&
+          m.type !== "story" &&
+          m.type !== "note" &&
+          !m.deleted,
+      )
       .map((m) => m.id);
 
     const event = ChapterCreatedEventUtil.Create(
       title,
       summary,
       coveredMessageIds,
-      nextChapterDirection,
     );
 
     await d.ChatEventService(this.chatId).AddChatEvent(event);
@@ -112,14 +113,8 @@ export class ChatService {
     chapterId: string,
     title: string,
     summary: string,
-    nextChapterDirection?: string,
   ): Promise<void> {
-    const event = ChapterEditedEventUtil.Create(
-      chapterId,
-      title,
-      summary,
-      nextChapterDirection,
-    );
+    const event = ChapterEditedEventUtil.Create(chapterId, title, summary);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 
@@ -134,7 +129,11 @@ export class ChatService {
     summary: string,
     coveredChapterIds: string[],
   ): Promise<void> {
-    const event = BookCreatedEventUtil.Create(title, summary, coveredChapterIds);
+    const event = BookCreatedEventUtil.Create(
+      title,
+      summary,
+      coveredChapterIds,
+    );
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 
@@ -169,7 +168,9 @@ export class ChatService {
       planName,
       content,
     );
-    await d.ChatEventService(this.chatId).AddChatEvents([hideEvent, createEvent]);
+    await d
+      .ChatEventService(this.chatId)
+      .AddChatEvents([hideEvent, createEvent]);
   }
 
   // ---- Note Operations ----

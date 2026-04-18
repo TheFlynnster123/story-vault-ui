@@ -15,6 +15,7 @@ import {
   Box,
   Loader,
   ScrollArea,
+  Tooltip,
 } from "@mantine/core";
 import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
@@ -44,7 +45,8 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     isGenerating,
     defaultModel,
     sendMessage,
-    generateFromFeedback,
+    generateInitialMessage,
+    sendFinalFeedbackAndGenerate,
   } = useDiscussionChat(service);
   const [chatModel, setChatModel] = useState<string | null>(null);
   const [modelInitialized, setModelInitialized] = useState(false);
@@ -55,6 +57,10 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
       setModelInitialized(true);
     }
   }, [defaultModel, modelInitialized]);
+
+  useEffect(() => {
+    generateInitialMessage();
+  }, []);
 
   const handleGoBack = () => {
     navigate(`/chat/${chatId}`);
@@ -76,7 +82,9 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
   };
 
   const handleGenerate = async () => {
-    await generateFromFeedback();
+    const finalFeedback = inputValue.trim() ? inputValue : undefined;
+    setInputValue("");
+    await sendFinalFeedbackAndGenerate(finalFeedback);
     navigate(`/chat/${chatId}`);
   };
 
@@ -104,8 +112,10 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
           value={inputValue}
           onChange={setInputValue}
           onSend={handleSend}
+          onSendAndGenerate={handleGenerate}
           onKeyDown={handleKeyDown}
           isGenerating={isGenerating}
+          hasMessages={messages.length > 0}
           config={config}
         />
 
@@ -235,8 +245,10 @@ interface DiscussionInputProps {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
+  onSendAndGenerate: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   isGenerating: boolean;
+  hasMessages: boolean;
   config: DiscussionPageConfig;
 }
 
@@ -244,8 +256,10 @@ const DiscussionInput: React.FC<DiscussionInputProps> = ({
   value,
   onChange,
   onSend,
+  onSendAndGenerate,
   onKeyDown,
   isGenerating,
+  hasMessages,
   config,
 }) => (
   <Group gap="xs" align="flex-end" mb="md">
@@ -278,6 +292,19 @@ const DiscussionInput: React.FC<DiscussionInputProps> = ({
     >
       <RiSendPlane2Line style={{ width: "50%", height: "50%" }} />
     </ActionIcon>
+    <Tooltip label={config.finalFeedbackButtonLabel}>
+      <ActionIcon
+        size="input-md"
+        radius="xl"
+        variant="filled"
+        color={config.accentColor}
+        onClick={onSendAndGenerate}
+        disabled={isGenerating || (!value.trim() && !hasMessages)}
+        aria-label={config.finalFeedbackButtonLabel}
+      >
+        <VscRefresh style={{ width: "50%", height: "50%" }} />
+      </ActionIcon>
+    </Tooltip>
   </Group>
 );
 

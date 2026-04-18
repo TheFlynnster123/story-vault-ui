@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { ChatEntry } from "./ChatEntries/ChatEntry";
 import { useUserChatProjection } from "../../hooks/useUserChatProjection";
@@ -10,15 +10,13 @@ interface IChatEntriesList {
 export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const { messages } = useUserChatProjection(chatId);
-  const [shouldFollowOutput, setShouldFollowOutput] = useState(true);
 
   return (
     <Virtuoso
       ref={virtuosoRef}
       data={messages}
       style={{ height: "100%", width: "100%" }}
-      followOutput={shouldFollowOutput ? "smooth" : false}
-      atBottomStateChange={(atBottom) => setShouldFollowOutput(atBottom)}
+      followOutput={false}
       itemContent={(index, msg) => (
         <ChatEntry
           key={msg.id}

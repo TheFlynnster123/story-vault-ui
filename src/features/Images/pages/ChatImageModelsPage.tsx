@@ -93,7 +93,7 @@ export const ChatImageModelsPage: React.FC = () => {
               <Button
                 variant="subtle"
                 onClick={handleAddFromTemplate}
-                style={{ color: Theme.chatSettings.primary }}
+                style={{ color: Theme.imageModel.primary }}
                 leftSection={<RiImageLine size={16} />}
               >
                 Add from Template
@@ -101,7 +101,7 @@ export const ChatImageModelsPage: React.FC = () => {
               <Button
                 variant="subtle"
                 onClick={handleAddNewModel}
-                style={{ color: Theme.chatSettings.primary }}
+                style={{ color: Theme.imageModel.primary }}
                 leftSection={<RiAddLine size={16} />}
               >
                 New Model
@@ -149,13 +149,13 @@ const PageHeader: React.FC<{ onGoBack: () => void }> = ({ onGoBack }) => (
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
           <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <RiImageLine size={24} color={Theme.chatSettings.primary} />
-        <Title order={2} fw={400} style={{ color: Theme.chatSettings.primary }}>
+        <RiImageLine size={24} color={Theme.imageModel.primary} />
+        <Title order={2} fw={400} style={{ color: Theme.imageModel.primary }}>
           Chat Image Models
         </Title>
       </Group>
     </Group>
-    <Divider mb="xl" style={{ borderColor: Theme.chatSettings.border }} />
+    <Divider mb="xl" style={{ borderColor: Theme.imageModel.border }} />
   </>
 );
 

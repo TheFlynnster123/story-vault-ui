@@ -98,6 +98,68 @@ export class DiscussionService {
     }
   };
 
+  /**
+   * Generates the first assistant message when a discussion starts.
+   * Uses the config's buildInitialPrompt to get a hidden user instruction
+   * that the LLM responds to. Only the response is shown in the UI.
+   */
+  public generateInitialMessage = async (
+    modelOverride?: string,
+  ): Promise<void> => {
+    if (this.messages.length > 0 || this.generating) return;
+
+    const initialPrompt = this.config.buildInitialPrompt?.();
+    if (!initialPrompt) return;
+
+    this.generating = true;
+    this.notifySubscribers();
+
+    try {
+      const promptMessages = this.buildConversationPrompt();
+      promptMessages.push({ role: "user", content: initialPrompt });
+
+      const model = modelOverride || this.config.getDefaultModel();
+      const response = await d
+        .OpenRouterChatAPI()
+        .postChat(promptMessages, model);
+
+      this.messages = [{ role: "assistant", content: response }];
+    } catch (e) {
+      d.ErrorService().log("Failed to generate initial message", e);
+      this.messages = [
+        {
+          role: "assistant",
+          content:
+            "Sorry, I couldn't generate the initial summary. Please send a message to start.",
+        },
+      ];
+    } finally {
+      this.generating = false;
+      this.notifySubscribers();
+    }
+  };
+
+  /**
+   * Adds optional final user feedback, then triggers the generate action.
+   * This lets users provide last-minute input and generate in one step,
+   * avoiding the send → wait → generate cycle.
+   */
+  public sendFinalFeedbackAndGenerate = async (
+    userMessage?: string,
+  ): Promise<void> => {
+    if (this.generating) return;
+
+    if (userMessage?.trim()) {
+      this.messages = [
+        ...this.messages,
+        { role: "user", content: userMessage.trim() },
+      ];
+      this.notifySubscribers();
+    }
+
+    return this.generateFromFeedback();
+  };
+
   private buildConversationPrompt = (): LLMMessage[] => {
     const chatMessages = this.config.getChatMessages();
     const systemPrompt = this.config.buildSystemPrompt();

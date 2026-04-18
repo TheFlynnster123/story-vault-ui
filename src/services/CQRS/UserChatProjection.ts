@@ -263,7 +263,6 @@ export class UserChatProjection {
       hidden: false,
       data: {
         title: event.title,
-        nextChapterDirection: event.nextChapterDirection,
         coveredMessageIds: [...event.coveredMessageIds],
       },
     });
@@ -281,7 +280,6 @@ export class UserChatProjection {
         data: {
           ...chapter.data,
           title: event.title,
-          nextChapterDirection: event.nextChapterDirection,
         },
       };
     }
@@ -490,7 +488,9 @@ export class UserChatProjection {
    * Computes note expiration based on the number of qualifying messages
    * that follow each note. Returns a new array with expired flags updated.
    */
-  private computeNoteExpiration(messages: UserChatMessage[]): UserChatMessage[] {
+  private computeNoteExpiration(
+    messages: UserChatMessage[],
+  ): UserChatMessage[] {
     const result: UserChatMessage[] = [];
     const noteIndices: number[] = [];
 
@@ -593,7 +593,6 @@ export interface CivitJobChatMessage extends UserChatMessage {
 export interface ChapterChatMessage extends UserChatMessage {
   data: {
     title: string;
-    nextChapterDirection?: string;
     coveredMessageIds: string[];
   };
 }

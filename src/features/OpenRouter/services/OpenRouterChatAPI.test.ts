@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { OpenRouterChatAPI } from "./OpenRouterChatAPI";
+import { OpenRouterChatAPI, cleanMessages } from "./OpenRouterChatAPI";
 import { OpenRouterError } from "./OpenRouterError";
 import { d } from "../../../services/Dependencies";
 
@@ -227,5 +227,79 @@ describe("OpenRouterChatAPI", () => {
         expect((e as OpenRouterError).code).toBe(0);
       }
     });
+  });
+
+  // ---- Message Cleaning ----
+
+  describe("message cleaning", () => {
+    it("should only send role and content fields in the request body", async () => {
+      const responseBody = { reply: "ok" };
+      const fetchSpy = vi
+        .spyOn(global, "fetch")
+        .mockResolvedValue(
+          new Response(JSON.stringify(responseBody), { status: 200 }),
+        );
+
+      const dirtyMessages = [
+        {
+          id: "book-123",
+          role: "system" as const,
+          content: "Book summary",
+        },
+        {
+          id: "user-456",
+          role: "user" as const,
+          content: "Hello",
+        },
+      ];
+
+      await api.postChat(dirtyMessages);
+
+      const sentBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      for (const msg of sentBody.messages) {
+        expect(Object.keys(msg)).toEqual(["role", "content"]);
+      }
+    });
+  });
+});
+
+// ---- cleanMessages ----
+
+describe("cleanMessages", () => {
+  it("should strip extra fields and keep only role and content", () => {
+    const messages = [
+      { id: "book-123", role: "system" as const, content: "Summary" },
+      { id: "user-456", role: "user" as const, content: "Hello" },
+      { id: "asst-789", role: "assistant" as const, content: "Response" },
+    ];
+
+    const result = cleanMessages(messages);
+
+    expect(result).toEqual([
+      { role: "system", content: "Summary" },
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: "Response" },
+    ]);
+  });
+
+  it("should return an empty array for empty input", () => {
+    expect(cleanMessages([])).toEqual([]);
+  });
+
+  it("should not include any unexpected properties", () => {
+    const messages = [
+      {
+        id: "msg-1",
+        role: "user" as const,
+        content: "Hi",
+        extra: "should be removed",
+      } as any,
+    ];
+
+    const result = cleanMessages(messages);
+
+    expect(result).toEqual([{ role: "user", content: "Hi" }]);
+    expect(result[0]).not.toHaveProperty("id");
+    expect(result[0]).not.toHaveProperty("extra");
   });
 });

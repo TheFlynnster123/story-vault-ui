@@ -18,6 +18,7 @@ const pageConfig: DiscussionPageConfig = {
     'Discuss the book summary with the AI. When you\'re satisfied, click "Generate Updated Book Summary" to regenerate the summary using this conversation as feedback.',
   inputPlaceholder: "Discuss book summary…",
   generateButtonLabel: "Generate Updated Book Summary",
+  finalFeedbackButtonLabel: "Send & Generate Book Summary",
   emptyStateText:
     "Start a conversation about this book's summary. Discuss the overarching narrative, themes, or character arcs.",
 };

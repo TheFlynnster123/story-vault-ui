@@ -9,7 +9,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [nextChapterDirection, setNextChapterDirection] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const [, forceUpdate] = useState({});
   const chapterGeneration = d.ChapterGenerationService(chatId);
 
@@ -17,72 +17,58 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     return chapterGeneration?.subscribe(() => forceUpdate({}));
   }, [chapterGeneration]);
 
-  const handleOpenModal = async () => {
+  const handleOpenModal = () => {
     setShowModal(true);
-
-    // Automatically generate title and summary when modal opens
-    try {
-      const [generatedTitle, generatedSummary] = await Promise.all([
-        d.ChapterGenerationService(chatId).generateChapterTitle(),
-        d.ChapterGenerationService(chatId).generateChapterSummary(),
-      ]);
-
-      if (generatedTitle) {
-        setTitle(generatedTitle);
-      }
-      if (generatedSummary) {
-        setSummary(generatedSummary);
-      }
-    } catch (error) {
-      d.ErrorService().log("Failed to generate chapter title/summary", error);
-    }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setTitle("");
     setSummary("");
-    setNextChapterDirection("");
   };
 
-  const handleGenerateSummary = async () => {
+  const handleGenerateTitle = async () => {
     try {
-      const generatedSummary = await d
+      const generatedTitle = await d
         .ChapterGenerationService(chatId)
-        .generateChapterSummary();
-      if (generatedSummary) {
-        setSummary(generatedSummary);
+        .generateChapterTitle();
+      if (generatedTitle) {
+        setTitle(generatedTitle);
       }
     } catch (error) {
-      d.ErrorService().log("Failed to generate chapter summary", error);
+      d.ErrorService().log("Failed to generate chapter title", error);
     }
   };
 
   const handleSubmit = async () => {
     if (!title.trim() || !summary.trim()) return;
 
+    setIsCreating(true);
     try {
-      await d
-        .ChatService(chatId)
-        .AddChapter(title, summary, nextChapterDirection || undefined);
+      await d.ChatService(chatId).AddChapter(title, summary);
       handleCloseModal();
     } catch (error) {
       d.ErrorService().log("Failed to create chapter", error);
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  const handleDiscuss = async (): Promise<string | undefined> => {
-    if (!title.trim() || !summary.trim()) return undefined;
+  const handleGenerate = async (): Promise<string | undefined> => {
+    if (!title.trim()) return undefined;
 
+    setIsCreating(true);
     try {
       const chapterId = await d
         .ChatService(chatId)
-        .AddChapter(title, summary, nextChapterDirection || undefined);
+        .AddChapter(title, summary.trim() || "");
       handleCloseModal();
       return chapterId;
     } catch (error) {
       d.ErrorService().log("Failed to create chapter for discussion", error);
       return undefined;
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -90,15 +76,14 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     showModal,
     title,
     summary,
-    nextChapterDirection,
-    isGenerating: chapterGeneration?.IsLoading || false,
+    isGeneratingTitle: chapterGeneration?.IsLoading || false,
+    isCreating,
     setTitle,
     setSummary,
-    setNextChapterDirection,
     handleOpenModal,
     handleCloseModal,
-    handleGenerateSummary,
+    handleGenerateTitle,
     handleSubmit,
-    handleDiscuss,
+    handleGenerate,
   };
 };

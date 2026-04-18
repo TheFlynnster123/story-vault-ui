@@ -27,7 +27,9 @@ export const ChatModelSection: React.FC<ChatModelSectionProps> = ({
   } = useChatModelOverride(chatId);
 
   const displayName = activeModel?.name ?? activeModelId ?? "Default";
-  const sourceLabel = isOverridden ? "chat" : "default";
+  const sourceLabel = isOverridden
+    ? "(overridden for this chat)"
+    : "(using system default)";
 
   const handleClearOverride = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,30 +37,36 @@ export const ChatModelSection: React.FC<ChatModelSectionProps> = ({
   };
 
   return (
-    <Box>
-      <FlowButton
-        onClick={() => setIsModalOpen(true)}
-        leftSection={<RiRobot2Line size={18} color="rgba(100, 149, 237, 1)" />}
-      >
-        <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-          <Text size="sm" fw={500}>
-            Chat Model
-          </Text>
-        </Group>
-      </FlowButton>
-
-      {/* Current model display */}
-      <Box
-        px="sm"
-        py={6}
-        style={{
-          backgroundColor: FlowStyles.buttonBackground,
-          borderRadius: "0 0 4px 4px",
-          marginTop: "-2px",
-        }}
-      >
-        <Group gap="xs" justify="space-between" wrap="nowrap">
+    <Box
+      style={{
+        display: "flex",
+        alignItems: "center",
+        backgroundColor: FlowStyles.buttonBackground,
+        borderRadius: "4px",
+      }}
+    >
+      <Box style={{ flex: 1, minWidth: 0 }}>
+        <FlowButton
+          onClick={() => setIsModalOpen(true)}
+          leftSection={
+            <RiRobot2Line size={18} color="rgba(100, 149, 237, 1)" />
+          }
+        >
           <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+            <Text size="sm" fw={500} style={{ flexShrink: 0 }}>
+              Chat Model
+            </Text>
+            <Text
+              size="xs"
+              style={{
+                color: isOverridden
+                  ? "rgba(100, 149, 237, 0.8)"
+                  : "rgba(255, 255, 255, 0.35)",
+                flexShrink: 0,
+              }}
+            >
+              {sourceLabel}
+            </Text>
             <Text
               size="xs"
               c="dimmed"
@@ -70,40 +78,27 @@ export const ChatModelSection: React.FC<ChatModelSectionProps> = ({
             >
               {isLoading ? "Loading..." : truncateModelName(displayName)}
             </Text>
-            <Text
-              size="xs"
-              style={{
-                color: isOverridden
-                  ? "rgba(100, 149, 237, 0.8)"
-                  : "rgba(255, 255, 255, 0.35)",
-                fontSize: "10px",
-                flexShrink: 0,
-              }}
-            >
-              ({sourceLabel})
-            </Text>
           </Group>
-
-          {isOverridden && (
-            <button
-              onClick={handleClearOverride}
-              title="Clear model override — revert to system default"
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "rgba(248, 113, 113, 0.8)",
-                padding: "2px",
-                display: "flex",
-                alignItems: "center",
-                flexShrink: 0,
-              }}
-            >
-              <RiCloseLine size={14} />
-            </button>
-          )}
-        </Group>
+        </FlowButton>
       </Box>
+      {isOverridden && (
+        <button
+          onClick={handleClearOverride}
+          title="Clear model override — revert to system default"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "rgba(248, 113, 113, 0.8)",
+            padding: "6px",
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          <RiCloseLine size={20} />
+        </button>
+      )}
 
       <ModelSelectorModal
         isOpen={isModalOpen}

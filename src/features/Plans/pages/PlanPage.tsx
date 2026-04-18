@@ -4,7 +4,7 @@ import {
   RiArrowLeftLine,
   RiAddLine,
   RiDeleteBinLine,
-  RiFileList2Line,
+  RiTreasureMapFill,
   RiPlayLine,
 } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
@@ -150,9 +150,9 @@ const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
           <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <RiFileList2Line size={24} color={Theme.plan.primary} />
+        <RiTreasureMapFill size={24} color={Theme.plan.primary} />
         <Title order={2} fw={400} style={{ color: Theme.plan.primary }}>
-          Plan
+          Plans
         </Title>
       </Group>
     </Group>
@@ -163,7 +163,11 @@ const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
 interface PlanListProps {
   plans: Plan[];
   onAdd: () => void;
-  onChange: (id: string, field: keyof Plan, value: string | number | boolean) => void;
+  onChange: (
+    id: string,
+    field: keyof Plan,
+    value: string | number | boolean,
+  ) => void;
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;
@@ -206,7 +210,11 @@ const PlanList: React.FC<PlanListProps> = ({
 
 interface PlanEditorProps {
   plan: Plan;
-  onChange: (id: string, field: keyof Plan, value: string | number | boolean) => void;
+  onChange: (
+    id: string,
+    field: keyof Plan,
+    value: string | number | boolean,
+  ) => void;
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;

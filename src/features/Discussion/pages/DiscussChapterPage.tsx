@@ -20,6 +20,7 @@ const pageConfig: DiscussionPageConfig = {
     'Discuss the chapter summary with the AI. When you\'re satisfied, click "Generate Updated Chapter Summary" to regenerate the summary using this conversation as feedback.',
   inputPlaceholder: "Discuss chapter summary…",
   generateButtonLabel: "Generate Updated Chapter Summary",
+  finalFeedbackButtonLabel: "Send & Generate Chapter Summary",
   emptyStateText:
     "Start a conversation about this chapter's summary. Discuss what happened, suggest corrections, or refine the narrative.",
 };
@@ -42,7 +43,12 @@ export const DiscussChapterPage: React.FC = () => {
           systemPrompts.chapterSummaryPrompt,
         ),
       ),
-    [chatId, chapterId, systemPrompts.chapterSummaryModel, systemPrompts.chapterSummaryPrompt],
+    [
+      chatId,
+      chapterId,
+      systemPrompts.chapterSummaryModel,
+      systemPrompts.chapterSummaryPrompt,
+    ],
   );
 
   if (isLoading) {

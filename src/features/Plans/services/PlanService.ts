@@ -88,16 +88,15 @@ export class PlanService {
   }
 
   public async savePlans(plans?: Plan[]): Promise<void> {
+    if (plans) {
+      this.Plans = plans;
+    }
+
     this.IsLoading = true;
 
     try {
       const plansToSave = plans ?? this.Plans;
       await d.PlansManagedBlob(this.chatId).save(plansToSave);
-
-      if (plans) {
-        this.Plans = plans;
-      }
-
       this.notifySubscribers();
     } finally {
       this.IsLoading = false;

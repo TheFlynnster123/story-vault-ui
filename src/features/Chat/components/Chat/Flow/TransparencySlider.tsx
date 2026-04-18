@@ -37,35 +37,41 @@ export const TransparencySlider: React.FC<TransparencySliderProps> = ({
 
   return (
     <Box
-      p="xs"
+      px="sm"
+      py={6}
       style={{
         backgroundColor: FlowStyles.buttonBackground,
         borderRadius: "4px",
       }}
     >
-      <Group gap="xs" mb={4}>
-        <RiContrastLine size={18} color={FlowStyles.text} />
-        <Text size="sm" fw={500} c={FlowStyles.text}>
+      <Group gap="xs" wrap="nowrap" align="center">
+        <RiContrastLine
+          size={18}
+          color={FlowStyles.text}
+          style={{ flexShrink: 0 }}
+        />
+        <Text size="sm" fw={500} c={FlowStyles.text} style={{ flexShrink: 0 }}>
           Message Transparency
         </Text>
-        <Text size="xs" c="dimmed" ml="auto">
+        <Slider
+          min={0}
+          max={1}
+          step={0.01}
+          value={displayValue}
+          onChange={handleChange}
+          label={(v) => `${toPercent(v)}%`}
+          color="gray"
+          size="sm"
+          style={{ flex: 1 }}
+          styles={{
+            track: { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+            thumb: { borderColor: "rgba(255, 255, 255, 0.5)" },
+          }}
+        />
+        <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
           {toPercent(displayValue)}%
         </Text>
       </Group>
-      <Slider
-        min={0}
-        max={1}
-        step={0.01}
-        value={displayValue}
-        onChange={handleChange}
-        label={(v) => `${toPercent(v)}%`}
-        color="gray"
-        size="sm"
-        styles={{
-          track: { backgroundColor: "rgba(255, 255, 255, 0.1)" },
-          thumb: { borderColor: "rgba(255, 255, 255, 0.5)" },
-        }}
-      />
     </Box>
   );
 };

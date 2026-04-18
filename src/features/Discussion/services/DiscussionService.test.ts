@@ -304,4 +304,189 @@ describe("DiscussionService", () => {
       expect(service.getDefaultModel()).toBeUndefined();
     });
   });
+
+  describe("generateInitialMessage", () => {
+    it("should generate first assistant message using initial prompt", async () => {
+      mockConfig.buildInitialPrompt = vi
+        .fn()
+        .mockReturnValue("Summarize the chapter.");
+      mockOpenRouterChatAPI.postChat.mockResolvedValue(
+        "Here is the chapter summary.",
+      );
+
+      const service = new DiscussionService(mockConfig);
+      await service.generateInitialMessage();
+
+      const messages = service.getMessages();
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({
+        role: "assistant",
+        content: "Here is the chapter summary.",
+      });
+    });
+
+    it("should include initial prompt as user message in LLM call", async () => {
+      mockConfig.buildInitialPrompt = vi
+        .fn()
+        .mockReturnValue("Summarize the chapter.");
+
+      const service = new DiscussionService(mockConfig);
+      await service.generateInitialMessage();
+
+      const callMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
+      const lastMessage = callMessages[callMessages.length - 1];
+      expect(lastMessage).toEqual({
+        role: "user",
+        content: "Summarize the chapter.",
+      });
+    });
+
+    it("should not generate if messages already exist", async () => {
+      mockConfig.buildInitialPrompt = vi
+        .fn()
+        .mockReturnValue("Summarize the chapter.");
+
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Hello");
+      mockOpenRouterChatAPI.postChat.mockClear();
+
+      await service.generateInitialMessage();
+
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
+    });
+
+    it("should not generate if buildInitialPrompt is undefined", async () => {
+      const service = new DiscussionService(mockConfig);
+      await service.generateInitialMessage();
+
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
+      expect(service.getMessages()).toHaveLength(0);
+    });
+
+    it("should not generate if buildInitialPrompt returns undefined", async () => {
+      mockConfig.buildInitialPrompt = vi.fn().mockReturnValue(undefined);
+
+      const service = new DiscussionService(mockConfig);
+      await service.generateInitialMessage();
+
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
+    });
+
+    it("should handle errors gracefully", async () => {
+      mockConfig.buildInitialPrompt = vi
+        .fn()
+        .mockReturnValue("Summarize the chapter.");
+      mockOpenRouterChatAPI.postChat.mockRejectedValue(
+        new Error("Network error"),
+      );
+
+      const service = new DiscussionService(mockConfig);
+      await service.generateInitialMessage();
+
+      const messages = service.getMessages();
+      expect(messages).toHaveLength(1);
+      expect(messages[0].role).toBe("assistant");
+      expect(messages[0].content).toContain("Sorry");
+      expect(mockErrorService.log).toHaveBeenCalled();
+    });
+
+    it("should notify subscribers during generation", async () => {
+      mockConfig.buildInitialPrompt = vi
+        .fn()
+        .mockReturnValue("Summarize the chapter.");
+
+      const service = new DiscussionService(mockConfig);
+      const subscriber = vi.fn();
+      service.subscribe(subscriber);
+
+      await service.generateInitialMessage();
+
+      expect(subscriber).toHaveBeenCalledTimes(2);
+    });
+
+    it("should use model override when provided", async () => {
+      mockConfig.buildInitialPrompt = vi
+        .fn()
+        .mockReturnValue("Summarize the chapter.");
+
+      const service = new DiscussionService(mockConfig);
+      await service.generateInitialMessage("custom-model");
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "custom-model",
+      );
+    });
+  });
+
+  describe("sendFinalFeedbackAndGenerate", () => {
+    it("should add user message and trigger generate", async () => {
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Initial discussion");
+
+      await service.sendFinalFeedbackAndGenerate("Final thought");
+
+      const messages = service.getMessages();
+      const userMessages = messages.filter((m) => m.role === "user");
+      expect(userMessages).toHaveLength(2);
+      expect(userMessages[1].content).toBe("Final thought");
+      expect(mockConfig.generateFromFeedback).toHaveBeenCalledWith(
+        expect.stringContaining("Final thought"),
+      );
+    });
+
+    it("should generate without adding message when userMessage is empty", async () => {
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Something to discuss");
+
+      await service.sendFinalFeedbackAndGenerate("");
+
+      expect(mockConfig.generateFromFeedback).toHaveBeenCalled();
+      const userMessages = service
+        .getMessages()
+        .filter((m) => m.role === "user");
+      expect(userMessages).toHaveLength(1);
+    });
+
+    it("should generate without adding message when userMessage is undefined", async () => {
+      const service = new DiscussionService(mockConfig);
+      await service.sendMessage("Something to discuss");
+
+      await service.sendFinalFeedbackAndGenerate(undefined);
+
+      expect(mockConfig.generateFromFeedback).toHaveBeenCalled();
+    });
+
+    it("should not run while already generating", async () => {
+      mockOpenRouterChatAPI.postChat.mockImplementation(
+        () => new Promise(() => {}),
+      );
+
+      const service = new DiscussionService(mockConfig);
+      service.sendMessage("First");
+      await flushPromises();
+
+      await service.sendFinalFeedbackAndGenerate("While busy");
+
+      expect(mockConfig.generateFromFeedback).not.toHaveBeenCalled();
+    });
+
+    it("should do nothing if no messages exist and no feedback given", async () => {
+      const service = new DiscussionService(mockConfig);
+
+      await service.sendFinalFeedbackAndGenerate("");
+
+      expect(mockConfig.generateFromFeedback).not.toHaveBeenCalled();
+    });
+
+    it("should work with only final feedback and no prior messages", async () => {
+      const service = new DiscussionService(mockConfig);
+
+      await service.sendFinalFeedbackAndGenerate("Just this one thought");
+
+      expect(mockConfig.generateFromFeedback).toHaveBeenCalledWith(
+        expect.stringContaining("Just this one thought"),
+      );
+    });
+  });
 });

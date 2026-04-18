@@ -17,7 +17,6 @@ export const EditChapterButton: React.FC<EditChapterButtonProps> = ({
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [nextChapterDirection, setNextChapterDirection] = useState("");
 
   const handleOpenModal = () => {
     const message = d
@@ -27,19 +26,13 @@ export const EditChapterButton: React.FC<EditChapterButtonProps> = ({
     if (message && message.type === "chapter") {
       setTitle(message.data.title);
       setSummary(message.content || "");
-      setNextChapterDirection(message.data.nextChapterDirection || "");
       setShowModal(true);
     }
   };
 
   const handleSubmit = () => {
     if (title.trim() && summary.trim()) {
-      d.ChatService(chatId).EditChapter(
-        chapterId,
-        title,
-        summary,
-        nextChapterDirection || undefined,
-      );
+      d.ChatService(chatId).EditChapter(chapterId, title, summary);
     }
     setShowModal(false);
   };
@@ -72,10 +65,8 @@ export const EditChapterButton: React.FC<EditChapterButtonProps> = ({
         opened={showModal}
         title={title}
         summary={summary}
-        nextChapterDirection={nextChapterDirection}
         onTitleChange={setTitle}
         onSummaryChange={setSummary}
-        onNextChapterDirectionChange={setNextChapterDirection}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
       />

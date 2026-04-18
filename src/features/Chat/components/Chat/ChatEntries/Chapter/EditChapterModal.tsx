@@ -12,10 +12,8 @@ interface EditChapterModalProps {
   opened: boolean;
   title: string;
   summary: string;
-  nextChapterDirection: string;
   onTitleChange: (title: string) => void;
   onSummaryChange: (summary: string) => void;
-  onNextChapterDirectionChange: (direction: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -24,10 +22,8 @@ export const EditChapterModal: React.FC<EditChapterModalProps> = ({
   opened,
   title,
   summary,
-  nextChapterDirection,
   onTitleChange,
   onSummaryChange,
-  onNextChapterDirectionChange,
   onSubmit,
   onCancel,
 }) => {
@@ -62,15 +58,6 @@ export const EditChapterModal: React.FC<EditChapterModalProps> = ({
           minRows={12}
           autosize
           required
-        />
-
-        <Textarea
-          label="Next Chapter Direction (Optional)"
-          placeholder="Enter guidance for where the next chapter should go..."
-          value={nextChapterDirection}
-          onChange={(e) => onNextChapterDirectionChange(e.currentTarget.value)}
-          minRows={4}
-          autosize
         />
 
         <Group justify="flex-end" mt="md">
