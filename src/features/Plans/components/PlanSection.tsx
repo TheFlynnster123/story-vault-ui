@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Group, Text } from "@mantine/core";
-import { RiFileList2Line } from "react-icons/ri";
+import { RiTreasureMapFill } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
 import styled, { keyframes } from "styled-components";
 import { Theme } from "../../../components/Theme";
@@ -40,11 +40,11 @@ export const PlanSection: React.FC<PlanSectionProps> = ({
     <Box>
       <FlowButton
         onClick={onNavigate}
-        leftSection={<RiFileList2Line size={18} color={Theme.plan.primary} />}
+        leftSection={<RiTreasureMapFill size={18} color={Theme.plan.primary} />}
       >
         <Group gap="xs">
           <Text size="sm" fw={500}>
-            Plan
+            Plans
           </Text>
           <Text size="xs" c="dimmed">
             ({plans.length})

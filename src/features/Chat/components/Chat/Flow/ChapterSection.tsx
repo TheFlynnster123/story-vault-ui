@@ -14,18 +14,19 @@ export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
     showModal,
     title,
     summary,
-    isGenerating,
+    isGeneratingTitle,
+    isCreating,
     setTitle,
     setSummary,
     handleOpenModal,
     handleCloseModal,
-    handleGenerateSummary,
+    handleGenerateTitle,
     handleSubmit,
-    handleDiscuss,
+    handleGenerate,
   } = useAddChapter({ chatId });
 
-  const onDiscuss = async () => {
-    const chapterId = await handleDiscuss();
+  const onGenerate = async () => {
+    const chapterId = await handleGenerate();
     if (chapterId) {
       navigate(`/chat/${chatId}/chapter/${chapterId}/discuss`);
     }
@@ -38,11 +39,12 @@ export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
         opened={showModal}
         title={title}
         summary={summary}
-        isGenerating={isGenerating}
+        isGeneratingTitle={isGeneratingTitle}
+        isCreating={isCreating}
         onTitleChange={setTitle}
         onSummaryChange={setSummary}
-        onGenerateSummary={handleGenerateSummary}
-        onDiscuss={onDiscuss}
+        onGenerateTitle={handleGenerateTitle}
+        onGenerate={onGenerate}
         onSubmit={handleSubmit}
         onCancel={handleCloseModal}
       />

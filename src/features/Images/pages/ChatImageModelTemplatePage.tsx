@@ -174,13 +174,13 @@ const PageHeader: React.FC<{ onGoBack: () => void }> = ({ onGoBack }) => (
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
           <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <RiImageLine size={24} color={Theme.chatSettings.primary} />
-        <Title order={2} fw={400} style={{ color: Theme.chatSettings.primary }}>
+        <RiImageLine size={24} color={Theme.imageModel.primary} />
+        <Title order={2} fw={400} style={{ color: Theme.imageModel.primary }}>
           Select Template
         </Title>
       </Group>
     </Group>
-    <Divider mb="xl" style={{ borderColor: Theme.chatSettings.border }} />
+    <Divider mb="xl" style={{ borderColor: Theme.imageModel.border }} />
   </>
 );
 

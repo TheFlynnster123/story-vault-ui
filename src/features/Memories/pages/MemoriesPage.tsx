@@ -81,6 +81,19 @@ export const MemoriesPage: React.FC = () => {
         <MemoriesHeader onGoBack={handleGoBack} />
 
         <Stack>
+          <Text size="sm" style={{ color: Theme.page.textMuted }}>
+            Memories are always appended to the end of the message context, so
+            the AI will always see them. They are highly persistent, but this
+            can make AI responses repetitive over time. If you find the AI
+            fixating on a memory, consider removing or rewording it. For
+            context that should naturally fade, use{" "}
+            <Text component="span" size="sm" fw={500} style={{ color: Theme.note.primary }}>
+              Notes
+            </Text>{" "}
+            — they follow the chat and degrade naturally as the conversation
+            moves on.
+          </Text>
+          <Divider style={{ borderColor: Theme.memories.border }} />
           <Group justify="space-between">
             <Text fw={500}>Memories</Text>
             <Button

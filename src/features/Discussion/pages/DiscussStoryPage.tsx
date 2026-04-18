@@ -18,6 +18,7 @@ const pageConfig: DiscussionPageConfig = {
     'Discuss the story with the AI. When you\'re satisfied, click "Generate Updated Story" to regenerate the story using this conversation as feedback.',
   inputPlaceholder: "Discuss story…",
   generateButtonLabel: "Generate Updated Story",
+  finalFeedbackButtonLabel: "Send & Generate Story",
   emptyStateText:
     "Start a conversation about your story. Discuss the premise, characters, setting, or narrative direction.",
 };

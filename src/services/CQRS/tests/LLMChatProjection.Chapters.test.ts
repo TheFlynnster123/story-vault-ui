@@ -559,24 +559,10 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
     it("promotes second chapter to full format when first deleted", () => {
       const messageIds1 = createMessagesSequence(projection, 5);
-      createChapter(
-        projection,
-        "chapter-1",
-        "Ch1",
-        "Sum1",
-        messageIds1,
-        "Dir1",
-      );
+      createChapter(projection, "chapter-1", "Ch1", "Sum1", messageIds1);
 
       const messageIds2 = createMessagesSequence(projection, 10, 6);
-      createChapter(
-        projection,
-        "chapter-2",
-        "Ch2",
-        "Sum2",
-        messageIds2,
-        "Dir2",
-      );
+      createChapter(projection, "chapter-2", "Ch2", "Sum2", messageIds2);
 
       deleteChapter(projection, "chapter-2");
 

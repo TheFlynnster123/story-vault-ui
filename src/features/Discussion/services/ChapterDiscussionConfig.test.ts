@@ -201,4 +201,29 @@ describe("ChapterDiscussionConfig", () => {
       expect(config.buildSystemPrompt()).toBe("");
     });
   });
+
+  describe("buildInitialPrompt", () => {
+    it("should return the default chapter summary prompt when no custom prompt provided", () => {
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
+      const prompt = config.buildInitialPrompt!();
+      expect(prompt).toBe(DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt);
+    });
+
+    it("should return the custom prompt when provided", () => {
+      const customPrompt = "Summarize this chapter in pirate speak.";
+      const config = createChapterDiscussionConfig(
+        testChatId,
+        testChapterId,
+        undefined,
+        customPrompt,
+      );
+      const prompt = config.buildInitialPrompt!();
+      expect(prompt).toBe(customPrompt);
+    });
+
+    it("should be defined on the config", () => {
+      const config = createChapterDiscussionConfig(testChatId, testChapterId);
+      expect(config.buildInitialPrompt).toBeDefined();
+    });
+  });
 });

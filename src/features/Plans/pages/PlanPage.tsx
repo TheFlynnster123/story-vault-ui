@@ -4,7 +4,7 @@ import {
   RiArrowLeftLine,
   RiAddLine,
   RiDeleteBinLine,
-  RiFileList2Line,
+  RiTreasureMapFill,
   RiPlayLine,
 } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
@@ -150,9 +150,9 @@ const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
         <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
           <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <RiFileList2Line size={24} color={Theme.plan.primary} />
+        <RiTreasureMapFill size={24} color={Theme.plan.primary} />
         <Title order={2} fw={400} style={{ color: Theme.plan.primary }}>
-          Plan
+          Plans
         </Title>
       </Group>
     </Group>

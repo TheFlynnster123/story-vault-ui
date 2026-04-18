@@ -19,4 +19,10 @@ export interface DiscussionConfig {
    * e.g. regenerate plan, update chapter summary, update book summary, regenerate story.
    */
   generateFromFeedback: (feedback: string) => Promise<void>;
+
+  /**
+   * Optional prompt used to auto-generate the first assistant message
+   * when the discussion starts. If undefined, no initial message is generated.
+   */
+  buildInitialPrompt?: () => string | undefined;
 }

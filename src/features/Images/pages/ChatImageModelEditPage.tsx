@@ -229,8 +229,8 @@ const PageHeader: React.FC<{
         <ActionIcon onClick={onBack} size="lg" variant="subtle">
           <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
-        <RiImageLine size={28} color={Theme.chatSettings.primary} />
-        <Title order={1} fw={400} style={{ color: Theme.chatSettings.primary }}>
+        <RiImageLine size={28} color={Theme.imageModel.primary} />
+        <Title order={1} fw={400} style={{ color: Theme.imageModel.primary }}>
           {modelName}
         </Title>
       </Group>
@@ -244,7 +244,7 @@ const PageHeader: React.FC<{
         <RiDeleteBinLine />
       </ActionIcon>
     </Group>
-    <Divider my="xl" style={{ borderColor: Theme.chatSettings.border }} />
+    <Divider my="xl" style={{ borderColor: Theme.imageModel.border }} />
   </>
 );
 

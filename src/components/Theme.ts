@@ -28,7 +28,7 @@ export const Theme = {
     /** Secondary darker emerald */
     secondary: "rgba(5, 150, 105, 1)",
     /** Border color for book elements */
-    border: "rgba(16, 185, 129, 0.5)",
+    border: "rgba(16, 185, 129, 0.25)",
     /** Text color for book headers */
     headerText: "rgba(255, 255, 255, 1)",
     /** Transparent version for backgrounds */
@@ -49,6 +49,21 @@ export const Theme = {
     /** Transparent version for backgrounds */
     backgroundPrimary: "rgba(138, 43, 226, 0.8)",
     backgroundSecondary: "rgba(75, 0, 130, 0.8)",
+  },
+
+  /** Colors for image model UI elements - Lime theme */
+  imageModel: {
+    /** Primary lime color */
+    primary: "rgba(163, 230, 53, 1)",
+    /** Secondary darker lime */
+    secondary: "rgba(101, 163, 13, 1)",
+    /** Border color for image model elements */
+    border: "rgba(163, 230, 53, 0.5)",
+    /** Text color for headers */
+    headerText: "rgba(255, 255, 255, 1)",
+    /** Transparent version for backgrounds */
+    backgroundPrimary: "rgba(163, 230, 53, 0.8)",
+    backgroundSecondary: "rgba(101, 163, 13, 0.8)",
   },
 
   /** Colors for plan UI elements - Teal/Cyan theme */
@@ -82,7 +97,6 @@ export const Theme = {
     /** Muted color for expired notes */
     expired: "rgba(120, 120, 120, 0.6)",
   },
-
 
   /** Colors for memories UI elements - Rose/Pink theme */
   memories: {
