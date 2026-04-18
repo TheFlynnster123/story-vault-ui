@@ -115,9 +115,7 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
       return;
 
     try {
-      await d
-        .ChatService(chatId)
-        .AddBook(title, summary, selectedChapterIds);
+      await d.ChatService(chatId).AddBook(title, summary, selectedChapterIds);
       handleCloseModal();
     } catch (error) {
       d.ErrorService().log("Failed to create book", error);

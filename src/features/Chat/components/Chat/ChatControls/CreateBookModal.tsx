@@ -82,8 +82,10 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
   };
 
   const getSelectionHint = (): string => {
-    if (!startChapterId) return "Click a chapter to set the start of the range.";
-    if (!endChapterId) return "Click another chapter to set the end of the range.";
+    if (!startChapterId)
+      return "Click a chapter to set the start of the range.";
+    if (!endChapterId)
+      return "Click another chapter to set the end of the range.";
     return `${selectedChapterIds.length} chapter${selectedChapterIds.length > 1 ? "s" : ""} selected.`;
   };
 
@@ -174,7 +176,9 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
 
                       <ChapterTitle>📖 {chapter.data.title}</ChapterTitle>
 
-                      {isStart && <BoundaryBadge $type="start">Start</BoundaryBadge>}
+                      {isStart && (
+                        <BoundaryBadge $type="start">Start</BoundaryBadge>
+                      )}
                       {isEnd && <BoundaryBadge $type="end">End</BoundaryBadge>}
                     </ChapterHeader>
 
@@ -223,11 +227,7 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
           <Button variant="default" onClick={onCancel} disabled={isGenerating}>
             Cancel
           </Button>
-          <Button
-            color="blue"
-            onClick={onSubmit}
-            disabled={!canSubmit}
-          >
+          <Button color="blue" onClick={onSubmit} disabled={!canSubmit}>
             Create Book
           </Button>
         </Group>
@@ -235,5 +235,3 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
     </Modal>
   );
 };
-
-

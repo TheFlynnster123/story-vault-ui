@@ -22,9 +22,7 @@ describe("CompressionPickerModal", () => {
   it("should render the explanation text", () => {
     renderModal();
 
-    expect(
-      screen.getByText(/reduces the context window/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/reduces the context window/i)).toBeInTheDocument();
   });
 
   it("should render both compression options", () => {

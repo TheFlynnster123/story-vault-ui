@@ -37,11 +37,20 @@ export const ChatModelSection: React.FC<ChatModelSectionProps> = ({
   };
 
   return (
-    <Box style={{ display: "flex", alignItems: "center", backgroundColor: FlowStyles.buttonBackground, borderRadius: "4px" }}>
+    <Box
+      style={{
+        display: "flex",
+        alignItems: "center",
+        backgroundColor: FlowStyles.buttonBackground,
+        borderRadius: "4px",
+      }}
+    >
       <Box style={{ flex: 1, minWidth: 0 }}>
         <FlowButton
           onClick={() => setIsModalOpen(true)}
-          leftSection={<RiRobot2Line size={18} color="rgba(100, 149, 237, 1)" />}
+          leftSection={
+            <RiRobot2Line size={18} color="rgba(100, 149, 237, 1)" />
+          }
         >
           <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
             <Text size="sm" fw={500} style={{ flexShrink: 0 }}>

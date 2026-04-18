@@ -163,7 +163,11 @@ const PlanHeader: React.FC<PlanHeaderProps> = ({ onGoBack }) => (
 interface PlanListProps {
   plans: Plan[];
   onAdd: () => void;
-  onChange: (id: string, field: keyof Plan, value: string | number | boolean) => void;
+  onChange: (
+    id: string,
+    field: keyof Plan,
+    value: string | number | boolean,
+  ) => void;
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;
@@ -206,7 +210,11 @@ const PlanList: React.FC<PlanListProps> = ({
 
 interface PlanEditorProps {
   plan: Plan;
-  onChange: (id: string, field: keyof Plan, value: string | number | boolean) => void;
+  onChange: (
+    id: string,
+    field: keyof Plan,
+    value: string | number | boolean,
+  ) => void;
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
   onRemove: (id: string) => void;
