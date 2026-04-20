@@ -27,4 +27,6 @@ export interface DiscussionPageConfig {
   finalFeedbackButtonLabel: string;
   /** Empty state text when no messages */
   emptyStateText: string;
+  /** Label for the accept message button (e.g. "Use This"). If undefined, no button is shown. */
+  acceptMessageLabel?: string;
 }

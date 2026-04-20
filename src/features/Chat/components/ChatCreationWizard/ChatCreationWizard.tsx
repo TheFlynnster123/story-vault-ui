@@ -63,7 +63,7 @@ export const ChatCreationWizard: React.FC = () => {
         story: state.story.trim(),
       });
 
-      navigate(`/chat/${chatId}`);
+      navigate(`/chat/${chatId}/story/discuss`);
     } catch (error) {
       console.error("Failed to create chat:", error);
     }

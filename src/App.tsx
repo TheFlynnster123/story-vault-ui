@@ -12,6 +12,7 @@ import ChatPage from "./features/Chat/pages/ChatPage";
 import { PlanPage } from "./features/Plans/pages/PlanPage";
 import { DiscussPlanPage } from "./features/Discussion/pages/DiscussPlanPage";
 import { DiscussChapterPage } from "./features/Discussion/pages/DiscussChapterPage";
+import { DiscussNewChapterPage } from "./features/Discussion/pages/DiscussNewChapterPage";
 import { DiscussBookPage } from "./features/Discussion/pages/DiscussBookPage";
 import { DiscussStoryPage } from "./features/Discussion/pages/DiscussStoryPage";
 import { MemoriesPage } from "./features/Memories/pages/MemoriesPage";
@@ -68,6 +69,14 @@ const App: React.FC<AppProps> = () => {
             element={
               <ProtectedRoute>
                 <DiscussPlanPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/chapter/discuss"
+            element={
+              <ProtectedRoute>
+                <DiscussNewChapterPage />
               </ProtectedRoute>
             }
           />

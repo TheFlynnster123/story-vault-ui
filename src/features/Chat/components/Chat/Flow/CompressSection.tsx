@@ -19,10 +19,10 @@ export const CompressSection: React.FC<CompressSectionProps> = ({ chatId }) => {
   const book = useAddBook({ chatId });
 
   const onGenerate = async () => {
-    const chapterId = await chapter.handleGenerate();
-    if (chapterId) {
-      navigate(`/chat/${chatId}/chapter/${chapterId}/discuss`);
-    }
+    if (!chapter.title.trim()) return;
+    const encodedTitle = encodeURIComponent(chapter.title);
+    chapter.handleCloseModal();
+    navigate(`/chat/${chatId}/chapter/discuss?title=${encodedTitle}`);
   };
 
   return (

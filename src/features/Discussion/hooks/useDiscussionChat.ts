@@ -16,5 +16,7 @@ export const useDiscussionChat = (service: DiscussionService) => {
     generateFromFeedback: service.generateFromFeedback,
     generateInitialMessage: service.generateInitialMessage,
     sendFinalFeedbackAndGenerate: service.sendFinalFeedbackAndGenerate,
+    acceptMessage: service.acceptMessage,
+    canAcceptMessage: service.canAcceptMessage(),
   };
 };

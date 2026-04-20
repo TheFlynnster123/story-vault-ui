@@ -7,13 +7,14 @@ import { Theme } from "../../../../../components/Theme";
 import type { ChapterChatMessage } from "../../../../../services/CQRS/UserChatProjection";
 import { ChapterContent } from "./Chapter/ChapterContent.tsx";
 import { ChapterExpandedDetails } from "./Chapter/ChapterExpandedMessages.tsx";
+import { transparencyColor } from "./transparencyColor";
 
 const MessageContainer = styled.div`
   padding: 1rem;
   background: linear-gradient(
     135deg,
-    ${Theme.chapter.backgroundPrimary} 0%,
-    ${Theme.chapter.backgroundSecondary} 100%
+    ${transparencyColor(Theme.chapter.backgroundPrimary)} 0%,
+    ${transparencyColor(Theme.chapter.backgroundSecondary)} 100%
   );
   border-left: 4px solid ${Theme.chapter.border};
   border-top-left-radius: 8px;

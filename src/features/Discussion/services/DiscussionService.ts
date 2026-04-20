@@ -99,6 +99,26 @@ export class DiscussionService {
   };
 
   /**
+   * Accepts a specific message's content as the final result,
+   * bypassing the generate-from-feedback flow.
+   */
+  public acceptMessage = async (content: string): Promise<void> => {
+    if (!this.config.acceptMessage || this.generating) return;
+
+    this.generating = true;
+    this.notifySubscribers();
+
+    try {
+      await this.config.acceptMessage(content);
+    } finally {
+      this.generating = false;
+      this.notifySubscribers();
+    }
+  };
+
+  public canAcceptMessage = (): boolean => !!this.config.acceptMessage;
+
+  /**
    * Generates the first assistant message when a discussion starts.
    * Uses the config's buildInitialPrompt to get a hidden user instruction
    * that the LLM responds to. Only the response is shown in the UI.

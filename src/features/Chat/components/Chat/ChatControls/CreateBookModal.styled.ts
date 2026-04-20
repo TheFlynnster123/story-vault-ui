@@ -50,20 +50,14 @@ export const ChapterHeader = styled.div`
   gap: 8px;
   padding: 8px 10px;
   user-select: none;
-  min-width: 0;
 `;
 
 export const ChapterTitle = styled.span`
   flex: 1;
   font-size: 14px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `;
 
 export const BoundaryBadge = styled.span<{ $type: "start" | "end" }>`
-  flex-shrink: 0;
   font-size: 11px;
   font-weight: 600;
   padding: 1px 8px;
@@ -83,7 +77,6 @@ export const BoundaryBadge = styled.span<{ $type: "start" | "end" }>`
 `;
 
 export const ExpandButton = styled.button`
-  flex-shrink: 0;
   background: none;
   border: none;
   cursor: pointer;

@@ -1,12 +1,13 @@
 import styled from "styled-components";
 import { Theme } from "../../../../../components/Theme";
+import { transparencyColor } from "./transparencyColor";
 
 export const StoryMessageContainer = styled.div`
   padding: 1rem;
   background: linear-gradient(
     135deg,
-    ${Theme.chatSettings.backgroundPrimary} 0%,
-    ${Theme.chatSettings.backgroundSecondary} 100%
+    ${transparencyColor(Theme.chatSettings.backgroundPrimary)} 0%,
+    ${transparencyColor(Theme.chatSettings.backgroundSecondary)} 100%
   );
   border-radius: 8px;
   margin-top: 1rem;

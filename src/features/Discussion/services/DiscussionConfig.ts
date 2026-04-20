@@ -25,4 +25,11 @@ export interface DiscussionConfig {
    * when the discussion starts. If undefined, no initial message is generated.
    */
   buildInitialPrompt?: () => string | undefined;
+
+  /**
+   * Optional action to accept a specific message as the final result
+   * without going through the full generate-from-feedback flow.
+   * e.g. accept the initial AI summary directly as the chapter summary.
+   */
+  acceptMessage?: (content: string) => Promise<void>;
 }
