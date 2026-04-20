@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RiArrowLeftLine, RiSendPlane2Line } from "react-icons/ri";
+import { RiArrowLeftLine, RiSendPlane2Line, RiCheckLine } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
 import {
   Title,
@@ -15,7 +15,6 @@ import {
   Box,
   Loader,
   ScrollArea,
-  Tooltip,
 } from "@mantine/core";
 import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
@@ -47,6 +46,8 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     sendMessage,
     generateInitialMessage,
     sendFinalFeedbackAndGenerate,
+    acceptMessage,
+    canAcceptMessage,
   } = useDiscussionChat(service);
   const [chatModel, setChatModel] = useState<string | null>(null);
   const [modelInitialized, setModelInitialized] = useState(false);
@@ -81,6 +82,11 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     }
   };
 
+  const handleAcceptMessage = async (content: string) => {
+    await acceptMessage(content);
+    navigate(`/chat/${chatId}`);
+  };
+
   const handleGenerate = async () => {
     const finalFeedback = inputValue.trim() ? inputValue : undefined;
     setInputValue("");
@@ -90,7 +96,14 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
 
   return (
     <Page>
-      <Paper mt={30}>
+      <Paper
+        mt={30}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "calc(100vh - 80px)",
+        }}
+      >
         <DiscussionHeader config={config} onGoBack={handleGoBack} />
 
         <Box mb="md">
@@ -106,6 +119,8 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
           messages={messages}
           isGenerating={isGenerating}
           config={config}
+          canAcceptMessage={canAcceptMessage}
+          onAcceptMessage={handleAcceptMessage}
         />
 
         <DiscussionInput
@@ -116,13 +131,6 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
           onKeyDown={handleKeyDown}
           isGenerating={isGenerating}
           hasMessages={messages.length > 0}
-          config={config}
-        />
-
-        <GenerateButton
-          onClick={handleGenerate}
-          disabled={messages.length === 0 || isGenerating}
-          isGenerating={isGenerating}
           config={config}
         />
       </Paper>
@@ -164,34 +172,63 @@ interface DiscussionChatAreaProps {
   messages: ReadonlyArray<DiscussionMessage>;
   isGenerating: boolean;
   config: DiscussionPageConfig;
+  canAcceptMessage: boolean;
+  onAcceptMessage: (content: string) => void;
 }
 
 const DiscussionChatArea: React.FC<DiscussionChatAreaProps> = ({
   messages,
   isGenerating,
   config,
-}) => (
-  <ScrollArea h={400} mb="md" offsetScrollbars>
-    <Stack gap="sm" p="xs">
-      {messages.length === 0 && (
-        <Text c="dimmed" ta="center" py="xl">
-          {config.emptyStateText}
-        </Text>
-      )}
-      {messages.map((msg, index) => (
-        <DiscussionMessageBubble key={index} message={msg} config={config} />
-      ))}
-      {isGenerating && (
-        <Group gap="xs" align="center">
-          <Loader size="xs" color={config.primaryColor} />
-          <Text size="sm" c={config.primaryColor}>
-            Thinking…
+  canAcceptMessage,
+  onAcceptMessage,
+}) => {
+  const firstAssistantIndex = messages.findIndex((m) => m.role === "assistant");
+  const showAcceptButton =
+    canAcceptMessage &&
+    config.acceptMessageLabel &&
+    firstAssistantIndex !== -1 &&
+    messages.length === 1;
+
+  return (
+    <ScrollArea style={{ flex: 1 }} mb="md" offsetScrollbars>
+      <Stack gap="sm" p="xs">
+        {messages.length === 0 && (
+          <Text c="dimmed" ta="center" py="xl">
+            {config.emptyStateText}
           </Text>
-        </Group>
-      )}
-    </Stack>
-  </ScrollArea>
-);
+        )}
+        {messages.map((msg, index) => (
+          <React.Fragment key={index}>
+            <DiscussionMessageBubble message={msg} config={config} />
+            {showAcceptButton && index === firstAssistantIndex && (
+              <Box style={{ textAlign: "left" }}>
+                <Button
+                  size="compact-sm"
+                  variant="light"
+                  color={config.accentColor}
+                  leftSection={<RiCheckLine size={14} />}
+                  onClick={() => onAcceptMessage(msg.content)}
+                  disabled={isGenerating}
+                >
+                  {config.acceptMessageLabel}
+                </Button>
+              </Box>
+            )}
+          </React.Fragment>
+        ))}
+        {isGenerating && (
+          <Group gap="xs" align="center">
+            <Loader size="xs" color={config.primaryColor} />
+            <Text size="sm" c={config.primaryColor}>
+              Thinking…
+            </Text>
+          </Group>
+        )}
+      </Stack>
+    </ScrollArea>
+  );
+};
 
 interface DiscussionMessageBubbleProps {
   message: DiscussionMessage;
@@ -281,55 +318,27 @@ const DiscussionInput: React.FC<DiscussionInputProps> = ({
         },
       }}
     />
-    <ActionIcon
-      size="input-md"
+    <Button
+      size="md"
       radius="xl"
       variant="filled"
       color={config.accentColor}
       onClick={onSend}
       disabled={!value.trim() || isGenerating}
-      aria-label="Send"
+      leftSection={<RiSendPlane2Line />}
     >
-      <RiSendPlane2Line style={{ width: "50%", height: "50%" }} />
-    </ActionIcon>
-    <Tooltip label={config.finalFeedbackButtonLabel}>
-      <ActionIcon
-        size="input-md"
-        radius="xl"
-        variant="filled"
-        color={config.accentColor}
-        onClick={onSendAndGenerate}
-        disabled={isGenerating || (!value.trim() && !hasMessages)}
-        aria-label={config.finalFeedbackButtonLabel}
-      >
-        <VscRefresh style={{ width: "50%", height: "50%" }} />
-      </ActionIcon>
-    </Tooltip>
+      Send
+    </Button>
+    <Button
+      size="md"
+      radius="xl"
+      variant="filled"
+      color={config.accentColor}
+      onClick={onSendAndGenerate}
+      disabled={isGenerating || (!value.trim() && !hasMessages)}
+      leftSection={<VscRefresh />}
+    >
+      {config.generateButtonLabel}
+    </Button>
   </Group>
-);
-
-interface GenerateButtonProps {
-  onClick: () => void;
-  disabled: boolean;
-  isGenerating: boolean;
-  config: DiscussionPageConfig;
-}
-
-const GenerateButton: React.FC<GenerateButtonProps> = ({
-  onClick,
-  disabled,
-  isGenerating,
-  config,
-}) => (
-  <Button
-    fullWidth
-    size="lg"
-    color={config.accentColor}
-    onClick={onClick}
-    disabled={disabled}
-    loading={isGenerating}
-    leftSection={<VscRefresh size={20} />}
-  >
-    {config.generateButtonLabel}
-  </Button>
 );

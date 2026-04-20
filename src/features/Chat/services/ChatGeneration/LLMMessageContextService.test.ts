@@ -167,7 +167,7 @@ describe("LLMMessageContextService", () => {
       );
 
       const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.role).toBe("user");
       expect(lastMessage.content).toContain("Write a dramatic scene");
     });
 
@@ -295,7 +295,7 @@ describe("LLMMessageContextService", () => {
       const result = await service.buildChapterSummaryRequestMessages();
 
       const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.role).toBe("user");
       expect(lastMessage.content).toContain("generate a brief summary");
     });
 
@@ -344,7 +344,7 @@ describe("LLMMessageContextService", () => {
       const result = await service.buildChapterTitleRequestMessages();
 
       const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.role).toBe("user");
       expect(lastMessage.content).toContain(
         "generate a concise, engaging title",
       );
@@ -441,14 +441,10 @@ describe("LLMMessageContextService", () => {
       SystemPromptsService.Get.mockResolvedValue(undefined);
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildBookTitleRequestMessages([
-        "Summary 1",
-      ]);
+      const result = await service.buildBookTitleRequestMessages(["Summary 1"]);
 
       const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(
-        DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt,
-      );
+      expect(lastMessage.content).toBe(DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt);
     });
 
     it("should use user-configured book title prompt", async () => {
@@ -459,9 +455,7 @@ describe("LLMMessageContextService", () => {
       });
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildBookTitleRequestMessages([
-        "Summary 1",
-      ]);
+      const result = await service.buildBookTitleRequestMessages(["Summary 1"]);
 
       const lastMessage = result[result.length - 1];
       expect(lastMessage.content).toBe(customPrompt);

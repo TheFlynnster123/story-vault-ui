@@ -1,6 +1,9 @@
 import type { LLMMessage } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
-import { toSystemMessage } from "../../../../services/Utils/MessageUtils";
+import {
+  toSystemMessage,
+  toUserMessage,
+} from "../../../../services/Utils/MessageUtils";
 import type { Memory } from "../../../Memories/services/Memory";
 import type { ChatSettings } from "../Chat/ChatSettings";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
@@ -74,7 +77,10 @@ export class LLMMessageContextService {
     chapterSummaries: string[],
   ): Promise<LLMMessage[]> {
     const bookSummaryPrompt = await this.fetchBookSummaryPrompt();
-    return this.assembleBookSummaryMessages(chapterSummaries, bookSummaryPrompt);
+    return this.assembleBookSummaryMessages(
+      chapterSummaries,
+      bookSummaryPrompt,
+    );
   }
 
   async buildBookTitleRequestMessages(
@@ -132,8 +138,7 @@ export class LLMMessageContextService {
   private async fetchBookTitlePrompt(): Promise<string> {
     const systemPrompts = await d.SystemPromptsService().Get();
     return (
-      systemPrompts?.bookTitlePrompt ||
-      DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt
+      systemPrompts?.bookTitlePrompt || DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt
     );
   }
 
@@ -160,14 +165,14 @@ export class LLMMessageContextService {
     chatMessages: LLMMessage[],
     chapterSummaryPrompt: string,
   ): LLMMessage[] {
-    return [...chatMessages, toSystemMessage(chapterSummaryPrompt)];
+    return [...chatMessages, toUserMessage(chapterSummaryPrompt)];
   }
 
   private assembleChapterTitleMessages(
     chatMessages: LLMMessage[],
     chapterTitlePrompt: string,
   ): LLMMessage[] {
-    return [...chatMessages, toSystemMessage(chapterTitlePrompt)];
+    return [...chatMessages, toUserMessage(chapterTitlePrompt)];
   }
 
   private assembleBookSummaryMessages(
@@ -179,7 +184,7 @@ export class LLMMessageContextService {
       .join("\n\n");
     return [
       toSystemMessage(summariesContent),
-      toSystemMessage(bookSummaryPrompt),
+      toUserMessage(bookSummaryPrompt),
     ];
   }
 
@@ -190,10 +195,7 @@ export class LLMMessageContextService {
     const summariesContent = chapterSummaries
       .map((s, i) => `Chapter ${i + 1}:\n${s}`)
       .join("\n\n");
-    return [
-      toSystemMessage(summariesContent),
-      toSystemMessage(bookTitlePrompt),
-    ];
+    return [toSystemMessage(summariesContent), toUserMessage(bookTitlePrompt)];
   }
 
   private appendFeedbackMessage(
@@ -205,7 +207,7 @@ export class LLMMessageContextService {
       originalContent,
       feedback,
     );
-    if (feedbackMessage) messages.push(toSystemMessage(feedbackMessage));
+    if (feedbackMessage) messages.push(toUserMessage(feedbackMessage));
     return messages;
   }
 
@@ -260,7 +262,7 @@ export class LLMMessageContextService {
     guidance?: string,
   ): LLMMessage[] {
     if (!this.hasFeedback(guidance)) return messages;
-    return [...messages, toSystemMessage(this.formatGuidanceMessage(guidance!))];
+    return [...messages, toUserMessage(this.formatGuidanceMessage(guidance!))];
   }
 
   private formatGuidanceMessage = (guidance: string): string =>

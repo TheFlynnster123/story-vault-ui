@@ -6,13 +6,14 @@ import { Theme } from "../../../../../components/Theme";
 import type { BookChatMessage } from "../../../../../services/CQRS/UserChatProjection";
 import { BookContent } from "./Book/BookContent";
 import { BookExpandedDetails } from "./Book/BookExpandedDetails";
+import { transparencyColor } from "./transparencyColor";
 
 const MessageContainer = styled.div`
   padding: 1rem;
   background: linear-gradient(
     135deg,
-    ${Theme.book.backgroundPrimary} 0%,
-    ${Theme.book.backgroundSecondary} 100%
+    ${transparencyColor(Theme.book.backgroundPrimary)} 0%,
+    ${transparencyColor(Theme.book.backgroundSecondary)} 100%
   );
   border-left: 4px solid ${Theme.book.border};
   border-top-left-radius: 8px;
@@ -67,9 +68,7 @@ export const BookMessage: React.FC<BookMessageProps> = ({ chatId, book }) => {
           </Button>
         </ExpandButtonContainer>
 
-        {isExpanded && (
-          <BookExpandedDetails chatId={chatId} bookId={book.id} />
-        )}
+        {isExpanded && <BookExpandedDetails chatId={chatId} bookId={book.id} />}
       </MessageContainer>
     </div>
   );

@@ -7,3 +7,11 @@ export function toSystemMessage(systemReplyText: string): LLMMessage {
     content: systemReplyText,
   };
 }
+
+export function toUserMessage(text: string): LLMMessage {
+  return {
+    id: `user-${Date.now()}`,
+    role: "user",
+    content: text,
+  };
+}

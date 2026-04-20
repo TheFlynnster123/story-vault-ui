@@ -1,6 +1,7 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { StoryChatMessage } from "../../../services/CQRS/UserChatProjection";
 import { d } from "../../../services/Dependencies";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
 
 /**
@@ -49,6 +50,9 @@ export const createStoryDiscussionConfig = (
 
   const getDefaultModel = (): string | undefined => undefined;
 
+  const buildInitialPrompt = (): string =>
+    DEFAULT_SYSTEM_PROMPTS.newStoryPrompt;
+
   const generateFromFeedback = async (feedback: string): Promise<void> => {
     const story = findStory();
     if (!story) return;
@@ -89,5 +93,6 @@ export const createStoryDiscussionConfig = (
     getChatMessages,
     getDefaultModel,
     generateFromFeedback,
+    buildInitialPrompt,
   };
 };
