@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RiArrowLeftLine, RiSendPlane2Line, RiCheckLine } from "react-icons/ri";
-import { VscRefresh } from "react-icons/vsc";
+import {
+  RiArrowLeftLine,
+  RiSendPlane2Line,
+  RiCheckLine,
+  RiCheckDoubleLine,
+} from "react-icons/ri";
 import {
   Title,
   Button,
@@ -299,36 +303,37 @@ const DiscussionInput: React.FC<DiscussionInputProps> = ({
   hasMessages,
   config,
 }) => (
-  <Group gap="xs" align="flex-end" mb="md">
-    <Textarea
-      value={value}
-      onChange={(e) => onChange(e.currentTarget.value)}
-      onKeyDown={onKeyDown}
-      placeholder={config.inputPlaceholder}
-      disabled={isGenerating}
-      minRows={2}
-      autosize
-      maxRows={6}
-      style={{ flex: 1 }}
-      styles={{
-        input: {
-          backgroundColor: "rgba(0, 0, 0, 0.3)",
-          borderColor: config.borderColor,
-          color: Theme.page.text,
-        },
-      }}
-    />
-    <Button
-      size="md"
-      radius="xl"
-      variant="filled"
-      color={config.accentColor}
-      onClick={onSend}
-      disabled={!value.trim() || isGenerating}
-      leftSection={<RiSendPlane2Line />}
-    >
-      Send
-    </Button>
+  <Stack gap="xs" mb="md">
+    <Group gap="xs" align="flex-end">
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.currentTarget.value)}
+        onKeyDown={onKeyDown}
+        placeholder={config.inputPlaceholder}
+        disabled={isGenerating}
+        minRows={2}
+        autosize
+        maxRows={6}
+        style={{ flex: 1 }}
+        styles={{
+          input: {
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            borderColor: config.borderColor,
+            color: Theme.page.text,
+          },
+        }}
+      />
+      <ActionIcon
+        size="lg"
+        radius="xl"
+        variant="filled"
+        color={config.accentColor}
+        onClick={onSend}
+        disabled={!value.trim() || isGenerating}
+      >
+        <RiSendPlane2Line />
+      </ActionIcon>
+    </Group>
     <Button
       size="md"
       radius="xl"
@@ -336,9 +341,10 @@ const DiscussionInput: React.FC<DiscussionInputProps> = ({
       color={config.accentColor}
       onClick={onSendAndGenerate}
       disabled={isGenerating || (!value.trim() && !hasMessages)}
-      leftSection={<VscRefresh />}
+      leftSection={<RiCheckDoubleLine />}
+      fullWidth
     >
-      {config.generateButtonLabel}
+      Finalized
     </Button>
-  </Group>
+  </Stack>
 );
