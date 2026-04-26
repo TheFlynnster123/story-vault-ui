@@ -1,7 +1,7 @@
 import { TextInput, Stack, Button, Textarea, Group } from "@mantine/core";
 import { RiArrowRightLine } from "react-icons/ri";
 import type { ChatCreationWizardState } from "./ChatCreationWizardState";
-import { StoryGeneratorModal } from "../../../StoryEditor/components/StoryGeneratorModal";
+import { StoryDiscussionModal } from "../../../StoryEditor/components/StoryDiscussionModal";
 
 interface TitleStepProps {
   state: ChatCreationWizardState;
@@ -43,7 +43,7 @@ export const TitleStep: React.FC<TitleStepProps> = ({
       </Stack>
 
       <Group justify="space-between" align="center">
-        <StoryGeneratorModal
+        <StoryDiscussionModal
           onStoryGenerated={(story) => updateState({ story })}
         />
         <Button
