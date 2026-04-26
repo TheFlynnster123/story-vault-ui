@@ -11,37 +11,15 @@ export const ChapterList = styled.div`
   padding: 8px;
 `;
 
-export const ChapterRow = styled.div<{
-  $isSelected: boolean;
-  $isStart: boolean;
-  $isEnd: boolean;
-}>`
+export const ChapterCheckboxRow = styled.div`
   display: flex;
   flex-direction: column;
   border-radius: 6px;
   overflow: hidden;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
   margin-bottom: 2px;
 
-  background-color: ${({ $isSelected }) =>
-    $isSelected ? "var(--mantine-color-blue-light)" : "transparent"};
-
-  border-left: 3px solid
-    ${({ $isStart, $isEnd, $isSelected }) =>
-      $isStart
-        ? "var(--mantine-color-green-6)"
-        : $isEnd
-          ? "var(--mantine-color-red-6)"
-          : $isSelected
-            ? "var(--mantine-color-blue-6)"
-            : "transparent"};
-
   &:hover {
-    background-color: ${({ $isSelected }) =>
-      $isSelected
-        ? "var(--mantine-color-blue-light-hover)"
-        : "var(--mantine-color-dark-5)"};
+    background-color: var(--mantine-color-dark-5);
   }
 `;
 
@@ -56,25 +34,6 @@ export const ChapterHeader = styled.div`
 export const ChapterTitle = styled.span`
   flex: 1;
   font-size: 14px;
-`;
-
-export const BoundaryBadge = styled.span<{ $type: "start" | "end" }>`
-  font-size: 11px;
-  font-weight: 600;
-  padding: 1px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  background-color: ${({ $type }) =>
-    $type === "start"
-      ? "var(--mantine-color-green-9)"
-      : "var(--mantine-color-red-9)"};
-
-  color: ${({ $type }) =>
-    $type === "start"
-      ? "var(--mantine-color-green-1)"
-      : "var(--mantine-color-red-1)"};
 `;
 
 export const ExpandButton = styled.button`

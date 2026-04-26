@@ -14,15 +14,12 @@ export const BookSection: React.FC<BookSectionProps> = ({ chatId }) => {
     summary,
     chapters,
     selectedChapterIds,
-    startChapterId,
-    endChapterId,
     isGenerating,
     setTitle,
     setSummary,
     handleOpenModal,
     handleCloseModal,
-    handleChapterClick,
-    handleClearSelection,
+    handleSelectionChange,
     handleGenerateSummary,
     handleSubmit,
   } = useAddBook({ chatId });
@@ -36,13 +33,10 @@ export const BookSection: React.FC<BookSectionProps> = ({ chatId }) => {
         summary={summary}
         chapters={chapters}
         selectedChapterIds={selectedChapterIds}
-        startChapterId={startChapterId}
-        endChapterId={endChapterId}
         isGenerating={isGenerating}
         onTitleChange={setTitle}
         onSummaryChange={setSummary}
-        onChapterClick={handleChapterClick}
-        onClearSelection={handleClearSelection}
+        onSelectionChange={handleSelectionChange}
         onGenerateSummary={handleGenerateSummary}
         onSubmit={handleSubmit}
         onCancel={handleCloseModal}
