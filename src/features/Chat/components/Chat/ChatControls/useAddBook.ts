@@ -51,10 +51,6 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
     setSelectedChapterIds(ids);
   };
 
-  const handleClearSelection = () => {
-    setSelectedChapterIds([]);
-  };
-
   const handleGenerateSummary = async () => {
     const chapterSummaries = getSelectedChapterSummaries();
     if (chapterSummaries.length === 0) return;
@@ -96,7 +92,6 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
     handleOpenModal,
     handleCloseModal,
     handleSelectionChange,
-    handleClearSelection,
     handleGenerateSummary,
     handleSubmit,
   };
