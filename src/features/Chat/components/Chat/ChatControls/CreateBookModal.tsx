@@ -110,7 +110,6 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
       onClose={onCancel}
       title="Compress to Book"
       size="xl"
-      style={{ height: "100%" }}
     >
       <Stack>
         <Text size="sm" c="dimmed">
