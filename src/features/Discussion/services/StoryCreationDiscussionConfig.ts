@@ -34,9 +34,15 @@ export const createStoryCreationDiscussionConfig = (
       `---`,
     ].join("\n");
 
-    const messages: LLMMessage[] = [{ role: "system", content: systemPrompt }];
-    const story = await d.OpenRouterChatAPI().postChat(messages);
-    onStoryGenerated(story);
+    try {
+      const messages: LLMMessage[] = [
+        { role: "system", content: systemPrompt },
+      ];
+      const story = await d.OpenRouterChatAPI().postChat(messages);
+      onStoryGenerated(story);
+    } catch (error) {
+      d.ErrorService().log("Failed to generate story from discussion", error);
+    }
   };
 
   const acceptMessage = async (content: string): Promise<void> => {

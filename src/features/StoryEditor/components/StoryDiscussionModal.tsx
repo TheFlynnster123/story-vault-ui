@@ -139,25 +139,32 @@ const StoryDiscussionModalContent: React.FC<
               with the AI.
             </Text>
           )}
-          {messages.map((msg, index) => (
-            <React.Fragment key={index}>
-              <StoryMessageBubble message={msg} />
-              {canAcceptMessage && msg.role === "assistant" && (
-                <Box style={{ textAlign: "left" }}>
-                  <Button
-                    size="compact-sm"
-                    variant="light"
-                    color="violet"
-                    leftSection={<RiCheckLine size={14} />}
-                    onClick={() => acceptMessage(msg.content)}
-                    disabled={isGenerating}
-                  >
-                    Use This Story
-                  </Button>
-                </Box>
-              )}
-            </React.Fragment>
-          ))}
+          {messages.map((msg, index) => {
+            const isLastAssistant =
+              msg.role === "assistant" &&
+              messages
+                .slice(index + 1)
+                .every((m) => m.role !== "assistant");
+            return (
+              <React.Fragment key={index}>
+                <StoryMessageBubble message={msg} />
+                {canAcceptMessage && isLastAssistant && (
+                  <Box style={{ textAlign: "left" }}>
+                    <Button
+                      size="compact-sm"
+                      variant="light"
+                      color="violet"
+                      leftSection={<RiCheckLine size={14} />}
+                      onClick={() => acceptMessage(msg.content)}
+                      disabled={isGenerating}
+                    >
+                      Use This Story
+                    </Button>
+                  </Box>
+                )}
+              </React.Fragment>
+            );
+          })}
           {isGenerating && (
             <Group gap="xs" align="center">
               <Loader size="xs" color={Theme.chatSettings.primary} />
