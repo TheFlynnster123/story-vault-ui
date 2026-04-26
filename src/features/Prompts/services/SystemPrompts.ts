@@ -42,6 +42,16 @@ export interface SystemPrompts {
   bookTitlePrompt: string;
   /** Model override for book title generation (empty = use default) */
   bookTitleModel?: string;
+
+  /** Prompt for selecting which character to depict in an image */
+  characterSelectionPrompt: string;
+  /** Model override for character selection (empty = use default) */
+  characterSelectionModel?: string;
+
+  /** Prompt for generating character descriptions */
+  characterDescriptionPrompt: string;
+  /** Model override for character description generation (empty = use default) */
+  characterDescriptionModel?: string;
 }
 
 export const DEFAULT_SYSTEM_PROMPTS: SystemPrompts = {
@@ -82,4 +92,10 @@ Example:
 
   bookTitlePrompt:
     "Review the chapter summaries above and generate a concise, engaging title for this collection of chapters as a book. The title should capture the overarching theme or narrative arc. Keep it short (3-7 words). Provide only the title without formatting or any preamble.",
+
+  characterSelectionPrompt:
+    "Review the conversation above and identify which character should be depicted in the next image. Choose the character most prominently featured in the current scene or narrative moment - this may not be the main character. Consider who is actively participating in the scene, who the narrative is focusing on, and who would be most meaningful to visualize. Respond with ONLY the character's name, nothing else. If you are highly confident, respond with just the name. If uncertain, respond with 'UNCLEAR'.",
+
+  characterDescriptionPrompt:
+    "Based on the conversation above, generate a detailed physical description for the character. Focus ONLY on permanent physical features: face shape, eye color, hair color and style, skin tone, age, height, build, and any distinctive features (scars, tattoos, etc.). Do NOT include clothing, accessories, or contextual details - those will be added separately based on the scene. Keep the description to 2-3 sentences. Respond with ONLY the physical description, no preamble or formatting.",
 };

@@ -50,6 +50,8 @@ import { ImageModelMapper } from "../features/Images/services/modelGeneration/Im
 import { getChatInputCacheInstance } from "../features/Chat/services/Chat/ChatInputCache";
 import { getCharacterDescriptionsManagedBlobInstance } from "../features/Characters/services/CharacterDescriptionsManagedBlob";
 import { CharacterDescriptionsService } from "../features/Characters/services/CharacterDescriptionsService";
+import { CharacterSelectionService } from "../features/Characters/services/CharacterSelectionService";
+import { CharacterDescriptionGenerationService } from "../features/Characters/services/CharacterDescriptionGenerationService";
 
 export class Dependencies {
   CivitKeyAPI() {
@@ -96,6 +98,12 @@ export class Dependencies {
   }
   CharacterDescriptionsService(chatId: string) {
     return new CharacterDescriptionsService(chatId);
+  }
+  CharacterSelectionService(chatId: string) {
+    return new CharacterSelectionService(chatId);
+  }
+  CharacterDescriptionGenerationService(chatId: string) {
+    return new CharacterDescriptionGenerationService(chatId);
   }
   ImageGenerator(chatId: string) {
     return new ImageGenerator(chatId);
