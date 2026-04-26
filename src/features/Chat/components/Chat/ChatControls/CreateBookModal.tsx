@@ -8,22 +8,19 @@ import {
   Button,
   Group,
   Collapse,
+  Checkbox,
+  Alert,
 } from "@mantine/core";
-import {
-  RiPlayFill,
-  RiStopFill,
-  RiArrowDownSLine,
-  RiArrowRightSLine,
-} from "react-icons/ri";
+import { RiArrowDownSLine, RiArrowRightSLine, RiErrorWarningLine } from "react-icons/ri";
 import type { ChapterChatMessage } from "../../../../../services/CQRS/UserChatProjection";
+import { areChapterIdsContiguous } from "./areChapterIdsContiguous";
 import {
   ChapterList,
-  ChapterRow,
   ChapterHeader,
   ChapterTitle,
-  BoundaryBadge,
   ExpandButton,
   ChapterContent,
+  ChapterCheckboxRow,
 } from "./CreateBookModal.styled";
 
 interface CreateBookModalProps {
@@ -32,13 +29,10 @@ interface CreateBookModalProps {
   summary: string;
   chapters: ChapterChatMessage[];
   selectedChapterIds: string[];
-  startChapterId: string | null;
-  endChapterId: string | null;
   isGenerating: boolean;
   onTitleChange: (title: string) => void;
   onSummaryChange: (summary: string) => void;
-  onChapterClick: (chapterId: string) => void;
-  onClearSelection: () => void;
+  onSelectionChange: (ids: string[]) => void;
   onGenerateSummary: () => void;
   onSubmit: () => void;
   onCancel: () => void;
@@ -50,13 +44,10 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
   summary,
   chapters,
   selectedChapterIds,
-  startChapterId,
-  endChapterId,
   isGenerating,
   onTitleChange,
   onSummaryChange,
-  onChapterClick,
-  onClearSelection,
+  onSelectionChange,
   onGenerateSummary,
   onSubmit,
   onCancel,
@@ -65,10 +56,13 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
     new Set(),
   );
 
+  const isContiguous = areChapterIdsContiguous(chapters, selectedChapterIds);
+
   const canSubmit =
     title.trim() &&
     summary.trim() &&
     selectedChapterIds.length > 0 &&
+    isContiguous &&
     !isGenerating;
 
   const toggleExpand = (chapterId: string, e: React.MouseEvent) => {
@@ -81,29 +75,6 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
     });
   };
 
-  const getSelectionHint = (): string => {
-    if (!startChapterId)
-      return "Click a chapter to set the start of the range.";
-    if (!endChapterId)
-      return "Click another chapter to set the end of the range.";
-    return `${selectedChapterIds.length} chapter${selectedChapterIds.length > 1 ? "s" : ""} selected.`;
-  };
-
-  const resolvedStartId = (() => {
-    if (!startChapterId) return null;
-    if (!endChapterId) return startChapterId;
-    const startIdx = chapters.findIndex((ch) => ch.id === startChapterId);
-    const endIdx = chapters.findIndex((ch) => ch.id === endChapterId);
-    return startIdx <= endIdx ? startChapterId : endChapterId;
-  })();
-
-  const resolvedEndId = (() => {
-    if (!startChapterId || !endChapterId) return null;
-    const startIdx = chapters.findIndex((ch) => ch.id === startChapterId);
-    const endIdx = chapters.findIndex((ch) => ch.id === endChapterId);
-    return startIdx <= endIdx ? endChapterId : startChapterId;
-  })();
-
   return (
     <Modal
       opened={opened}
@@ -112,84 +83,56 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
       size="xl"
     >
       <Stack>
-        <Text size="sm" c="dimmed">
-          {getSelectionHint()}
-        </Text>
-
         <Stack gap="xs">
-          <Group justify="space-between">
-            <Text size="sm" fw={500}>
-              Select Chapter Range
-            </Text>
-            {startChapterId && (
-              <Button variant="subtle" size="xs" onClick={onClearSelection}>
-                Clear Selection
-              </Button>
-            )}
-          </Group>
+          <Text size="sm" fw={500}>
+            Select Chapters
+          </Text>
 
           {chapters.length === 0 ? (
             <Text size="sm" c="dimmed" ta="center" py="md">
               No chapters available to compress.
             </Text>
           ) : (
-            <ChapterList>
-              {chapters.map((chapter) => {
-                const isStart = chapter.id === resolvedStartId;
-                const isEnd = chapter.id === resolvedEndId;
-                const isSelected = selectedChapterIds.includes(chapter.id);
-                const isExpanded = expandedChapters.has(chapter.id);
+            <Checkbox.Group value={selectedChapterIds} onChange={onSelectionChange}>
+              <ChapterList>
+                {chapters.map((chapter) => {
+                  const isExpanded = expandedChapters.has(chapter.id);
 
-                return (
-                  <ChapterRow
-                    key={chapter.id}
-                    $isSelected={isSelected}
-                    $isStart={isStart}
-                    $isEnd={isEnd}
-                    onClick={() => onChapterClick(chapter.id)}
-                  >
-                    <ChapterHeader>
-                      <ExpandButton
-                        onClick={(e) => toggleExpand(chapter.id, e)}
-                        title={isExpanded ? "Collapse" : "Expand"}
-                      >
-                        {isExpanded ? (
-                          <RiArrowDownSLine size={16} />
-                        ) : (
-                          <RiArrowRightSLine size={16} />
-                        )}
-                      </ExpandButton>
+                  return (
+                    <ChapterCheckboxRow key={chapter.id}>
+                      <ChapterHeader>
+                        <ExpandButton
+                          onClick={(e) => toggleExpand(chapter.id, e)}
+                          title={isExpanded ? "Collapse" : "Expand"}
+                        >
+                          {isExpanded ? (
+                            <RiArrowDownSLine size={16} />
+                          ) : (
+                            <RiArrowRightSLine size={16} />
+                          )}
+                        </ExpandButton>
 
-                      {isStart && (
-                        <RiPlayFill
-                          size={14}
-                          color="var(--mantine-color-green-6)"
-                        />
-                      )}
-                      {isEnd && (
-                        <RiStopFill
-                          size={14}
-                          color="var(--mantine-color-red-6)"
-                        />
-                      )}
+                        <Checkbox value={chapter.id} />
 
-                      <ChapterTitle>📖 {chapter.data.title}</ChapterTitle>
+                        <ChapterTitle>📖 {chapter.data.title}</ChapterTitle>
+                      </ChapterHeader>
 
-                      {isStart && (
-                        <BoundaryBadge $type="start">Start</BoundaryBadge>
-                      )}
-                      {isEnd && <BoundaryBadge $type="end">End</BoundaryBadge>}
-                    </ChapterHeader>
+                      <Collapse in={isExpanded}>
+                        <ChapterContent>
+                          {chapter.content || "No summary available."}
+                        </ChapterContent>
+                      </Collapse>
+                    </ChapterCheckboxRow>
+                  );
+                })}
+              </ChapterList>
+            </Checkbox.Group>
+          )}
 
-                    <Collapse in={isExpanded}>
-                      <ChapterContent>
-                        {chapter.content || "No summary available."}
-                      </ChapterContent>
-                    </Collapse>
-                  </ChapterRow>
-                );
-              })}
-            </ChapterList>
+          {selectedChapterIds.length > 0 && !isContiguous && (
+            <Alert icon={<RiErrorWarningLine />} color="orange" variant="light">
+              Selected chapters must be contiguous. Please select a consecutive range.
+            </Alert>
           )}
         </Stack>
 
@@ -215,7 +158,7 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
             variant="light"
             onClick={onGenerateSummary}
             loading={isGenerating}
-            disabled={selectedChapterIds.length === 0}
+            disabled={selectedChapterIds.length === 0 || !isContiguous}
             fullWidth
           >
             Generate Summary

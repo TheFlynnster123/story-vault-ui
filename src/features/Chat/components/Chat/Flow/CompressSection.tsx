@@ -56,13 +56,10 @@ export const CompressSection: React.FC<CompressSectionProps> = ({ chatId }) => {
         summary={book.summary}
         chapters={book.chapters}
         selectedChapterIds={book.selectedChapterIds}
-        startChapterId={book.startChapterId}
-        endChapterId={book.endChapterId}
         isGenerating={book.isGenerating}
         onTitleChange={book.setTitle}
         onSummaryChange={book.setSummary}
-        onChapterClick={book.handleChapterClick}
-        onClearSelection={book.handleClearSelection}
+        onSelectionChange={book.handleSelectionChange}
         onGenerateSummary={book.handleGenerateSummary}
         onSubmit={book.handleSubmit}
         onCancel={book.handleCloseModal}

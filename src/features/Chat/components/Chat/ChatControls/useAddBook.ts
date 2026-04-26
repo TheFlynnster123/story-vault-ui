@@ -6,28 +6,11 @@ interface UseAddBookParams {
   chatId: string;
 }
 
-const getChapterIdsInRange = (
-  chapters: ChapterChatMessage[],
-  startId: string,
-  endId: string | null,
-): string[] => {
-  if (!endId) return [startId];
-
-  const startIdx = chapters.findIndex((ch) => ch.id === startId);
-  const endIdx = chapters.findIndex((ch) => ch.id === endId);
-  if (startIdx === -1 || endIdx === -1) return [];
-
-  const minIdx = Math.min(startIdx, endIdx);
-  const maxIdx = Math.max(startIdx, endIdx);
-  return chapters.slice(minIdx, maxIdx + 1).map((ch) => ch.id);
-};
-
 export const useAddBook = ({ chatId }: UseAddBookParams) => {
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [startChapterId, setStartChapterId] = useState<string | null>(null);
-  const [endChapterId, setEndChapterId] = useState<string | null>(null);
+  const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([]);
   const [, forceUpdate] = useState({});
   const bookGeneration = d.BookGenerationService(chatId);
 
@@ -43,14 +26,6 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
       .filter((m) => m.type === "chapter") as ChapterChatMessage[];
   }, [chatId, showModal]);
 
-  const selectedChapterIds = useMemo(
-    () =>
-      startChapterId
-        ? getChapterIdsInRange(chapters, startChapterId, endChapterId)
-        : [],
-    [chapters, startChapterId, endChapterId],
-  );
-
   const getSelectedChapterSummaries = (): string[] => {
     return selectedChapterIds
       .map((id) => chapters.find((ch) => ch.id === id))
@@ -60,8 +35,7 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
 
   const handleOpenModal = async () => {
     setShowModal(true);
-    setStartChapterId(null);
-    setEndChapterId(null);
+    setSelectedChapterIds([]);
     setTitle("");
     setSummary("");
   };
@@ -70,27 +44,11 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
     setShowModal(false);
     setTitle("");
     setSummary("");
-    setStartChapterId(null);
-    setEndChapterId(null);
+    setSelectedChapterIds([]);
   };
 
-  const handleChapterClick = (chapterId: string) => {
-    if (!startChapterId) {
-      setStartChapterId(chapterId);
-      setEndChapterId(null);
-    } else if (endChapterId) {
-      setStartChapterId(chapterId);
-      setEndChapterId(null);
-    } else if (startChapterId === chapterId) {
-      setStartChapterId(null);
-    } else {
-      setEndChapterId(chapterId);
-    }
-  };
-
-  const handleClearSelection = () => {
-    setStartChapterId(null);
-    setEndChapterId(null);
+  const handleSelectionChange = (ids: string[]) => {
+    setSelectedChapterIds(ids);
   };
 
   const handleGenerateSummary = async () => {
@@ -128,15 +86,12 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
     summary,
     chapters,
     selectedChapterIds,
-    startChapterId,
-    endChapterId,
     isGenerating: bookGeneration?.IsLoading || false,
     setTitle,
     setSummary,
     handleOpenModal,
     handleCloseModal,
-    handleChapterClick,
-    handleClearSelection,
+    handleSelectionChange,
     handleGenerateSummary,
     handleSubmit,
   };
