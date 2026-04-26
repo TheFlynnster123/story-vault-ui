@@ -3,12 +3,12 @@ import styled from "styled-components";
 export const ChapterList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 300px;
+  gap: 4px;
+  max-height: 400px;
   overflow-y: auto;
   border: 1px solid var(--mantine-color-dark-4);
   border-radius: 8px;
-  padding: 4px;
+  padding: 8px;
 `;
 
 export const ChapterRow = styled.div<{
@@ -22,6 +22,7 @@ export const ChapterRow = styled.div<{
   overflow: hidden;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  margin-bottom: 2px;
 
   background-color: ${({ $isSelected }) =>
     $isSelected ? "var(--mantine-color-blue-light)" : "transparent"};
@@ -48,7 +49,7 @@ export const ChapterHeader = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   user-select: none;
 `;
 
@@ -91,10 +92,11 @@ export const ExpandButton = styled.button`
 `;
 
 export const ChapterContent = styled.div`
-  padding: 4px 10px 10px 24px;
+  padding: 8px 12px 12px 32px;
   font-size: 13px;
   color: var(--mantine-color-dimmed);
   white-space: pre-wrap;
-  line-height: 1.5;
+  line-height: 1.6;
   border-top: 1px solid var(--mantine-color-dark-4);
+  margin-top: 4px;
 `;
