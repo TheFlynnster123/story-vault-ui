@@ -21,7 +21,7 @@ const getBalanceColor = (balance: number): string => {
   return Theme.credits.primary;
 };
 
-export const CreditsSection: React.FC<CreditsSectionProps> = ({ chatId }) => {
+export const CreditsSection: React.FC<CreditsSectionProps> = () => {
   const { credits, isLoading, error, refetch } = useOpenRouterCredits();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
