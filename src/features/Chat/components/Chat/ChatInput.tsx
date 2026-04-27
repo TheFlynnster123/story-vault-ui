@@ -3,18 +3,24 @@ import { IoCamera, IoSend, IoSync } from "react-icons/io5";
 import { Textarea, ActionIcon, Group, Box, Stack, Loader } from "@mantine/core";
 import { SpinningIcon } from "./ChatInput.styled";
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useChatInputCache } from "../../hooks/useChatInputCache";
 import { useChatGeneration } from "../../hooks/useChatGeneration";
 import { useChatInputExpansion } from "../../hooks/useChatInputExpansion";
 import { useLongPress } from "../../hooks/useLongPress";
 import { SendGuidanceModal } from "./SendGuidanceModal";
+import { MissingCharacterDescriptionModal } from "./MissingCharacterDescriptionModal.tsx";
 
 export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
+  const navigate = useNavigate();
   const { inputValue, setInputValue, clearInputValue } =
     useChatInputCache(chatId);
   const { isExpanded, expand, minimize } = useChatInputExpansion();
   const {
     generateImage,
+    missingCharacterName,
+    resolveMissingCharacterDescription,
+    dismissMissingCharacterDescription,
     generateResponse,
     isTextLoading,
     isImageLoading,
@@ -23,6 +29,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
   const chatBoxRef = useRef<HTMLDivElement>(null);
   const [showGuidanceModal, setShowGuidanceModal] = useState(false);
   const [guidance, setGuidance] = useState("");
+  const [isResolvingCharacterDescription, setIsResolvingCharacterDescription] =
+    useState(false);
 
   const handleSend = (guidanceText?: string) => {
     if (isTextLoading) return;
@@ -45,6 +53,38 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
   const handleGuidanceCancel = () => {
     setShowGuidanceModal(false);
     setGuidance("");
+  };
+
+  const runCharacterDescriptionResolution = async (
+    resolver: () => Promise<void>,
+  ) => {
+    setIsResolvingCharacterDescription(true);
+    try {
+      await resolver();
+    } finally {
+      setIsResolvingCharacterDescription(false);
+    }
+  };
+
+  const handleGenerateMissingDescription = async () => {
+    await runCharacterDescriptionResolution(async () => {
+      await resolveMissingCharacterDescription("generate");
+    });
+  };
+
+  const handleCreateMissingDescriptionManually = async () => {
+    await runCharacterDescriptionResolution(async () => {
+      const result = await resolveMissingCharacterDescription("manual");
+      if (result === "navigate-to-characters") {
+        navigate(`/chat/${chatId}/characters`);
+      }
+    });
+  };
+
+  const handleSkipMissingDescription = async () => {
+    await runCharacterDescriptionResolution(async () => {
+      await resolveMissingCharacterDescription("skip");
+    });
   };
 
   return (
@@ -84,6 +124,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
         onGuidanceChange={setGuidance}
         onSubmit={handleGuidanceSubmit}
         onCancel={handleGuidanceCancel}
+      />
+
+      <MissingCharacterDescriptionModal
+        isOpen={!!missingCharacterName}
+        characterName={missingCharacterName ?? ""}
+        isWorking={isResolvingCharacterDescription}
+        onGenerate={handleGenerateMissingDescription}
+        onCreateManually={handleCreateMissingDescriptionManually}
+        onSkip={handleSkipMissingDescription}
+        onCancel={dismissMissingCharacterDescription}
       />
     </Box>
   );

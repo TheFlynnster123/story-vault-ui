@@ -10,6 +10,7 @@ import { ChatModelSection } from "./ChatModelSection";
 import { usePlanCache } from "../../../../Plans/hooks/usePlanCache";
 import { PlanSection } from "../../../../Plans/components/PlanSection";
 import { MemoriesSection } from "../../../../Memories/components/MemoriesSection";
+import { CharacterDescriptionsSection } from "../../../../Characters/components/CharacterDescriptionsSection";
 import { TransparencySlider } from "./TransparencySlider";
 import { CreditsSection } from "./CreditsSection";
 
@@ -24,6 +25,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
   const navigateToChatSettings = () => navigate(`/chat/${chatId}/edit`);
   const navigateToPlan = () => navigate(`/chat/${chatId}/plan`);
   const navigateToMemories = () => navigate(`/chat/${chatId}/memories`);
+  const navigateToCharacters = () => navigate(`/chat/${chatId}/characters`);
   const navigateToChatImageModels = () =>
     navigate(`/chat/${chatId}/image-models`);
 
@@ -56,6 +58,10 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
               />
               <CompressSection chatId={chatId} />
               <NoteSection chatId={chatId} />
+              <CharacterDescriptionsSection
+                chatId={chatId}
+                onNavigate={navigateToCharacters}
+              />
               <MemoriesSection
                 chatId={chatId}
                 onNavigate={navigateToMemories}

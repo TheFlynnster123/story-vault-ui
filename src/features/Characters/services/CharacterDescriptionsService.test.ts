@@ -89,6 +89,27 @@ describe("CharacterDescriptionsService", () => {
       expect(result).toEqual(descriptions[0]);
     });
 
+    it("should find character by high-confidence fuzzy match", async () => {
+      const descriptions = createMockDescriptions();
+      mockBlob.get.mockResolvedValue(descriptions);
+
+      const result = await service.findByName("Sarah");
+
+      expect(result).toEqual(descriptions[0]);
+    });
+
+    it("should return undefined for ambiguous fuzzy matches", async () => {
+      const ambiguousDescriptions = [
+        createMockCharacter("Sarah Chen", "char-1"),
+        createMockCharacter("Sarah Connor", "char-2"),
+      ];
+      mockBlob.get.mockResolvedValue(ambiguousDescriptions);
+
+      const result = await service.findByName("Sarah");
+
+      expect(result).toBeUndefined();
+    });
+
     it("should return undefined when character not found", async () => {
       const descriptions = createMockDescriptions();
       mockBlob.get.mockResolvedValue(descriptions);
@@ -168,6 +189,16 @@ describe("CharacterDescriptionsService", () => {
       mockBlob.get.mockResolvedValue([existing]);
 
       const result = await service.createBlankCharacter("Sarah Chen");
+
+      expect(result).toEqual(existing);
+      expect(mockBlob.save).not.toHaveBeenCalled();
+    });
+
+    it("should return existing character for fuzzy high-confidence name", async () => {
+      const existing = createMockCharacter("Sarah Chen", "char-1");
+      mockBlob.get.mockResolvedValue([existing]);
+
+      const result = await service.createBlankCharacter("Sarah");
 
       expect(result).toEqual(existing);
       expect(mockBlob.save).not.toHaveBeenCalled();

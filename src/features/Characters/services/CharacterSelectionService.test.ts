@@ -122,6 +122,17 @@ describe("CharacterSelectionService", () => {
       expect(callArgs[1]).toBe(customModel);
     });
 
+    it("should use default character selection model when prompts are missing", async () => {
+      mockLLMChatProjection.GetMessages.mockReturnValue(createMockMessages());
+      mockSystemPromptsService.Get.mockResolvedValue(undefined);
+      mockOpenRouterChatAPI.postChat.mockResolvedValue("Sarah Chen");
+
+      await service.selectCharacterForImage();
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0];
+      expect(callArgs[1]).toBe("x-ai/grok-4.1-fast");
+    });
+
     it("should include chat messages in prompt", async () => {
       const messages = createMockMessages();
       mockLLMChatProjection.GetMessages.mockReturnValue(messages);

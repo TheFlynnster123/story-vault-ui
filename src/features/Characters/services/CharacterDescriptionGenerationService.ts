@@ -16,7 +16,9 @@ export class CharacterDescriptionGenerationService {
     const model = await this.getCharacterDescriptionModel();
 
     const promptMessages = buildPromptMessages(messages, prompt);
-    const response = await d.OpenRouterChatAPI().postChat(promptMessages, model);
+    const response = await d
+      .OpenRouterChatAPI()
+      .postChat(promptMessages, model);
 
     return cleanDescription(response);
   };
@@ -56,6 +58,6 @@ const formatPromptForCharacter = (
   basePrompt: string,
   characterName: string,
 ): string =>
-  `Generate a physical description for the character named "${characterName}".\n\n${basePrompt}`;
+  `Generate an appearance-only character sheet for "${characterName}". Focus on stable visual traits and exclude actions, poses, and scene context.\n\n${basePrompt}`;
 
 const cleanDescription = (response: string): string => response.trim();

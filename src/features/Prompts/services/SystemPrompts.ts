@@ -95,7 +95,18 @@ Example:
 
   characterSelectionPrompt:
     "Review the conversation above and identify which character should be depicted in the next image. Choose the character most prominently featured in the current scene or narrative moment - this may not be the main character. Consider who is actively participating in the scene, who the narrative is focusing on, and who would be most meaningful to visualize. Respond with ONLY the character's name, nothing else. If you are highly confident, respond with just the name. If uncertain, respond with 'UNCLEAR'.",
+  characterSelectionModel: "x-ai/grok-4.1-fast",
 
-  characterDescriptionPrompt:
-    "Based on the conversation above, generate a detailed physical description for the character. Focus ONLY on permanent physical features: face shape, eye color, hair color and style, skin tone, age, height, build, and any distinctive features (scars, tattoos, etc.). Do NOT include clothing, accessories, or contextual details - those will be added separately based on the scene. Keep the description to 2-3 sentences. Respond with ONLY the physical description, no preamble or formatting.",
+  characterDescriptionPrompt: `Consider the character present.
+
+For each reply, include 3-5 words for:
+- **Face & Head Features** (face shape, eye color, hair color/style)
+- **Body Traits** (age range, build, height, skin tone)
+- **Distinctive Features** (scars, freckles, tattoos, other permanent marks)
+
+Respond with ONLY a detailed, comma separated list describing the character's appearance for consistent image generation.
+Do NOT include setting, actions, poses, or temporary clothing.
+
+Example:
+"young woman, oval face, green eyes, long dark wavy hair, olive skin, medium height, slim build, faint scar on left eyebrow"`,
 };

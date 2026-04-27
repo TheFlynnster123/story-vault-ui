@@ -1,8 +1,21 @@
 import { d } from "../../../services/Dependencies";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { ImageModel } from "./modelGeneration/ImageModel";
+import type { CharacterDescription } from "../../Characters/services/CharacterDescription";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
+
+export type CharacterContext =
+  | { type: "none" }
+  | {
+      type: "existing-description";
+      characterName: string;
+      description: string;
+    }
+  | {
+      type: "missing-description";
+      characterName: string;
+    };
 
 export class ImageGenerator {
   private chatId: string;
@@ -16,7 +29,19 @@ export class ImageGenerator {
    * Includes character description if available.
    */
   public async generatePrompt(messages: LLMMessage[]): Promise<string> {
-    const characterDescription = await this.resolveCharacterDescription();
+    const characterContext = await this.resolveCharacterContextForLegacyFlow();
+
+    return await this.generatePromptWithCharacterContext(
+      messages,
+      characterContext,
+    );
+  }
+
+  public async generatePromptWithCharacterContext(
+    messages: LLMMessage[],
+    characterContext: CharacterContext,
+  ): Promise<string> {
+    const characterDescription = toCharacterContextMessage(characterContext);
     const imageGenerationPrompt = await this.resolveImageGenerationPrompt();
 
     const promptMessages = buildPromptMessagesWithCharacter(
@@ -38,7 +63,23 @@ export class ImageGenerator {
       return this.generatePrompt(messages);
     }
 
-    const characterDescription = await this.resolveCharacterDescription();
+    const characterContext = await this.resolveCharacterContextForLegacyFlow();
+
+    return await this.generatePromptWithFeedbackAndCharacterContext(
+      messages,
+      characterContext,
+      originalPrompt,
+      feedback,
+    );
+  }
+
+  public async generatePromptWithFeedbackAndCharacterContext(
+    messages: LLMMessage[],
+    characterContext: CharacterContext,
+    originalPrompt?: string,
+    feedback?: string,
+  ): Promise<string> {
+    const characterDescription = toCharacterContextMessage(characterContext);
     const imageGenerationPrompt = await this.resolveImageGenerationPrompt();
     const feedbackMessage = buildFeedbackMessage(originalPrompt, feedback!);
 
@@ -51,6 +92,33 @@ export class ImageGenerator {
 
     const model = await this.resolveImageModel();
     return await d.OpenRouterChatAPI().postChat(promptMessages, model);
+  }
+
+  public async resolveCharacterContext(): Promise<CharacterContext> {
+    const characterName = await this.selectCharacter();
+
+    if (!characterName) {
+      return noCharacterContext();
+    }
+
+    const character = await this.findCharacterDescriptionRecord(characterName);
+
+    if (!character) {
+      return {
+        type: "missing-description",
+        characterName,
+      };
+    }
+
+    if (!hasDescription(character.description)) {
+      return noCharacterContext();
+    }
+
+    return {
+      type: "existing-description",
+      characterName,
+      description: character.description,
+    };
   }
 
   public async triggerJob(imageGenerationPrompt: string): Promise<string> {
@@ -97,51 +165,56 @@ export class ImageGenerator {
     return systemPrompts?.defaultImageModel || undefined;
   }
 
-  /**
-   * Resolves character description for the image.
-   * Returns character description string or null if no character should be included.
-   */
-  private async resolveCharacterDescription(): Promise<string | null> {
-    const characterName = await this.selectCharacter();
+  private async resolveCharacterContextForLegacyFlow(): Promise<CharacterContext> {
+    const context = await this.resolveCharacterContext();
 
-    if (!characterName) {
-      return null;
+    if (!isMissingDescriptionContext(context)) {
+      return context;
     }
 
-    const existingDescription = await this.findExistingCharacterDescription(
-      characterName,
-    );
-
-    if (existingDescription) {
-      return formatCharacterContext(characterName, existingDescription);
-    }
-
-    // Create blank character record for future use
     await d
       .CharacterDescriptionsService(this.chatId)
-      .createBlankCharacter(characterName);
+      .createBlankCharacter(context.characterName);
 
-    return null;
+    return noCharacterContext();
   }
 
   private selectCharacter = async (): Promise<string | null> =>
     await d.CharacterSelectionService(this.chatId).selectCharacterForImage();
 
-  private findExistingCharacterDescription = async (
+  private findCharacterDescriptionRecord = async (
     name: string,
-  ): Promise<string | null> => {
-    const character = await d
-      .CharacterDescriptionsService(this.chatId)
-      .findByName(name);
-
-    return character && hasDescription(character.description)
-      ? character.description
-      : null;
-  };
+  ): Promise<CharacterDescription | undefined> =>
+    await d.CharacterDescriptionsService(this.chatId).findByName(name);
 }
 
 const hasFeedback = (feedback?: string): boolean =>
   feedback !== undefined && feedback.trim().length > 0;
+
+const noCharacterContext = (): CharacterContext => ({ type: "none" });
+
+const isMissingDescriptionContext = (
+  context: CharacterContext,
+): context is { type: "missing-description"; characterName: string } =>
+  context.type === "missing-description";
+
+const isExistingDescriptionContext = (
+  context: CharacterContext,
+): context is {
+  type: "existing-description";
+  characterName: string;
+  description: string;
+} => context.type === "existing-description";
+
+const toCharacterContextMessage = (
+  context: CharacterContext,
+): string | null => {
+  if (!isExistingDescriptionContext(context)) {
+    return null;
+  }
+
+  return formatCharacterContext(context.characterName, context.description);
+};
 
 const buildFeedbackMessage = (
   originalPrompt: string | undefined,

@@ -159,6 +159,56 @@ export const SystemPromptsEditor: React.FC = () => {
       />
 
       <PromptInput
+        id="characterSelectionPrompt"
+        label="Character Selection Prompt"
+        helpText="This prompt instructs the AI to select the single most prominent character to depict for the next generated image."
+        value={localPrompts.characterSelectionPrompt || ""}
+        isHighlighted={highlightedPrompt === "characterSelectionPrompt"}
+        onChange={(value) =>
+          handlePromptChange({ characterSelectionPrompt: value })
+        }
+        onReset={() =>
+          handleResetClick(
+            "characterSelectionPrompt",
+            "Character Selection Prompt",
+          )
+        }
+      />
+      <ModelSelect
+        value={localPrompts.characterSelectionModel || ""}
+        onChange={(value) =>
+          handlePromptChange({ characterSelectionModel: value || undefined })
+        }
+        label="Character Selection Model"
+        withDescription={false}
+      />
+
+      <PromptInput
+        id="characterDescriptionPrompt"
+        label="Character Description Prompt"
+        helpText="This prompt instructs the AI to generate comma-separated, appearance-only character descriptors for consistent image generation."
+        value={localPrompts.characterDescriptionPrompt || ""}
+        isHighlighted={highlightedPrompt === "characterDescriptionPrompt"}
+        onChange={(value) =>
+          handlePromptChange({ characterDescriptionPrompt: value })
+        }
+        onReset={() =>
+          handleResetClick(
+            "characterDescriptionPrompt",
+            "Character Description Prompt",
+          )
+        }
+      />
+      <ModelSelect
+        value={localPrompts.characterDescriptionModel || ""}
+        onChange={(value) =>
+          handlePromptChange({ characterDescriptionModel: value || undefined })
+        }
+        label="Character Description Model"
+        withDescription={false}
+      />
+
+      <PromptInput
         id="chapterSummaryPrompt"
         label="Chapter Summary Prompt"
         helpText="This prompt instructs the AI how to generate chapter summaries when compressing conversation history into chapters."
@@ -186,9 +236,7 @@ export const SystemPromptsEditor: React.FC = () => {
         helpText="This prompt instructs the AI how to generate concise, engaging titles for chapters."
         value={localPrompts.chapterTitlePrompt || ""}
         isHighlighted={highlightedPrompt === "chapterTitlePrompt"}
-        onChange={(value) =>
-          handlePromptChange({ chapterTitlePrompt: value })
-        }
+        onChange={(value) => handlePromptChange({ chapterTitlePrompt: value })}
         onReset={() =>
           handleResetClick("chapterTitlePrompt", "Chapter Title Prompt")
         }
@@ -208,9 +256,7 @@ export const SystemPromptsEditor: React.FC = () => {
         helpText="This prompt instructs the AI how to generate book summaries when compressing multiple chapters into a book."
         value={localPrompts.bookSummaryPrompt || ""}
         isHighlighted={highlightedPrompt === "bookSummaryPrompt"}
-        onChange={(value) =>
-          handlePromptChange({ bookSummaryPrompt: value })
-        }
+        onChange={(value) => handlePromptChange({ bookSummaryPrompt: value })}
         onReset={() =>
           handleResetClick("bookSummaryPrompt", "Book Summary Prompt")
         }
@@ -230,12 +276,8 @@ export const SystemPromptsEditor: React.FC = () => {
         helpText="This prompt instructs the AI how to generate concise, engaging titles for books."
         value={localPrompts.bookTitlePrompt || ""}
         isHighlighted={highlightedPrompt === "bookTitlePrompt"}
-        onChange={(value) =>
-          handlePromptChange({ bookTitlePrompt: value })
-        }
-        onReset={() =>
-          handleResetClick("bookTitlePrompt", "Book Title Prompt")
-        }
+        onChange={(value) => handlePromptChange({ bookTitlePrompt: value })}
+        onReset={() => handleResetClick("bookTitlePrompt", "Book Title Prompt")}
       />
       <ModelSelect
         value={localPrompts.bookTitleModel || ""}

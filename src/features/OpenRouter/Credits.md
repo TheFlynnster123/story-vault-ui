@@ -31,11 +31,10 @@ HTTP client for fetching OpenRouter credits information from the backend.
 - `getCredits(): Promise<OpenRouterCredits>` — Fetches current credits info
 
 **Request:**
-- Endpoint: `/api/getOpenRouterCredits`
+- Endpoint: `/api/openrouter/auth/key`
 - Method: GET
 - Headers:
   - `Authorization: Bearer {accessToken}`
-  - `EncryptionKey: {openRouterEncryptionKey}`
 
 **Response:**
 ```typescript
@@ -84,12 +83,23 @@ credits: {
 
 ## Backend Requirements
 
-The backend must implement `/api/getOpenRouterCredits` endpoint that:
+The backend must implement a catch-all OpenRouter passthrough route at `/api/openrouter/{*route}`.
 
-1. Accepts GET request with Authorization and EncryptionKey headers
-2. Decrypts the OpenRouter API key using the provided EncryptionKey
-3. Calls OpenRouter's `/api/v1/auth/key` endpoint with the decrypted key
-4. Returns the credits data in the expected format
+For credits, this feature calls `/api/openrouter/auth/key`, and the backend must:
+
+1. Accept GET request with app Authorization header
+2. Resolve the user from app auth, then load that user's stored OpenRouter key server-side
+3. Decrypt the stored OpenRouter key using server-managed secrets/keys (never from client headers)
+4. Proxy to OpenRouter `/api/v1/auth/key` using `Authorization: Bearer {decryptedOpenRouterApiKey}`
+5. Return only the proxied credits metadata payload expected by the frontend
+
+### Security Boundary
+
+The decrypted OpenRouter API key must never be returned to the frontend.
+
+- The frontend sends app auth only.
+- The backend injects the OpenRouter bearer key when calling OpenRouter.
+- Backend logs and responses must not include the raw OpenRouter key.
 
 ### OpenRouter API Reference
 
