@@ -143,6 +143,25 @@ export const Theme = {
     backgroundSecondary: "rgba(230, 81, 0, 0.8)",
   },
 
+  /** Colors for credits UI elements - Gold/Yellow theme */
+  credits: {
+    /** Primary gold color for credits */
+    primary: "rgba(255, 215, 0, 1)",
+    /** Secondary darker gold */
+    secondary: "rgba(218, 165, 32, 1)",
+    /** Border color for credits elements */
+    border: "rgba(255, 215, 0, 0.5)",
+    /** Text color for headers */
+    headerText: "rgba(255, 255, 255, 1)",
+    /** Transparent version for backgrounds */
+    backgroundPrimary: "rgba(255, 215, 0, 0.8)",
+    backgroundSecondary: "rgba(218, 165, 32, 0.8)",
+    /** Warning color for low balance */
+    warning: "rgba(255, 193, 7, 1)",
+    /** Error color for very low balance */
+    error: "rgba(244, 67, 54, 1)",
+  },
+
   /** Colors for different message types */
   messages: {
     /** User message colors */

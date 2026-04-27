@@ -31,6 +31,7 @@ import { getAuthApiSingleton } from "./Auth/AuthAPI";
 import { getEncryptionManagerSingleton } from "./Auth/EncryptionManager";
 import { OpenRouterKeyAPI } from "../features/OpenRouter/services/OpenRouterKeyAPI";
 import { OpenRouterModelsAPI } from "../features/OpenRouter/services/OpenRouterModelsAPI";
+import { OpenRouterCreditsAPI } from "../features/OpenRouter/services/OpenRouterCreditsAPI";
 import { RecentModelsService } from "../features/AI/services/RecentModelsService";
 import { CivitJobOrchestrator } from "../features/Images/services/CivitJobOrchestrator";
 import { ImageModelFromGeneratedImageService } from "../features/Images/services/modelGeneration/ImageModelFromGeneratedImageService";
@@ -68,6 +69,10 @@ export class Dependencies {
 
   OpenRouterModelsAPI() {
     return new OpenRouterModelsAPI();
+  }
+
+  OpenRouterCreditsAPI() {
+    return new OpenRouterCreditsAPI();
   }
 
   RecentModelsService() {

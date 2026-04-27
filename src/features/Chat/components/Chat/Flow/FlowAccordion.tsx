@@ -11,6 +11,7 @@ import { usePlanCache } from "../../../../Plans/hooks/usePlanCache";
 import { PlanSection } from "../../../../Plans/components/PlanSection";
 import { MemoriesSection } from "../../../../Memories/components/MemoriesSection";
 import { TransparencySlider } from "./TransparencySlider";
+import { CreditsSection } from "./CreditsSection";
 
 interface FlowAccordionProps {
   chatId: string;
@@ -42,6 +43,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
             <Stack gap="xs" p="md">
               <TransparencySlider chatId={chatId} />
               <ChatModelSection chatId={chatId} />
+              <CreditsSection chatId={chatId} />
               <ChatImageModelsSection
                 chatId={chatId}
                 onNavigate={navigateToChatImageModels}
