@@ -19,6 +19,8 @@ export const useSystemPrompts = (): UseSystemPromptsResult => {
     chapterTitlePrompt: "",
     bookSummaryPrompt: "",
     bookTitlePrompt: "",
+    characterSelectionPrompt: "",
+    characterDescriptionPrompt: "",
   });
   const [isLoading, setIsLoading] = useState(true);
 
