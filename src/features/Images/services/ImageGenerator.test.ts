@@ -41,9 +41,7 @@ describe("ImageGenerator", () => {
 
     (d.OpenRouterChatAPI as any) = vi.fn(() => mockOpenRouterChatAPI);
     (d.SystemPromptsService as any) = vi.fn(() => mockSystemPromptsService);
-    (d.ChatImageModelService as any) = vi.fn(
-      () => mockChatImageModelService,
-    );
+    (d.ChatImageModelService as any) = vi.fn(() => mockChatImageModelService);
     (d.CharacterSelectionService as any) = vi.fn(
       () => mockCharacterSelectionService,
     );
@@ -66,7 +64,9 @@ describe("ImageGenerator", () => {
       const result = await imageGenerator.generatePrompt(messages);
 
       expect(result).toBe("Generated prompt");
-      expect(mockCharacterSelectionService.selectCharacterForImage).toHaveBeenCalled();
+      expect(
+        mockCharacterSelectionService.selectCharacterForImage,
+      ).toHaveBeenCalled();
     });
 
     it("should generate prompt with character description when character exists", async () => {
@@ -145,6 +145,9 @@ describe("ImageGenerator", () => {
         m.content.includes(`# Character: ${characterName}`),
       );
       expect(characterMessage).toBeUndefined();
+      expect(
+        mockCharacterDescriptionsService.createBlankCharacter,
+      ).not.toHaveBeenCalled();
     });
 
     it("should use custom image model when specified", async () => {
@@ -183,7 +186,9 @@ describe("ImageGenerator", () => {
         undefined,
       );
 
-      expect(mockCharacterSelectionService.selectCharacterForImage).toHaveBeenCalled();
+      expect(
+        mockCharacterSelectionService.selectCharacterForImage,
+      ).toHaveBeenCalled();
     });
 
     it("should include feedback message when feedback provided", async () => {

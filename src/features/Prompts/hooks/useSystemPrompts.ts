@@ -10,26 +10,19 @@ interface UseSystemPromptsResult {
 }
 
 export const useSystemPrompts = (): UseSystemPromptsResult => {
-  const [systemPrompts, setSystemPrompts] = useState<SystemPrompts>({
-    newStoryPrompt: "",
-    defaultFirstPersonPrompt: "",
-    defaultThirdPersonPrompt: "",
-    defaultImagePrompt: "",
-    chapterSummaryPrompt: "",
-    chapterTitlePrompt: "",
-    bookSummaryPrompt: "",
-    bookTitlePrompt: "",
-    characterSelectionPrompt: "",
-    characterDescriptionPrompt: "",
-  });
+  const [systemPrompts, setSystemPrompts] = useState<SystemPrompts>(
+    DEFAULT_SYSTEM_PROMPTS,
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   const blob = () => d.SystemPromptsManagedBlob();
 
   const loadPrompts = async () => {
     const data = await blob().get();
-    // Default to DEFAULT_SYSTEM_PROMPTS if no data exists
-    setSystemPrompts(data || DEFAULT_SYSTEM_PROMPTS);
+    setSystemPrompts({
+      ...DEFAULT_SYSTEM_PROMPTS,
+      ...(data || {}),
+    });
     setIsLoading(false);
   };
 

@@ -16,7 +16,9 @@ export class CharacterSelectionService {
     const model = await this.getCharacterSelectionModel();
 
     const promptMessages = buildPromptMessages(messages, prompt);
-    const response = await d.OpenRouterChatAPI().postChat(promptMessages, model);
+    const response = await d
+      .OpenRouterChatAPI()
+      .postChat(promptMessages, model);
 
     return parseCharacterName(response);
   };
@@ -36,7 +38,11 @@ export class CharacterSelectionService {
     string | undefined
   > => {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return systemPrompts?.characterSelectionModel || undefined;
+    return (
+      systemPrompts?.characterSelectionModel ||
+      DEFAULT_SYSTEM_PROMPTS.characterSelectionModel ||
+      undefined
+    );
   };
 }
 

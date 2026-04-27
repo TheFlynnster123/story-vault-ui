@@ -16,6 +16,7 @@ export interface OpenRouterCredits {
 
 export class OpenRouterCreditsAPI {
   URL: string = "";
+  OPENROUTER_CREDITS_ROUTE: string = "/api/openrouter/auth/key";
 
   constructor() {
     this.URL = Config.storyVaultAPIURL;
@@ -27,14 +28,17 @@ export class OpenRouterCreditsAPI {
       .EncryptionManager()
       .getOpenRouterEncryptionKey();
 
-    const response = await fetch(`${this.URL}/api/getOpenRouterCredits`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-        EncryptionKey: encryptionKey,
+    const response = await fetch(
+      `${this.URL}${this.OPENROUTER_CREDITS_ROUTE}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          EncryptionKey: encryptionKey,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       throw new Error(
@@ -42,7 +46,14 @@ export class OpenRouterCreditsAPI {
       );
     }
 
-    const data = await response.json();
-    return data;
+    const json = await response.json();
+    const data = json.data;
+    return {
+      balance: data.limit_remaining,
+      usage: data.usage,
+      limit: data.limit,
+      isFreeTier: data.is_free_tier,
+      label: data.label,
+    };
   }
 }
