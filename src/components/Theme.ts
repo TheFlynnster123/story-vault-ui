@@ -113,6 +113,21 @@ export const Theme = {
     backgroundSecondary: "rgba(190, 24, 93, 0.3)",
   },
 
+  /** Colors for character UI elements - Indigo/Blue theme */
+  character: {
+    /** Primary indigo color */
+    primary: "rgba(99, 102, 241, 1)",
+    /** Secondary darker indigo */
+    secondary: "rgba(67, 56, 202, 1)",
+    /** Border color for character elements */
+    border: "rgba(99, 102, 241, 0.5)",
+    /** Text color for headers */
+    headerText: "rgba(255, 255, 255, 1)",
+    /** Transparent version for backgrounds */
+    backgroundPrimary: "rgba(99, 102, 241, 0.3)",
+    backgroundSecondary: "rgba(67, 56, 202, 0.3)",
+  },
+
   /** Colors for system prompts UI elements - Orange/Amber theme */
   systemPrompts: {
     /** Primary orange color */

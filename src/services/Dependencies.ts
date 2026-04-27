@@ -48,6 +48,10 @@ import { GeneratedImageQuery } from "../features/Images/services/modelGeneration
 import { ImageIdExtractor } from "../features/Images/services/modelGeneration/ImageIdExtractor";
 import { ImageModelMapper } from "../features/Images/services/modelGeneration/ImageModelMapper";
 import { getChatInputCacheInstance } from "../features/Chat/services/Chat/ChatInputCache";
+import { getCharacterDescriptionsManagedBlobInstance } from "../features/Characters/services/CharacterDescriptionsManagedBlob";
+import { CharacterDescriptionsService } from "../features/Characters/services/CharacterDescriptionsService";
+import { CharacterSelectionService } from "../features/Characters/services/CharacterSelectionService";
+import { CharacterDescriptionGenerationService } from "../features/Characters/services/CharacterDescriptionGenerationService";
 
 export class Dependencies {
   CivitKeyAPI() {
@@ -91,6 +95,15 @@ export class Dependencies {
 
   MemoriesService(chatId: string) {
     return new MemoriesService(chatId);
+  }
+  CharacterDescriptionsService(chatId: string) {
+    return new CharacterDescriptionsService(chatId);
+  }
+  CharacterSelectionService(chatId: string) {
+    return new CharacterSelectionService(chatId);
+  }
+  CharacterDescriptionGenerationService(chatId: string) {
+    return new CharacterDescriptionGenerationService(chatId);
   }
   ImageGenerator(chatId: string) {
     return new ImageGenerator(chatId);
@@ -154,6 +167,10 @@ export class Dependencies {
 
   MemoriesManagedBlob(chatId: string) {
     return getMemoriesManagedBlobInstance(chatId);
+  }
+
+  CharacterDescriptionsManagedBlob(chatId: string) {
+    return getCharacterDescriptionsManagedBlobInstance(chatId);
   }
 
   PlansManagedBlob(chatId: string) {

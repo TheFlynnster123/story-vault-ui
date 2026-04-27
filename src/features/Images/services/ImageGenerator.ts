@@ -13,13 +13,17 @@ export class ImageGenerator {
 
   /**
    * Generates a scene description prompt using the selected model's prompt or the system default.
+   * Includes character description if available.
    */
   public async generatePrompt(messages: LLMMessage[]): Promise<string> {
+    const characterDescription = await this.resolveCharacterDescription();
     const imageGenerationPrompt = await this.resolveImageGenerationPrompt();
-    const promptMessages = [
-      ...messages,
-      toSystemMessage(imageGenerationPrompt),
-    ];
+
+    const promptMessages = buildPromptMessagesWithCharacter(
+      messages,
+      characterDescription,
+      imageGenerationPrompt,
+    );
 
     const model = await this.resolveImageModel();
     return await d.OpenRouterChatAPI().postChat(promptMessages, model);
@@ -34,13 +38,16 @@ export class ImageGenerator {
       return this.generatePrompt(messages);
     }
 
+    const characterDescription = await this.resolveCharacterDescription();
     const imageGenerationPrompt = await this.resolveImageGenerationPrompt();
     const feedbackMessage = buildFeedbackMessage(originalPrompt, feedback!);
-    const promptMessages = [
-      ...messages,
-      toSystemMessage(imageGenerationPrompt),
-      toSystemMessage(feedbackMessage),
-    ];
+
+    const promptMessages = buildPromptMessagesWithCharacterAndFeedback(
+      messages,
+      characterDescription,
+      imageGenerationPrompt,
+      feedbackMessage,
+    );
 
     const model = await this.resolveImageModel();
     return await d.OpenRouterChatAPI().postChat(promptMessages, model);
@@ -89,6 +96,48 @@ export class ImageGenerator {
     const systemPrompts = await d.SystemPromptsService().Get();
     return systemPrompts?.defaultImageModel || undefined;
   }
+
+  /**
+   * Resolves character description for the image.
+   * Returns character description string or null if no character should be included.
+   */
+  private async resolveCharacterDescription(): Promise<string | null> {
+    const characterName = await this.selectCharacter();
+
+    if (!characterName) {
+      return null;
+    }
+
+    const existingDescription = await this.findExistingCharacterDescription(
+      characterName,
+    );
+
+    if (existingDescription) {
+      return formatCharacterContext(characterName, existingDescription);
+    }
+
+    // Create blank character record for future use
+    await d
+      .CharacterDescriptionsService(this.chatId)
+      .createBlankCharacter(characterName);
+
+    return null;
+  }
+
+  private selectCharacter = async (): Promise<string | null> =>
+    await d.CharacterSelectionService(this.chatId).selectCharacterForImage();
+
+  private findExistingCharacterDescription = async (
+    name: string,
+  ): Promise<string | null> => {
+    const character = await d
+      .CharacterDescriptionsService(this.chatId)
+      .findByName(name);
+
+    return character && hasDescription(character.description)
+      ? character.description
+      : null;
+  };
 }
 
 const hasFeedback = (feedback?: string): boolean =>
@@ -107,3 +156,46 @@ const appendPrompt = (modelInput: any, prompt: string) => {
 
 const copyModel = (selectedModel: ImageModel) =>
   JSON.parse(JSON.stringify(selectedModel.input));
+
+const buildPromptMessagesWithCharacter = (
+  messages: LLMMessage[],
+  characterDescription: string | null,
+  imagePrompt: string,
+): LLMMessage[] => {
+  const promptMessages = [...messages];
+
+  if (characterDescription) {
+    promptMessages.push(toSystemMessage(characterDescription));
+  }
+
+  promptMessages.push(toSystemMessage(imagePrompt));
+
+  return promptMessages;
+};
+
+const buildPromptMessagesWithCharacterAndFeedback = (
+  messages: LLMMessage[],
+  characterDescription: string | null,
+  imagePrompt: string,
+  feedbackMessage: string,
+): LLMMessage[] => {
+  const promptMessages = [...messages];
+
+  if (characterDescription) {
+    promptMessages.push(toSystemMessage(characterDescription));
+  }
+
+  promptMessages.push(toSystemMessage(imagePrompt));
+  promptMessages.push(toSystemMessage(feedbackMessage));
+
+  return promptMessages;
+};
+
+const formatCharacterContext = (
+  characterName: string,
+  description: string,
+): string =>
+  `# Character: ${characterName}\n\n${description}\n\nUse this character description as the basis for the person in the image.`;
+
+const hasDescription = (description: string): boolean =>
+  description.trim().length > 0;
