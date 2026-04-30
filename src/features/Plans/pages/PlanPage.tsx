@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   RiArrowLeftLine,
   RiAddLine,
+  RiChat3Line,
   RiDeleteBinLine,
   RiTreasureMapFill,
   RiPlayLine,
@@ -30,6 +31,7 @@ import {
   DEFAULT_PLAN_NAME,
   DEFAULT_REFRESH_INTERVAL,
   formatRefreshStatus,
+  isAutoRefreshDisabled,
 } from "../services/Plan";
 import { usePlanCache } from "../hooks/usePlanCache";
 import { usePlanGenerationStatus } from "../hooks/usePlanGenerationStatus";
@@ -61,6 +63,13 @@ const inputStyles = {
   },
 };
 
+/**
+ * Normalizes Mantine NumberInput values for plan refresh intervals.
+ * Empty strings and invalid values fall back to 0, which disables auto-generation.
+ */
+const normalizeRefreshInterval = (value: string | number): number =>
+  Math.max(0, typeof value === "number" ? value : Number(value) || 0);
+
 export const PlanPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
@@ -80,6 +89,11 @@ export const PlanPage: React.FC = () => {
     field: keyof Plan,
     value: string | number | boolean,
   ) => {
+    if (field === "refreshInterval" && typeof value !== "boolean") {
+      updatePlanDefinition?.(id, field, normalizeRefreshInterval(value));
+      return;
+    }
+
     updatePlanDefinition?.(id, field, value);
   };
 
@@ -89,6 +103,15 @@ export const PlanPage: React.FC = () => {
 
   const handleGenerateNow = (id: string) => {
     d.PlanGenerationService(chatId!).generatePlanNow(id);
+  };
+
+  const handleDiscussPlan = async (id: string) => {
+    try {
+      await planService?.savePendingChanges();
+      navigate(`/chat/${chatId}/plan/${id}/discuss`);
+    } catch (error) {
+      d.ErrorService().log("Failed to save plan changes", error);
+    }
   };
 
   const handleRemovePlan = (id: string) => {
@@ -122,6 +145,7 @@ export const PlanPage: React.FC = () => {
             onChange={handlePlanChange}
             onResetPrompt={handleResetPrompt}
             onGenerateNow={handleGenerateNow}
+            onDiscuss={handleDiscussPlan}
             onRemove={handleRemovePlan}
             isGenerating={isGenerating}
           />
@@ -170,6 +194,7 @@ interface PlanListProps {
   ) => void;
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
+  onDiscuss: (id: string) => void;
   onRemove: (id: string) => void;
   isGenerating: (planId: string) => boolean;
 }
@@ -180,6 +205,7 @@ const PlanList: React.FC<PlanListProps> = ({
   onChange,
   onResetPrompt,
   onGenerateNow,
+  onDiscuss,
   onRemove,
   isGenerating,
 }) => (
@@ -201,6 +227,7 @@ const PlanList: React.FC<PlanListProps> = ({
         onChange={onChange}
         onResetPrompt={onResetPrompt}
         onGenerateNow={onGenerateNow}
+        onDiscuss={onDiscuss}
         onRemove={onRemove}
         isGenerating={isGenerating(plan.id)}
       />
@@ -217,6 +244,7 @@ interface PlanEditorProps {
   ) => void;
   onResetPrompt: (id: string) => void;
   onGenerateNow: (id: string) => void;
+  onDiscuss: (id: string) => void;
   onRemove: (id: string) => void;
   isGenerating: boolean;
 }
@@ -226,6 +254,7 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
   onChange,
   onResetPrompt,
   onGenerateNow,
+  onDiscuss,
   onRemove,
   isGenerating,
 }) => (
@@ -299,11 +328,12 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
     <Group gap="md" align="flex-end">
       <NumberInput
         label="Refresh every N messages"
+        description="Set to 0 to disable automatic generation."
         value={plan.refreshInterval}
         onChange={(value) =>
-          onChange(plan.id, "refreshInterval", Number(value) || 1)
+          onChange(plan.id, "refreshInterval", normalizeRefreshInterval(value))
         }
-        min={1}
+        min={0}
         max={100}
         w={200}
         styles={inputStyles}
@@ -311,6 +341,14 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
       <RefreshStatusBadge plan={plan} />
     </Group>
     <Group gap="sm">
+      <Button
+        variant="light"
+        color="cyan"
+        onClick={() => onDiscuss(plan.id)}
+        leftSection={<RiChat3Line />}
+      >
+        Discuss Plan
+      </Button>
       <Button
         variant="light"
         color="teal"
@@ -333,6 +371,14 @@ interface RefreshStatusBadgeProps {
 }
 
 const RefreshStatusBadge: React.FC<RefreshStatusBadgeProps> = ({ plan }) => {
+  if (isAutoRefreshDisabled(plan)) {
+    return (
+      <Badge variant="light" color="gray" size="lg" style={{ marginBottom: 2 }}>
+        Manual only
+      </Badge>
+    );
+  }
+
   const remaining = Math.max(
     0,
     plan.refreshInterval - plan.messagesSinceLastUpdate,
