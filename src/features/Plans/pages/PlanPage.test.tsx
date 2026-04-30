@@ -3,6 +3,8 @@ import { render, screen, waitFor, userEvent } from "../../../testing";
 import React from "react";
 import { PlanPage } from "./PlanPage";
 import type { Plan } from "../services/Plan";
+import type { PlanGenerationService } from "../services/PlanGenerationService";
+import type { PlanService } from "../services/PlanService";
 import { d } from "../../../services/Dependencies";
 
 const mockNavigate = vi.fn();
@@ -10,6 +12,15 @@ const mockUsePlanCache = vi.fn();
 const mockUsePlanGenerationStatus = vi.fn();
 const mockSavePendingChanges = vi.fn();
 const mockGeneratePlanNow = vi.fn();
+const mockErrorLog = vi.fn();
+
+const mockPlanService: Partial<PlanService> = {
+  savePendingChanges: mockSavePendingChanges,
+};
+
+const mockPlanGenerationService: Partial<PlanGenerationService> = {
+  generatePlanNow: mockGeneratePlanNow,
+};
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
@@ -65,12 +76,13 @@ describe("PlanPage", () => {
     mockUsePlanGenerationStatus.mockReturnValue({
       isGenerating: () => false,
     });
-    vi.mocked(d.PlanService).mockReturnValue({
-      savePendingChanges: mockSavePendingChanges,
-    } as any);
-    vi.mocked(d.PlanGenerationService).mockReturnValue({
-      generatePlanNow: mockGeneratePlanNow,
-    } as any);
+    vi.mocked(d.PlanService).mockReturnValue(mockPlanService as PlanService);
+    vi.mocked(d.PlanGenerationService).mockReturnValue(
+      mockPlanGenerationService as PlanGenerationService,
+    );
+    vi.mocked(d.ErrorService).mockReturnValue({
+      log: mockErrorLog,
+    } as ReturnType<typeof d.ErrorService>);
   });
 
   it("should show manual-only status for plans with refresh interval 0", () => {
@@ -90,7 +102,25 @@ describe("PlanPage", () => {
 
     await waitFor(() => {
       expect(mockSavePendingChanges).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith("/chat/chat-1/plan/plan-1/discuss");
+      expect(mockNavigate).toHaveBeenCalledWith(
+        "/chat/chat-1/plan/plan-1/discuss",
+      );
+    });
+  });
+
+  it("should stay on the page when saving before discussion fails", async () => {
+    const user = userEvent.setup();
+    mockSavePendingChanges.mockRejectedValueOnce(new Error("Save failed"));
+    render(<PlanPage />);
+
+    await user.click(screen.getByRole("button", { name: "Discuss Plan" }));
+
+    await waitFor(() => {
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(mockErrorLog).toHaveBeenCalledWith(
+        "Failed to save plan changes",
+        expect.any(Error),
+      );
     });
   });
 });

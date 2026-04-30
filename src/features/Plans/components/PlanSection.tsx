@@ -54,7 +54,7 @@ export const PlanSection: React.FC<PlanSectionProps> = ({
           </Group>
           {hasManualOnlyPlans && (
             <Text size="xs" c="dimmed">
-              Plans set to 0 refresh will only be manually generated.
+              Some plans are set to manual-only mode.
             </Text>
           )}
         </Box>

@@ -41,7 +41,7 @@ describe("PlanSection", () => {
     );
 
     expect(
-      screen.getByText("Plans set to 0 refresh will only be manually generated."),
+      screen.getByText("Some plans are set to manual-only mode."),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Story Plan — Manual generation only"),

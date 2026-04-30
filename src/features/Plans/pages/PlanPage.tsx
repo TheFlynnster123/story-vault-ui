@@ -63,6 +63,10 @@ const inputStyles = {
   },
 };
 
+/**
+ * Normalizes Mantine NumberInput values for plan refresh intervals.
+ * Empty strings and invalid values fall back to 0, which disables auto-generation.
+ */
 const normalizeRefreshInterval = (value: string | number): number =>
   Math.max(0, typeof value === "number" ? value : Number(value) || 0);
 
@@ -102,8 +106,12 @@ export const PlanPage: React.FC = () => {
   };
 
   const handleDiscussPlan = async (id: string) => {
-    await planService?.savePendingChanges();
-    navigate(`/chat/${chatId}/plan/${id}/discuss`);
+    try {
+      await planService?.savePendingChanges();
+      navigate(`/chat/${chatId}/plan/${id}/discuss`);
+    } catch (error) {
+      d.ErrorService().log("Failed to save plan changes", error);
+    }
   };
 
   const handleRemovePlan = (id: string) => {
