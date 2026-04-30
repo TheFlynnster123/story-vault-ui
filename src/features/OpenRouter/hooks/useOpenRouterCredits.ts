@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { d } from "../../../services/Dependencies";
-import type { OpenRouterCredits } from "../services/OpenRouterCreditsAPI";
-
-export const getOpenRouterCreditsQueryKey = () => ["openrouter-credits"];
+import {
+  getOpenRouterCreditsQueryKey,
+  type OpenRouterCredits,
+} from "../services/OpenRouterCreditsAPI";
 
 export const useOpenRouterCredits = (): {
   credits: OpenRouterCredits | undefined;

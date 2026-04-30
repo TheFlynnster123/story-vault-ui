@@ -18,6 +18,7 @@ import { d } from "../../../services/Dependencies";
 import { SampleImageGenerator } from "../components/SampleImageGenerator";
 import { ModelFromImage } from "../components/ModelFromImage";
 import { ModelSampleImage } from "../components/ModelSampleImage";
+import { ImageGenerationPromptSection } from "../components/ImageGenerationPromptSection";
 import {
   PromptsComponent,
   ParametersComponent,
@@ -72,6 +73,26 @@ const ImageModelEditPage: React.FC = () => {
   const handleModelNameChange = (value: string) => {
     if (!imageModel) return;
     const updatedModel = { ...imageModel, name: value };
+    setImageModel(updatedModel);
+    d.ImageModelService().SaveImageModel(updatedModel);
+  };
+
+  const handleImageGenerationPromptChange = (value: string) => {
+    if (!imageModel) return;
+    const updatedModel = {
+      ...imageModel,
+      imageGenerationPrompt: value || undefined,
+    };
+    setImageModel(updatedModel);
+    d.ImageModelService().SaveImageModel(updatedModel);
+  };
+
+  const handleAppendToBasePromptChange = (checked: boolean) => {
+    if (!imageModel) return;
+    const updatedModel = {
+      ...imageModel,
+      appendImageGenerationPromptToBase: checked,
+    };
     setImageModel(updatedModel);
     d.ImageModelService().SaveImageModel(updatedModel);
   };
@@ -165,6 +186,13 @@ const ImageModelEditPage: React.FC = () => {
             label="Name"
             value={imageModel.name}
             onChange={(e) => handleModelNameChange(e.target.value)}
+          />
+
+          <ImageGenerationPromptSection
+            prompt={imageModel.imageGenerationPrompt || ""}
+            appendToBase={imageModel.appendImageGenerationPromptToBase || false}
+            onPromptChange={handleImageGenerationPromptChange}
+            onAppendToBaseChange={handleAppendToBasePromptChange}
           />
 
           <PromptsComponent

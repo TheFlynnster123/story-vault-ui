@@ -101,6 +101,39 @@ describe("ImageGenerationService", () => {
     expect(mockChatService.CreateCivitJob).not.toHaveBeenCalled();
   });
 
+  it("sets loading immediately while resolving the character context", async () => {
+    let resolveCharacterContext: (value: {
+      type: "missing-description";
+      characterName: string;
+    }) => void;
+
+    const characterContextPromise = new Promise<{
+      type: "missing-description";
+      characterName: string;
+    }>((resolve) => {
+      resolveCharacterContext = resolve;
+    });
+
+    mockImageGenerator.resolveCharacterContext.mockReturnValue(
+      characterContextPromise,
+    );
+
+    const resultPromise = service.generateImage();
+
+    expect(service.IsLoading).toBe(true);
+
+    resolveCharacterContext!({
+      type: "missing-description",
+      characterName: "Sarah Chen",
+    });
+
+    await expect(resultPromise).resolves.toEqual({
+      type: "missing-character-description",
+      characterName: "Sarah Chen",
+    });
+    expect(service.IsLoading).toBe(false);
+  });
+
   it("generates image immediately when character description already exists", async () => {
     mockImageGenerator.resolveCharacterContext.mockResolvedValue({
       type: "existing-description",

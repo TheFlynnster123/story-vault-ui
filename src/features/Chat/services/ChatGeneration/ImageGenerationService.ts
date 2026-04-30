@@ -26,55 +26,67 @@ export class ImageGenerationService extends GenerationOrchestrator {
   }
 
   async generateImage(): Promise<GenerateImageResult> {
-    const characterContext = await d
-      .ImageGenerator(this.chatId)
-      .resolveCharacterContext();
+    const result = await this.orchestrate<GenerateImageResult>(
+      async (): Promise<GenerateImageResult> => {
+        const characterContext = await d
+          .ImageGenerator(this.chatId)
+          .resolveCharacterContext();
 
-    if (isMissingCharacterDescription(characterContext)) {
-      return {
-        type: "missing-character-description",
-        characterName: characterContext.characterName,
-      };
-    }
+        if (isMissingCharacterDescription(characterContext)) {
+          return {
+            type: "missing-character-description",
+            characterName: characterContext.characterName,
+          };
+        }
 
-    await this.generateImageWithCharacterContext(characterContext);
-    return { type: "started" };
+        await this.runImageGenerationSteps(characterContext);
+        return { type: "started" };
+      },
+    );
+
+    return result ?? { type: "started" };
   }
 
   async resolveMissingCharacterDescription(
     characterName: string,
     decision: MissingCharacterDescriptionDecision,
   ): Promise<GenerateImageResult> {
-    if (decision === "manual") {
-      await this.createBlankCharacterRecord(characterName);
-      return {
-        type: "navigate-to-character-descriptions",
-        characterName,
-      };
-    }
+    const result = await this.orchestrate<GenerateImageResult>(
+      async (): Promise<GenerateImageResult> => {
+        if (decision === "manual") {
+          await this.createBlankCharacterRecord(characterName);
+          return {
+            type: "navigate-to-character-descriptions",
+            characterName,
+          };
+        }
 
-    if (decision === "skip") {
-      await this.createBlankCharacterRecord(characterName);
-      await this.generateImageWithCharacterContext(noCharacterContext());
-      return { type: "started" };
-    }
+        if (decision === "skip") {
+          await this.createBlankCharacterRecord(characterName);
+          await this.runImageGenerationSteps(noCharacterContext());
+          return { type: "started" };
+        }
 
-    const generatedDescription = await d
-      .CharacterDescriptionGenerationService(this.chatId)
-      .generateDescription(characterName);
+        const generatedDescription = await d
+          .CharacterDescriptionGenerationService(this.chatId)
+          .generateDescription(characterName);
 
-    await this.saveGeneratedCharacterDescription(
-      characterName,
-      generatedDescription,
+        await this.saveGeneratedCharacterDescription(
+          characterName,
+          generatedDescription,
+        );
+
+        await this.runImageGenerationSteps({
+          type: "existing-description",
+          characterName,
+          description: generatedDescription,
+        });
+
+        return { type: "started" };
+      },
     );
 
-    await this.generateImageWithCharacterContext({
-      type: "existing-description",
-      characterName,
-      description: generatedDescription,
-    });
-
-    return { type: "started" };
+    return result ?? { type: "started" };
   }
 
   async regenerateImage(jobId: string, feedback?: string): Promise<void> {
@@ -108,25 +120,23 @@ export class ImageGenerationService extends GenerationOrchestrator {
     });
   }
 
-  private async generateImageWithCharacterContext(
+  private async runImageGenerationSteps(
     characterContext: CharacterContext,
   ): Promise<void> {
-    await this.orchestrate(async () => {
-      this.setStatus("Generating image prompt...");
-      const messageList = d.LLMChatProjection(this.chatId).GetMessages();
+    this.setStatus("Generating image prompt...");
+    const messageList = d.LLMChatProjection(this.chatId).GetMessages();
 
-      const generatedPrompt = await d
-        .ImageGenerator(this.chatId)
-        .generatePromptWithCharacterContext(messageList, characterContext);
+    const generatedPrompt = await d
+      .ImageGenerator(this.chatId)
+      .generatePromptWithCharacterContext(messageList, characterContext);
 
-      this.setStatus("Triggering image generation...");
-      const jobId = await d
-        .ImageGenerator(this.chatId)
-        .triggerJob(generatedPrompt);
+    this.setStatus("Triggering image generation...");
+    const jobId = await d
+      .ImageGenerator(this.chatId)
+      .triggerJob(generatedPrompt);
 
-      this.setStatus("Saving job...");
-      await d.ChatService(this.chatId).CreateCivitJob(jobId, generatedPrompt);
-    });
+    this.setStatus("Saving job...");
+    await d.ChatService(this.chatId).CreateCivitJob(jobId, generatedPrompt);
   }
 
   private createBlankCharacterRecord = async (

@@ -8,7 +8,6 @@ import {
   Divider,
   Stack,
   TextInput,
-  Textarea,
   Button,
   Alert,
   Loader,
@@ -19,6 +18,7 @@ import { d } from "../../../services/Dependencies";
 import { SampleImageGenerator } from "../components/SampleImageGenerator";
 import { ModelFromImage } from "../components/ModelFromImage";
 import { ModelSampleImage } from "../components/ModelSampleImage";
+import { ImageGenerationPromptSection } from "../components/ImageGenerationPromptSection";
 import {
   PromptsComponent,
   ParametersComponent,
@@ -84,6 +84,16 @@ const ChatImageModelEditPage: React.FC = () => {
     const updatedModel = {
       ...imageModel,
       imageGenerationPrompt: value || undefined,
+    };
+    setImageModel(updatedModel);
+    service.SaveModel(updatedModel);
+  };
+
+  const handleAppendToBasePromptChange = (checked: boolean) => {
+    if (!imageModel) return;
+    const updatedModel = {
+      ...imageModel,
+      appendImageGenerationPromptToBase: checked,
     };
     setImageModel(updatedModel);
     service.SaveModel(updatedModel);
@@ -180,14 +190,11 @@ const ChatImageModelEditPage: React.FC = () => {
             onChange={(e) => handleModelNameChange(e.target.value)}
           />
 
-          <Textarea
-            label="Image Generation Prompt (Optional)"
-            description="Custom prompt that instructs the AI how to describe scenes for this model. Leave empty to use the system default."
-            placeholder="Leave empty to use the default image generation prompt..."
-            value={imageModel.imageGenerationPrompt || ""}
-            onChange={(e) => handleImageGenerationPromptChange(e.target.value)}
-            minRows={4}
-            autosize
+          <ImageGenerationPromptSection
+            prompt={imageModel.imageGenerationPrompt || ""}
+            appendToBase={imageModel.appendImageGenerationPromptToBase || false}
+            onPromptChange={handleImageGenerationPromptChange}
+            onAppendToBaseChange={handleAppendToBasePromptChange}
           />
 
           <PromptsComponent

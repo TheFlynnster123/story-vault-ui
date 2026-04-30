@@ -1,13 +1,23 @@
 import { d } from "../../../services/Dependencies";
 import Config from "../../../services/Config";
 
+export const getOpenRouterCreditsQueryKey = () => ["openrouter-credits"];
+
 export interface OpenRouterCredits {
-  /** Current balance in USD */
-  balance: number;
-  /** Total usage in USD */
+  /** Remaining credit on the current API key in USD */
+  limitRemaining: number;
+  /** Current key usage in USD across all time */
   usage: number;
+  /** Current key usage in USD for the current UTC day */
+  usageDaily: number;
+  /** Current key usage in USD for the current UTC week */
+  usageWeekly: number;
+  /** Current key usage in USD for the current UTC month */
+  usageMonthly: number;
   /** Credit limit if set, null otherwise */
   limit: number | null;
+  /** Limit reset cadence, e.g. weekly */
+  limitReset: string | null;
   /** Whether account is on free tier */
   isFreeTier: boolean;
   /** Label/name for the API key */
@@ -49,9 +59,13 @@ export class OpenRouterCreditsAPI {
     const json = await response.json();
     const data = json.data;
     return {
-      balance: data.limit_remaining,
+      limitRemaining: data.limit_remaining,
       usage: data.usage,
+      usageDaily: data.usage_daily,
+      usageWeekly: data.usage_weekly,
+      usageMonthly: data.usage_monthly,
       limit: data.limit,
+      limitReset: data.limit_reset,
       isFreeTier: data.is_free_tier,
       label: data.label,
     };

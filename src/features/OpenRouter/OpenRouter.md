@@ -46,6 +46,44 @@ The HTTP client for OpenRouter key management:
 - `hasValidOpenRouterKey()` — checks if a valid key exists (200 = valid, 404 = not found)
 - `saveOpenRouterKey(encryptedKey)` — persists a new encrypted OpenRouter key
 
+## Backend Proxy Pattern
+
+Story Vault does not call most authenticated OpenRouter endpoints directly from the browser. The frontend talks to the Story Vault backend, and the backend forwards the request to OpenRouter after resolving the user's stored key.
+
+### Current Contract
+
+1. The browser authenticates to Story Vault with the app access token.
+2. The browser sends the client-held `EncryptionKey` header when the backend needs to decrypt the stored OpenRouter key for a request.
+3. The backend loads the user's encrypted OpenRouter key from storage.
+4. The backend decrypts that stored key, builds the upstream OpenRouter request, and forwards it.
+5. The backend returns the upstream status/body, or a narrow Story Vault wrapper when the route needs app-specific shaping.
+
+### What Counts As A Simple Proxy
+
+For simple passthrough routes, the backend route should stay thin:
+
+- Authenticate the Story Vault user.
+- Load that user's encrypted OpenRouter key.
+- Decrypt it using the supplied `EncryptionKey`.
+- Forward the request to the matching OpenRouter `/api/v1/...` route.
+- Preserve the upstream response as closely as possible.
+
+Example mapping used by the credits viewer:
+
+- Story Vault route: `/api/openrouter/auth/key`
+- OpenRouter route: `GET https://openrouter.ai/api/v1/auth/key`
+
+### Security Boundary
+
+- The decrypted OpenRouter API key must never be returned to the browser.
+- Proxy logs must not include the raw OpenRouter key.
+- Frontend code should treat OpenRouter-authenticated routes as backend-mediated unless the route is explicitly public, such as model listing.
+
+### Current Exceptions
+
+- `OpenRouterModelsAPI` is a direct browser call because the models endpoint is public.
+- `OpenRouterChatAPI` and `postChatStream()` go through Story Vault endpoints (`/api/PostChat` and `/api/PostChatStream`) because the backend does more than simple path forwarding for chat generation.
+
 ## Text Generation Usage
 
 All AI text generation flows through `OpenRouterChatAPI.postChat()`. Below is a complete list of every call site:

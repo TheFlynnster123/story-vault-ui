@@ -22,6 +22,12 @@ export type ImageModel = {
   imageGenerationPrompt?: string;
 
   /**
+   * When true, imageGenerationPrompt is appended to the system-level defaultImagePrompt
+   * instead of replacing it.
+   */
+  appendImageGenerationPromptToBase?: boolean;
+
+  /**
    * Trained words from additional model resources (e.g. LoRAs).
    * These can be toggled on/off by the user in the prompt editor.
    */
