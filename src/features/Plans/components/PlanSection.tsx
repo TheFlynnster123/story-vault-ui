@@ -5,7 +5,7 @@ import { VscRefresh } from "react-icons/vsc";
 import styled, { keyframes } from "styled-components";
 import { Theme } from "../../../components/Theme";
 import type { Plan } from "../services/Plan";
-import { formatRefreshStatus } from "../services/Plan";
+import { formatRefreshStatus, isAutoRefreshDisabled } from "../services/Plan";
 import { FlowButton } from "../../Chat/components/Chat/Flow/FlowButton";
 import { usePlanGenerationStatus } from "../hooks/usePlanGenerationStatus";
 
@@ -35,6 +35,7 @@ export const PlanSection: React.FC<PlanSectionProps> = ({
   onNavigate,
 }) => {
   const { isGenerating } = usePlanGenerationStatus(chatId);
+  const hasManualOnlyPlans = plans.some(isAutoRefreshDisabled);
 
   return (
     <Box>
@@ -42,14 +43,21 @@ export const PlanSection: React.FC<PlanSectionProps> = ({
         onClick={onNavigate}
         leftSection={<RiTreasureMapFill size={18} color={Theme.plan.primary} />}
       >
-        <Group gap="xs">
-          <Text size="sm" fw={500}>
-            Plans
-          </Text>
-          <Text size="xs" c="dimmed">
-            ({plans.length})
-          </Text>
-        </Group>
+        <Box ta="left">
+          <Group gap="xs">
+            <Text size="sm" fw={500}>
+              Plans
+            </Text>
+            <Text size="xs" c="dimmed">
+              ({plans.length})
+            </Text>
+          </Group>
+          {hasManualOnlyPlans && (
+            <Text size="xs" c="dimmed">
+              Plans set to 0 refresh will only be manually generated.
+            </Text>
+          )}
+        </Box>
       </FlowButton>
       {plans.length > 0 && (
         <Box pl="md" pt={4}>
@@ -90,7 +98,10 @@ const PlanStatusLine: React.FC<PlanStatusLineProps> = ({
 
   return (
     <Text size="xs" c="dimmed">
-      {plan.name} — {buildPlanDescription(plan)}
+      {plan.name} —{" "}
+      {isAutoRefreshDisabled(plan)
+        ? "Manual generation only"
+        : buildPlanDescription(plan)}
     </Text>
   );
 };

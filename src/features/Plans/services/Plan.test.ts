@@ -8,6 +8,7 @@ import {
   DEFAULT_REFRESH_INTERVAL,
   DEFAULT_PLAN_PROMPT,
   DEFAULT_PLAN_NAME,
+  isAutoRefreshDisabled,
 } from "./Plan";
 import type { Plan } from "./Plan";
 
@@ -183,22 +184,34 @@ describe("isDueForRefresh", () => {
     expect(isDueForRefresh(plan)).toBe(false);
   });
 
-  it("should return true for a brand-new plan with interval 0", () => {
+  it("should return false for a brand-new plan with interval 0", () => {
     const plan = createPlan({ refreshInterval: 0, messagesSinceLastUpdate: 0 });
 
-    expect(isDueForRefresh(plan)).toBe(true);
+    expect(isDueForRefresh(plan)).toBe(false);
   });
 
-  it("should return true for counter at 0 with interval 0", () => {
+  it("should return false for counter at 0 with interval 0", () => {
     const plan = createPlan({ refreshInterval: 0, messagesSinceLastUpdate: 0 });
 
-    expect(isDueForRefresh(plan)).toBe(true);
+    expect(isDueForRefresh(plan)).toBe(false);
   });
 
   it("should return false for counter at 0 with interval 1", () => {
     const plan = createPlan({ refreshInterval: 1, messagesSinceLastUpdate: 0 });
 
     expect(isDueForRefresh(plan)).toBe(false);
+  });
+});
+
+describe("isAutoRefreshDisabled", () => {
+  it("should return true when refresh interval is 0", () => {
+    expect(isAutoRefreshDisabled(createPlan({ refreshInterval: 0 }))).toBe(true);
+  });
+
+  it("should return false when refresh interval is above 0", () => {
+    expect(isAutoRefreshDisabled(createPlan({ refreshInterval: 1 }))).toBe(
+      false,
+    );
   });
 });
 
@@ -304,5 +317,11 @@ describe("formatRefreshStatus", () => {
     const plan = createPlan({ refreshInterval: 5, messagesSinceLastUpdate: 0 });
 
     expect(formatRefreshStatus(plan)).toBe("5/5");
+  });
+
+  it("should explain manual generation when refresh interval is 0", () => {
+    const plan = createPlan({ refreshInterval: 0, messagesSinceLastUpdate: 0 });
+
+    expect(formatRefreshStatus(plan)).toBe("Manual generation only");
   });
 });

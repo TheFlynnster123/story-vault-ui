@@ -286,6 +286,29 @@ describe("PlanGenerationService", () => {
       ]);
     });
 
+    it("should not auto-generate plans with refresh interval 0", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const manualOnlyPlan = createPlan({
+        id: "manual-only",
+        refreshInterval: 0,
+        messagesSinceLastUpdate: 0,
+      });
+      mockPlanService.getPlans.mockReturnValue([manualOnlyPlan]);
+
+      service.onMessageSent();
+      await flushPromises();
+
+      expect(mockOpenRouterChatAPI.postChat).not.toHaveBeenCalled();
+      expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
+      expect(mockPlanService.savePlans).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: "manual-only",
+          messagesSinceLastUpdate: 0,
+          refreshInterval: 0,
+        }),
+      ]);
+    });
+
     it("should process all due plans in parallel", async () => {
       const service = new PlanGenerationService(testChatId);
       const plans = [

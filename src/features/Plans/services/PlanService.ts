@@ -65,7 +65,14 @@ export class PlanService {
   ): void {
     const plan = this.Plans.find((p) => p.id === planId);
     if (plan) {
-      (plan[field] as string | number | boolean) = value;
+      if (field === "refreshInterval" && typeof value === "number") {
+        plan.refreshInterval = value;
+        if (value === 0) {
+          plan.messagesSinceLastUpdate = 0;
+        }
+      } else {
+        (plan[field] as string | number | boolean) = value;
+      }
       this.notifySubscribers();
       this.savePlansDebounced();
     }

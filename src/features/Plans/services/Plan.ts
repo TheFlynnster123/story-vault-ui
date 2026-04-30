@@ -32,6 +32,9 @@ Keep it concise and actionable. Update sections rather than rewriting from scrat
 
 export const DEFAULT_PLAN_NAME = "Story Plan";
 
+export const isAutoRefreshDisabled = (plan: Plan): boolean =>
+  plan.refreshInterval === 0;
+
 export const applyPlanDefaults = (
   plan: Partial<Plan> & {
     id: string;
@@ -53,6 +56,7 @@ export const applyPlanDefaults = (
 });
 
 export const isDueForRefresh = (plan: Plan): boolean =>
+  !isAutoRefreshDisabled(plan) &&
   plan.messagesSinceLastUpdate >= plan.refreshInterval;
 
 export const resetMessageCounter = (plan: Plan): Plan => ({
@@ -66,6 +70,10 @@ export const incrementMessageCounter = (plan: Plan): Plan => ({
 });
 
 export const formatRefreshStatus = (plan: Plan): string => {
+  if (isAutoRefreshDisabled(plan)) {
+    return "Manual generation only";
+  }
+
   const remaining = Math.max(
     0,
     plan.refreshInterval - plan.messagesSinceLastUpdate,

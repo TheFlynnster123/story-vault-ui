@@ -3,7 +3,12 @@ import { d } from "../../../services/Dependencies";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import type { Plan } from "./Plan";
-import { isDueForRefresh, resetMessageCounter } from "./Plan";
+import {
+  incrementMessageCounter,
+  isAutoRefreshDisabled,
+  isDueForRefresh,
+  resetMessageCounter,
+} from "./Plan";
 
 export const getPlanGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new PlanGenerationService(chatId),
@@ -144,10 +149,9 @@ export class PlanGenerationService {
     const plans = planService.getPlans();
     if (plans.length === 0) return;
 
-    const updatedPlans = plans.map((plan) => ({
-      ...plan,
-      messagesSinceLastUpdate: plan.messagesSinceLastUpdate + 1,
-    }));
+    const updatedPlans = plans.map((plan) =>
+      isAutoRefreshDisabled(plan) ? plan : incrementMessageCounter(plan),
+    );
     planService.savePlans(updatedPlans);
 
     const duePlans = updatedPlans.filter(isDueForRefresh);
