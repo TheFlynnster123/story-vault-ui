@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { IoCamera, IoSend, IoSync } from "react-icons/io5";
-import { Textarea, ActionIcon, Group, Box, Stack, Loader } from "@mantine/core";
+import { Textarea, ActionIcon, Group, Box, Stack } from "@mantine/core";
 import { SpinningIcon } from "./ChatInput.styled";
 import React from "react";
 import { useNavigate } from "react-router-dom";
@@ -144,20 +144,16 @@ interface ChatInputProps {
 }
 
 const SendIcon = ({ isLoading }: { isLoading: boolean }) =>
-  isLoading ? (
-    <SpinningIcon>
-      <IoSync style={ICON_STYLE} />
-    </SpinningIcon>
-  ) : (
-    <IoSend style={ICON_STYLE} />
-  );
+  isLoading ? <LoadingIcon /> : <IoSend style={ICON_STYLE} />;
 
 const ImageIcon = ({ isLoading }: { isLoading: boolean }) =>
-  isLoading ? (
-    <Loader size="sm" color={ICON_STYLE.color} />
-  ) : (
-    <IoCamera style={ICON_STYLE} />
-  );
+  isLoading ? <LoadingIcon /> : <IoCamera style={ICON_STYLE} />;
+
+const LoadingIcon = () => (
+  <SpinningIcon>
+    <IoSync style={ICON_STYLE} />
+  </SpinningIcon>
+);
 
 interface MessageTextareaProps {
   value: string;

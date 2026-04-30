@@ -33,7 +33,11 @@ describe("OpenRouterCreditsAPI", () => {
         label: "Story Vault",
         limit_remaining: 12.34,
         usage: 5.25,
+        usage_daily: 1.5,
+        usage_weekly: 3.75,
+        usage_monthly: 4.5,
         limit: 50,
+        limit_reset: "weekly",
         is_free_tier: false,
       },
     };
@@ -45,9 +49,13 @@ describe("OpenRouterCreditsAPI", () => {
     const result = await api.getCredits();
 
     expect(result).toEqual({
-      balance: 12.34,
+      limitRemaining: 12.34,
       usage: 5.25,
+      usageDaily: 1.5,
+      usageWeekly: 3.75,
+      usageMonthly: 4.5,
       limit: 50,
+      limitReset: "weekly",
       isFreeTier: false,
       label: "Story Vault",
     });
@@ -60,7 +68,11 @@ describe("OpenRouterCreditsAPI", () => {
           data: {
             limit_remaining: 1,
             usage: 0,
+            usage_daily: 0,
+            usage_weekly: 0,
+            usage_monthly: 0,
             limit: null,
+            limit_reset: null,
             is_free_tier: true,
           },
         }),

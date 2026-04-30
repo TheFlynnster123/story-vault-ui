@@ -136,21 +136,34 @@ export class ImageGenerator {
 
   /**
    * Resolves the image generation prompt using the hierarchy:
-   * 1. Selected model's imageGenerationPrompt (if set)
-   * 2. System-level defaultImagePrompt (user-saved or built-in default)
+   * 1. Selected model's imageGenerationPrompt appended to the base prompt (if enabled)
+   * 2. Selected model's imageGenerationPrompt (if set)
+   * 3. System-level defaultImagePrompt (user-saved or built-in default)
    */
   private async resolveImageGenerationPrompt(): Promise<string> {
     const selectedModel = await d
       .ChatImageModelService(this.chatId)
       .getSelectedModelOrDefault();
 
-    // Use model-specific prompt if set
-    if (selectedModel.imageGenerationPrompt?.trim()) {
-      return selectedModel.imageGenerationPrompt;
+    const basePrompt = await this.resolveBaseImageGenerationPrompt();
+
+    if (!selectedModel.imageGenerationPrompt?.trim()) {
+      return basePrompt;
     }
 
-    // Fall back to user-saved system prompt, then to the built-in default
+    if (selectedModel.appendImageGenerationPromptToBase) {
+      return appendPromptSection(
+        basePrompt,
+        selectedModel.imageGenerationPrompt,
+      );
+    }
+
+    return selectedModel.imageGenerationPrompt;
+  }
+
+  private async resolveBaseImageGenerationPrompt(): Promise<string> {
     const systemPrompts = await d.SystemPromptsService().Get();
+
     return (
       systemPrompts?.defaultImagePrompt?.trim() ||
       DEFAULT_SYSTEM_PROMPTS.defaultImagePrompt
@@ -225,6 +238,21 @@ const buildFeedbackMessage = (
 const appendPrompt = (modelInput: any, prompt: string) => {
   modelInput.params.prompt =
     (modelInput.params.prompt ? `${modelInput.params.prompt}, ` : "") + prompt;
+};
+
+const appendPromptSection = (basePrompt: string, prompt: string): string => {
+  const trimmedBasePrompt = basePrompt.trim();
+  const trimmedPrompt = prompt.trim();
+
+  if (!trimmedBasePrompt) {
+    return trimmedPrompt;
+  }
+
+  if (!trimmedPrompt) {
+    return trimmedBasePrompt;
+  }
+
+  return `${trimmedBasePrompt}\n\n${trimmedPrompt}`;
 };
 
 const copyModel = (selectedModel: ImageModel) =>

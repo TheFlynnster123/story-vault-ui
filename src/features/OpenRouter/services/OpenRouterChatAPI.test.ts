@@ -2,11 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { OpenRouterChatAPI, cleanMessages } from "./OpenRouterChatAPI";
 import { OpenRouterError } from "./OpenRouterError";
 import { d } from "../../../services/Dependencies";
+import { getOpenRouterCreditsQueryKey } from "./OpenRouterCreditsAPI";
 
 vi.mock("../../../services/Dependencies");
 
 describe("OpenRouterChatAPI", () => {
   let api: OpenRouterChatAPI;
+  let invalidateQueries: ReturnType<typeof vi.fn>;
 
   const mockAccessToken = "test-token";
   const mockEncryptionKey = "enc-key-123";
@@ -14,6 +16,7 @@ describe("OpenRouterChatAPI", () => {
   beforeEach(() => {
     api = new OpenRouterChatAPI();
     (api as any).API_URL = "https://test-api.example.com";
+    invalidateQueries = vi.fn().mockResolvedValue(undefined);
 
     vi.mocked(d.AuthAPI).mockReturnValue({
       getAccessToken: vi.fn().mockResolvedValue(mockAccessToken),
@@ -29,6 +32,10 @@ describe("OpenRouterChatAPI", () => {
 
     vi.mocked(d.ErrorService).mockReturnValue({
       log: vi.fn(),
+    } as any);
+
+    vi.mocked(d.QueryClient).mockReturnValue({
+      invalidateQueries,
     } as any);
   });
 
@@ -48,6 +55,38 @@ describe("OpenRouterChatAPI", () => {
       const result = await api.postChat([{ role: "user", content: "Hi" }]);
 
       expect(result).toBe("Hello world");
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: getOpenRouterCreditsQueryKey(),
+      });
+    });
+
+    it("should refresh credits after a streamed response completes", async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: "Hello"\n'));
+          controller.enqueue(encoder.encode('data: " world"\n'));
+          controller.enqueue(encoder.encode("data: [DONE]\n"));
+          controller.close();
+        },
+      });
+
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(stream, { status: 200 }),
+      );
+
+      const onToken = vi.fn();
+
+      const result = await api.postChatStream(
+        [{ role: "user", content: "Hi" }],
+        onToken,
+      );
+
+      expect(result).toBe("Hello world");
+      expect(onToken).toHaveBeenLastCalledWith("Hello world");
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: getOpenRouterCreditsQueryKey(),
+      });
     });
   });
 
@@ -70,6 +109,8 @@ describe("OpenRouterChatAPI", () => {
         expect(e).toBeInstanceOf(OpenRouterError);
         expect((e as OpenRouterError).code).toBe(401);
       }
+
+      expect(invalidateQueries).not.toHaveBeenCalled();
     });
 
     it("should throw OpenRouterError for a 402 response", async () => {

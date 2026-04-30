@@ -2,20 +2,23 @@
 
 ## Overview
 
-The Credits feature displays the current OpenRouter account balance in the chat Flow panel, allowing users to monitor their API usage and credits in real-time.
+The Credits feature displays OpenRouter key usage metrics in the chat Flow panel. It is backed by OpenRouter's key metadata endpoint and surfaces the values that are available to a non-management key: `Usage Today`, `Limit Remaining`, `Limit Resets`, plus weekly and monthly usage summaries.
 
 ## Components
 
 ### `CreditsSection`
 
-A Flow panel component that displays the current OpenRouter credits balance. Features:
+A Flow panel component that displays the current OpenRouter key usage summary. Features:
 
-- **Real-time balance display** — Shows current balance in USD with 2 decimal places
+- **Simple title row** — Keeps the main flow item as just `Credits`
+- **Primary detail line** — Shows `Spend Today` and remaining `Limit`, including the reset cadence
+- **Secondary detail line** — Shows `Spent this Week` and current month totals underneath the row
 - **Color-coded indicators** — Visual feedback based on balance level:
   - 🟡 Gold: balance ≥ $5 (healthy)
   - 🟠 Yellow: $1 ≤ balance < $5 (low)
   - 🔴 Red: balance < $1 (critical)
-- **Manual refresh** — Refresh button to update balance on demand
+- **Automatic refresh after chat completion** — Successful OpenRouter chat responses invalidate the credits query
+- **Manual refresh** — Refresh button to update credits on demand
 - **Error handling** — Clear error messages when balance cannot be fetched
 - **Loading states** — Shows loading indicator during fetch
 
@@ -35,15 +38,20 @@ HTTP client for fetching OpenRouter credits information from the backend.
 - Method: GET
 - Headers:
   - `Authorization: Bearer {accessToken}`
+  - `EncryptionKey: {clientOpenRouterEncryptionKey}`
 
 **Response:**
 ```typescript
 interface OpenRouterCredits {
-  balance: number;        // Current balance in USD
-  usage: number;          // Total usage in USD
-  limit: number | null;   // Credit limit if set
-  isFreeTier: boolean;    // Whether on free tier
-  label?: string;         // API key label/name
+  limitRemaining: number;  // Remaining credit on the current API key in USD
+  usage: number;           // Total key usage in USD
+  usageDaily: number;      // Current UTC-day usage in USD
+  usageWeekly: number;     // Current UTC-week usage in USD
+  usageMonthly: number;    // Current UTC-month usage in USD
+  limit: number | null;    // Credit limit configured on the current key
+  limitReset: string | null; // Reset cadence such as weekly
+  isFreeTier: boolean;     // Whether on free tier
+  label?: string;          // API key label/name
 }
 ```
 
@@ -57,6 +65,8 @@ React Query hook for managing credits data with automatic caching and refresh.
 - `staleTime: 30000` (30 seconds) — Balance is considered fresh for 30s
 - `gcTime: 60000` (1 minute) — Data kept in cache for 1 minute
 - `retry: 2` — Retries failed requests twice
+
+Successful `OpenRouterChatAPI` completions also invalidate the credits query so the panel refreshes after chat generation without waiting for the stale timer.
 
 **Returns:**
 ```typescript
@@ -83,21 +93,21 @@ credits: {
 
 ## Backend Requirements
 
-The backend must implement a catch-all OpenRouter passthrough route at `/api/openrouter/{*route}`.
+The backend route for credits is intentionally a thin OpenRouter proxy.
 
 For credits, this feature calls `/api/openrouter/auth/key`, and the backend must:
 
-1. Accept GET request with app Authorization header
-2. Resolve the user from app auth, then load that user's stored OpenRouter key server-side
-3. Decrypt the stored OpenRouter key using server-managed secrets/keys (never from client headers)
-4. Proxy to OpenRouter `/api/v1/auth/key` using `Authorization: Bearer {decryptedOpenRouterApiKey}`
-5. Return only the proxied credits metadata payload expected by the frontend
+1. Accept a GET request with Story Vault app auth and `EncryptionKey`
+2. Resolve the authenticated user and load that user's stored encrypted OpenRouter key
+3. Decrypt the stored OpenRouter key with the supplied `EncryptionKey`
+4. Proxy the request to OpenRouter `GET /api/v1/auth/key` using `Authorization: Bearer {decryptedOpenRouterApiKey}`
+5. Return the upstream JSON payload without exposing the raw OpenRouter key
 
 ### Security Boundary
 
 The decrypted OpenRouter API key must never be returned to the frontend.
 
-- The frontend sends app auth only.
+- The frontend sends Story Vault app auth plus `EncryptionKey`.
 - The backend injects the OpenRouter bearer key when calling OpenRouter.
 - Backend logs and responses must not include the raw OpenRouter key.
 
@@ -126,15 +136,20 @@ Authorization: Bearer {openrouter_api_key}
 }
 ```
 
-Note: The balance is calculated as `limit - usage` (or infinite if limit is null).
+Note: The UI no longer claims to show account balance. It displays only the key-level fields that OpenRouter returns for this kind of API key.
+
+## Account Balance Constraint
+
+The current OpenRouter response shows `is_management_key: false`, so this UI should be treated as a key-usage view, not an account-wallet view. The frontend should not infer or label any field as account balance from this payload.
 
 ## Usage
 
 The Credits section is automatically displayed in the Flow panel for all chats. Users can:
 
-1. **View current balance** — Balance is displayed and auto-refreshed every 30 seconds
-2. **Manual refresh** — Click the refresh icon to update balance immediately
-3. **Visual indicators** — Color indicates balance health at a glance
+1. **View current usage** — Daily, weekly, and monthly key usage is displayed and auto-refreshed every 30 seconds
+2. **Auto-refresh after generation** — Successful streamed and non-streamed chat completions refresh the displayed credits
+3. **Manual refresh** — Click the refresh icon to update credits immediately
+4. **Visual indicators** — Color indicates remaining key credit at a glance
 
 No transaction history is stored client-side. All data is fetched fresh from OpenRouter's API.
 

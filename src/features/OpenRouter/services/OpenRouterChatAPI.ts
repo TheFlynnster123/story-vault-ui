@@ -2,6 +2,7 @@ import { d } from "../../../services/Dependencies";
 import Config from "../../../services/Config";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { OpenRouterError, parseOpenRouterError } from "./OpenRouterError";
+import { getOpenRouterCreditsQueryKey } from "./OpenRouterCreditsAPI";
 
 interface CleanMessage {
   role: string;
@@ -136,6 +137,8 @@ export class OpenRouterChatAPI {
       reader.releaseLock();
     }
 
+    await this.refreshCredits();
+
     return fullContent;
   }
 
@@ -169,7 +172,9 @@ export class OpenRouterChatAPI {
         throw this.buildApiError(response.status, errorBody);
       }
 
-      return await response.json();
+      const json = await response.json();
+      await this.refreshCredits();
+      return json;
     } catch (e: any) {
       if (e instanceof OpenRouterError) {
         d.ErrorService().log(e.message, e);
@@ -191,6 +196,12 @@ export class OpenRouterChatAPI {
       httpStatus,
       body || `Request failed with status ${httpStatus}`,
     );
+  }
+
+  private async refreshCredits(): Promise<void> {
+    await d.QueryClient().invalidateQueries({
+      queryKey: getOpenRouterCreditsQueryKey(),
+    });
   }
 }
 

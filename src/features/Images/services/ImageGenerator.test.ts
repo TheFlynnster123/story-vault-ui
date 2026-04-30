@@ -167,6 +167,62 @@ describe("ImageGenerator", () => {
       const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0];
       expect(callArgs[1]).toBe(customModel);
     });
+
+    it("should append the custom image generation prompt to the base prompt when enabled", async () => {
+      const messages = createMockMessages();
+      const basePrompt = "Base image prompt";
+      const customPrompt = "Add cinematic lighting";
+
+      mockSystemPromptsService.Get.mockResolvedValue({
+        defaultImagePrompt: basePrompt,
+      });
+      mockChatImageModelService.getSelectedModelOrDefault.mockResolvedValue({
+        imageGenerationPrompt: customPrompt,
+        appendImageGenerationPromptToBase: true,
+        input: {},
+      });
+      mockCharacterSelectionService.selectCharacterForImage.mockResolvedValue(
+        null,
+      );
+      mockOpenRouterChatAPI.postChat.mockResolvedValue("Generated prompt");
+
+      await imageGenerator.generatePrompt(messages);
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0];
+      const promptMessages = callArgs[0];
+      const imagePromptMessage = promptMessages[promptMessages.length - 1];
+
+      expect(imagePromptMessage.content).toBe(
+        `${basePrompt}\n\n${customPrompt}`,
+      );
+    });
+
+    it("should use only the custom image generation prompt when append is disabled", async () => {
+      const messages = createMockMessages();
+      const basePrompt = "Base image prompt";
+      const customPrompt = "Only use this prompt";
+
+      mockSystemPromptsService.Get.mockResolvedValue({
+        defaultImagePrompt: basePrompt,
+      });
+      mockChatImageModelService.getSelectedModelOrDefault.mockResolvedValue({
+        imageGenerationPrompt: customPrompt,
+        appendImageGenerationPromptToBase: false,
+        input: {},
+      });
+      mockCharacterSelectionService.selectCharacterForImage.mockResolvedValue(
+        null,
+      );
+      mockOpenRouterChatAPI.postChat.mockResolvedValue("Generated prompt");
+
+      await imageGenerator.generatePrompt(messages);
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0];
+      const promptMessages = callArgs[0];
+      const imagePromptMessage = promptMessages[promptMessages.length - 1];
+
+      expect(imagePromptMessage.content).toBe(customPrompt);
+    });
   });
 
   describe("generatePromptWithFeedback", () => {
