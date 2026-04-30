@@ -10,6 +10,9 @@ import {
   ActionIcon,
   Stack,
   Divider,
+  Button,
+  Modal,
+  Text,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { ChatSettings } from "../services/Chat/ChatSettings";
@@ -20,6 +23,10 @@ import { Page } from "../../../components/Page";
 import { Theme } from "../../../components/Theme";
 import { useChatSettings } from "../hooks/useChatSettings";
 import { d } from "../../../services/Dependencies";
+import {
+  getPresetByName,
+  useChatPromptPresets,
+} from "../../Prompts/hooks/useChatPromptPresets";
 
 export const ChatEditorPage: React.FC = () => {
   const { id: chatIdFromParams } = useParams();
@@ -31,6 +38,20 @@ export const ChatEditorPage: React.FC = () => {
     handleCivitJobIdChange,
     onFormUpdated,
     handleGoBack,
+    presets,
+    savePresetOpen,
+    setSavePresetOpen,
+    presetName,
+    setPresetName,
+    overwriteConfirmOpen,
+    setOverwriteConfirmOpen,
+    deleteConfirmOpen,
+    setDeleteConfirmOpen,
+    openSavePreset,
+    submitSavePreset,
+    confirmOverwrite,
+    confirmDelete,
+    requestDeletePreset,
   } = useChatEditor(chatIdFromParams);
 
   return (
@@ -39,7 +60,88 @@ export const ChatEditorPage: React.FC = () => {
         <ChatEditorHeader onGoBack={handleGoBack} />
 
         <Stack>
-          <ChatFormFields form={form} onFormUpdated={onFormUpdated} />
+          <Modal
+            opened={savePresetOpen}
+            onClose={() => setSavePresetOpen(false)}
+            title="Save preset as"
+          >
+            <Stack>
+              <TextInput
+                label="Preset name"
+                placeholder="e.g. Cinematic third-person"
+                value={presetName}
+                onChange={(e) => setPresetName(e.currentTarget.value)}
+                autoFocus
+              />
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  onClick={() => setSavePresetOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={submitSavePreset}
+                  disabled={presetName.trim().length === 0}
+                >
+                  Save
+                </Button>
+              </Group>
+            </Stack>
+          </Modal>
+
+          <Modal
+            opened={overwriteConfirmOpen}
+            onClose={() => setOverwriteConfirmOpen(false)}
+            title="Overwrite preset?"
+          >
+            <Stack>
+              <Text size="sm">
+                A preset named "{presetName.trim()}" already exists. Overwrite
+                it?
+              </Text>
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  onClick={() => setOverwriteConfirmOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button color="red" onClick={confirmOverwrite}>
+                  Overwrite
+                </Button>
+              </Group>
+            </Stack>
+          </Modal>
+
+          <Modal
+            opened={deleteConfirmOpen}
+            onClose={() => setDeleteConfirmOpen(false)}
+            title="Delete preset?"
+          >
+            <Stack>
+              <Text size="sm">This will permanently delete the preset.</Text>
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button color="red" onClick={confirmDelete}>
+                  Delete
+                </Button>
+              </Group>
+            </Stack>
+          </Modal>
+
+          <ChatFormFields
+            form={form}
+            onFormUpdated={onFormUpdated}
+            presets={presets}
+            onSavePresetAs={openSavePreset}
+            onRequestDeletePreset={requestDeletePreset}
+          />
 
           <BackgroundPhotoUploader
             chatId={chatId}
@@ -82,6 +184,13 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   const [chatId] = useState(chatIdFromParams ?? uuidv4());
   const navigate = useNavigate();
   const { chatSettings } = useChatSettings(chatId);
+  const { presets, savePreset, deletePreset } = useChatPromptPresets();
+
+  const [savePresetOpen, setSavePresetOpen] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [presetToDelete, setPresetToDelete] = useState<string | null>(null);
 
   const form = useForm<ChatSettings>({
     initialValues: {
@@ -167,6 +276,49 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     navigate(-1);
   };
 
+  const openSavePreset = () => {
+    setPresetName("");
+    setSavePresetOpen(true);
+  };
+
+  const submitSavePreset = async () => {
+    const existing = getPresetByName(presets, presetName);
+    if (existing) {
+      setOverwriteConfirmOpen(true);
+      return;
+    }
+
+    await savePreset({ name: presetName, prompt: form.values.prompt });
+    setSavePresetOpen(false);
+  };
+
+  const confirmOverwrite = async () => {
+    const existing = getPresetByName(presets, presetName);
+    if (!existing) {
+      setOverwriteConfirmOpen(false);
+      return;
+    }
+    await savePreset({
+      id: existing.id,
+      name: presetName,
+      prompt: form.values.prompt,
+    });
+    setOverwriteConfirmOpen(false);
+    setSavePresetOpen(false);
+  };
+
+  const requestDeletePreset = (presetId: string) => {
+    setPresetToDelete(presetId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!presetToDelete) return;
+    await deletePreset(presetToDelete);
+    setDeleteConfirmOpen(false);
+    setPresetToDelete(null);
+  };
+
   const handleDeleteSuccess = () => {
     navigate("/chat");
   };
@@ -180,6 +332,20 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     onFormUpdated,
     handleGoBack,
     handleDeleteSuccess,
+    presets,
+    savePresetOpen,
+    setSavePresetOpen,
+    presetName,
+    setPresetName,
+    overwriteConfirmOpen,
+    setOverwriteConfirmOpen,
+    deleteConfirmOpen,
+    setDeleteConfirmOpen,
+    openSavePreset,
+    submitSavePreset,
+    confirmOverwrite,
+    requestDeletePreset,
+    confirmDelete,
   };
 };
 
@@ -188,11 +354,17 @@ interface ChatFormFieldsProps {
     getInputProps: (field: string) => any;
   };
   onFormUpdated: (overrides?: Partial<ChatSettings>) => void;
+  presets: { id: string; name: string }[];
+  onSavePresetAs: () => void;
+  onRequestDeletePreset: (presetId: string) => void;
 }
 
 const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
   form,
   onFormUpdated,
+  presets,
+  onSavePresetAs,
+  onRequestDeletePreset,
 }) => (
   <Stack>
     <TextInput
@@ -218,6 +390,24 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
       }}
       styles={{ input: { height: "30vh" } }}
     />
+
+    <Group justify="space-between" align="center">
+      <Button variant="default" onClick={onSavePresetAs}>
+        Save preset as
+      </Button>
+
+      <Button
+        variant="default"
+        color="red"
+        disabled={presets.length === 0}
+        onClick={() => {
+          // For editor we delete by selecting from most recent
+          onRequestDeletePreset(presets[0].id);
+        }}
+      >
+        Delete preset
+      </Button>
+    </Group>
   </Stack>
 );
 

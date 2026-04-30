@@ -7,6 +7,7 @@ import { getPlansManagedBlobInstance } from "../features/Plans/services/PlansMan
 import { getRecentChatsManagedBlobInstance } from "../features/Chat/services/Chat/RecentChatsManagedBlob";
 import { getSystemSettingsManagedBlobInstance } from "../features/SystemSettings/services/SystemSettingsManagedBlob";
 import { getSystemPromptsManagedBlobInstance } from "../features/Prompts/services/SystemPromptsManagedBlob";
+import { getChatPromptPresetsManagedBlobInstance } from "../features/Prompts/services/ChatPromptPresetsManagedBlob";
 import { ErrorService } from "./ErrorService";
 import { QUERY_CLIENT } from "./QueryClient";
 import { SystemSettingsService } from "../features/SystemSettings/services/SystemSettingsService";
@@ -192,6 +193,10 @@ export class Dependencies {
 
   SystemPromptsManagedBlob() {
     return getSystemPromptsManagedBlobInstance();
+  }
+
+  ChatPromptPresetsManagedBlob() {
+    return getChatPromptPresetsManagedBlobInstance();
   }
 
   QueryClient() {

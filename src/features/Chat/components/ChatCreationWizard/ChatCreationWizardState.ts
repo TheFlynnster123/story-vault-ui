@@ -2,7 +2,8 @@ export interface ChatCreationWizardState {
   step: number;
   title: string;
   story: string;
-  promptType: "Manual" | "First Person" | "Third Person";
+  promptType: "Manual" | "First Person" | "Third Person" | "Preset";
+  selectedPromptPresetId?: string;
   prompt?: string;
   backgroundPhotoBase64?: string;
   backgroundPhotoCivitJobId?: string;
