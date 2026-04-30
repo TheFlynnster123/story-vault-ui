@@ -82,7 +82,7 @@ describe("PlanPage", () => {
     );
     vi.mocked(d.ErrorService).mockReturnValue({
       log: mockErrorLog,
-    } as ReturnType<typeof d.ErrorService>);
+    } as unknown as ReturnType<typeof d.ErrorService>);
   });
 
   it("should show manual-only status for plans with refresh interval 0", () => {
