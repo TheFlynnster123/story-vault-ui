@@ -33,7 +33,7 @@ Keep it concise and actionable. Update sections rather than rewriting from scrat
 export const DEFAULT_PLAN_NAME = "Story Plan";
 
 export const isAutoRefreshDisabled = (plan: Plan): boolean =>
-  plan.refreshInterval === 0;
+  plan.refreshInterval <= 0;
 
 export const applyPlanDefaults = (
   plan: Partial<Plan> & {

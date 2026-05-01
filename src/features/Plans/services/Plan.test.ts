@@ -201,11 +201,22 @@ describe("isDueForRefresh", () => {
 
     expect(isDueForRefresh(plan)).toBe(false);
   });
+
+  it("should treat negative refresh intervals as disabled", () => {
+    const plan = createPlan({ refreshInterval: -1, messagesSinceLastUpdate: 10 });
+
+    expect(isAutoRefreshDisabled(plan)).toBe(true);
+    expect(isDueForRefresh(plan)).toBe(false);
+  });
 });
 
 describe("isAutoRefreshDisabled", () => {
   it("should return true when refresh interval is 0", () => {
     expect(isAutoRefreshDisabled(createPlan({ refreshInterval: 0 }))).toBe(true);
+  });
+
+  it("should return true when refresh interval is negative", () => {
+    expect(isAutoRefreshDisabled(createPlan({ refreshInterval: -5 }))).toBe(true);
   });
 
   it("should return false when refresh interval is above 0", () => {
