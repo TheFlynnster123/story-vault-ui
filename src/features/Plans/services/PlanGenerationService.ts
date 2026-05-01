@@ -149,9 +149,17 @@ export class PlanGenerationService {
     const plans = planService.getPlans();
     if (plans.length === 0) return;
 
-    const updatedPlans = plans.map((plan) =>
-      isAutoRefreshDisabled(plan) ? plan : incrementMessageCounter(plan),
-    );
+    const updatedPlans = plans.map((plan) => {
+      if (isAutoRefreshDisabled(plan)) {
+        return plan;
+      }
+
+      const refreshInterval = Math.max(1, plan.refreshInterval);
+      return incrementMessageCounter({
+        ...plan,
+        refreshInterval,
+      });
+    });
     planService.savePlans(updatedPlans);
 
     const duePlans = updatedPlans.filter(isDueForRefresh);
