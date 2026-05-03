@@ -13,6 +13,7 @@ import {
   Button,
   Modal,
   Text,
+  Select,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { ChatSettings } from "../services/Chat/ChatSettings";
@@ -39,6 +40,8 @@ export const ChatEditorPage: React.FC = () => {
     onFormUpdated,
     handleGoBack,
     presets,
+    selectedPresetId,
+    selectPreset,
     savePresetOpen,
     setSavePresetOpen,
     presetName,
@@ -139,6 +142,8 @@ export const ChatEditorPage: React.FC = () => {
             form={form}
             onFormUpdated={onFormUpdated}
             presets={presets}
+            selectedPresetId={selectedPresetId}
+            onSelectPreset={selectPreset}
             onSavePresetAs={openSavePreset}
             onRequestDeletePreset={requestDeletePreset}
           />
@@ -191,6 +196,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [presetToDelete, setPresetToDelete] = useState<string | null>(null);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
 
   const form = useForm<ChatSettings>({
     initialValues: {
@@ -281,6 +287,15 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     setSavePresetOpen(true);
   };
 
+  const selectPreset = (presetId: string | null) => {
+    setSelectedPresetId(presetId);
+    if (!presetId) return;
+    const preset = presets.find((p) => p.id === presetId);
+    if (!preset) return;
+    form.setFieldValue("prompt", preset.prompt);
+    onFormUpdated({ prompt: preset.prompt });
+  };
+
   const submitSavePreset = async () => {
     const existing = getPresetByName(presets, presetName);
     if (existing) {
@@ -315,6 +330,9 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   const confirmDelete = async () => {
     if (!presetToDelete) return;
     await deletePreset(presetToDelete);
+    if (selectedPresetId === presetToDelete) {
+      setSelectedPresetId(null);
+    }
     setDeleteConfirmOpen(false);
     setPresetToDelete(null);
   };
@@ -333,6 +351,8 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
     handleGoBack,
     handleDeleteSuccess,
     presets,
+    selectedPresetId,
+    selectPreset,
     savePresetOpen,
     setSavePresetOpen,
     presetName,
@@ -355,6 +375,8 @@ interface ChatFormFieldsProps {
   };
   onFormUpdated: (overrides?: Partial<ChatSettings>) => void;
   presets: { id: string; name: string }[];
+  selectedPresetId: string | null;
+  onSelectPreset: (presetId: string | null) => void;
   onSavePresetAs: () => void;
   onRequestDeletePreset: (presetId: string) => void;
 }
@@ -363,6 +385,8 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
   form,
   onFormUpdated,
   presets,
+  selectedPresetId,
+  onSelectPreset,
   onSavePresetAs,
   onRequestDeletePreset,
 }) => (
@@ -391,6 +415,15 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
       styles={{ input: { height: "30vh" } }}
     />
 
+    <Select
+      label="Preset"
+      placeholder="No preset selected"
+      clearable
+      data={presets.map((p) => ({ value: p.id, label: p.name }))}
+      value={selectedPresetId}
+      onChange={onSelectPreset}
+    />
+
     <Group justify="space-between" align="center">
       <Button variant="default" onClick={onSavePresetAs}>
         Save preset as
@@ -399,10 +432,9 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
       <Button
         variant="default"
         color="red"
-        disabled={presets.length === 0}
+        disabled={!selectedPresetId}
         onClick={() => {
-          // For editor we delete by selecting from most recent
-          onRequestDeletePreset(presets[0].id);
+          if (selectedPresetId) onRequestDeletePreset(selectedPresetId);
         }}
       >
         Delete preset
