@@ -17,6 +17,7 @@ export const createNewChapterDiscussionConfig = (
   chapterTitle: string,
   chapterSummaryModel?: string,
   chapterSummaryPrompt?: string,
+  discussChapterPrompt?: string,
 ): DiscussionConfig => {
   const getChatMessages = (): LLMMessage[] =>
     d.LLMChatProjection(chatId).GetMessages();
@@ -24,17 +25,16 @@ export const createNewChapterDiscussionConfig = (
   const resolvedPrompt = (): string =>
     chapterSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt;
 
+  const resolvedDiscussionPrompt = (): string =>
+    discussChapterPrompt || DEFAULT_SYSTEM_PROMPTS.discussChapterPrompt;
+
   const buildSystemPrompt = (): string => {
     const lines = [
       `# New Chapter Summary Discussion — ${chapterTitle}`,
       ``,
-      `You are helping the user create a summary for a new chapter.`,
-      `Consider the full chat history above for context.`,
+      `This chapter does not have a summary yet.`,
       ``,
-      `The chapter does not have a summary yet. Help the user create one.`,
-      `Engage in a helpful conversation about what happened in this chapter.`,
-      `Suggest improvements, ask clarifying questions, and help them refine the summary.`,
-      `Keep responses concise and focused on accurately capturing the chapter's events.`,
+      resolvedDiscussionPrompt(),
     ];
 
     return lines.join("\n");

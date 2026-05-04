@@ -32,6 +32,7 @@ describe("ImageGenerationService", () => {
   let mockCharacterDescriptionsService: {
     createBlankCharacter: ReturnType<typeof vi.fn>;
     updateCharacter: ReturnType<typeof vi.fn>;
+    findByName: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -63,6 +64,7 @@ describe("ImageGenerationService", () => {
     mockCharacterDescriptionsService = {
       createBlankCharacter: vi.fn(),
       updateCharacter: vi.fn(),
+      findByName: vi.fn().mockResolvedValue(undefined),
     };
 
     vi.mocked(d.ImageGenerator).mockReturnValue(mockImageGenerator as any);
@@ -143,7 +145,10 @@ describe("ImageGenerationService", () => {
     mockImageGenerator.generatePromptWithCharacterContext.mockResolvedValue(
       "image prompt",
     );
-    mockImageGenerator.triggerJob.mockResolvedValue("job-1");
+    mockImageGenerator.triggerJob.mockResolvedValue({
+      jobId: "job-1",
+      modelName: "Test Model",
+    });
 
     const result = await service.generateImage();
 
@@ -154,6 +159,7 @@ describe("ImageGenerationService", () => {
     expect(mockChatService.CreateCivitJob).toHaveBeenCalledWith(
       "job-1",
       "image prompt",
+      expect.objectContaining({ modelName: "Test Model" }),
     );
   });
 
@@ -190,7 +196,10 @@ describe("ImageGenerationService", () => {
     mockImageGenerator.generatePromptWithCharacterContext.mockResolvedValue(
       "image prompt",
     );
-    mockImageGenerator.triggerJob.mockResolvedValue("job-2");
+    mockImageGenerator.triggerJob.mockResolvedValue({
+      jobId: "job-2",
+      modelName: "Test Model",
+    });
 
     const result = await service.resolveMissingCharacterDescription(
       "Sarah Chen",
@@ -207,6 +216,7 @@ describe("ImageGenerationService", () => {
     expect(mockChatService.CreateCivitJob).toHaveBeenCalledWith(
       "job-2",
       "image prompt",
+      expect.objectContaining({ modelName: "Test Model" }),
     );
   });
 
@@ -222,7 +232,10 @@ describe("ImageGenerationService", () => {
     mockImageGenerator.generatePromptWithCharacterContext.mockResolvedValue(
       "image prompt",
     );
-    mockImageGenerator.triggerJob.mockResolvedValue("job-3");
+    mockImageGenerator.triggerJob.mockResolvedValue({
+      jobId: "job-3",
+      modelName: "Test Model",
+    });
 
     const result = await service.resolveMissingCharacterDescription(
       "Sarah Chen",
@@ -251,6 +264,7 @@ describe("ImageGenerationService", () => {
     expect(mockChatService.CreateCivitJob).toHaveBeenCalledWith(
       "job-3",
       "image prompt",
+      expect.objectContaining({ modelName: "Test Model" }),
     );
   });
 });

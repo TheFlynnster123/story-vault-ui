@@ -27,7 +27,7 @@ export const CharacterDescriptionsSection: React.FC<
       >
         <Group gap="xs">
           <Text size="sm" fw={500}>
-            Character Descriptions
+            Characters
           </Text>
           <Text size="xs" c="dimmed">
             ({characters.length})
@@ -42,7 +42,7 @@ export const CharacterDescriptionsSection: React.FC<
         renderItem={(character) =>
           renderCharacterPreview(character, isExpanded)
         }
-        emptyMessage="No character descriptions saved"
+        emptyMessage="No characters saved"
       />
     </Box>
   );

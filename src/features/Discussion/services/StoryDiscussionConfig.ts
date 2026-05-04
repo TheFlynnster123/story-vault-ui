@@ -12,6 +12,7 @@ import type { DiscussionConfig } from "./DiscussionConfig";
  */
 export const createStoryDiscussionConfig = (
   chatId: string,
+  discussStoryPrompt?: string,
 ): DiscussionConfig => {
   const findStory = (): StoryChatMessage | undefined =>
     d
@@ -22,28 +23,18 @@ export const createStoryDiscussionConfig = (
   const getChatMessages = (): LLMMessage[] =>
     d.LLMChatProjection(chatId).GetMessages();
 
+  const resolvedDiscussionPrompt = (): string =>
+    discussStoryPrompt || DEFAULT_SYSTEM_PROMPTS.discussStoryPrompt;
+
   const buildSystemPrompt = (): string => {
     const story = findStory();
     const content = story?.content ?? "";
 
-    const lines = [
-      `# Story Discussion`,
-      ``,
-      `You are helping the user discuss and refine their story.`,
-      `Consider the full chat history above for context.`,
-    ];
+    const lines = [`# Story Discussion`, ``, resolvedDiscussionPrompt()];
 
     if (content) {
-      lines.push(``, `This is the current story:`, `---`, content, `---`);
+      lines.push(``, `Current story:`, `---`, content, `---`);
     }
-
-    lines.push(
-      ``,
-      `The user would like to discuss what the story should contain.`,
-      `Engage in a helpful, creative conversation about the story.`,
-      `Suggest ideas, ask clarifying questions, and help them refine their vision.`,
-      `Keep responses concise and focused on making the story compelling.`,
-    );
 
     return lines.join("\n");
   };

@@ -18,6 +18,7 @@ export const createChapterDiscussionConfig = (
   chapterId: string,
   chapterSummaryModel?: string,
   chapterSummaryPrompt?: string,
+  discussChapterPrompt?: string,
 ): DiscussionConfig => {
   const findChapter = (): ChapterChatMessage | undefined =>
     d
@@ -31,6 +32,9 @@ export const createChapterDiscussionConfig = (
   const resolvedPrompt = (): string =>
     chapterSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt;
 
+  const resolvedDiscussionPrompt = (): string =>
+    discussChapterPrompt || DEFAULT_SYSTEM_PROMPTS.discussChapterPrompt;
+
   const buildSystemPrompt = (): string => {
     const chapter = findChapter();
     if (!chapter) return "";
@@ -41,29 +45,12 @@ export const createChapterDiscussionConfig = (
     const lines = [
       `# Chapter Summary Discussion — ${title}`,
       ``,
-      `You are helping the user create and refine the summary for this chapter.`,
-      `Consider the full chat history above for context.`,
+      resolvedDiscussionPrompt(),
     ];
 
     if (summary) {
-      lines.push(
-        ``,
-        `This is the current chapter summary:`,
-        `---`,
-        summary,
-        `---`,
-      );
+      lines.push(``, `Current chapter summary:`, `---`, summary, `---`);
     }
-
-    lines.push(
-      ``,
-      summary
-        ? `The user would like to discuss what the chapter summary should contain.`
-        : `The chapter does not have a summary yet. Help the user create one.`,
-      `Engage in a helpful conversation about what happened in this chapter.`,
-      `Suggest improvements, ask clarifying questions, and help them refine the summary.`,
-      `Keep responses concise and focused on accurately capturing the chapter's events.`,
-    );
 
     return lines.join("\n");
   };

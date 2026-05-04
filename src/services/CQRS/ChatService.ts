@@ -11,7 +11,10 @@ import {
   BookEditedEventUtil,
   BookDeletedEventUtil,
 } from "./events/BookEventUtils";
-import { CivitJobCreatedEventUtil } from "./events/CivitJobCreatedEventUtil";
+import {
+  CivitJobCreatedEventUtil,
+  type CivitJobExtras,
+} from "./events/CivitJobCreatedEventUtil";
 import { MessagesDeletedEventUtil } from "./events/MessagesDeletedEventUtil";
 import { StoryCreatedEventUtil } from "./events/StoryCreatedEventUtil";
 import { StoryEditedEventUtil } from "./events/StoryEditedEventUtil";
@@ -59,8 +62,12 @@ export class ChatService {
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 
-  public async CreateCivitJob(jobId: string, prompt: string): Promise<void> {
-    const event = CivitJobCreatedEventUtil.Create(jobId, prompt);
+  public async CreateCivitJob(
+    jobId: string,
+    prompt: string,
+    extras?: CivitJobExtras,
+  ): Promise<void> {
+    const event = CivitJobCreatedEventUtil.Create(jobId, prompt, extras);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 
@@ -152,6 +159,15 @@ export class ChatService {
   }
 
   // ---- Plan Operations ----
+
+  /**
+   * Hides all plan messages for a given definition without creating a new one.
+   * Used by the "Clear Plan" action on the Plans page.
+   */
+  public async ClearPlan(planDefinitionId: string): Promise<void> {
+    const hideEvent = PlanHiddenEventUtil.Create(planDefinitionId);
+    await d.ChatEventService(this.chatId).AddChatEvent(hideEvent);
+  }
 
   /**
    * Hides all prior plan messages for this definition, then creates a new plan message.

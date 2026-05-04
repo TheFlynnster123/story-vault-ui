@@ -4,6 +4,7 @@ import type { ImageModel } from "./modelGeneration/ImageModel";
 import type { CharacterDescription } from "../../Characters/services/CharacterDescription";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
+import { resolveVariant } from "./ImageModelVariant";
 
 export type CharacterContext =
   | { type: "none" }
@@ -51,7 +52,9 @@ export class ImageGenerator {
     );
 
     const model = await this.resolveImageModel();
-    return await d.OpenRouterChatAPI().postChat(promptMessages, model);
+    return await d
+      .OpenRouterChatAPI()
+      .postChat(promptMessages, model, "image-prompt", "Image Prompt");
   }
 
   public async generatePromptWithFeedback(
@@ -91,7 +94,9 @@ export class ImageGenerator {
     );
 
     const model = await this.resolveImageModel();
-    return await d.OpenRouterChatAPI().postChat(promptMessages, model);
+    return await d
+      .OpenRouterChatAPI()
+      .postChat(promptMessages, model, "image-prompt", "Image Prompt");
   }
 
   public async resolveCharacterContext(): Promise<CharacterContext> {
@@ -121,17 +126,47 @@ export class ImageGenerator {
     };
   }
 
-  public async triggerJob(imageGenerationPrompt: string): Promise<string> {
-    const selectedModel = await d
-      .ChatImageModelService(this.chatId)
-      .getSelectedModelOrDefault();
+  public async triggerJob(
+    imageGenerationPrompt: string,
+    preferredImage?: { id: string; source: "system" | "variant" },
+  ): Promise<{ jobId: string; modelName: string }> {
+    const selectedModel = await this.resolveModelForJob(preferredImage);
 
     const modelInput = copyModel(selectedModel);
 
     appendPrompt(modelInput, imageGenerationPrompt);
 
     const response = await d.CivitJobAPI().generateImage(modelInput);
-    return response?.jobs[0]?.jobId ?? "";
+    return {
+      jobId: response?.jobs[0]?.jobId ?? "",
+      modelName: selectedModel.name,
+    };
+  }
+
+  private async resolveModelForJob(preferredImage?: {
+    id: string;
+    source: "system" | "variant";
+  }): Promise<ImageModel> {
+    if (!preferredImage) {
+      return d.ChatImageVariantService(this.chatId).getSelectedModelOrDefault();
+    }
+
+    if (preferredImage.source === "variant") {
+      const data = await d.ChatImageVariantService(this.chatId).GetAll();
+      const variant = data.variants.find((v) => v.id === preferredImage.id);
+      if (variant) {
+        const parent = await d
+          .ChatImageVariantService(this.chatId)
+          .findParentModel(variant.parentModelId);
+        if (parent) return resolveVariant(variant, parent);
+      }
+    } else {
+      const allModels = await d.ImageModelService().GetAllImageModels();
+      const model = allModels.models.find((m) => m.id === preferredImage.id);
+      if (model) return model;
+    }
+
+    return d.ChatImageVariantService(this.chatId).getSelectedModelOrDefault();
   }
 
   /**
@@ -142,7 +177,7 @@ export class ImageGenerator {
    */
   private async resolveImageGenerationPrompt(): Promise<string> {
     const selectedModel = await d
-      .ChatImageModelService(this.chatId)
+      .ChatImageVariantService(this.chatId)
       .getSelectedModelOrDefault();
 
     const basePrompt = await this.resolveBaseImageGenerationPrompt();
@@ -292,7 +327,7 @@ const buildPromptMessagesWithCharacterAndFeedback = (
   return promptMessages;
 };
 
-const formatCharacterContext = (
+export const formatCharacterContext = (
   characterName: string,
   description: string,
 ): string =>

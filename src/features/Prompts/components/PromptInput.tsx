@@ -18,6 +18,7 @@ interface PromptInputProps {
   onChange: (value: string) => void;
   onReset: () => void;
   minRows?: number;
+  icon?: React.ReactNode;
 }
 
 export const PromptInput: React.FC<PromptInputProps> = ({
@@ -29,6 +30,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   onChange,
   onReset,
   minRows = 4,
+  icon,
 }) => (
   <Stack
     gap="xs"
@@ -44,9 +46,12 @@ export const PromptInput: React.FC<PromptInputProps> = ({
     }}
   >
     <Group justify="space-between" align="center" mb={0}>
-      <Text fw={600} size="md" c="orange">
-        {label}
-      </Text>
+      <Group gap="xs" align="center">
+        {icon}
+        <Text fw={600} size="md" c="orange">
+          {label}
+        </Text>
+      </Group>
       <Tooltip label="Reset to default">
         <ActionIcon variant="light" size="sm" onClick={onReset} color="orange">
           <VscRefresh size={16} />

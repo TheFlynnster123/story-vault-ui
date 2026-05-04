@@ -24,6 +24,7 @@ const pageConfig: DiscussionPageConfig = {
   emptyStateText:
     "Start a conversation about what this chapter's summary should contain. Discuss what happened, suggest key events, and refine the narrative.",
   acceptMessageLabel: "Use This Summary",
+  promptLink: "/system-prompts#discussChapterPrompt",
 };
 
 export const DiscussNewChapterPage: React.FC = () => {
@@ -41,6 +42,7 @@ export const DiscussNewChapterPage: React.FC = () => {
           chapterTitle,
           systemPrompts.chapterSummaryModel,
           systemPrompts.chapterSummaryPrompt,
+          systemPrompts.discussChapterPrompt,
         ),
       ),
     [
@@ -48,6 +50,7 @@ export const DiscussNewChapterPage: React.FC = () => {
       chapterTitle,
       systemPrompts.chapterSummaryModel,
       systemPrompts.chapterSummaryPrompt,
+      systemPrompts.discussChapterPrompt,
     ],
   );
 

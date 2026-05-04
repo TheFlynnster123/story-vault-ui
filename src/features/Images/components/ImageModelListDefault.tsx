@@ -1,14 +1,15 @@
 import { Stack, Loader, Text, Alert, Button, Paper } from "@mantine/core";
-import React from "react";
+import React, { useState } from "react";
 import { RiAddLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
 import { useImageModels } from "../hooks/useImageModels";
 import { ImageModelListItem } from "./ImageModelListItem";
+import { AddImageModelModal } from "./AddImageModelModal";
 
 export const ImageModelList: React.FC = () => {
   const navigate = useNavigate();
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const {
     userImageModels,
     loading,
@@ -17,29 +18,6 @@ export const ImageModelList: React.FC = () => {
     selectImageModel,
     getSelectedModel,
   } = useImageModels();
-  const createNewModel = (): ImageModel => {
-    const timestamp = Date.now();
-    return {
-      id: uuidv4(),
-      name: "Default Image Model",
-      timestampUtcMs: timestamp,
-      input: {
-        model: "urn:air:sdxl:checkpoint:civitai:257749@290640",
-        params: {
-          prompt: "score_9, score_8_up, score_7_up, score_6_up, source_anime",
-          negativePrompt:
-            "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad hands, jpeg artifacts",
-          scheduler: "DPM2Karras",
-          steps: 20,
-          cfgScale: 7,
-          width: 1024,
-          height: 1024,
-          clipSkip: 2,
-        },
-        additionalNetworks: {},
-      },
-    };
-  };
 
   const handleSelectModel = async (modelId: string) => {
     await selectImageModel(modelId);
@@ -49,12 +27,10 @@ export const ImageModelList: React.FC = () => {
     navigate(`/default-image-models/edit/${modelId}`);
   };
 
-  const handleAddNewModel = async () => {
-    const newModel = createNewModel();
-    const success = await saveImageModel(newModel);
+  const handleModelCreated = async (model: ImageModel) => {
+    const success = await saveImageModel(model);
     if (success) {
-      // Navigate to edit page for the new model
-      navigate(`/default-image-models/edit/${newModel.id}`);
+      navigate(`/default-image-models/edit/${model.id}`);
     }
   };
 
@@ -79,14 +55,20 @@ export const ImageModelList: React.FC = () => {
 
   return (
     <Stack w="100%" align="center">
-      <Button onClick={handleAddNewModel} leftSection={<RiAddLine />}>
-        Add New Model
+      <Button onClick={() => setAddModalOpen(true)} leftSection={<RiAddLine />}>
+        Add Model
       </Button>
+
+      <AddImageModelModal
+        opened={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onModelCreated={handleModelCreated}
+      />
 
       {userImageModels.models.length === 0 ? (
         <Paper withBorder p="xl" ta="center">
           <Text c="dimmed">No image models configured yet</Text>
-          <Button mt="md" onClick={handleAddNewModel}>
+          <Button mt="md" onClick={() => setAddModalOpen(true)}>
             Create your first model
           </Button>
         </Paper>

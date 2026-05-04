@@ -8,6 +8,7 @@ import { getRecentChatsManagedBlobInstance } from "../features/Chat/services/Cha
 import { getSystemSettingsManagedBlobInstance } from "../features/SystemSettings/services/SystemSettingsManagedBlob";
 import { getSystemPromptsManagedBlobInstance } from "../features/Prompts/services/SystemPromptsManagedBlob";
 import { getChatPromptPresetsManagedBlobInstance } from "../features/Prompts/services/ChatPromptPresetsManagedBlob";
+import { getPlanPresetsManagedBlobInstance } from "../features/Plans/services/PlanPresetsManagedBlob";
 import { ErrorService } from "./ErrorService";
 import { QUERY_CLIENT } from "./QueryClient";
 import { SystemSettingsService } from "../features/SystemSettings/services/SystemSettingsService";
@@ -23,6 +24,8 @@ import { getBookGenerationServiceInstance } from "../features/Chat/services/Chat
 import { getLLMMessageContextServiceInstance } from "../features/Chat/services/ChatGeneration/LLMMessageContextService";
 import { ImageGenerator } from "../features/Images/services/ImageGenerator";
 import { getChatImageModelServiceInstance } from "../features/Images/services/ChatImageModelService";
+import { getChatImageVariantServiceInstance } from "../features/Images/services/ChatImageVariantService";
+import { getChatImageVariantsManagedBlobInstance } from "../features/Images/services/ChatImageVariantsManagedBlob";
 import { getUserChatProjectionInstance } from "./CQRS/UserChatProjection";
 import { getLLMChatProjectionInstance } from "./CQRS/LLMChatProjection";
 import { getChatEventServiceInstance } from "./CQRS/ChatEventService";
@@ -54,6 +57,10 @@ import { getCharacterDescriptionsManagedBlobInstance } from "../features/Charact
 import { CharacterDescriptionsService } from "../features/Characters/services/CharacterDescriptionsService";
 import { CharacterSelectionService } from "../features/Characters/services/CharacterSelectionService";
 import { CharacterDescriptionGenerationService } from "../features/Characters/services/CharacterDescriptionGenerationService";
+import { getRequestTrackerInstance } from "../features/OpenRouter/services/RequestTracker";
+import { ModelPricingEstimator } from "../features/OpenRouter/services/ModelPricingEstimator";
+import { getOpenRouterModelsQueryKey } from "../features/OpenRouter/hooks/useOpenRouterModels";
+import type { OpenRouterModel } from "../features/OpenRouter/services/OpenRouterModelsAPI";
 
 export class Dependencies {
   CivitKeyAPI() {
@@ -74,6 +81,19 @@ export class Dependencies {
 
   OpenRouterCreditsAPI() {
     return new OpenRouterCreditsAPI();
+  }
+
+  RequestTracker() {
+    return getRequestTrackerInstance();
+  }
+
+  ModelPricingEstimator() {
+    return new ModelPricingEstimator(
+      () =>
+        QUERY_CLIENT.getQueryData<OpenRouterModel[]>(
+          getOpenRouterModelsQueryKey(),
+        ) ?? [],
+    );
   }
 
   RecentModelsService() {
@@ -119,6 +139,12 @@ export class Dependencies {
   }
   ChatImageModelsManagedBlob(chatId: string) {
     return getChatImageModelsManagedBlobInstance(chatId);
+  }
+  ChatImageVariantService(chatId: string) {
+    return getChatImageVariantServiceInstance(chatId);
+  }
+  ChatImageVariantsManagedBlob(chatId: string) {
+    return getChatImageVariantsManagedBlobInstance(chatId);
   }
   TextGenerationService(chatId: string) {
     return getTextGenerationServiceInstance(chatId);
@@ -197,6 +223,10 @@ export class Dependencies {
 
   ChatPromptPresetsManagedBlob() {
     return getChatPromptPresetsManagedBlobInstance();
+  }
+
+  PlanPresetsManagedBlob() {
+    return getPlanPresetsManagedBlobInstance();
   }
 
   QueryClient() {

@@ -12,6 +12,7 @@ export const useDiscussionChat = (service: DiscussionService) => {
     messages: service.getMessages(),
     isGenerating: service.isGenerating(),
     defaultModel: service.getDefaultModel(),
+    getLLMContext: service.getLLMContext,
     sendMessage: service.sendMessage,
     generateFromFeedback: service.generateFromFeedback,
     generateInitialMessage: service.generateInitialMessage,

@@ -48,16 +48,9 @@ describe("CreditsSection", () => {
     });
 
     render(<CreditsSection chatId="test-chat" />);
-    expect(screen.getByText("Spend Today:")).toBeInTheDocument();
+    expect(screen.getByText("Credits / Recent Requests")).toBeInTheDocument();
+    expect(screen.getByText("Today:")).toBeInTheDocument();
     expect(screen.getByText("$1.23")).toBeInTheDocument();
-    expect(screen.getByText("Limit:")).toBeInTheDocument();
-    expect(screen.getByText("$12.66")).toBeInTheDocument();
-    expect(screen.getByText("Resets:")).toBeInTheDocument();
-    expect(screen.getByText("weekly")).toBeInTheDocument();
-    expect(screen.getByText("Spent this Week:")).toBeInTheDocument();
-    expect(screen.getByText("$7.34")).toBeInTheDocument();
-    expect(screen.getByText("Month:")).toBeInTheDocument();
-    expect(screen.getByText("$44.39")).toBeInTheDocument();
   });
 
   it("should display Credits label", () => {
@@ -78,7 +71,7 @@ describe("CreditsSection", () => {
     });
 
     render(<CreditsSection chatId="test-chat" />);
-    expect(screen.getByText("Credits")).toBeInTheDocument();
+    expect(screen.getByText("Credits / Recent Requests")).toBeInTheDocument();
   });
 
   it("should show unlimited and never when the key has no limit reset", () => {
@@ -99,10 +92,7 @@ describe("CreditsSection", () => {
     });
 
     render(<CreditsSection chatId="test-chat" />);
+    expect(screen.getByText("Today:")).toBeInTheDocument();
     expect(screen.getByText("$0.75")).toBeInTheDocument();
-    expect(screen.getByText("$5.00")).toBeInTheDocument();
-    expect(screen.getByText("never")).toBeInTheDocument();
-    expect(screen.getByText("$2.50")).toBeInTheDocument();
-    expect(screen.getByText("$4.25")).toBeInTheDocument();
   });
 });

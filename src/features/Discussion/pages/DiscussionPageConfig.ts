@@ -29,4 +29,6 @@ export interface DiscussionPageConfig {
   emptyStateText: string;
   /** Label for the accept message button (e.g. "Use This"). If undefined, no button is shown. */
   acceptMessageLabel?: string;
+  /** URL to navigate to for editing this discussion's system prompt (e.g. "/system-prompts#discussChapterPrompt") */
+  promptLink?: string;
 }

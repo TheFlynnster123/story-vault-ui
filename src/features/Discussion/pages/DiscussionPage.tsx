@@ -5,6 +5,8 @@ import {
   RiSendPlane2Line,
   RiCheckLine,
   RiCheckDoubleLine,
+  RiArrowDownSLine,
+  RiArrowUpSLine,
 } from "react-icons/ri";
 import {
   Title,
@@ -19,10 +21,15 @@ import {
   Box,
   Loader,
   ScrollArea,
+  Collapse,
+  UnstyledButton,
+  Badge,
 } from "@mantine/core";
+import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { Theme } from "../../../components/Theme";
 import { Page } from "../../../components/Page";
 import { ModelSelect } from "../../AI/components/ModelSelect";
+import { EditPromptButton } from "../../AI/components/EditPromptButton";
 import { useDiscussionChat } from "../hooks/useDiscussionChat";
 import type { DiscussionService } from "../services/DiscussionService";
 import type { DiscussionMessage } from "../services/DiscussionMessage";
@@ -47,6 +54,7 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     messages,
     isGenerating,
     defaultModel,
+    getLLMContext,
     sendMessage,
     generateInitialMessage,
     sendFinalFeedbackAndGenerate,
@@ -70,6 +78,10 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
   const handleGoBack = () => {
     navigate(`/chat/${chatId}`);
   };
+
+  const handleEditPrompt = config.promptLink
+    ? () => navigate(config.promptLink!)
+    : undefined;
 
   const handleSend = async () => {
     if (!inputValue.trim() || isGenerating) return;
@@ -108,7 +120,11 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
           height: "calc(100vh - 80px)",
         }}
       >
-        <DiscussionHeader config={config} onGoBack={handleGoBack} />
+        <DiscussionHeader
+          config={config}
+          onGoBack={handleGoBack}
+          onEditPrompt={handleEditPrompt}
+        />
 
         <Box mb="md">
           <ModelSelect
@@ -118,6 +134,8 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
             withDescription={false}
           />
         </Box>
+
+        <LLMContextPanel context={getLLMContext()} />
 
         <DiscussionChatArea
           messages={messages}
@@ -144,14 +162,87 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
 
 // ---- Sub-components ----
 
+const ROLE_COLOR: Record<string, string> = {
+  system: "#9370DB",
+  user: "#4CAF50",
+  assistant: "#2196F3",
+};
+
+interface LLMContextPanelProps {
+  context: LLMMessage[];
+}
+
+const LLMContextPanel: React.FC<LLMContextPanelProps> = ({ context }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Box mb="sm">
+      <UnstyledButton
+        onClick={() => setOpen((o) => !o)}
+        style={{ width: "100%" }}
+      >
+        <Group gap={4} align="center">
+          {open ? (
+            <RiArrowUpSLine size={14} color={Theme.page.textMuted} />
+          ) : (
+            <RiArrowDownSLine size={14} color={Theme.page.textMuted} />
+          )}
+          <Text size="xs" c="dimmed">
+            LLM Context ({context.length} message
+            {context.length !== 1 ? "s" : ""})
+          </Text>
+        </Group>
+      </UnstyledButton>
+      <Collapse in={open} style={{ overflow: open ? "visible" : "hidden" }}>
+        <ScrollArea h={300} mt="xs">
+          <Stack gap="xs">
+            {context.map((msg, i) => (
+              <Box
+                key={i}
+                pl="xs"
+                style={{
+                  borderLeft: `3px solid ${ROLE_COLOR[msg.role] ?? "#888"}`,
+                }}
+              >
+                <Badge
+                  size="xs"
+                  variant="outline"
+                  color={
+                    msg.role === "system"
+                      ? "violet"
+                      : msg.role === "user"
+                        ? "green"
+                        : "blue"
+                  }
+                  mb={2}
+                >
+                  {msg.role}
+                </Badge>
+                <Text
+                  size="xs"
+                  style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}
+                >
+                  {msg.content}
+                </Text>
+              </Box>
+            ))}
+          </Stack>
+        </ScrollArea>
+      </Collapse>
+    </Box>
+  );
+};
+
 interface DiscussionHeaderProps {
   config: DiscussionPageConfig;
   onGoBack: () => void;
+  onEditPrompt?: () => void;
 }
 
 const DiscussionHeader: React.FC<DiscussionHeaderProps> = ({
   config,
   onGoBack,
+  onEditPrompt,
 }) => (
   <>
     <Group justify="space-between" align="center" mb="md">
@@ -164,6 +255,9 @@ const DiscussionHeader: React.FC<DiscussionHeaderProps> = ({
           {config.title}
         </Title>
       </Group>
+      {onEditPrompt && (
+        <EditPromptButton onClick={onEditPrompt}>Edit Prompt</EditPromptButton>
+      )}
     </Group>
     <Text size="sm" c="dimmed" mb="md">
       {config.description}

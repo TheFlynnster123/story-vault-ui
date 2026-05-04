@@ -9,7 +9,7 @@ describe("ImageGenerator", () => {
   let imageGenerator: ImageGenerator;
   let mockOpenRouterChatAPI: any;
   let mockSystemPromptsService: any;
-  let mockChatImageModelService: any;
+  let mockChatImageVariantService: any;
   let mockCharacterSelectionService: any;
   let mockCharacterDescriptionsService: any;
   const chatId = "test-chat-123";
@@ -23,7 +23,7 @@ describe("ImageGenerator", () => {
       Get: vi.fn(),
     };
 
-    mockChatImageModelService = {
+    mockChatImageVariantService = {
       getSelectedModelOrDefault: vi.fn().mockResolvedValue({
         imageGenerationPrompt: "",
         input: {},
@@ -41,7 +41,9 @@ describe("ImageGenerator", () => {
 
     (d.OpenRouterChatAPI as any) = vi.fn(() => mockOpenRouterChatAPI);
     (d.SystemPromptsService as any) = vi.fn(() => mockSystemPromptsService);
-    (d.ChatImageModelService as any) = vi.fn(() => mockChatImageModelService);
+    (d.ChatImageVariantService as any) = vi.fn(
+      () => mockChatImageVariantService,
+    );
     (d.CharacterSelectionService as any) = vi.fn(
       () => mockCharacterSelectionService,
     );
@@ -176,7 +178,7 @@ describe("ImageGenerator", () => {
       mockSystemPromptsService.Get.mockResolvedValue({
         defaultImagePrompt: basePrompt,
       });
-      mockChatImageModelService.getSelectedModelOrDefault.mockResolvedValue({
+      mockChatImageVariantService.getSelectedModelOrDefault.mockResolvedValue({
         imageGenerationPrompt: customPrompt,
         appendImageGenerationPromptToBase: true,
         input: {},
@@ -205,7 +207,7 @@ describe("ImageGenerator", () => {
       mockSystemPromptsService.Get.mockResolvedValue({
         defaultImagePrompt: basePrompt,
       });
-      mockChatImageModelService.getSelectedModelOrDefault.mockResolvedValue({
+      mockChatImageVariantService.getSelectedModelOrDefault.mockResolvedValue({
         imageGenerationPrompt: customPrompt,
         appendImageGenerationPromptToBase: false,
         input: {},

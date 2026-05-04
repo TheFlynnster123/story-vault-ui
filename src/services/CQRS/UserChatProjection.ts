@@ -178,6 +178,19 @@ export class UserChatProjection {
     return this.computeNoteExpiration(visible);
   }
 
+  public GetLatestPlanContent(planDefinitionId: string): string | undefined {
+    const planMessages = this.Messages.filter(
+      (m) =>
+        m.type === "plan" &&
+        !m.hidden &&
+        !m.deleted &&
+        m.data?.planDefinitionId === planDefinitionId,
+    );
+    return planMessages.length > 0
+      ? planMessages[planMessages.length - 1].content
+      : undefined;
+  }
+
   public getChapterMessages(chapterId: string): UserChatMessage[] {
     const chapter = this.Messages.find(
       (m) => m.id === chapterId && m.type === "chapter",
@@ -380,11 +393,27 @@ export class UserChatProjection {
     this.Messages[bookIndex] = { ...book, deleted: true };
   }
 
-  private processCivitJobCreated(event: { jobId: string; prompt: string }) {
+  private processCivitJobCreated(event: {
+    jobId: string;
+    prompt: string;
+    modelName?: string;
+    modelId?: string;
+    modelSource?: "system" | "variant";
+    characterDescription?: string;
+    characterName?: string;
+  }) {
     this.Messages.push({
       id: event.jobId,
       type: "civit-job",
-      data: { jobId: event.jobId, prompt: event.prompt },
+      data: {
+        jobId: event.jobId,
+        prompt: event.prompt,
+        modelName: event.modelName,
+        modelId: event.modelId,
+        modelSource: event.modelSource,
+        characterDescription: event.characterDescription,
+        characterName: event.characterName,
+      },
 
       hiddenByChapterId: undefined,
       deleted: false,
@@ -587,7 +616,15 @@ export interface UserChatMessage {
 }
 
 export interface CivitJobChatMessage extends UserChatMessage {
-  data: { jobId: string; prompt: string };
+  data: {
+    jobId: string;
+    prompt: string;
+    modelName?: string;
+    modelId?: string;
+    modelSource?: "system" | "variant";
+    characterDescription?: string;
+    characterName?: string;
+  };
 }
 
 export interface ChapterChatMessage extends UserChatMessage {

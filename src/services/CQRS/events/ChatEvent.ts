@@ -64,6 +64,11 @@ export interface CivitJobCreatedEvent {
   type: "CivitJobCreated";
   jobId: string;
   prompt: string;
+  modelName?: string;
+  modelId?: string;
+  modelSource?: "system" | "variant";
+  characterDescription?: string;
+  characterName?: string;
 }
 
 export interface StoryCreatedEvent {

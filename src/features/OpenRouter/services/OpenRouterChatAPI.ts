@@ -3,10 +3,18 @@ import Config from "../../../services/Config";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { OpenRouterError, parseOpenRouterError } from "./OpenRouterError";
 import { getOpenRouterCreditsQueryKey } from "./OpenRouterCreditsAPI";
+import type { RequestType } from "./RequestTracker";
 
 interface CleanMessage {
   role: string;
   content: string;
+}
+
+interface UsageResponse {
+  promptTokens: number;
+  completionTokens: number;
+  reasoningTokens: number | null;
+  cost: number | null;
 }
 
 interface PostChatRequest {
@@ -24,6 +32,8 @@ export class OpenRouterChatAPI {
   public async postChat(
     messages: LLMMessage[],
     modelOverride?: string,
+    requestType: RequestType = "chat",
+    requestLabel: string = "LLM",
   ): Promise<string> {
     var openRouterEncryptionKey = await d
       .EncryptionManager()
@@ -44,14 +54,30 @@ export class OpenRouterChatAPI {
       requestBody.model = modelOverride;
     }
 
-    const response = await this.makeRequest<{ reply: string }>(
-      `/api/PostChat`,
-      {
-        method: "POST",
-        body: JSON.stringify(requestBody),
-        headers,
-      },
-    );
+    const response = await this.makeRequest<{
+      reply: string;
+      usage: UsageResponse | null;
+    }>(`/api/PostChat`, {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+      headers,
+    });
+
+    d.RequestTracker().record({
+      label: requestLabel,
+      type: requestType,
+      model: requestBody.model,
+      timestamp: new Date(),
+      inputMessageCount: messages.length,
+      inputCharCount: sumMessageChars(messages),
+      responseCharCount: response.reply.length,
+      inputMessages: cleanMessages(messages),
+      responseContent: response.reply,
+      actualCost: response.usage?.cost ?? undefined,
+      promptTokens: response.usage?.promptTokens ?? undefined,
+      completionTokens: response.usage?.completionTokens ?? undefined,
+      reasoningTokens: response.usage?.reasoningTokens ?? undefined,
+    });
 
     return response.reply;
   }
@@ -102,6 +128,7 @@ export class OpenRouterChatAPI {
     const decoder = new TextDecoder();
     let fullContent = "";
     let buffer = "";
+    let capturedUsage: UsageResponse | null = null;
 
     try {
       while (true) {
@@ -124,6 +151,8 @@ export class OpenRouterChatAPI {
             if (typeof parsed === "string") {
               fullContent += parsed;
               onToken(fullContent);
+            } else if (parsed.type === "usage") {
+              capturedUsage = parsed.data as UsageResponse;
             } else if (parsed.error) {
               throw new OpenRouterError(0, parsed.error);
             }
@@ -138,6 +167,22 @@ export class OpenRouterChatAPI {
     }
 
     await this.refreshCredits();
+
+    d.RequestTracker().record({
+      label: "Chat",
+      type: "chat",
+      model: requestBody.model,
+      timestamp: new Date(),
+      inputMessageCount: messages.length,
+      inputCharCount: sumMessageChars(messages),
+      responseCharCount: fullContent.length,
+      inputMessages: cleanMessages(messages),
+      responseContent: fullContent,
+      actualCost: capturedUsage?.cost ?? undefined,
+      promptTokens: capturedUsage?.promptTokens ?? undefined,
+      completionTokens: capturedUsage?.completionTokens ?? undefined,
+      reasoningTokens: capturedUsage?.reasoningTokens ?? undefined,
+    });
 
     return fullContent;
   }
@@ -207,3 +252,6 @@ export class OpenRouterChatAPI {
 
 export const cleanMessages = (messages: LLMMessage[]): CleanMessage[] =>
   messages.map(({ role, content }) => ({ role, content }));
+
+const sumMessageChars = (messages: LLMMessage[]): number =>
+  messages.reduce((sum, m) => sum + m.content.length, 0);
