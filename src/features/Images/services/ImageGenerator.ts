@@ -129,7 +129,7 @@ export class ImageGenerator {
   public async triggerJob(
     imageGenerationPrompt: string,
     preferredImage?: { id: string; source: "system" | "variant" },
-  ): Promise<{ jobId: string; modelName: string }> {
+  ): Promise<{ jobId: string; modelName: string; fullPrompt: string }> {
     const selectedModel = await this.resolveModelForJob(preferredImage);
 
     const modelInput = copyModel(selectedModel);
@@ -140,6 +140,7 @@ export class ImageGenerator {
     return {
       jobId: response?.jobs[0]?.jobId ?? "",
       modelName: selectedModel.name,
+      fullPrompt: modelInput.params?.prompt ?? imageGenerationPrompt,
     };
   }
 

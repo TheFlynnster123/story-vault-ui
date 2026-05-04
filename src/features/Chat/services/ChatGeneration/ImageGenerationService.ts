@@ -111,12 +111,12 @@ export class ImageGenerationService extends GenerationOrchestrator {
         .generatePromptWithFeedback(messageList, originalPrompt, feedback);
 
       this.setStatus("Triggering image generation...");
-      const { jobId: newJobId, modelName } = await d
+      const { jobId: newJobId, modelName, fullPrompt } = await d
         .ImageGenerator(this.chatId)
         .triggerJob(generatedPrompt, originalModel);
 
       this.setStatus("Saving job...");
-      await d.ChatService(this.chatId).CreateCivitJob(newJobId, generatedPrompt, {
+      await d.ChatService(this.chatId).CreateCivitJob(newJobId, fullPrompt, {
         modelName,
         modelId: originalModel?.id,
         modelSource: originalModel?.source,
@@ -139,12 +139,12 @@ export class ImageGenerationService extends GenerationOrchestrator {
       await this.resolveCharacterPreferredImage(characterContext);
 
     this.setStatus("Triggering image generation...");
-    const { jobId, modelName } = await d
+    const { jobId, modelName, fullPrompt } = await d
       .ImageGenerator(this.chatId)
       .triggerJob(generatedPrompt, preferredImage);
 
     this.setStatus("Saving job...");
-    await d.ChatService(this.chatId).CreateCivitJob(jobId, generatedPrompt, {
+    await d.ChatService(this.chatId).CreateCivitJob(jobId, fullPrompt, {
       modelName,
       modelId: preferredImage?.id,
       modelSource: preferredImage?.source,
