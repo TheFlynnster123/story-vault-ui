@@ -148,6 +148,7 @@ describe("ImageGenerationService", () => {
     mockImageGenerator.triggerJob.mockResolvedValue({
       jobId: "job-1",
       modelName: "Test Model",
+      fullPrompt: "full combined prompt",
     });
 
     const result = await service.generateImage();
@@ -158,7 +159,7 @@ describe("ImageGenerationService", () => {
     ).toHaveBeenCalled();
     expect(mockChatService.CreateCivitJob).toHaveBeenCalledWith(
       "job-1",
-      "image prompt",
+      "full combined prompt",
       expect.objectContaining({ modelName: "Test Model" }),
     );
   });
@@ -199,6 +200,7 @@ describe("ImageGenerationService", () => {
     mockImageGenerator.triggerJob.mockResolvedValue({
       jobId: "job-2",
       modelName: "Test Model",
+      fullPrompt: "full combined prompt",
     });
 
     const result = await service.resolveMissingCharacterDescription(
@@ -215,7 +217,7 @@ describe("ImageGenerationService", () => {
     ).toHaveBeenCalledWith(createMockMessages(), { type: "none" });
     expect(mockChatService.CreateCivitJob).toHaveBeenCalledWith(
       "job-2",
-      "image prompt",
+      "full combined prompt",
       expect.objectContaining({ modelName: "Test Model" }),
     );
   });
@@ -235,6 +237,7 @@ describe("ImageGenerationService", () => {
     mockImageGenerator.triggerJob.mockResolvedValue({
       jobId: "job-3",
       modelName: "Test Model",
+      fullPrompt: "full combined prompt",
     });
 
     const result = await service.resolveMissingCharacterDescription(
@@ -263,7 +266,7 @@ describe("ImageGenerationService", () => {
     });
     expect(mockChatService.CreateCivitJob).toHaveBeenCalledWith(
       "job-3",
-      "image prompt",
+      "full combined prompt",
       expect.objectContaining({ modelName: "Test Model" }),
     );
   });
