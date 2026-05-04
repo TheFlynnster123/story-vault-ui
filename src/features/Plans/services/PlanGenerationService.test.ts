@@ -639,6 +639,22 @@ describe("PlanGenerationService", () => {
         ]),
       );
     });
+
+    it("should reset the message counter after generation", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1", messagesSinceLastUpdate: 3 });
+      mockPlanService.getPlans
+        .mockReturnValueOnce([plan])
+        .mockReturnValue([plan]);
+
+      await service.regeneratePlanFromMessage("plan-1", "Old content");
+
+      expect(mockPlanService.savePlans).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ id: "plan-1", messagesSinceLastUpdate: 0 }),
+        ]),
+      );
+    });
   });
 
   // ---- onMessageSent due-plan detection ----
