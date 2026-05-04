@@ -401,6 +401,8 @@ export class UserChatProjection {
     modelSource?: "system" | "variant";
     characterDescription?: string;
     characterName?: string;
+    basePrompt?: string;
+    sceneDescription?: string;
   }) {
     this.Messages.push({
       id: event.jobId,
@@ -413,6 +415,8 @@ export class UserChatProjection {
         modelSource: event.modelSource,
         characterDescription: event.characterDescription,
         characterName: event.characterName,
+        basePrompt: event.basePrompt,
+        sceneDescription: event.sceneDescription,
       },
 
       hiddenByChapterId: undefined,
@@ -624,6 +628,8 @@ export interface CivitJobChatMessage extends UserChatMessage {
     modelSource?: "system" | "variant";
     characterDescription?: string;
     characterName?: string;
+    basePrompt?: string;
+    sceneDescription?: string;
   };
 }
 
