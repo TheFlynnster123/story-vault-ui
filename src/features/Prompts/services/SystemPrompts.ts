@@ -52,6 +52,15 @@ export interface SystemPrompts {
   characterDescriptionPrompt: string;
   /** Model override for character description generation (empty = use default) */
   characterDescriptionModel?: string;
+
+  /** System prompt used during chapter discussion conversations */
+  discussChapterPrompt: string;
+
+  /** System prompt used during story discussion conversations */
+  discussStoryPrompt: string;
+
+  /** System prompt used during plan discussion conversations */
+  discussPlanPrompt: string;
 }
 
 export const DEFAULT_SYSTEM_PROMPTS: SystemPrompts = {
@@ -109,4 +118,13 @@ Do NOT include setting, actions, poses, or temporary clothing.
 
 Example:
 "young woman, oval face, green eyes, long dark wavy hair, olive skin, medium height, slim build, faint scar on left eyebrow"`,
+
+  discussChapterPrompt:
+    "You are helping the user create and refine the summary for this chapter.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the chapter summary should contain.\nEngage in a helpful conversation about what happened in this chapter.\nSuggest improvements, ask clarifying questions, and help them refine the summary.\nKeep responses concise and focused on accurately capturing the chapter's events.",
+
+  discussStoryPrompt:
+    "You are helping the user discuss and refine their story.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the story should contain.\nEngage in a helpful, creative conversation about the story.\nSuggest ideas, ask clarifying questions, and help them refine their vision.\nKeep responses concise and focused on making the story compelling.",
+
+  discussPlanPrompt:
+    "You are helping the user discuss and refine their story plan.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the story plan should contain.\nEngage in a helpful, creative conversation about story possibilities.\nSuggest ideas, ask clarifying questions, and help them refine their vision.\nKeep responses concise and focused on actionable plan improvements.",
 };

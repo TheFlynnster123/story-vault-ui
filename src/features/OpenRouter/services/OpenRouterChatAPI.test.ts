@@ -37,6 +37,10 @@ describe("OpenRouterChatAPI", () => {
     vi.mocked(d.QueryClient).mockReturnValue({
       invalidateQueries,
     } as any);
+
+    vi.mocked(d.RequestTracker).mockReturnValue({
+      record: vi.fn(),
+    } as any);
   });
 
   afterEach(() => {

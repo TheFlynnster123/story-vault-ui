@@ -23,6 +23,7 @@ const pageConfig: DiscussionPageConfig = {
   finalFeedbackButtonLabel: "Send & Generate Chapter Summary",
   emptyStateText:
     "Start a conversation about this chapter's summary. Discuss what happened, suggest corrections, or refine the narrative.",
+  promptLink: "/system-prompts#discussChapterPrompt",
 };
 
 export const DiscussChapterPage: React.FC = () => {
@@ -41,6 +42,7 @@ export const DiscussChapterPage: React.FC = () => {
           chapterId!,
           systemPrompts.chapterSummaryModel,
           systemPrompts.chapterSummaryPrompt,
+          systemPrompts.discussChapterPrompt,
         ),
       ),
     [
@@ -48,6 +50,7 @@ export const DiscussChapterPage: React.FC = () => {
       chapterId,
       systemPrompts.chapterSummaryModel,
       systemPrompts.chapterSummaryPrompt,
+      systemPrompts.discussChapterPrompt,
     ],
   );
 

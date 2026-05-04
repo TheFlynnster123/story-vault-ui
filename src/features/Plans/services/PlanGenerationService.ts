@@ -178,6 +178,14 @@ export class PlanGenerationService {
   };
 
   /**
+   * Hides all plan messages for this definition from the chat timeline.
+   * Used by the "Clear Plan" action on the Plans page.
+   */
+  public clearPlan = async (planId: string): Promise<void> => {
+    await d.ChatService(this.chatId).ClearPlan(planId);
+  };
+
+  /**
    * Regenerates a plan from the chat timeline.
    * If priorContent is provided, sends an "update" prompt that includes
    * the prior plan and optional user feedback.

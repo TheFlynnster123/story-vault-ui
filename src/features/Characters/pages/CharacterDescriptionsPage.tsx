@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { RiArrowLeftLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
+import {
+  RiArrowLeftLine,
+  RiAddLine,
+  RiDeleteBinLine,
+  RiImageLine,
+} from "react-icons/ri";
 import { FaUser } from "react-icons/fa";
 import {
   Title,
@@ -13,8 +18,10 @@ import {
   TextInput,
   Text,
   Divider,
+  Badge,
 } from "@mantine/core";
 import type { CharacterDescription } from "../services/CharacterDescription";
+import type { PreferredImage } from "../services/CharacterDescription";
 import {
   createCharacterDescription,
   updateCharacterDescription,
@@ -24,6 +31,7 @@ import { Page } from "../../../components/Page";
 import { Theme } from "../../../components/Theme";
 import { ConfirmModal } from "../../../components/ConfirmModal";
 import { d } from "../../../services/Dependencies";
+import { CharacterImageModelModal } from "../../Images/components/CharacterImageModelModal";
 
 export const CharacterDescriptionsPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -37,6 +45,9 @@ export const CharacterDescriptionsPage: React.FC = () => {
   const [characterToDeleteId, setCharacterToDeleteId] = useState<string | null>(
     null,
   );
+  const [modelPickerCharacterId, setModelPickerCharacterId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (!isLoading) {
@@ -101,6 +112,21 @@ export const CharacterDescriptionsPage: React.FC = () => {
   const handleGoBack = async () => {
     await d.CharacterDescriptionsService(chatId!).save(formCharacters);
     navigate(`/chat/${chatId}`);
+  };
+
+  const handlePreferredImageSelect = async (
+    characterId: string,
+    preferredImage: PreferredImage | undefined,
+  ) => {
+    const updatedCharacters = formCharacters.map((character) =>
+      character.id === characterId
+        ? updateCharacterDescription(character, { preferredImage })
+        : character,
+    );
+    setFormCharacters(updatedCharacters);
+    await d
+      .CharacterDescriptionsService(chatId!)
+      .updateCharacter(characterId, { preferredImage });
   };
 
   return (
@@ -179,6 +205,37 @@ export const CharacterDescriptionsPage: React.FC = () => {
                   },
                 }}
               />
+              <Group gap="xs" align="center">
+                <Text size="sm" style={{ color: Theme.page.text }}>
+                  Preferred Image Model:
+                </Text>
+                {character.preferredImage ? (
+                  <Badge
+                    size="sm"
+                    color={
+                      character.preferredImage.source === "variant"
+                        ? "violet"
+                        : "teal"
+                    }
+                    variant="light"
+                  >
+                    {character.preferredImage.source}
+                  </Badge>
+                ) : (
+                  <Text size="sm" c="dimmed">
+                    None (uses chat default)
+                  </Text>
+                )}
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  leftSection={<RiImageLine size={12} />}
+                  style={{ color: Theme.character.primary }}
+                  onClick={() => setModelPickerCharacterId(character.id)}
+                >
+                  Change
+                </Button>
+              </Group>
               <Button
                 variant="outline"
                 color="red"
@@ -187,7 +244,10 @@ export const CharacterDescriptionsPage: React.FC = () => {
               >
                 <RiDeleteBinLine /> Delete Character
               </Button>
-              <Divider my="sm" style={{ borderColor: Theme.character.border }} />
+              <Divider
+                my="sm"
+                style={{ borderColor: Theme.character.border }}
+              />
             </Stack>
           ))}
         </Stack>
@@ -200,6 +260,22 @@ export const CharacterDescriptionsPage: React.FC = () => {
         title="Confirm Deletion"
         message="Are you sure you want to delete this character?"
       />
+
+      {modelPickerCharacterId && (
+        <CharacterImageModelModal
+          opened={!!modelPickerCharacterId}
+          onClose={() => setModelPickerCharacterId(null)}
+          chatId={chatId!}
+          currentSelection={
+            formCharacters.find((c) => c.id === modelPickerCharacterId)
+              ?.preferredImage
+          }
+          onSelect={(selection) => {
+            handlePreferredImageSelect(modelPickerCharacterId, selection);
+            setModelPickerCharacterId(null);
+          }}
+        />
+      )}
     </Page>
   );
 };
@@ -219,7 +295,7 @@ const CharacterDescriptionsHeader: React.FC<
         </ActionIcon>
         <FaUser size={20} color={Theme.character.primary} />
         <Title order={2} fw={400} style={{ color: Theme.character.primary }}>
-          Character Descriptions
+          Characters
         </Title>
       </Group>
     </Group>

@@ -18,11 +18,14 @@ import { DiscussStoryPage } from "./features/Discussion/pages/DiscussStoryPage";
 import { MemoriesPage } from "./features/Memories/pages/MemoriesPage";
 import { CharacterDescriptionsPage } from "./features/Characters/pages/CharacterDescriptionsPage";
 import { StoryEditorPage } from "./features/StoryEditor/pages/StoryEditorPage";
+import { ChatImageVariantsPage } from "./features/Images/pages/ChatImageVariantsPage";
+import ChatImageVariantEditPage from "./features/Images/pages/ChatImageVariantEditPage";
 import { ChatImageModelsPage } from "./features/Images/pages/ChatImageModelsPage";
 import ChatImageModelTemplatePage from "./features/Images/pages/ChatImageModelTemplatePage";
 import ChatImageModelEditPage from "./features/Images/pages/ChatImageModelEditPage";
 import ProtectedRoute from "./features/Auth/components/ProtectedRoute";
 import { ChatCreationWizard } from "./features/Chat/components/ChatCreationWizard/ChatCreationWizard";
+import { CreditsPage } from "./features/OpenRouter/pages/CreditsPage";
 import { QUERY_CLIENT } from "./services/QueryClient";
 
 interface AppProps {}
@@ -114,10 +117,34 @@ const App: React.FC<AppProps> = () => {
             }
           />
           <Route
+            path="/chat/:chatId/credits"
+            element={
+              <ProtectedRoute>
+                <CreditsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/chat/:chatId/characters"
             element={
               <ProtectedRoute>
                 <CharacterDescriptionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/image-variants"
+            element={
+              <ProtectedRoute>
+                <ChatImageVariantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/image-variants/edit/:variantId"
+            element={
+              <ProtectedRoute>
+                <ChatImageVariantEditPage />
               </ProtectedRoute>
             }
           />

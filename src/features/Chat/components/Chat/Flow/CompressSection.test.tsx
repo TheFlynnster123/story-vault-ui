@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import React from "react";
 import { render, screen, waitFor } from "../../../../../testing";
 import userEvent from "@testing-library/user-event";
 import { CompressSection } from "./CompressSection";
@@ -7,6 +8,7 @@ import { CompressSection } from "./CompressSection";
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
+  MemoryRouter: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // Mock hooks to avoid real service dependencies

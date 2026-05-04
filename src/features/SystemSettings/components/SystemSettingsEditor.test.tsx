@@ -34,6 +34,22 @@ vi.mock("../../OpenRouter/hooks/useOpenRouterModels", () => ({
   }),
 }));
 
+// Mock react-virtuoso (GroupedVirtuoso doesn't render in JSDOM)
+vi.mock("react-virtuoso", () => ({
+  GroupedVirtuoso: ({ groupCounts, groupContent, itemContent }: any) => {
+    const nodes: React.ReactNode[] = [];
+    let itemIndex = 0;
+    groupCounts.forEach((count: number, groupIndex: number) => {
+      nodes.push(<div key={`g-${groupIndex}`}>{groupContent(groupIndex)}</div>);
+      for (let i = 0; i < count; i++) {
+        nodes.push(<div key={`i-${itemIndex}`}>{itemContent(itemIndex)}</div>);
+        itemIndex++;
+      }
+    });
+    return <div>{nodes}</div>;
+  },
+}));
+
 // Mock notifications
 vi.mock("@mantine/notifications", () => ({
   notifications: {

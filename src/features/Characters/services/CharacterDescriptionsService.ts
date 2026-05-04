@@ -68,7 +68,9 @@ export class CharacterDescriptionsService {
 
   updateCharacter = async (
     id: string,
-    updates: Partial<Pick<CharacterDescription, "name" | "description">>,
+    updates: Partial<
+      Pick<CharacterDescription, "name" | "description" | "preferredImage">
+    >,
   ): Promise<void> => {
     const descriptions = await this.get();
     const character = findCharacterById(descriptions, id);

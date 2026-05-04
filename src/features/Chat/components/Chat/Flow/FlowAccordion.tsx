@@ -3,13 +3,12 @@ import { Accordion, Stack, Box } from "@mantine/core";
 import { useNavigate } from "react-router-dom";
 import { FlowStyles } from "./FlowStyles";
 import { CompressSection } from "./CompressSection";
-import { NoteSection } from "./NoteSection";
+import { NotesAndMemoriesSection } from "./NotesAndMemoriesSection";
 import { ChatSettingsButton } from "./ChatSettingsButton";
 import { ChatImageModelsSection } from "./ChatImageModelsSection";
 import { ChatModelSection } from "./ChatModelSection";
 import { usePlanCache } from "../../../../Plans/hooks/usePlanCache";
 import { PlanSection } from "../../../../Plans/components/PlanSection";
-import { MemoriesSection } from "../../../../Memories/components/MemoriesSection";
 import { CharacterDescriptionsSection } from "../../../../Characters/components/CharacterDescriptionsSection";
 import { TransparencySlider } from "./TransparencySlider";
 import { CreditsSection } from "./CreditsSection";
@@ -27,7 +26,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
   const navigateToMemories = () => navigate(`/chat/${chatId}/memories`);
   const navigateToCharacters = () => navigate(`/chat/${chatId}/characters`);
   const navigateToChatImageModels = () =>
-    navigate(`/chat/${chatId}/image-models`);
+    navigate(`/chat/${chatId}/image-variants`);
 
   return (
     <Box
@@ -57,14 +56,13 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
                 onNavigate={navigateToPlan}
               />
               <CompressSection chatId={chatId} />
-              <NoteSection chatId={chatId} />
+              <NotesAndMemoriesSection
+                chatId={chatId}
+                onNavigateToMemories={navigateToMemories}
+              />
               <CharacterDescriptionsSection
                 chatId={chatId}
                 onNavigate={navigateToCharacters}
-              />
-              <MemoriesSection
-                chatId={chatId}
-                onNavigate={navigateToMemories}
               />
             </Stack>
           </Accordion.Panel>

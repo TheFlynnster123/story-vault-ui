@@ -1,5 +1,6 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { Plan } from "../../Plans/services/Plan";
 import type { DiscussionConfig } from "./DiscussionConfig";
 
@@ -9,6 +10,7 @@ import type { DiscussionConfig } from "./DiscussionConfig";
 export const createPlanDiscussionConfig = (
   chatId: string,
   planId: string,
+  discussPlanPrompt?: string,
 ): DiscussionConfig => {
   const findPlan = (): Plan | undefined =>
     d
@@ -44,6 +46,9 @@ export const createPlanDiscussionConfig = (
     return d.LLMChatProjection(chatId).GetMessagesExcludingPlan(planId);
   };
 
+  const resolvedDiscussionPrompt = (): string =>
+    discussPlanPrompt || DEFAULT_SYSTEM_PROMPTS.discussPlanPrompt;
+
   const buildSystemPrompt = (): string => {
     const plan = findPlan();
     if (!plan) return "";
@@ -53,27 +58,12 @@ export const createPlanDiscussionConfig = (
     const lines = [
       `# Plan Discussion — ${plan.name}`,
       ``,
-      `You are helping the user discuss and refine their story plan.`,
-      `Consider the full chat history above for context.`,
+      resolvedDiscussionPrompt(),
     ];
 
     if (latestPlanContent) {
-      lines.push(
-        ``,
-        `This was the most recently generated story plan:`,
-        `---`,
-        latestPlanContent,
-        `---`,
-      );
+      lines.push(``, `Current plan:`, `---`, latestPlanContent, `---`);
     }
-
-    lines.push(
-      ``,
-      `The user would like to discuss what the story plan should contain.`,
-      `Engage in a helpful, creative conversation about story possibilities.`,
-      `Suggest ideas, ask clarifying questions, and help them refine their vision.`,
-      `Keep responses concise and focused on actionable plan improvements.`,
-    );
 
     return lines.join("\n");
   };

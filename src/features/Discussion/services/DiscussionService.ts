@@ -39,6 +39,9 @@ export class DiscussionService {
   public getDefaultModel = (): string | undefined =>
     this.config.getDefaultModel();
 
+  /** Returns the full prompt that will be sent to the LLM on the next call. */
+  public getLLMContext = (): LLMMessage[] => this.buildConversationPrompt();
+
   /**
    * Sends a user message and gets an LLM response in context.
    * @param modelOverride - When provided, overrides the default model for this call.

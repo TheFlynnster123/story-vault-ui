@@ -49,6 +49,7 @@ export const PlanMessage: React.FC<PlanMessageProps> = ({
             chatId={chatId}
             messageId={message.id}
             planDefinitionId={message.data.planDefinitionId}
+            planName={message.data.planName}
             priorContent={message.content}
           />
         </MessageOverlay>

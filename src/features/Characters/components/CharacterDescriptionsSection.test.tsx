@@ -16,11 +16,9 @@ describe("CharacterDescriptionsSection", () => {
       <CharacterDescriptionsSection chatId="chat-1" onNavigate={vi.fn()} />,
     );
 
-    expect(screen.getByText("Character Descriptions")).toBeInTheDocument();
+    expect(screen.getByText("Characters")).toBeInTheDocument();
     expect(screen.getByText("(0)")).toBeInTheDocument();
-    expect(
-      screen.getByText("No character descriptions saved"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No characters saved")).toBeInTheDocument();
   });
 
   it("shows preview data and expands full list", async () => {

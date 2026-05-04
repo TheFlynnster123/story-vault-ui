@@ -2,7 +2,7 @@ export interface ChatCreationWizardState {
   step: number;
   title: string;
   story: string;
-  promptType: "Manual" | "First Person" | "Third Person" | "Preset";
+  promptType: "Manual" | "System Default" | "Preset";
   selectedPromptPresetId?: string;
   prompt?: string;
   backgroundPhotoBase64?: string;
@@ -15,7 +15,7 @@ export const createInitialWizardState = (): ChatCreationWizardState => {
     step: 0,
     title: "",
     story: "",
-    promptType: "Third Person",
+    promptType: "System Default",
     prompt: "",
     generateImage: false,
   };

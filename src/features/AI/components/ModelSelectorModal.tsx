@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { GroupedVirtuoso } from "react-virtuoso";
 import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
 import { d } from "../../../services/Dependencies";
 import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
@@ -216,15 +217,26 @@ const ModelItem: React.FC<{
 const GroupHeader: React.FC<{ label: string }> = ({ label }) => (
   <div
     style={{
-      padding: "8px 14px 4px",
-      fontSize: "12px",
-      fontWeight: 600,
-      color: "#aaa",
-      textTransform: "uppercase",
-      letterSpacing: "0.5px",
+      padding: "4px 8px",
+      backgroundColor: "rgba(24, 24, 28, 0.98)",
     }}
   >
-    {label}
+    <span
+      style={{
+        display: "inline-block",
+        padding: "2px 10px",
+        fontSize: "11px",
+        fontWeight: 600,
+        color: "#ccc",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        borderRadius: "999px",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+      }}
+    >
+      {label}
+    </span>
   </div>
 );
 
@@ -320,14 +332,13 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(0, 0, 0, 0.7)",
-        backdropFilter: "blur(4px)",
+        backgroundColor: "rgba(0, 0, 0, 0.75)",
       }}
     >
       <div
         style={{
           width: "min(560px, 90vw)",
-          maxHeight: "80vh",
+          height: "80vh",
           backgroundColor: "rgba(24, 24, 28, 0.98)",
           borderRadius: "12px",
           border: "1px solid rgba(255,255,255,0.1)",
@@ -410,11 +421,12 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
         <div
           style={{
             flex: 1,
-            overflowY: "auto",
+            minHeight: 0,
             padding: "0 12px 12px",
+            overflow: "hidden",
           }}
         >
-          {filteredGroups.length === 0 && !isLoading && (
+          {filteredGroups.length === 0 && !isLoading ? (
             <div
               style={{
                 textAlign: "center",
@@ -425,20 +437,32 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
             >
               No models found matching &quot;{search}&quot;
             </div>
+          ) : (
+            <GroupedVirtuoso
+              style={{ height: "100%" }}
+              groupCounts={filteredGroups.map((g) => g.models.length)}
+              groupContent={(index) => (
+                <GroupHeader label={filteredGroups[index].label} />
+              )}
+              itemContent={(index) => {
+                let offset = 0;
+                for (const group of filteredGroups) {
+                  if (index < offset + group.models.length) {
+                    const model = group.models[index - offset];
+                    return (
+                      <ModelItem
+                        model={model}
+                        isSelected={model.id === selectedModelId}
+                        onClick={() => handleSelect(model.id)}
+                      />
+                    );
+                  }
+                  offset += group.models.length;
+                }
+                return null;
+              }}
+            />
           )}
-          {filteredGroups.map((group) => (
-            <div key={group.label} style={{ marginBottom: "8px" }}>
-              <GroupHeader label={group.label} />
-              {group.models.map((model) => (
-                <ModelItem
-                  key={model.id}
-                  model={model}
-                  isSelected={model.id === selectedModelId}
-                  onClick={() => handleSelect(model.id)}
-                />
-              ))}
-            </div>
-          ))}
         </div>
       </div>
     </div>

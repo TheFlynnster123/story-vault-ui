@@ -1,15 +1,8 @@
 import React, { useState } from "react";
-import {
-  Box,
-  Group,
-  Text,
-  Paper,
-  ActionIcon,
-  Loader,
-  Tooltip,
-} from "@mantine/core";
+import { Box, Group, Text, ActionIcon, Loader, Tooltip } from "@mantine/core";
 import { RiRefreshLine } from "react-icons/ri";
 import { MdAccountBalanceWallet } from "react-icons/md";
+import { useNavigate } from "react-router-dom";
 import { FlowButton } from "./FlowButton";
 import { FlowStyles } from "./FlowStyles";
 import { Theme } from "../../../../../components/Theme";
@@ -21,18 +14,14 @@ interface CreditsSectionProps {
 
 const formatCurrency = (amount: number): string => `$${amount.toFixed(2)}`;
 
-const formatLimitReset = (limitReset: string | null): string => {
-  if (!limitReset) return "never";
-  return limitReset.toLowerCase();
-};
-
 const getBalanceColor = (balance: number): string => {
   if (balance < 1) return Theme.credits.error;
   if (balance < 5) return Theme.credits.warning;
   return Theme.credits.primary;
 };
 
-export const CreditsSection: React.FC<CreditsSectionProps> = () => {
+export const CreditsSection: React.FC<CreditsSectionProps> = ({ chatId }) => {
+  const navigate = useNavigate();
   const { credits, isLoading, error, refetch } = useOpenRouterCredits();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -42,6 +31,8 @@ export const CreditsSection: React.FC<CreditsSectionProps> = () => {
     await refetch();
     setIsRefreshing(false);
   };
+
+  const navigateToCredits = () => navigate(`/chat/${chatId}/credits`);
 
   const hasCredits = Boolean(credits && !isLoading && !error);
   const availableCredits = hasCredits ? credits : undefined;
@@ -68,30 +59,21 @@ export const CreditsSection: React.FC<CreditsSectionProps> = () => {
       >
         <Box style={{ flex: 1, minWidth: 0 }}>
           <FlowButton
-            onClick={() => {
-              // Future: could open a modal with more details
-            }}
+            onClick={navigateToCredits}
             leftSection={
               <MdAccountBalanceWallet size={18} color={balanceColor} />
             }
           >
             <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
               <Text size="sm" fw={500} style={{ flexShrink: 0 }}>
-                Credits
+                Credits / Recent Requests
               </Text>
               {availableCredits ? (
-                <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
-                  <InlineMetric
-                    label="Spend Today"
-                    value={formatCurrency(availableCredits.usageDaily)}
-                    valueColor={Theme.credits.secondary}
-                  />
-                  <InlineMetric
-                    label="Limit"
-                    value={formatCurrency(availableCredits.limitRemaining)}
-                    valueColor={balanceColor}
-                  />
-                </Group>
+                <InlineMetric
+                  label="Today"
+                  value={formatCurrency(availableCredits.usageDaily)}
+                  valueColor={Theme.credits.secondary}
+                />
               ) : (
                 <Text
                   size="xs"
@@ -127,38 +109,6 @@ export const CreditsSection: React.FC<CreditsSectionProps> = () => {
           </ActionIcon>
         </Tooltip>
       </Box>
-      {availableCredits && (
-        <Box mt="xs">
-          <Paper
-            p="xs"
-            style={{
-              backgroundColor: "rgba(0, 0, 0, 0.2)",
-              borderRadius: "4px",
-            }}
-          >
-            <CreditsDetailLine>
-              <LabeledValue
-                label="Resets"
-                value={formatLimitReset(availableCredits.limitReset)}
-                valueColor={Theme.credits.secondary}
-              />
-            </CreditsDetailLine>
-            <CreditsDetailLine>
-              <LabeledValue
-                label="Spent this Week"
-                value={formatCurrency(availableCredits.usageWeekly)}
-              />
-              <Text span size="xs" c="dimmed">
-                {" · "}
-              </Text>
-              <LabeledValue
-                label="Month"
-                value={formatCurrency(availableCredits.usageMonthly)}
-              />
-            </CreditsDetailLine>
-          </Paper>
-        </Box>
-      )}
     </Box>
   );
 };
@@ -189,44 +139,4 @@ const InlineMetric: React.FC<InlineMetricProps> = ({
       {value}
     </Text>
   </Group>
-);
-
-interface LabeledValueProps {
-  label: string;
-  value: string;
-  valueColor?: string;
-}
-
-const LabeledValue: React.FC<LabeledValueProps> = ({
-  label,
-  value,
-  valueColor = Theme.credits.primary,
-}) => (
-  <>
-    <Text span size="xs" fw={600} c="dimmed">
-      {label}:
-    </Text>
-    <Text span size="xs" c="dimmed">
-      {" "}
-    </Text>
-    <Text span size="xs" fw={500} style={{ color: valueColor }}>
-      {value}
-    </Text>
-  </>
-);
-
-const CreditsDetailLine: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <Box
-    mb="xs"
-    pl="sm"
-    style={{
-      borderLeft: "2px solid rgba(255, 255, 255, 0.3)",
-    }}
-  >
-    <Text size="xs" c="dimmed">
-      {children}
-    </Text>
-  </Box>
 );

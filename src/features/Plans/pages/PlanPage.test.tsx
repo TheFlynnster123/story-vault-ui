@@ -25,6 +25,7 @@ const mockPlanGenerationService: Partial<PlanGenerationService> = {
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
   useParams: () => ({ chatId: "chat-1" }),
+  MemoryRouter: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock("../hooks/usePlanCache", () => ({
@@ -34,6 +35,22 @@ vi.mock("../hooks/usePlanCache", () => ({
 vi.mock("../hooks/usePlanGenerationStatus", () => ({
   usePlanGenerationStatus: (...args: unknown[]) =>
     mockUsePlanGenerationStatus(...args),
+}));
+
+vi.mock("../hooks/usePlanPresets", () => ({
+  usePlanPresets: () => ({
+    presets: [],
+    isLoading: false,
+    savePreset: vi.fn(),
+    deletePreset: vi.fn(),
+  }),
+  getPlanPresetByName: vi.fn(),
+}));
+
+vi.mock("../hooks/usePlanContent", () => ({
+  usePlanContent: () => ({
+    getLatestPlanContent: () => undefined,
+  }),
 }));
 
 vi.mock("../../../services/Dependencies");
@@ -82,7 +99,7 @@ describe("PlanPage", () => {
     );
     vi.mocked(d.ErrorService).mockReturnValue({
       log: mockErrorLog,
-    } as ReturnType<typeof d.ErrorService>);
+    } as any);
   });
 
   it("should show manual-only status for plans with refresh interval 0", () => {

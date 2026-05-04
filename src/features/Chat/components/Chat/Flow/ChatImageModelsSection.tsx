@@ -3,7 +3,7 @@ import { Box, Group, Text } from "@mantine/core";
 import { RiImageLine } from "react-icons/ri";
 import { FlowButton } from "./FlowButton";
 import { FlowStyles } from "./FlowStyles";
-import { useChatImageModels } from "../../../../Images/hooks/useChatImageModels";
+import { useChatImageVariants } from "../../../../Images/hooks/useChatImageVariants";
 import { Theme } from "../../../../../components/Theme";
 
 interface ChatImageModelsSectionProps {
@@ -18,12 +18,12 @@ export const ChatImageModelsSection: React.FC<ChatImageModelsSectionProps> = ({
   chatId,
   onNavigate,
 }) => {
-  const { getSelectedModel } = useChatImageModels(chatId);
+  const { getSelectedVariant } = useChatImageVariants(chatId);
 
-  const selectedModel = getSelectedModel();
-  const isSelected = !!selectedModel;
-  const displayName = selectedModel?.name ?? "Default";
-  const sourceLabel = isSelected ? "(chat)" : "(using system default)";
+  const selectedVariant = getSelectedVariant();
+  const isSelected = !!selectedVariant;
+  const displayName = selectedVariant?.name ?? "Default";
+  const sourceLabel = isSelected ? "(variant)" : "(using system default)";
 
   return (
     <Box

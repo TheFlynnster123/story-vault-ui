@@ -47,7 +47,7 @@ const LoadingBubble = styled.div`
   text-align: center;
 `;
 
-const LoadingImageIndicator = () => (
+const LoadingImageIndicator = ({ modelName }: { modelName?: string }) => (
   <LoadingBubble style={{ marginBottom: "8px" }}>
     <Group
       gap="md"
@@ -59,6 +59,9 @@ const LoadingImageIndicator = () => (
         <Loader size="sm" color="white" />
         <span>Image is being generated</span>
       </Group>
+      {modelName && (
+        <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>{modelName}</span>
+      )}
     </Group>
   </LoadingBubble>
 );
@@ -142,7 +145,9 @@ export const CivitJobMessage = ({
     <MessageItem $type="system">
       <MessageContentWrapper $fitContent>
         <MessageContent className="message-text" onClick={toggle}>
-          {shouldShowLoadingIndicator() && <LoadingImageIndicator />}
+          {shouldShowLoadingIndicator() && (
+            <LoadingImageIndicator modelName={message.data?.modelName} />
+          )}
           {getErrorMessage() && (
             <LoadingBubble>{getErrorMessage()}</LoadingBubble>
           )}
@@ -151,17 +156,19 @@ export const CivitJobMessage = ({
 
         <MessageOverlay show={showButtons} onBackdropClick={toggle}>
           <Stack gap="xs" justify="center">
+            {message.data?.prompt && (
+              <Button
+                size="xs"
+                variant="light"
+                color="blue"
+                leftSection={<RiEyeLine size={14} />}
+                onClick={() => setShowPromptModal(true)}
+              >
+                View Prompt
+              </Button>
+            )}
             {isImageGenerated() && (
               <>
-                <Button
-                  size="xs"
-                  variant="light"
-                  color="blue"
-                  leftSection={<RiEyeLine size={14} />}
-                  onClick={() => setShowPromptModal(true)}
-                >
-                  View Prompt
-                </Button>
                 {isLastMessage && (
                   <>
                     <Button
@@ -243,6 +250,7 @@ export const CivitJobMessage = ({
         <ViewPromptModal
           opened={showPromptModal}
           prompt={message.data?.prompt ?? ""}
+          characterDescription={message.data?.characterDescription}
           onClose={() => setShowPromptModal(false)}
         />
 
