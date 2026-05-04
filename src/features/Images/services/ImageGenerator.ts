@@ -127,20 +127,33 @@ export class ImageGenerator {
   }
 
   public async triggerJob(
-    imageGenerationPrompt: string,
+    sceneDescription: string,
     preferredImage?: { id: string; source: "system" | "variant" },
-  ): Promise<{ jobId: string; modelName: string; fullPrompt: string }> {
+    characterDescription?: string,
+  ): Promise<{
+    jobId: string;
+    modelName: string;
+    fullPrompt: string;
+    basePrompt: string;
+    sceneDescription: string;
+  }> {
     const selectedModel = await this.resolveModelForJob(preferredImage);
 
     const modelInput = copyModel(selectedModel);
+    const basePrompt = modelInput.params?.prompt ?? "";
 
-    appendPrompt(modelInput, imageGenerationPrompt);
+    if (characterDescription) {
+      appendPrompt(modelInput, characterDescription);
+    }
+    appendPrompt(modelInput, sceneDescription);
 
     const response = await d.CivitJobAPI().generateImage(modelInput);
     return {
       jobId: response?.jobs[0]?.jobId ?? "",
       modelName: selectedModel.name,
-      fullPrompt: modelInput.params?.prompt ?? imageGenerationPrompt,
+      fullPrompt: modelInput.params?.prompt ?? sceneDescription,
+      basePrompt,
+      sceneDescription,
     };
   }
 

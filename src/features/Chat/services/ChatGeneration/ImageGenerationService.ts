@@ -2,7 +2,6 @@ import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { CharacterContext } from "../../../Images/services/ImageGenerator";
-import { formatCharacterContext } from "../../../Images/services/ImageGenerator";
 
 export const getImageGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new ImageGenerationService(chatId),
@@ -101,26 +100,43 @@ export class ImageGenerationService extends GenerationOrchestrator {
     await this.orchestrate(async () => {
       const originalPrompt = message.data?.prompt;
       const originalModel = getOriginalModelFromData(message.data);
+      const characterName = message.data?.characterName;
 
       await d.ChatService(this.chatId).DeleteMessage(jobId);
 
       this.setStatus("Generating image prompt...");
       const messageList = d.LLMChatProjection(this.chatId).GetMessages();
+
+      const characterContext = characterName
+        ? await resolveCharacterContextByName(this.chatId, characterName)
+        : noCharacterContext();
+
       const generatedPrompt = await d
         .ImageGenerator(this.chatId)
-        .generatePromptWithFeedback(messageList, originalPrompt, feedback);
+        .generatePromptWithFeedbackAndCharacterContext(
+          messageList,
+          characterContext,
+          originalPrompt,
+          feedback,
+        );
+
+      const rawCharacterDescription = getRawDescriptionFromContext(characterContext);
 
       this.setStatus("Triggering image generation...");
-      const { jobId: newJobId, modelName, fullPrompt } = await d
-        .ImageGenerator(this.chatId)
-        .triggerJob(generatedPrompt, originalModel);
+      const { jobId: newJobId, modelName, fullPrompt, basePrompt, sceneDescription } =
+        await d
+          .ImageGenerator(this.chatId)
+          .triggerJob(generatedPrompt, originalModel, rawCharacterDescription);
 
       this.setStatus("Saving job...");
       await d.ChatService(this.chatId).CreateCivitJob(newJobId, fullPrompt, {
         modelName,
         modelId: originalModel?.id,
         modelSource: originalModel?.source,
-        characterName: message.data?.characterName,
+        characterName,
+        characterDescription: rawCharacterDescription,
+        basePrompt,
+        sceneDescription,
       });
     });
   }
@@ -138,18 +154,23 @@ export class ImageGenerationService extends GenerationOrchestrator {
     const preferredImage =
       await this.resolveCharacterPreferredImage(characterContext);
 
+    const rawCharacterDescription = getRawDescriptionFromContext(characterContext);
+
     this.setStatus("Triggering image generation...");
-    const { jobId, modelName, fullPrompt } = await d
-      .ImageGenerator(this.chatId)
-      .triggerJob(generatedPrompt, preferredImage);
+    const { jobId, modelName, fullPrompt, basePrompt, sceneDescription } =
+      await d
+        .ImageGenerator(this.chatId)
+        .triggerJob(generatedPrompt, preferredImage, rawCharacterDescription);
 
     this.setStatus("Saving job...");
     await d.ChatService(this.chatId).CreateCivitJob(jobId, fullPrompt, {
       modelName,
       modelId: preferredImage?.id,
       modelSource: preferredImage?.source,
-      characterDescription: getDescriptionFromContext(characterContext),
+      characterDescription: rawCharacterDescription,
       characterName: getNameFromContext(characterContext),
+      basePrompt,
+      sceneDescription,
     });
   }
 
@@ -193,12 +214,29 @@ const noCharacterContext = (): CharacterContext => ({ type: "none" });
 const getNameFromContext = (context: CharacterContext): string | undefined =>
   context.type === "existing-description" ? context.characterName : undefined;
 
-const getDescriptionFromContext = (
+const getRawDescriptionFromContext = (
   context: CharacterContext,
 ): string | undefined =>
-  context.type === "existing-description"
-    ? formatCharacterContext(context.characterName, context.description)
-    : undefined;
+  context.type === "existing-description" ? context.description : undefined;
+
+const resolveCharacterContextByName = async (
+  chatId: string,
+  characterName: string,
+): Promise<CharacterContext> => {
+  const character = await d
+    .CharacterDescriptionsService(chatId)
+    .findByName(characterName);
+
+  if (!character || !character.description?.trim()) {
+    return noCharacterContext();
+  }
+
+  return {
+    type: "existing-description",
+    characterName,
+    description: character.description,
+  };
+};
 
 const getOriginalModelFromData = (
   data: any,

@@ -251,6 +251,8 @@ export const CivitJobMessage = ({
           opened={showPromptModal}
           prompt={message.data?.prompt ?? ""}
           characterDescription={message.data?.characterDescription}
+          basePrompt={message.data?.basePrompt}
+          sceneDescription={message.data?.sceneDescription}
           onClose={() => setShowPromptModal(false)}
         />
 

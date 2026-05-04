@@ -6,6 +6,8 @@ export interface CivitJobExtras {
   modelSource?: "system" | "variant";
   characterDescription?: string;
   characterName?: string;
+  basePrompt?: string;
+  sceneDescription?: string;
 }
 
 export class CivitJobCreatedEventUtil {
