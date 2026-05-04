@@ -17,7 +17,7 @@ export const ViewPromptModal: React.FC<ViewPromptModalProps> = ({
   sceneDescription,
   onClose,
 }) => {
-  const hasBreakdown = basePrompt !== undefined || sceneDescription !== undefined;
+  const hasBreakdown = sceneDescription !== undefined;
 
   return (
     <Modal opened={opened} onClose={onClose} title="Image Prompt" size="lg">
