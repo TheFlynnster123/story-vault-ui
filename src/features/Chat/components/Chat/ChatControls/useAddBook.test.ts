@@ -1,18 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { d } from "../../../../../services/Dependencies";
+import type { ChapterChatMessage } from "../../../../../services/CQRS/UserChatProjection";
 
 vi.mock("../../../../../services/Dependencies");
 
 const CHAT_ID = "chat-123";
 
-const createChapter = (id: string, summary: string) =>
+const createChapter = (id: string, summary: string): ChapterChatMessage =>
   ({
     id,
     type: "chapter",
     content: summary,
     data: { title: `Chapter ${id}` },
-  }) as any;
+  }) as unknown as ChapterChatMessage;
 
 const createBookGenerationService = () => ({
   IsLoading: false,
@@ -33,14 +34,18 @@ describe("useAddBook", () => {
     mockGetMessages.mockReturnValue([createChapter("chapter-1", "Summary 1")]);
 
     vi.mocked(d.BookGenerationService).mockReturnValue(
-      mockBookGenerationService as any,
+      mockBookGenerationService as unknown as ReturnType<
+        typeof d.BookGenerationService
+      >,
     );
     vi.mocked(d.UserChatProjection).mockReturnValue(
       {
         GetMessages: mockGetMessages,
-      } as any,
+      } as unknown as ReturnType<typeof d.UserChatProjection>,
     );
-    vi.mocked(d.ErrorService).mockReturnValue({ log: mockErrorLog } as any);
+    vi.mocked(d.ErrorService).mockReturnValue(
+      { log: mockErrorLog } as unknown as ReturnType<typeof d.ErrorService>,
+    );
   });
 
   const importHook = async () => {
