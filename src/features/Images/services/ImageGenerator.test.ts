@@ -102,6 +102,43 @@ describe("ImageGenerator", () => {
       expect(characterMessage.content).toContain(characterDescription);
     });
 
+
+    it("should instruct scene generation to include the selected character name", async () => {
+      const messages = createMockMessages();
+      const characterName = "Sarah Chen";
+      const characterDescription = "Young woman with dark hair and green eyes";
+
+      mockSystemPromptsService.Get.mockResolvedValue(undefined);
+      mockCharacterSelectionService.selectCharacterForImage.mockResolvedValue(
+        characterName,
+      );
+      mockCharacterDescriptionsService.findByName.mockResolvedValue({
+        id: "char-1",
+        name: characterName,
+        description: characterDescription,
+        createdAt: "2024-01-01",
+        updatedAt: "2024-01-01",
+      });
+      mockOpenRouterChatAPI.postChat.mockResolvedValue("Generated prompt");
+
+      await imageGenerator.generatePrompt(messages);
+
+      const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0];
+      const promptMessages = callArgs[0];
+
+      const characterMessage = promptMessages.find((m: LLMMessage) =>
+        m.content.includes(`# Character: ${characterName}`),
+      );
+
+      expect(characterMessage).toBeDefined();
+      expect(characterMessage.content).toContain(
+        `what ${characterName} is doing`,
+      );
+      expect(characterMessage.content).toContain(
+        `include the name ${characterName}`,
+      );
+    });
+
     it("should create blank character when character selected but no description exists", async () => {
       const messages = createMockMessages();
       const characterName = "Sarah Chen";
