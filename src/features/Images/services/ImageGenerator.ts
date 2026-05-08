@@ -345,7 +345,7 @@ export const formatCharacterContext = (
   characterName: string,
   description: string,
 ): string =>
-  `# Character: ${characterName}\n\n${description}\n\nUse this character description as the basis for the person in the image. Do NOT repeat physical traits (appearance, hair, eyes, skin tone, body type, tattoos, piercings, etc.) in your response — they will be included in the final prompt automatically. Focus only on the setting and what the character is doing.`;
+  `# Character: ${characterName}\n\n${description}\n\nUse this character description as the basis for the person in the image. Do NOT repeat physical traits (appearance, hair, eyes, skin tone, body type, tattoos, piercings, etc.) in your response — they will be included in the final prompt automatically. Focus only on the setting and what ${characterName} is doing, and explicitly include the name ${characterName} in your response.`;
 
 const hasDescription = (description: string): boolean =>
   description.trim().length > 0;
