@@ -1,6 +1,7 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { BookChatMessage } from "../../../services/CQRS/UserChatProjection";
 import { d } from "../../../services/Dependencies";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
 
 /**
@@ -8,10 +9,17 @@ import type { DiscussionConfig } from "./DiscussionConfig";
  * When the user clicks "Generate", the book summary is regenerated
  * using the conversation as feedback, then the book is updated via
  * ChatService.EditBook.
+ *
+ * @param bookSummaryModel - Model override from SystemPrompts for book summary generation
+ * @param bookSummaryPrompt - Prompt from SystemPrompts for book summary generation
+ * @param discussBookPrompt - Prompt from SystemPrompts for book discussion
  */
 export const createBookDiscussionConfig = (
   chatId: string,
   bookId: string,
+  bookSummaryModel?: string,
+  bookSummaryPrompt?: string,
+  discussBookPrompt?: string,
 ): DiscussionConfig => {
   const findBook = (): BookChatMessage | undefined =>
     d
@@ -21,6 +29,12 @@ export const createBookDiscussionConfig = (
 
   const getChatMessages = (): LLMMessage[] =>
     d.LLMChatProjection(chatId).GetMessages();
+
+  const resolvedPrompt = (): string =>
+    bookSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.bookSummaryPrompt;
+
+  const resolvedDiscussionPrompt = (): string =>
+    discussBookPrompt || DEFAULT_SYSTEM_PROMPTS.discussBookPrompt;
 
   const buildSystemPrompt = (): string => {
     const book = findBook();
@@ -32,32 +46,20 @@ export const createBookDiscussionConfig = (
     const lines = [
       `# Book Summary Discussion — ${title}`,
       ``,
-      `You are helping the user discuss and refine the summary for this book.`,
-      `Consider the full chat history above for context.`,
+      resolvedDiscussionPrompt(),
     ];
 
     if (summary) {
-      lines.push(
-        ``,
-        `This is the current book summary:`,
-        `---`,
-        summary,
-        `---`,
-      );
+      lines.push(``, `Current book summary:`, `---`, summary, `---`);
     }
-
-    lines.push(
-      ``,
-      `The user would like to discuss what the book summary should contain.`,
-      `Engage in a helpful conversation about the overarching narrative.`,
-      `Suggest improvements, ask clarifying questions, and help them refine the summary.`,
-      `Keep responses concise and focused on the book's narrative arc and themes.`,
-    );
 
     return lines.join("\n");
   };
 
-  const getDefaultModel = (): string | undefined => undefined;
+  const buildInitialPrompt = (): string => resolvedPrompt();
+
+  const getDefaultModel = (): string | undefined =>
+    bookSummaryModel || undefined;
 
   const generateFromFeedback = async (feedback: string): Promise<void> => {
     const book = findBook();
@@ -68,7 +70,7 @@ export const createBookDiscussionConfig = (
 
     const chatMessages = getChatMessages();
     const systemPrompt = [
-      `Review the conversation above and generate an updated book summary.`,
+      resolvedPrompt(),
       ``,
       `Current book title: ${title}`,
       `Current summary:`,
@@ -91,7 +93,8 @@ export const createBookDiscussionConfig = (
       { role: "system", content: systemPrompt },
     ];
 
-    const response = await d.OpenRouterChatAPI().postChat(messages);
+    const model = bookSummaryModel || undefined;
+    const response = await d.OpenRouterChatAPI().postChat(messages, model);
 
     await d.ChatService(chatId).EditBook(bookId, title, response);
   };
@@ -101,5 +104,6 @@ export const createBookDiscussionConfig = (
     getChatMessages,
     getDefaultModel,
     generateFromFeedback,
+    buildInitialPrompt,
   };
 };
