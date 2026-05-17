@@ -79,10 +79,33 @@ export class ChatImageVariantService {
       if (!data.variants.find((v) => v.id === variantId)) {
         return false;
       }
-      this.blob().saveDebounced({ ...data, selectedVariantId: variantId });
+      this.blob().saveDebounced({
+        ...data,
+        selectedVariantId: variantId,
+        selectedSystemModelId: "",
+      });
       return true;
     } catch (error) {
       d.ErrorService().log("Failed to select image model variant", error);
+      return false;
+    }
+  }
+
+  public async SelectSystemModel(modelId: string): Promise<boolean> {
+    try {
+      const globalModels = await d.ImageModelService().GetAllImageModels();
+      if (!globalModels.models.find((m) => m.id === modelId)) {
+        return false;
+      }
+      const data = await this.GetAll();
+      this.blob().saveDebounced({
+        ...data,
+        selectedVariantId: "",
+        selectedSystemModelId: modelId,
+      });
+      return true;
+    } catch (error) {
+      d.ErrorService().log("Failed to select system image model", error);
       return false;
     }
   }
@@ -99,8 +122,8 @@ export class ChatImageVariantService {
         timestampUtcMs: Date.now(),
         overrides: {},
       };
-      await this.SaveVariant(variant);
-      return variant;
+      const saved = await this.SaveVariant(variant);
+      return saved ? variant : null;
     } catch (error) {
       d.ErrorService().log("Failed to create image model variant", error);
       return null;
@@ -122,6 +145,16 @@ export class ChatImageVariantService {
       }
     }
 
+    if (data.selectedSystemModelId) {
+      const globalModels = await d.ImageModelService().GetAllImageModels();
+      const systemModel = globalModels.models.find(
+        (m) => m.id === data.selectedSystemModelId,
+      );
+      if (systemModel) {
+        return systemModel;
+      }
+    }
+
     return d.ImageModelService().getOrDefaultSelectedModel();
   }
 
@@ -137,6 +170,7 @@ export class ChatImageVariantService {
 
   private createEmpty = (): ChatImageVariants => ({
     selectedVariantId: "",
+    selectedSystemModelId: "",
     variants: [],
   });
 

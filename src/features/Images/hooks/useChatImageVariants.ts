@@ -90,6 +90,23 @@ export const useChatImageVariants = (chatId: string) => {
           setChatImageVariants((prev) => ({
             ...prev,
             selectedVariantId: variantId,
+            selectedSystemModelId: "",
+          })),
+      )) ?? false
+    );
+  };
+
+  const selectSystemModel = async (modelId: string): Promise<boolean> => {
+    return (
+      (await withErrorHandling(
+        () => service.SelectSystemModel(modelId),
+        "Failed to select system image model",
+        (ok) =>
+          ok &&
+          setChatImageVariants((prev) => ({
+            ...prev,
+            selectedVariantId: "",
+            selectedSystemModelId: modelId,
           })),
       )) ?? false
     );
@@ -136,6 +153,7 @@ export const useChatImageVariants = (chatId: string) => {
     saveVariant,
     deleteVariant,
     selectVariant,
+    selectSystemModel,
     createVariant,
     findParentModel,
     getSelectedVariant,

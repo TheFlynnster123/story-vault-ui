@@ -14,6 +14,7 @@ import {
   Modal,
   Badge,
   Box,
+  Anchor,
 } from "@mantine/core";
 import {
   RiArrowLeftLine,
@@ -22,6 +23,7 @@ import {
   RiEditLine,
   RiCheckLine,
   RiErrorWarningLine,
+  RiExternalLinkLine,
 } from "react-icons/ri";
 import { useChatImageVariants } from "../hooks/useChatImageVariants";
 import { useImageModels } from "../hooks/useImageModels";
@@ -41,6 +43,7 @@ export const ChatImageVariantsPage: React.FC = () => {
     loading,
     error,
     selectVariant,
+    selectSystemModel,
     createVariant,
     getSelectedVariant,
   } = useChatImageVariants(chatId!);
@@ -70,6 +73,10 @@ export const ChatImageVariantsPage: React.FC = () => {
 
   const handleSelectVariant = async (variantId: string) => {
     await selectVariant(variantId);
+  };
+
+  const handleSelectSystemModel = async (modelId: string) => {
+    await selectSystemModel(modelId);
   };
 
   const handleEditVariant = (variantId: string) => {
@@ -121,18 +128,40 @@ export const ChatImageVariantsPage: React.FC = () => {
           </Group>
         ) : (
           <Stack>
-            <Group justify="space-between">
-              <Text fw={500}>Image Model Variants</Text>
-              <Button
-                variant="subtle"
-                onClick={() => setAddModalOpen(true)}
-                style={{ color: Theme.imageModel.primary }}
-                leftSection={<RiAddLine size={16} />}
-                disabled={userImageModels.models.length === 0}
-              >
-                Add Variant
-              </Button>
-            </Group>
+            {/* ── Variants section ── */}
+            <Stack gap={4}>
+              <Group justify="space-between">
+                <Text fw={500}>Chat-Specific Variants</Text>
+                <Group gap="xs">
+                  <Anchor
+                    href="/default-image-models"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate("/default-image-models");
+                    }}
+                    size="sm"
+                    style={{ color: Theme.imageModel.secondary }}
+                  >
+                    <Group gap={4}>
+                      <RiExternalLinkLine size={14} />
+                      Add a System Model
+                    </Group>
+                  </Anchor>
+                  <Button
+                    variant="subtle"
+                    onClick={() => setAddModalOpen(true)}
+                    style={{ color: Theme.imageModel.primary }}
+                    leftSection={<RiAddLine size={16} />}
+                    disabled={userImageModels.models.length === 0}
+                  >
+                    Add Variant
+                  </Button>
+                </Group>
+              </Group>
+              <Text size="sm" c="dimmed">
+                Variants let you tweak a system model's settings for this chat only — overriding prompts, networks, or parameters without affecting the original.
+              </Text>
+            </Stack>
 
             {chatImageVariants.variants.length === 0 ? (
               <Paper withBorder p="xl" ta="center">
@@ -170,6 +199,33 @@ export const ChatImageVariantsPage: React.FC = () => {
                 );
               })
             )}
+
+            {/* ── System Models section ── */}
+            {userImageModels.models.length > 0 && (
+              <>
+                <Divider
+                  label={<Text fw={500}>System Models</Text>}
+                  labelPosition="left"
+                  mt="md"
+                />
+                <Text size="sm" c="dimmed">
+                  Select a system model to use directly for this chat — no variant required.
+                </Text>
+                {userImageModels.models.map((model) => {
+                  const isSelected =
+                    !chatImageVariants.selectedVariantId &&
+                    chatImageVariants.selectedSystemModelId === model.id;
+                  return (
+                    <SystemModelListItem
+                      key={model.id}
+                      model={model}
+                      isSelected={isSelected}
+                      onSelect={() => handleSelectSystemModel(model.id)}
+                    />
+                  );
+                })}
+              </>
+            )}
           </Stack>
         )}
       </Paper>
@@ -193,7 +249,7 @@ const PageHeader: React.FC<{ onGoBack: () => void }> = ({ onGoBack }) => (
         </ActionIcon>
         <RiImageLine size={24} color={Theme.imageModel.primary} />
         <Title order={2} fw={400} style={{ color: Theme.imageModel.primary }}>
-          Image Model Variants
+          Chat Image Models
         </Title>
       </Group>
     </Group>
@@ -286,6 +342,43 @@ const VariantListItem: React.FC<{
     </Paper>
   );
 };
+
+const SystemModelListItem: React.FC<{
+  model: ImageModel;
+  isSelected: boolean;
+  onSelect: () => void;
+}> = ({ model, isSelected, onSelect }) => (
+  <Paper withBorder p="md" mb="sm" w="100%">
+    <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
+      <Box>
+        <ModelSampleImage sampleImageJobId={model.sampleImageId} size="medium" />
+      </Box>
+      <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
+        <Group gap="xs" wrap="wrap">
+          <Title order={4}>{model.name}</Title>
+          {isSelected && (
+            <Badge color="blue" variant="filled" size="sm">
+              Selected
+            </Badge>
+          )}
+        </Group>
+        <Text size="xs" c="dimmed" lineClamp={2}>
+          {model.input.params.prompt?.slice(0, 100)}
+          {(model.input.params.prompt?.length ?? 0) > 100 ? "…" : ""}
+        </Text>
+      </Stack>
+      <Button size="sm" variant="light" onClick={onSelect} style={{ flexShrink: 0 }}>
+        {isSelected ? (
+          <Group gap="xs">
+            <RiCheckLine size={14} /> Selected
+          </Group>
+        ) : (
+          "Select"
+        )}
+      </Button>
+    </Group>
+  </Paper>
+);
 
 const countOverrides = (variant: ImageModelVariant): number => {
   const o = variant.overrides;
