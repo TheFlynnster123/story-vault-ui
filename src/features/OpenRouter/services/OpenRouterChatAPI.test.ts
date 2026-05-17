@@ -153,6 +153,33 @@ describe("OpenRouterChatAPI", () => {
       );
     });
 
+    it("should use error code from SSE stream event when present", async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              'data: {"error":"Grok 4.1 Fast is deprecated","code":404}\n',
+            ),
+          );
+          controller.close();
+        },
+      });
+
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(stream, { status: 200 }),
+      );
+
+      try {
+        await api.postChatStream([{ role: "user", content: "Hi" }], vi.fn());
+        expect.fail("Should have thrown");
+      } catch (e) {
+        expect(e).toBeInstanceOf(OpenRouterError);
+        expect((e as OpenRouterError).code).toBe(404);
+        expect((e as OpenRouterError).apiMessage).toContain("deprecated");
+      }
+    });
+
     it("should call ErrorService.log exactly once for a stream 404 error", async () => {
       const errorBody = JSON.stringify({
         error: { code: 404, message: "Model not found" },

@@ -156,7 +156,8 @@ export class OpenRouterChatAPI {
             } else if (parsed.type === "usage") {
               capturedUsage = parsed.data as UsageResponse;
             } else if (parsed.error) {
-              const error = new OpenRouterError(0, parsed.error);
+              const code = typeof parsed.code === "number" ? parsed.code : 0;
+              const error = new OpenRouterError(code, parsed.error);
               d.ErrorService().log(error.message, error);
               throw error;
             }
