@@ -69,6 +69,8 @@ export interface CivitJobCreatedEvent {
   modelSource?: "system" | "variant";
   characterDescription?: string;
   characterName?: string;
+  basePrompt?: string;
+  sceneDescription?: string;
 }
 
 export interface StoryCreatedEvent {

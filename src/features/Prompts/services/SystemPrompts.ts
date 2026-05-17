@@ -56,6 +56,9 @@ export interface SystemPrompts {
   /** System prompt used during chapter discussion conversations */
   discussChapterPrompt: string;
 
+  /** System prompt used during book discussion conversations */
+  discussBookPrompt: string;
+
   /** System prompt used during story discussion conversations */
   discussStoryPrompt: string;
 
@@ -121,6 +124,9 @@ Example:
 
   discussChapterPrompt:
     "You are helping the user create and refine the summary for this chapter.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the chapter summary should contain.\nEngage in a helpful conversation about what happened in this chapter.\nSuggest improvements, ask clarifying questions, and help them refine the summary.\nKeep responses concise and focused on accurately capturing the chapter's events.",
+
+  discussBookPrompt:
+    "You are helping the user create and refine the summary for this book.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the book summary should contain.\nEngage in a helpful conversation about the overarching narrative.\nSuggest improvements, ask clarifying questions, and help them refine the summary.\nKeep responses concise and focused on the book's narrative arc and themes.",
 
   discussStoryPrompt:
     "You are helping the user discuss and refine their story.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the story should contain.\nEngage in a helpful, creative conversation about the story.\nSuggest ideas, ask clarifying questions, and help them refine their vision.\nKeep responses concise and focused on making the story compelling.",

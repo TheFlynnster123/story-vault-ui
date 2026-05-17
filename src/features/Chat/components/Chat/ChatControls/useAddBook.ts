@@ -55,17 +55,13 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
     const chapterSummaries = getSelectedChapterSummaries();
     if (chapterSummaries.length === 0) return;
 
-    try {
-      const [generatedTitle, generatedSummary] = await Promise.all([
-        d.BookGenerationService(chatId).generateBookTitle(chapterSummaries),
-        d.BookGenerationService(chatId).generateBookSummary(chapterSummaries),
-      ]);
+    const [titleResult, summaryResult] = await Promise.allSettled([
+      d.BookGenerationService(chatId).generateBookTitle(chapterSummaries),
+      d.BookGenerationService(chatId).generateBookSummary(chapterSummaries),
+    ]);
 
-      if (generatedTitle) setTitle(generatedTitle);
-      if (generatedSummary) setSummary(generatedSummary);
-    } catch (error) {
-      d.ErrorService().log("Failed to generate book summary", error);
-    }
+    applyGeneratedTitle(titleResult, setTitle);
+    applyGeneratedSummary(summaryResult, setSummary);
   };
 
   const handleSubmit = async () => {
@@ -95,4 +91,28 @@ export const useAddBook = ({ chatId }: UseAddBookParams) => {
     handleGenerateSummary,
     handleSubmit,
   };
+};
+
+const applyGeneratedTitle = (
+  result: PromiseSettledResult<string | undefined>,
+  setTitle: (title: string) => void,
+): void => {
+  if (result.status === "fulfilled") {
+    if (result.value) setTitle(result.value);
+    return;
+  }
+
+  d.ErrorService().log("Failed to generate book title", result.reason);
+};
+
+const applyGeneratedSummary = (
+  result: PromiseSettledResult<string | undefined>,
+  setSummary: (summary: string) => void,
+): void => {
+  if (result.status === "fulfilled") {
+    if (result.value) setSummary(result.value);
+    return;
+  }
+
+  d.ErrorService().log("Failed to generate book summary", result.reason);
 };

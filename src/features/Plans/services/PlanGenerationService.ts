@@ -217,6 +217,7 @@ export class PlanGenerationService {
       await d
         .ChatService(this.chatId)
         .AddPlanMessage(plan.id, plan.name, content);
+      this.resetCounter(planDefinitionId);
     });
   };
 

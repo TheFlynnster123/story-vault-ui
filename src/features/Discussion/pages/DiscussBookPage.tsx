@@ -1,10 +1,12 @@
 import React, { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { RiBook2Line } from "react-icons/ri";
+import { Loader, Center } from "@mantine/core";
 import { Theme } from "../../../components/Theme";
 import { DiscussionPage } from "./DiscussionPage";
 import { DiscussionService } from "../services/DiscussionService";
 import { createBookDiscussionConfig } from "../services/BookDiscussionConfig";
+import { useSystemPrompts } from "../../Prompts/hooks/useSystemPrompts";
 import type { DiscussionPageConfig } from "./DiscussionPageConfig";
 
 const pageConfig: DiscussionPageConfig = {
@@ -21,6 +23,7 @@ const pageConfig: DiscussionPageConfig = {
   finalFeedbackButtonLabel: "Send & Generate Book Summary",
   emptyStateText:
     "Start a conversation about this book's summary. Discuss the overarching narrative, themes, or character arcs.",
+  promptLink: "/system-prompts#discussBookPrompt",
 };
 
 export const DiscussBookPage: React.FC = () => {
@@ -29,10 +32,35 @@ export const DiscussBookPage: React.FC = () => {
     bookId: string;
   }>();
 
+  const { systemPrompts, isLoading } = useSystemPrompts();
+
   const service = useMemo(
-    () => new DiscussionService(createBookDiscussionConfig(chatId!, bookId!)),
-    [chatId, bookId],
+    () =>
+      new DiscussionService(
+        createBookDiscussionConfig(
+          chatId!,
+          bookId!,
+          systemPrompts.bookSummaryModel,
+          systemPrompts.bookSummaryPrompt,
+          systemPrompts.discussBookPrompt,
+        ),
+      ),
+    [
+      chatId,
+      bookId,
+      systemPrompts.bookSummaryModel,
+      systemPrompts.bookSummaryPrompt,
+      systemPrompts.discussBookPrompt,
+    ],
   );
+
+  if (isLoading) {
+    return (
+      <Center h="100vh">
+        <Loader size="lg" />
+      </Center>
+    );
+  }
 
   return (
     <DiscussionPage chatId={chatId!} service={service} config={pageConfig} />
