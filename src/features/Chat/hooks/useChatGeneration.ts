@@ -96,9 +96,29 @@ export const useChatGeneration = (chatId: string) => {
         return "none";
       }
 
+      const name = missingCharacterName;
+
+      if (decision === "generate") {
+        // Close the modal immediately so the user isn't blocked waiting for
+        // description generation. The image generation spinner stays active
+        // because orchestrate() keeps IsLoading = true throughout.
+        setMissingCharacterName(null);
+        imageGeneration
+          .resolveMissingCharacterDescription(name, decision)
+          .catch((e) => {
+            if (!isAlreadyHandled(e)) {
+              d.ErrorService().log(
+                "Failed to generate character description and image",
+                e,
+              );
+            }
+          });
+        return "none";
+      }
+
       try {
         const result = await imageGeneration.resolveMissingCharacterDescription(
-          missingCharacterName,
+          name,
           decision,
         );
 
