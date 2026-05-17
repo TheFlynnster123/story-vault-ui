@@ -117,7 +117,9 @@ export class OpenRouterChatAPI {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw this.buildApiError(response.status, errorBody);
+      const error = this.buildApiError(response.status, errorBody);
+      d.ErrorService().log(error.message, error);
+      throw error;
     }
 
     const reader = response.body?.getReader();
@@ -154,7 +156,10 @@ export class OpenRouterChatAPI {
             } else if (parsed.type === "usage") {
               capturedUsage = parsed.data as UsageResponse;
             } else if (parsed.error) {
-              throw new OpenRouterError(0, parsed.error);
+              const code = typeof parsed.code === "number" ? parsed.code : 0;
+              const error = new OpenRouterError(code, parsed.error);
+              d.ErrorService().log(error.message, error);
+              throw error;
             }
           } catch (e) {
             if (e instanceof OpenRouterError) throw e;

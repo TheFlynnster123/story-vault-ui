@@ -94,6 +94,114 @@ describe("OpenRouterChatAPI", () => {
     });
   });
 
+  // ---- postChatStream Errors ----
+
+  describe("postChatStream error propagation", () => {
+    it("should log and throw OpenRouterError for a 404 (deprecated model) response", async () => {
+      const errorBody = JSON.stringify({
+        error: {
+          code: 404,
+          message:
+            "Grok 4.1 Fast is deprecated. xAI recommends switching to Grok 4.3",
+        },
+      });
+
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(errorBody, { status: 404, statusText: "Not Found" }),
+      );
+
+      const mockLog = vi.fn();
+      vi.mocked(d.ErrorService).mockReturnValue({ log: mockLog } as any);
+
+      await expect(
+        api.postChatStream([{ role: "user", content: "Hi" }], vi.fn()),
+      ).rejects.toBeInstanceOf(OpenRouterError);
+
+      expect(mockLog).toHaveBeenCalledTimes(1);
+      expect(mockLog).toHaveBeenCalledWith(
+        expect.stringContaining("deprecated"),
+        expect.any(OpenRouterError),
+      );
+    });
+
+    it("should log and throw OpenRouterError when SSE stream contains an error event", async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode('data: {"error":"upstream provider failed"}\n'),
+          );
+          controller.close();
+        },
+      });
+
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(stream, { status: 200 }),
+      );
+
+      const mockLog = vi.fn();
+      vi.mocked(d.ErrorService).mockReturnValue({ log: mockLog } as any);
+
+      await expect(
+        api.postChatStream([{ role: "user", content: "Hi" }], vi.fn()),
+      ).rejects.toBeInstanceOf(OpenRouterError);
+
+      expect(mockLog).toHaveBeenCalledTimes(1);
+      expect(mockLog).toHaveBeenCalledWith(
+        expect.stringContaining("upstream provider failed"),
+        expect.any(OpenRouterError),
+      );
+    });
+
+    it("should use error code from SSE stream event when present", async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              'data: {"error":"Grok 4.1 Fast is deprecated","code":404}\n',
+            ),
+          );
+          controller.close();
+        },
+      });
+
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(stream, { status: 200 }),
+      );
+
+      try {
+        await api.postChatStream([{ role: "user", content: "Hi" }], vi.fn());
+        expect.fail("Should have thrown");
+      } catch (e) {
+        expect(e).toBeInstanceOf(OpenRouterError);
+        expect((e as OpenRouterError).code).toBe(404);
+        expect((e as OpenRouterError).apiMessage).toContain("deprecated");
+      }
+    });
+
+    it("should call ErrorService.log exactly once for a stream 404 error", async () => {
+      const errorBody = JSON.stringify({
+        error: { code: 404, message: "Model not found" },
+      });
+
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(errorBody, { status: 404 }),
+      );
+
+      const mockLog = vi.fn();
+      vi.mocked(d.ErrorService).mockReturnValue({ log: mockLog } as any);
+
+      try {
+        await api.postChatStream([{ role: "user", content: "Hi" }], vi.fn());
+      } catch {
+        // expected
+      }
+
+      expect(mockLog).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ---- OpenRouter Error Responses ----
 
   describe("OpenRouter error responses", () => {
