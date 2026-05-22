@@ -64,6 +64,7 @@ export class ChatImageVariantService {
       this.blob().saveDebounced({
         selectedVariantId:
           data.selectedVariantId === variantId ? "" : data.selectedVariantId,
+        selectedSystemModelId: data.selectedSystemModelId,
         variants: filtered,
       });
       return true;

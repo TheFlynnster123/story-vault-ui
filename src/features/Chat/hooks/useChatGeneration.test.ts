@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { d } from "../../../services/Dependencies";
+import type { useChatGeneration as UseChatGenerationType } from "./useChatGeneration";
 
 vi.mock("../../../services/Dependencies");
 
@@ -68,7 +69,7 @@ describe("useChatGeneration", () => {
   };
 
   const triggerMissingCharacterState = async (
-    result: ReturnType<typeof renderHook>["result"],
+    result: { current: ReturnType<typeof UseChatGenerationType> },
     characterName = "Sarah Chen",
   ) => {
     mockImageGeneration.generateImage.mockResolvedValue({
