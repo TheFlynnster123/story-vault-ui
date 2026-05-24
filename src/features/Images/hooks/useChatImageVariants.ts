@@ -6,7 +6,7 @@ import type { ImageModel } from "../services/modelGeneration/ImageModel";
 
 export const useChatImageVariants = (chatId: string) => {
   const [chatImageVariants, setChatImageVariants] = useState<ChatImageVariants>(
-    { selectedVariantId: "", variants: [] },
+    { selectedVariantId: "", selectedSystemModelId: "", variants: [] },
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
