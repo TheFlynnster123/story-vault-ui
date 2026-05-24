@@ -1,9 +1,8 @@
 import type { ImageModel } from "./ImageModel";
+import type { ImageGenInput, ImageGenEcosystem } from "../api/ImageGenInput";
 import type {
   GeneratedImage,
-  GeneratedImageAspectRatio,
 } from "./GeneratedImage";
-import type { FromTextInput } from "civitai/dist/types/Inputs";
 import { v4 as uuidv4 } from "uuid";
 import { d } from "../../../../services/Dependencies";
 
@@ -14,7 +13,7 @@ export class ImageModelMapper {
     id: uuidv4().toString(),
     timestampUtcMs: Date.now(),
     name: this.generateModelName(generatedData),
-    input: this.mapToFromTextInput(generatedData),
+    input: this.mapToImageGenInput(generatedData),
     trainedWords: this.extractAllTrainedWords(generatedData),
   });
 
@@ -36,7 +35,7 @@ export class ImageModelMapper {
 
   isCheckpoint = (type: string): boolean => type.toLowerCase() === "checkpoint";
 
-  mapToFromTextInput(generatedData: GeneratedImage): FromTextInput {
+  mapToImageGenInput(generatedData: GeneratedImage): ImageGenInput {
     const primaryResource = this.getPrimaryResource(generatedData);
     const isCheckpoint = primaryResource
       ? this.isCheckpoint(primaryResource.model.type)
@@ -49,24 +48,33 @@ export class ImageModelMapper {
       firstResourceBaseModel,
     );
 
+    const ecosystem = resolveEcosystem(modelAir);
     const { width, height } = this.resolveWidthHeight(generatedData.params);
+    const samplerParams = d
+      .SchedulerMapper()
+      .MapToSampleMethodParams(generatedData.params.sampler ?? "Euler a");
 
-    return {
+    const input: ImageGenInput = {
+      engine: "sdcpp",
+      ecosystem,
+      operation: "createImage",
       model: modelAir,
-      params: {
-        prompt: generatedData.params.prompt,
-        negativePrompt: generatedData.params.negativePrompt,
-        scheduler: d
-          .SchedulerMapper()
-          .MapToSchedulerName(generatedData.params.sampler ?? "Euler a"),
-        steps: generatedData.params.steps,
-        cfgScale: generatedData.params.cfgScale,
-        width: this.truncateDimension(width),
-        height: this.truncateDimension(height),
-        clipSkip: this.defaultClipSkip(generatedData.params.clipSkip),
-      },
-      additionalNetworks: this.mapAdditionalNetworks(generatedData),
+      prompt: generatedData.params.prompt,
+      negativePrompt: generatedData.params.negativePrompt,
+      sampleMethod: samplerParams.sampleMethod,
+      schedule: samplerParams.schedule,
+      steps: generatedData.params.steps,
+      cfgScale: generatedData.params.cfgScale,
+      width: this.truncateDimension(width),
+      height: this.truncateDimension(height),
+      loras: this.mapLoras(generatedData),
     };
+
+    if (ecosystem === "sd1") {
+      input.clipSkip = this.defaultClipSkip(generatedData.params.clipSkip);
+    }
+
+    return input;
   }
 
   resolveModelAir(
@@ -105,7 +113,7 @@ export class ImageModelMapper {
       typeof params.aspectRatio === "object" &&
       "width" in params.aspectRatio
     ) {
-      const ar = params.aspectRatio as GeneratedImageAspectRatio;
+      const ar = params.aspectRatio as { width: number; height: number };
       return { width: ar.width, height: ar.height };
     }
 
@@ -122,6 +130,25 @@ export class ImageModelMapper {
     return [...new Set(allWords)];
   }
 
+  mapLoras(generatedData: GeneratedImage): Record<string, number> {
+    const primaryResource = this.getPrimaryResource(generatedData);
+    const primaryResourceIsCheckpoint = primaryResource
+      ? this.isCheckpoint(primaryResource.model.type)
+      : false;
+
+    return generatedData.resources.reduce(
+      (loras, resource) => {
+        if (primaryResourceIsCheckpoint && resource === primaryResource) {
+          return loras;
+        }
+        loras[resource.air] = resource.strength;
+        return loras;
+      },
+      {} as Record<string, number>,
+    );
+  }
+
+  /** @deprecated Use mapToImageGenInput instead */
   mapAdditionalNetworks(generatedData: GeneratedImage) {
     const primaryResource = this.getPrimaryResource(generatedData);
     const primaryResourceIsCheckpoint = primaryResource
@@ -143,3 +170,8 @@ export class ImageModelMapper {
     );
   }
 }
+
+const resolveEcosystem = (airUrn: string): ImageGenEcosystem => {
+  if (airUrn.startsWith("urn:air:sd1:")) return "sd1";
+  return "sdxl";
+};

@@ -24,19 +24,20 @@ export const ImageModelList: React.FC = () => {
       name: "Default Image Model",
       timestampUtcMs: timestamp,
       input: {
+        engine: "sdcpp",
+        ecosystem: "sdxl",
+        operation: "createImage",
         model: "urn:air:sdxl:checkpoint:civitai:257749@290640",
-        params: {
-          prompt: "score_9, score_8_up, score_7_up, score_6_up, source_anime",
-          negativePrompt:
-            "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad hands, jpeg artifacts",
-          scheduler: "DPM2Karras",
-          steps: 20,
-          cfgScale: 7,
-          width: 1024,
-          height: 1024,
-          clipSkip: 2,
-        },
-        additionalNetworks: {},
+        prompt: "score_9, score_8_up, score_7_up, score_6_up, source_anime",
+        negativePrompt:
+          "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad hands, jpeg artifacts",
+        sampleMethod: "dpmpp_2m",
+        schedule: "karras",
+        steps: 20,
+        cfgScale: 7,
+        width: 1024,
+        height: 1024,
+        loras: {},
       },
     };
   };

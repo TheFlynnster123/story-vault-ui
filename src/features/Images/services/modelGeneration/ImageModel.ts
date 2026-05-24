@@ -1,4 +1,4 @@
-import type { FromTextInput } from "civitai/dist/types/Inputs";
+import type { ImageGenInput } from "../api/ImageGenInput";
 
 export type ImageModel = {
   id: string;
@@ -6,14 +6,15 @@ export type ImageModel = {
   timestampUtcMs: number;
 
   /**
-   * The image input parameters used to generate an image via CivitAI.
+   * The image input parameters used to generate an image via the CivitAI Orchestration API.
    */
-  input: FromTextInput;
+  input: ImageGenInput;
 
   /**
-   * The job ID for the sample image generated for this model.
+   * The workflow ID for the sample image generated for this model.
+   * Prefixed with "wf_" for orchestration API workflows.
    */
-  sampleImageId?: string;
+  sampleWorkflowId?: string;
 
   /**
    * Optional LLM prompt that instructs the AI how to describe scenes for image generation.

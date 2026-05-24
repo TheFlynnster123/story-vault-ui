@@ -43,7 +43,7 @@ import {
   resolveVariant,
   computeOverriddenFields,
 } from "../services/ImageModelVariant";
-import type { FromTextInput } from "civitai/dist/types/Inputs";
+import type { ImageGenInput } from "../services/api/ImageGenInput";
 
 // ---------------------------------------------------------------------------
 // Override diff helpers
@@ -56,9 +56,9 @@ const arraysShallowEqual = (a?: string[], b?: string[]): boolean => {
   return a.every((v, i) => v === b[i]);
 };
 
-const additionalNetworksEqual = (
-  a?: FromTextInput["additionalNetworks"],
-  b?: FromTextInput["additionalNetworks"],
+const lorасEqual = (
+  a?: Record<string, number>,
+  b?: Record<string, number>,
 ): boolean => JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
 
 const computeNewOverrides = (
@@ -67,8 +67,8 @@ const computeNewOverrides = (
 ): ImageModelVariantOverrides => {
   const overrides: ImageModelVariantOverrides = {};
 
-  if (resolved.sampleImageId !== parent.sampleImageId) {
-    overrides.sampleImageId = resolved.sampleImageId;
+  if (resolved.sampleWorkflowId !== parent.sampleWorkflowId) {
+    overrides.sampleWorkflowId = resolved.sampleWorkflowId;
   }
   if (resolved.imageGenerationPrompt !== parent.imageGenerationPrompt) {
     overrides.imageGenerationPrompt = resolved.imageGenerationPrompt;
@@ -84,42 +84,26 @@ const computeNewOverrides = (
     overrides.trainedWords = resolved.trainedWords;
   }
 
-  const inputOverrides: NonNullable<ImageModelVariantOverrides["input"]> = {};
+  const inputOverrides: Partial<ImageGenInput> = {};
   let hasInput = false;
 
-  if (resolved.input.model !== parent.input.model) {
-    inputOverrides.model = resolved.input.model;
-    hasInput = true;
-  }
+  const allInputKeys = new Set([
+    ...Object.keys(parent.input),
+    ...Object.keys(resolved.input),
+  ]) as Set<keyof ImageGenInput>;
 
-  const paramOverrides: Partial<FromTextInput["params"]> = {};
-  let hasParams = false;
-
-  const allParamKeys = new Set([
-    ...Object.keys(parent.input.params),
-    ...Object.keys(resolved.input.params),
-  ]) as Set<keyof FromTextInput["params"]>;
-
-  for (const key of allParamKeys) {
-    if (resolved.input.params[key] !== parent.input.params[key]) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (paramOverrides as any)[key] = resolved.input.params[key];
-      hasParams = true;
+  for (const key of allInputKeys) {
+    if (key === "loras") continue; // handled separately
+    const parentVal = parent.input[key];
+    const resolvedVal = resolved.input[key];
+    if (resolvedVal !== parentVal) {
+      (inputOverrides as any)[key] = resolvedVal;
+      hasInput = true;
     }
   }
 
-  if (hasParams) {
-    inputOverrides.params = paramOverrides;
-    hasInput = true;
-  }
-
-  if (
-    !additionalNetworksEqual(
-      resolved.input.additionalNetworks,
-      parent.input.additionalNetworks,
-    )
-  ) {
-    inputOverrides.additionalNetworks = resolved.input.additionalNetworks ?? {};
+  if (!lorасEqual(resolved.input.loras, parent.input.loras)) {
+    inputOverrides.loras = resolved.input.loras;
     hasInput = true;
   }
 
@@ -262,7 +246,7 @@ const ChatImageVariantEditPage: React.FC = () => {
 
   const handleSampleJobCreated = async (jobId: string) => {
     if (!resolved || !parent || !variant) return;
-    await handleResolvedModelChange({ ...resolved, sampleImageId: jobId });
+    await handleResolvedModelChange({ ...resolved, sampleWorkflowId: jobId });
   };
 
   const handleGoBack = async () => {
@@ -285,11 +269,8 @@ const ChatImageVariantEditPage: React.FC = () => {
       ...resolved,
       input: {
         ...resolved.input,
-        params: {
-          ...resolved.input.params,
-          prompt: parent.input.params.prompt,
-          negativePrompt: parent.input.params.negativePrompt,
-        },
+        prompt: parent.input.prompt,
+        negativePrompt: parent.input.negativePrompt,
       },
       trainedWords: parent.trainedWords,
     };
@@ -300,11 +281,7 @@ const ChatImageVariantEditPage: React.FC = () => {
     if (!parent || !resolved || !variant) return;
     await handleResolvedModelChange({
       ...resolved,
-      input: {
-        ...parent.input,
-        params: { ...parent.input.params },
-        additionalNetworks: parent.input.additionalNetworks,
-      },
+      input: { ...parent.input },
     });
   };
 
@@ -362,7 +339,7 @@ const ChatImageVariantEditPage: React.FC = () => {
         <Stack>
           <ModelSampleImage
             sampleImageJobId={
-              variant.overrides.sampleImageId ?? parent?.sampleImageId
+              variant.overrides.sampleWorkflowId ?? parent?.sampleWorkflowId
             }
             size="large"
           />
@@ -404,13 +381,13 @@ const ChatImageVariantEditPage: React.FC = () => {
                 title="Parameters"
                 overrideCount={
                   (overridden.inputModel ? 1 : 0) +
-                  (overridden.inputParams.scheduler ? 1 : 0) +
+                  (overridden.inputParams.sampleMethod ? 1 : 0) +
                   (overridden.inputParams.steps ? 1 : 0) +
                   (overridden.inputParams.cfgScale ? 1 : 0) +
                   (overridden.inputParams.width ? 1 : 0) +
                   (overridden.inputParams.height ? 1 : 0) +
                   (overridden.inputParams.clipSkip ? 1 : 0) +
-                  (overridden.inputAdditionalNetworks ? 1 : 0)
+                  (overridden.inputLoras ? 1 : 0)
                 }
                 onReset={resetParametersSection}
               >

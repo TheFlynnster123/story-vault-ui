@@ -77,12 +77,14 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
         .getOrDefaultSelectedModel();
       const modelInput = JSON.parse(JSON.stringify(selectedModel.input));
 
-      modelInput.params.prompt = modelInput.params.prompt
-        ? `${modelInput.params.prompt}, ${prompt}`
+      modelInput.prompt = modelInput.prompt
+        ? `${modelInput.prompt}, ${prompt}`
         : prompt;
 
-      const response = await d.CivitJobAPI().generateImage(modelInput);
-      const newJobId = response.jobs[0].jobId;
+      const workflow = await d
+        .CivitOrchestrationAPI()
+        .submitWorkflow([{ $type: "imageGen", input: modelInput }]);
+      const newJobId = workflow.id;
       updateState({ backgroundPhotoCivitJobId: newJobId });
       setPrompt("");
     } catch (e) {

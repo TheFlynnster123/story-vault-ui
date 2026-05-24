@@ -30,9 +30,9 @@ export const AdditionalNetworksComponent: React.FC<
         ...imageModel,
         input: {
           ...imageModel.input,
-          additionalNetworks: {
-            ...imageModel.input.additionalNetworks,
-            [newNetworkURN.trim()]: { strength: newNetworkStrength },
+          loras: {
+            ...imageModel.input.loras,
+            [newNetworkURN.trim()]: newNetworkStrength,
           },
         },
       });
@@ -42,12 +42,12 @@ export const AdditionalNetworksComponent: React.FC<
   };
 
   const handleRemoveNetwork = (urn: string) => {
-    const { [urn]: _, ...rest } = imageModel.input.additionalNetworks || {};
+    const { [urn]: _, ...rest } = imageModel.input.loras || {};
     onChange({
       ...imageModel,
       input: {
         ...imageModel.input,
-        additionalNetworks: rest,
+        loras: rest,
       },
     });
   };
@@ -57,9 +57,9 @@ export const AdditionalNetworksComponent: React.FC<
       ...imageModel,
       input: {
         ...imageModel.input,
-        additionalNetworks: {
-          ...imageModel.input.additionalNetworks,
-          [urn]: { strength },
+        loras: {
+          ...imageModel.input.loras,
+          [urn]: strength,
         },
       },
     });
@@ -71,7 +71,7 @@ export const AdditionalNetworksComponent: React.FC<
     }
   };
 
-  const additionalNetworks = imageModel.input.additionalNetworks || {};
+  const loras = imageModel.input.loras || {};
 
   return (
     <Paper withBorder p="md" mt="md">
@@ -79,7 +79,7 @@ export const AdditionalNetworksComponent: React.FC<
         Additional Networks
       </Title>
       <Stack>
-        {Object.entries(additionalNetworks).map(([urn, { strength }]) => (
+        {Object.entries(loras).map(([urn, strength]) => (
           <Paper withBorder p="sm" radius="sm" key={urn}>
             <Group>
               <Text size="sm" style={{ flex: 1 }}>

@@ -42,6 +42,7 @@ import { ImageModelFromGeneratedImageService } from "../features/Images/services
 import { ImageModelService } from "../features/Images/services/modelGeneration/ImageModelService";
 import { SchedulerMapper } from "../features/Images/services/modelGeneration/SchedulerMapper";
 import { CivitKeyAPI } from "../features/Images/services/api/CivitKeyAPI";
+import { CivitOrchestrationAPI } from "../features/Images/services/api/CivitOrchestrationAPI";
 import { CivitJobAPI } from "../features/Images/services/api/CivitJobAPI";
 import { CivitModelInfoQuery } from "../features/Images/services/api/CivitModelInfoQuery";
 import { ChatEventStore } from "./CQRS/ChatEventStore";
@@ -170,6 +171,10 @@ export class Dependencies {
   OpenRouterChatAPI() {
     return new OpenRouterChatAPI();
   }
+  CivitOrchestrationAPI() {
+    return new CivitOrchestrationAPI();
+  }
+
   CivitJobAPI() {
     return new CivitJobAPI();
   }

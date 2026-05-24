@@ -1,6 +1,7 @@
 import { d } from "../../../../services/Dependencies";
 import type { ImageModel } from "./ImageModel";
 import type { UserImageModels } from "../ImageModelsManagedBlob";
+import { migrateImageModel } from "../migrateImageModel";
 
 export class ImageModelService {
   readonly DEFAULT_SELECTED_MODEL_ID = "";
@@ -20,22 +21,19 @@ export class ImageModelService {
         return false;
       }
 
-      // Map the scheduler before saving
-      const modelWithMappedScheduler = this.mapSchedulerInModel(model);
-
       const userImageModels = await this.GetAllImageModels();
 
-      if (this.modelExists(userImageModels.models, modelWithMappedScheduler)) {
+      if (this.modelExists(userImageModels.models, model)) {
         const updatedModels = this.updateModel(
           userImageModels.models,
-          modelWithMappedScheduler,
+          model,
         );
         await this.saveUserImageModelsDebounced({
           ...userImageModels,
           models: updatedModels,
         });
       } else {
-        const newModels = [...userImageModels.models, modelWithMappedScheduler];
+        const newModels = [...userImageModels.models, model];
         await this.saveUserImageModelsDebounced({
           ...userImageModels,
           models: newModels,
@@ -52,7 +50,11 @@ export class ImageModelService {
   public async GetAllImageModels(): Promise<UserImageModels> {
     try {
       const data = await this.blob().get();
-      return data ?? this.createDefaultUserImageModels();
+      if (!data) return this.createDefaultUserImageModels();
+      return {
+        ...data,
+        models: data.models.map(migrateImageModel),
+      };
     } catch (error) {
       d.ErrorService().log("Failed to get image models", error);
       return this.createDefaultUserImageModels();
@@ -126,19 +128,19 @@ export class ImageModelService {
       name: "Default Image Model",
       timestampUtcMs: Date.now(),
       input: {
+        engine: "sdcpp",
+        ecosystem: "sdxl",
+        operation: "createImage",
         model: "urn:air:sdxl:checkpoint:civitai:257749@290640",
-        params: {
-          prompt: "score_9, score_8_up, score_7_up, score_6_up, source_anime",
-          negativePrompt:
-            "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad hands, jpeg artifacts",
-          scheduler: "DPM2Karras",
-          steps: 20,
-          cfgScale: 7,
-          width: 1024,
-          height: 1024,
-          clipSkip: 2,
-        },
-        additionalNetworks: {},
+        prompt: "score_9, score_8_up, score_7_up, score_6_up, source_anime",
+        negativePrompt:
+          "text, logo, watermark, signature, letterbox, bad anatomy, missing limbs, missing fingers, deformed, cropped, lowres, bad hands, jpeg artifacts",
+        sampleMethod: "dpm2",
+        schedule: "karras",
+        steps: 20,
+        cfgScale: 7,
+        width: 1024,
+        height: 1024,
       },
     };
   }
@@ -177,28 +179,6 @@ export class ImageModelService {
     modelId: string,
   ): ImageModel | undefined =>
     models.find((model) => model.id.toString() === modelId);
-
-  private mapSchedulerInModel(model: ImageModel): ImageModel {
-    try {
-      const mappedScheduler = d
-        .SchedulerMapper()
-        .MapToSchedulerName(model.input.params.scheduler);
-
-      return {
-        ...model,
-        input: {
-          ...model.input,
-          params: {
-            ...model.input.params,
-            scheduler: mappedScheduler,
-          },
-        },
-      };
-    } catch (error) {
-      // If mapping fails, return the original model unchanged
-      return model;
-    }
-  }
 }
 
 // Re-export for backwards compatibility

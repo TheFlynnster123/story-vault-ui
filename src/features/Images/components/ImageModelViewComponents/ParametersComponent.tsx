@@ -10,7 +10,7 @@ import {
 } from "@mantine/core";
 import { SchedulerCombobox } from "../SchedulerCombobox";
 import { ModelPreviewImage } from "../ModelPreviewImage";
-import type { FromTextInput } from "civitai/dist/types/Inputs";
+import type { ImageGenInput } from "../../services/api/ImageGenInput";
 import { d } from "../../../../services/Dependencies";
 import type { ImageModel } from "../../services/modelGeneration/ImageModel";
 
@@ -23,18 +23,15 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
   imageModel,
   onChange,
 }) => {
-  const handleParameterChange = (
-    field: keyof FromTextInput["params"],
+  const handleInputChange = (
+    field: keyof ImageGenInput,
     value: string | number,
   ) => {
     onChange({
       ...imageModel,
       input: {
         ...imageModel.input,
-        params: {
-          ...imageModel.input.params,
-          [field]: value,
-        },
+        [field]: value,
       },
     });
   };
@@ -50,9 +47,22 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
   };
 
   const handleSchedulerChange = (displayName: string) => {
-    const schedulerName = d.SchedulerMapper().MapToSchedulerName(displayName);
-    handleParameterChange("scheduler", schedulerName);
+    const { sampleMethod, schedule } = d
+      .SchedulerMapper()
+      .MapToSampleMethodParams(displayName);
+    onChange({
+      ...imageModel,
+      input: {
+        ...imageModel.input,
+        sampleMethod,
+        schedule,
+      },
+    });
   };
+
+  const schedulerDisplayName = d
+    .SchedulerMapper()
+    .MapToDisplayName(imageModel.input.sampleMethod ?? "");
 
   return (
     <Stack>
@@ -68,7 +78,7 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
         maxWidth="100%"
       />
       <SchedulerCombobox
-        value={imageModel.input.params.scheduler}
+        value={schedulerDisplayName}
         onChange={handleSchedulerChange}
       />
       <Stack gap="xs">
@@ -76,8 +86,8 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
           Steps
         </Text>
         <Slider
-          value={imageModel.input.params.steps || 20}
-          onChange={(value) => handleParameterChange("steps", value)}
+          value={imageModel.input.steps || 20}
+          onChange={(value) => handleInputChange("steps", value)}
           min={10}
           max={50}
           step={1}
@@ -94,8 +104,8 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
           CFG Scale
         </Text>
         <Slider
-          value={imageModel.input.params.cfgScale || 7}
-          onChange={(value) => handleParameterChange("cfgScale", value)}
+          value={imageModel.input.cfgScale || 7}
+          onChange={(value) => handleInputChange("cfgScale", value)}
           min={1}
           max={10}
           step={0.5}
@@ -110,30 +120,32 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
       <Group grow>
         <NumberInput
           label="Width"
-          value={imageModel.input.params.width}
+          value={imageModel.input.width}
           max={1024}
           min={0}
           onChange={(value) =>
-            handleParameterChange("width", Number(value) || 0)
+            handleInputChange("width", Number(value) || 0)
           }
         />
         <NumberInput
           label="Height"
           max={1024}
           min={0}
-          value={imageModel.input.params.height}
+          value={imageModel.input.height}
           onChange={(value) =>
-            handleParameterChange("height", Number(value) || 0)
+            handleInputChange("height", Number(value) || 0)
           }
         />
       </Group>
-      <NumberInput
-        label="Clip Skip"
-        value={imageModel.input.params.clipSkip || 0}
-        onChange={(value) =>
-          handleParameterChange("clipSkip", Number(value) || 0)
-        }
-      />
+      {imageModel.input.ecosystem === "sd1" && (
+        <NumberInput
+          label="Clip Skip"
+          value={imageModel.input.clipSkip || 0}
+          onChange={(value) =>
+            handleInputChange("clipSkip", Number(value) || 0)
+          }
+        />
+      )}
     </Stack>
   );
 };

@@ -1,8 +1,11 @@
-import type { FromTextInput } from "civitai/dist/types/Inputs";
 import Config from "../../../../services/Config";
-import type { CivitJobStatus, PhotoData } from "../CivitJob";
+import type { PhotoData } from "../CivitJob";
 import { d } from "../../../../services/Dependencies";
 
+/**
+ * Photo storage API - handles saving/loading generated images to/from Azure Blob Storage.
+ * This is separate from the generation workflow and does NOT use the civitai SDK.
+ */
 export class CivitJobAPI {
   public URL: string;
 
@@ -52,57 +55,6 @@ export class CivitJobAPI {
       throw new Error(`Error fetching photo: ${response.statusText}`);
     }
   }
-
-  public async getJobStatus(jobId: string): Promise<CivitJobStatus> {
-    const accessToken = await d.AuthAPI().getAccessToken();
-
-    const encryptionKey = await d.EncryptionManager().getCivitaiEncryptionKey();
-
-    const body = { jobId };
-
-    const requestInit = buildGetJobStatusRequest(
-      body,
-      accessToken,
-      encryptionKey,
-    );
-    const response = await fetch(`${this.URL}/api/GetJobStatus`, requestInit);
-
-    if (response.ok) {
-      return response.json();
-    } else {
-      return { scheduled: false, result: [] };
-    }
-  }
-
-  public async generateImage(input: FromTextInput): Promise<any> {
-    const accessToken = await d.AuthAPI().getAccessToken();
-
-    const encryptionKey = await d.EncryptionManager().getCivitaiEncryptionKey();
-
-    const requestInit = buildGenerateImageRequest(
-      input,
-      accessToken,
-      encryptionKey,
-    );
-
-    const response = await fetch(`${this.URL}/api/GenerateImage`, requestInit);
-
-    if (response.ok) {
-      return response.json();
-    } else {
-      this.logError(response);
-      throw new Error(`Error generating image: ${response.statusText}`);
-    }
-  }
-
-  private async logError(response: Response) {
-    try {
-      const fullErrorJson = await response.json();
-      console.log(fullErrorJson);
-    } finally {
-      d.ErrorService().log("Error from CivitAPI: " + response.statusText);
-    }
-  }
 }
 
 function buildSavePhotoRequest(
@@ -128,38 +80,6 @@ function buildGetPhotoRequest(
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(body),
-  };
-}
-
-function buildGetJobStatusRequest(
-  body: { jobId: string },
-  accessToken: string,
-  encryptionKey: string,
-): RequestInit {
-  return {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      EncryptionKey: encryptionKey,
-    },
-    body: JSON.stringify(body),
-  };
-}
-
-function buildGenerateImageRequest(
-  body: FromTextInput,
-  accessToken: string,
-  encryptionKey: string,
-): RequestInit {
-  return {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      EncryptionKey: encryptionKey,
     },
     body: JSON.stringify(body),
   };
