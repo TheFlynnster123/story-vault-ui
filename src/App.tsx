@@ -24,6 +24,7 @@ import { ChatImageModelsPage } from "./features/Images/pages/ChatImageModelsPage
 import ChatImageModelTemplatePage from "./features/Images/pages/ChatImageModelTemplatePage";
 import ChatImageModelEditPage from "./features/Images/pages/ChatImageModelEditPage";
 import ProtectedRoute from "./features/Auth/components/ProtectedRoute";
+import LogoutPage from "./features/Auth/pages/LogoutPage";
 import { ChatCreationWizard } from "./features/Chat/components/ChatCreationWizard/ChatCreationWizard";
 import { CreditsPage } from "./features/OpenRouter/pages/CreditsPage";
 import { QUERY_CLIENT } from "./services/QueryClient";
@@ -36,6 +37,7 @@ const App: React.FC<AppProps> = () => {
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/logout" element={<LogoutPage />} />
           <Route
             path="/chat"
             element={
