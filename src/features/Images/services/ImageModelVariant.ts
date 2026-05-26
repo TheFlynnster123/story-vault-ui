@@ -1,5 +1,6 @@
 import type { ImageGenInput } from "./api/ImageGenInput";
 import type { ImageModel } from "./modelGeneration/ImageModel";
+import { isWorkflowImageModel } from "./modelGeneration/ImageModel";
 
 export type ImageModelVariantOverrides = {
   input?: Partial<ImageGenInput>;
@@ -21,6 +22,10 @@ export const resolveVariant = (
   variant: ImageModelVariant,
   parent: ImageModel,
 ): ImageModel => {
+  if (!isWorkflowImageModel(parent)) {
+    throw new Error("Migrate the parent image model before using this variant.");
+  }
+
   const o = variant.overrides;
   return {
     id: variant.id,

@@ -31,6 +31,7 @@ export const ChatImageModelsPage: React.FC = () => {
     error,
     saveModel,
     selectModel,
+    migrateModel,
     getSelectedModel,
   } = useChatImageModels(chatId!);
 
@@ -45,6 +46,13 @@ export const ChatImageModelsPage: React.FC = () => {
 
   const handleEditModel = (modelId: string) => {
     navigate(`/chat/${chatId}/image-models/edit/${modelId}`);
+  };
+
+  const handleMigrateModel = async (modelId: string) => {
+    const migrated = await migrateModel(modelId);
+    if (migrated) {
+      navigate(`/chat/${chatId}/image-models/edit/${migrated.id}`);
+    }
   };
 
   const handleAddFromTemplate = () => {
@@ -133,6 +141,7 @@ export const ChatImageModelsPage: React.FC = () => {
                 isSelected={selectedModel?.id === model.id}
                 onSelect={() => handleSelectModel(model.id)}
                 onEdit={() => handleEditModel(model.id)}
+                onMigrate={() => handleMigrateModel(model.id)}
               />
             ))
           )}
@@ -160,6 +169,7 @@ const PageHeader: React.FC<{ onGoBack: () => void }> = ({ onGoBack }) => (
 );
 
 const createNewModel = (): ImageModel => ({
+  format: "workflow",
   id: uuidv4(),
   name: "New Image Model",
   timestampUtcMs: Date.now(),

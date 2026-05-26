@@ -15,11 +15,13 @@ export const ImageModelList: React.FC = () => {
     error,
     saveImageModel,
     selectImageModel,
+    migrateImageModel,
     getSelectedModel,
   } = useImageModels();
   const createNewModel = (): ImageModel => {
     const timestamp = Date.now();
     return {
+      format: "workflow",
       id: uuidv4(),
       name: "Default Image Model",
       timestampUtcMs: timestamp,
@@ -48,6 +50,13 @@ export const ImageModelList: React.FC = () => {
 
   const handleEditModel = (modelId: string) => {
     navigate(`/default-image-models/edit/${modelId}`);
+  };
+
+  const handleMigrateModel = async (modelId: string) => {
+    const migrated = await migrateImageModel(modelId);
+    if (migrated) {
+      navigate(`/default-image-models/edit/${migrated.id}`);
+    }
   };
 
   const handleAddNewModel = async () => {
@@ -100,6 +109,7 @@ export const ImageModelList: React.FC = () => {
               isSelected={selectedModel?.id === model.id}
               onSelect={() => handleSelectModel(model.id)}
               onEdit={() => handleEditModel(model.id)}
+              onMigrate={() => handleMigrateModel(model.id)}
             />
           ))}
         </Stack>

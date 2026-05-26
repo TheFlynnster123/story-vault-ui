@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { d } from "../../../services/Dependencies";
 import type { ChatImageVariants } from "../services/ChatImageVariantsManagedBlob";
 import type { ImageModelVariant } from "../services/ImageModelVariant";
-import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import type { AnyImageModel } from "../services/modelGeneration/ImageModel";
 
 export const useChatImageVariants = (chatId: string) => {
   const [chatImageVariants, setChatImageVariants] = useState<ChatImageVariants>(
@@ -125,7 +125,7 @@ export const useChatImageVariants = (chatId: string) => {
 
   const findParentModel = async (
     parentModelId: string,
-  ): Promise<ImageModel | null> => {
+  ): Promise<AnyImageModel | null> => {
     return await service.findParentModel(parentModelId);
   };
 

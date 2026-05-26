@@ -1,9 +1,9 @@
 import { createGlobalManagedBlob } from "../../../services/Blob/ManagedBlob";
-import type { ImageModel } from "./modelGeneration/ImageModel";
+import type { AnyImageModel } from "./modelGeneration/ImageModel";
 
 export type UserImageModels = {
   selectedModelId: string;
-  models: ImageModel[];
+  models: AnyImageModel[];
 };
 
 export const getImageModelsManagedBlobInstance =

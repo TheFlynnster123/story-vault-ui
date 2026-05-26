@@ -22,6 +22,7 @@ interface AddImageModelModalProps {
 }
 
 const createBlankModel = (): ImageModel => ({
+  format: "workflow",
   id: uuidv4(),
   name: "New Image Model",
   timestampUtcMs: Date.now(),
@@ -78,7 +79,12 @@ export const AddImageModelModal: React.FC<AddImageModelModalProps> = ({
         .GenerateImageModel(imageIdOrUrl.trim());
 
       if (model) {
-        onModelCreated({ ...model, id: uuidv4(), timestampUtcMs: Date.now() });
+        onModelCreated({
+          ...model,
+          format: "workflow",
+          id: uuidv4(),
+          timestampUtcMs: Date.now(),
+        });
         handleClose();
       } else {
         setImportError(

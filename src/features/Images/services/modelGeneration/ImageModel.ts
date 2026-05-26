@@ -1,6 +1,7 @@
 import type { ImageGenInput } from "../api/ImageGenInput";
 
 export type ImageModel = {
+  format?: "workflow";
   id: string;
   name: string;
   timestampUtcMs: number;
@@ -34,3 +35,20 @@ export type ImageModel = {
    */
   trainedWords?: string[];
 };
+
+export type LegacyJobImageModel = Omit<ImageModel, "format" | "input"> & {
+  format: "legacy-job";
+  input: unknown;
+  sampleImageId?: string;
+  legacyReason?: string;
+};
+
+export type AnyImageModel = ImageModel | LegacyJobImageModel;
+
+export const isWorkflowImageModel = (
+  model: AnyImageModel | null | undefined,
+): model is ImageModel => !!model && model.format === "workflow";
+
+export const isLegacyJobImageModel = (
+  model: AnyImageModel | null | undefined,
+): model is LegacyJobImageModel => !!model && model.format === "legacy-job";

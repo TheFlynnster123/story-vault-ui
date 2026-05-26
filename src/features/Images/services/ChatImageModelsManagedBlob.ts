@@ -1,9 +1,9 @@
 import { createManagedBlob } from "../../../services/Blob/ManagedBlob";
-import type { ImageModel } from "./modelGeneration/ImageModel";
+import type { AnyImageModel } from "./modelGeneration/ImageModel";
 
 export type ChatImageModels = {
   selectedModelId: string;
-  models: ImageModel[];
+  models: AnyImageModel[];
 };
 
 export const getChatImageModelsManagedBlobInstance =
