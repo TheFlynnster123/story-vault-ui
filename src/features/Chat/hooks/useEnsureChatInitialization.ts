@@ -3,8 +3,14 @@ import { d } from "../../../services/Dependencies";
 
 export const useEnsureChatInitialization = (chatId: string) => {
   useEffect(() => {
-    // Initialize the chat event service when chatId changes
-    d.ChatEventService(chatId).Initialize();
+    if (!chatId) return;
+
+    const initialize = async () => {
+      await d.ChatEventService(chatId).Initialize();
+      await d.ImageGenerationService(chatId).resumePendingGenerations();
+    };
+
+    void initialize();
   }, [chatId]);
 
   return d.ChatService(chatId);

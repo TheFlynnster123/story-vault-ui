@@ -19,7 +19,7 @@ export class CivitOrchestrationAPI {
     const encryptionKey = await d.EncryptionManager().getCivitaiEncryptionKey();
     const normalizedSteps = steps.map(normalizeImageGenStepForSubmission);
 
-    const response = await fetch(`${this.url}/api/SubmitWorkflow?wait=0`, {
+    const response = await fetch(`${this.url}/api/SubmitWorkflow?wait=60`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

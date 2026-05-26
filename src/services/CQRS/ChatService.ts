@@ -13,8 +13,10 @@ import {
 } from "./events/BookEventUtils";
 import {
   CivitJobCreatedEventUtil,
+  CivitJobUpdatedEventUtil,
   type CivitJobExtras,
 } from "./events/CivitJobCreatedEventUtil";
+import type { CivitJobUpdatedEvent } from "./events/ChatEvent";
 import { MessagesDeletedEventUtil } from "./events/MessagesDeletedEventUtil";
 import { StoryCreatedEventUtil } from "./events/StoryCreatedEventUtil";
 import { StoryEditedEventUtil } from "./events/StoryEditedEventUtil";
@@ -68,6 +70,14 @@ export class ChatService {
     extras?: CivitJobExtras,
   ): Promise<void> {
     const event = CivitJobCreatedEventUtil.Create(jobId, prompt, extras);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  public async UpdateCivitJob(
+    messageId: string,
+    patch: CivitJobUpdatedEvent["patch"],
+  ): Promise<void> {
+    const event = CivitJobUpdatedEventUtil.Create(messageId, patch);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 

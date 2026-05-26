@@ -10,6 +10,7 @@ export type ChatEvent =
   | BookEditedEvent
   | BookDeletedEvent
   | CivitJobCreatedEvent
+  | CivitJobUpdatedEvent
   | StoryCreatedEvent
   | StoryEditedEvent
   | PlanCreatedEvent
@@ -71,6 +72,34 @@ export interface CivitJobCreatedEvent {
   characterName?: string;
   basePrompt?: string;
   sceneDescription?: string;
+  generationStatus?: CivitJobGenerationStatus;
+  generationError?: string;
+}
+
+export type CivitJobGenerationStatus =
+  | "determining-character"
+  | "missing-character-description"
+  | "generating-prompt"
+  | "submitting"
+  | "submitted"
+  | "failed";
+
+export interface CivitJobUpdatedEvent {
+  type: "CivitJobUpdated";
+  messageId: string;
+  patch: Partial<{
+    jobId: string;
+    prompt: string;
+    modelName: string;
+    modelId: string;
+    modelSource: "system" | "variant";
+    characterDescription: string;
+    characterName: string;
+    basePrompt: string;
+    sceneDescription: string;
+    generationStatus: CivitJobGenerationStatus;
+    generationError: string;
+  }>;
 }
 
 export interface StoryCreatedEvent {
