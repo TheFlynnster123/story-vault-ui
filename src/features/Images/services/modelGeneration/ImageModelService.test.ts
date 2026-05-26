@@ -8,7 +8,6 @@ const mockGet = vi.fn();
 const mockSave = vi.fn();
 const mockSaveDebounced = vi.fn();
 const mockLog = vi.fn();
-const mockMapToSchedulerName = vi.fn();
 
 // Mock dependencies
 vi.mock("../../../../services/Dependencies", () => ({
@@ -20,9 +19,6 @@ vi.mock("../../../../services/Dependencies", () => ({
     })),
     ErrorService: vi.fn(() => ({
       log: mockLog,
-    })),
-    SchedulerMapper: vi.fn(() => ({
-      MapToSchedulerName: mockMapToSchedulerName,
     })),
   },
 }));
@@ -37,20 +33,19 @@ describe("ImageModelService", () => {
     timestampUtcMs: Date.now(),
     name: `Test Model ${id}`,
     input: {
+      engine: "sdcpp",
+      ecosystem: "sdxl",
+      operation: "createImage",
       model: "test-model",
-      params: {
-        prompt: "test prompt",
-        negativePrompt: "test negative",
-        scheduler: "DPM++ 2M",
-        steps: 20,
-        cfgScale: 7.5,
-        width: 512,
-        height: 512,
-        clipSkip: 1,
-      },
-      additionalNetworks: {},
+      prompt: "test prompt",
+      negativePrompt: "test negative",
+      sampleMethod: "dpmpp_2m",
+      steps: 20,
+      cfgScale: 7.5,
+      width: 512,
+      height: 512,
+      loras: {},
     },
-    sampleImageId: undefined,
   });
 
   const createMockUserImageModels = (
@@ -67,7 +62,6 @@ describe("ImageModelService", () => {
   });
 
   function setupDefaultMocks(): void {
-    mockMapToSchedulerName.mockImplementation((scheduler: string) => scheduler);
     mockGet.mockResolvedValue(undefined);
     mockSave.mockResolvedValue(undefined);
     mockSaveDebounced.mockResolvedValue(undefined);
@@ -141,44 +135,6 @@ describe("ImageModelService", () => {
       );
       expect(mockGet).not.toHaveBeenCalled();
       expect(mockSave).not.toHaveBeenCalled();
-    });
-
-    it("should map scheduler when saving model", async () => {
-      const mockModel = createMockImageModel();
-      mockModel.input.params.scheduler = "DPM++ 2M";
-      const mockUserModels = createMockUserImageModels();
-
-      mockGet.mockResolvedValue(mockUserModels);
-      mockMapToSchedulerName.mockReturnValue("DPM2M");
-
-      const result = await service.SaveImageModel(mockModel);
-
-      expect(result).toBe(true);
-      expect(mockMapToSchedulerName).toHaveBeenCalledWith("DPM++ 2M");
-
-      // Verify the saved model has the mapped scheduler
-      const savedData = mockSaveDebounced.mock.calls[0][0] as UserImageModels;
-      expect(savedData.models[0].input.params.scheduler).toBe("DPM2M");
-    });
-
-    it("should preserve original scheduler when mapping fails", async () => {
-      const mockModel = createMockImageModel();
-      mockModel.input.params.scheduler = "CustomScheduler";
-      const mockUserModels = createMockUserImageModels();
-
-      mockGet.mockResolvedValue(mockUserModels);
-      mockMapToSchedulerName.mockReturnValue("CustomScheduler"); // No-op behavior
-
-      const result = await service.SaveImageModel(mockModel);
-
-      expect(result).toBe(true);
-      expect(mockMapToSchedulerName).toHaveBeenCalledWith("CustomScheduler");
-
-      // Verify the saved model has the original scheduler
-      const savedData = mockSaveDebounced.mock.calls[0][0] as UserImageModels;
-      expect(savedData.models[0].input.params.scheduler).toBe(
-        "CustomScheduler",
-      );
     });
   });
 

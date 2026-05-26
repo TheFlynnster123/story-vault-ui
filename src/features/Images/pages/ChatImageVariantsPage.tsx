@@ -271,7 +271,7 @@ const VariantListItem: React.FC<{
       <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
         <Box>
           <ModelSampleImage
-            sampleImageJobId={variant.overrides.sampleImageId}
+            sampleImageJobId={variant.overrides.sampleWorkflowId}
             size="medium"
           />
         </Box>
@@ -306,8 +306,8 @@ const VariantListItem: React.FC<{
           </Group>
           {parent && (
             <Text size="xs" c="dimmed" lineClamp={2}>
-              Base: {parent.input.params.prompt?.slice(0, 80)}
-              {(parent.input.params.prompt?.length ?? 0) > 80 ? "…" : ""}
+              Base: {parent.input.prompt?.slice(0, 80)}
+              {(parent.input.prompt?.length ?? 0) > 80 ? "…" : ""}
             </Text>
           )}
           {!parent && (
@@ -351,7 +351,7 @@ const SystemModelListItem: React.FC<{
   <Paper withBorder p="md" mb="sm" w="100%">
     <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
       <Box>
-        <ModelSampleImage sampleImageJobId={model.sampleImageId} size="medium" />
+        <ModelSampleImage sampleImageJobId={model.sampleWorkflowId} size="medium" />
       </Box>
       <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
         <Group gap="xs" wrap="wrap">
@@ -363,8 +363,8 @@ const SystemModelListItem: React.FC<{
           )}
         </Group>
         <Text size="xs" c="dimmed" lineClamp={2}>
-          {model.input.params.prompt?.slice(0, 100)}
-          {(model.input.params.prompt?.length ?? 0) > 100 ? "…" : ""}
+          {model.input.prompt?.slice(0, 100)}
+          {(model.input.prompt?.length ?? 0) > 100 ? "…" : ""}
         </Text>
       </Stack>
       <Button size="sm" variant="light" onClick={onSelect} style={{ flexShrink: 0 }}>
@@ -383,13 +383,13 @@ const SystemModelListItem: React.FC<{
 const countOverrides = (variant: ImageModelVariant): number => {
   const o = variant.overrides;
   let count = 0;
-  if ("sampleImageId" in o) count++;
+  if ("sampleWorkflowId" in o) count++;
   if ("imageGenerationPrompt" in o) count++;
   if ("appendImageGenerationPromptToBase" in o) count++;
   if ("trainedWords" in o) count++;
   if (o.input?.model !== undefined) count++;
-  if (o.input?.additionalNetworks !== undefined) count++;
-  count += Object.keys(o.input?.params ?? {}).length;
+  if (o.input?.loras !== undefined) count++;
+  count += Object.keys(o.input ?? {}).filter(k => k !== "model" && k !== "loras").length;
   return count;
 };
 
@@ -420,13 +420,13 @@ const SelectParentModal: React.FC<{
         >
           <Group wrap="nowrap" gap="md">
             <ModelSampleImage
-              sampleImageJobId={model.sampleImageId}
+              sampleImageJobId={model.sampleWorkflowId}
               size="small"
             />
             <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
               <Text fw={500}>{model.name}</Text>
               <Text size="xs" c="dimmed" lineClamp={1}>
-                {model.input.params.prompt?.slice(0, 80)}
+                {model.input.prompt?.slice(0, 80)}
               </Text>
             </Stack>
           </Group>

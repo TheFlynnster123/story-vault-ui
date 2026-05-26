@@ -17,36 +17,37 @@ describe("SampleImageGenerator", () => {
     timestampUtcMs: Date.now(),
     name: "Test Model",
     input: {
+      engine: "sdcpp",
+      ecosystem: "sdxl",
+      operation: "createImage",
       model: "test-model",
-      params: {
-        prompt: "test prompt",
-        negativePrompt: "test negative",
-        scheduler: "DPM++ 2M",
-        steps: 20,
-        cfgScale: 7.5,
-        width: 512,
-        height: 512,
-        clipSkip: 1,
-      },
+      prompt: "test prompt",
+      negativePrompt: "test negative",
+      sampleMethod: "euler_a",
+      steps: 20,
+      cfgScale: 7.5,
+      width: 512,
+      height: 512,
     },
   };
 
   const mockOnSampleImageCreated = vi.fn();
-  let mockCivitJobAPI: any;
+  let mockCivitOrchestrationAPI: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup default mock return values
     vi.mocked(useCivitJob).mockReturnValue({
       photoBase64: null,
     } as any);
 
-    mockCivitJobAPI = {
-      generateImage: vi.fn(),
+    mockCivitOrchestrationAPI = {
+      submitWorkflow: vi.fn(),
     };
 
-    vi.mocked(d.CivitJobAPI).mockReturnValue(mockCivitJobAPI);
+    vi.mocked(d.CivitOrchestrationAPI).mockReturnValue(
+      mockCivitOrchestrationAPI,
+    );
     vi.mocked(d.ErrorService).mockReturnValue({
       log: vi.fn(),
     } as any);
@@ -66,10 +67,9 @@ describe("SampleImageGenerator", () => {
   });
 
   it("should show generating state when button is clicked", async () => {
-    mockCivitJobAPI.generateImage.mockImplementation(async () => {
-      // Delay to allow us to see the generating state
+    mockCivitOrchestrationAPI.submitWorkflow.mockImplementation(async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      return { jobs: [{ jobId: "test-job-123" }] };
+      return { id: "wf_test-123", status: "succeeded", steps: [] };
     });
 
     render(
@@ -82,7 +82,6 @@ describe("SampleImageGenerator", () => {
     const button = screen.getByRole("button");
     fireEvent.click(button);
 
-    // Should show generating state (both isGenerating and isWaitingForJob show this message)
     expect(button).toHaveTextContent("Generating image...");
     expect(button).toBeDisabled();
   });
@@ -90,10 +89,9 @@ describe("SampleImageGenerator", () => {
   it("should show success state when image is generated", () => {
     const mockBase64 = "data:image/jpeg;base64,mockimagedata";
 
-    // Mock a model with existing job and image
-    const modelWithJobId: ImageModel = {
+    const modelWithWorkflowId: ImageModel = {
       ...mockImageModel,
-      sampleImageId: "existing-job-123",
+      sampleWorkflowId: "wf_existing-123",
     };
 
     vi.mocked(useCivitJob).mockReturnValue({
@@ -102,7 +100,7 @@ describe("SampleImageGenerator", () => {
 
     render(
       <SampleImageGenerator
-        model={modelWithJobId}
+        model={modelWithWorkflowId}
         onSampleImageCreated={mockOnSampleImageCreated}
       />,
     );
@@ -110,11 +108,12 @@ describe("SampleImageGenerator", () => {
     const button = screen.getByRole("button");
     expect(button).toHaveTextContent("Generate Sample");
     expect(button).not.toBeDisabled();
-    // Should have green color and checkmark icon when successful
   });
 
   it("should show error state when generation fails", async () => {
-    mockCivitJobAPI.generateImage.mockRejectedValue(new Error("API Error"));
+    mockCivitOrchestrationAPI.submitWorkflow.mockRejectedValue(
+      new Error("API Error"),
+    );
 
     render(
       <SampleImageGenerator
@@ -132,9 +131,11 @@ describe("SampleImageGenerator", () => {
     });
   });
 
-  it("should call onSampleImageCreated when job is created", async () => {
-    mockCivitJobAPI.generateImage.mockResolvedValue({
-      jobs: [{ jobId: "test-job-456" }],
+  it("should call onSampleImageCreated when workflow is created", async () => {
+    mockCivitOrchestrationAPI.submitWorkflow.mockResolvedValue({
+      id: "wf_test-456",
+      status: "succeeded",
+      steps: [],
     });
 
     render(
@@ -148,54 +149,7 @@ describe("SampleImageGenerator", () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(mockOnSampleImageCreated).toHaveBeenCalledWith("test-job-456");
-    });
-  });
-
-  it("should include additional networks in generation request", async () => {
-    mockCivitJobAPI.generateImage.mockResolvedValue({
-      jobs: [{ jobId: "test-job-789" }],
-    });
-
-    const modelWithNetworks: ImageModel = {
-      ...mockImageModel,
-      input: {
-        ...mockImageModel.input,
-        additionalNetworks: {
-          "test-network-1": { strength: 0.8 },
-          "test-network-2": { strength: 0.6 },
-        },
-      },
-    };
-
-    render(
-      <SampleImageGenerator
-        model={modelWithNetworks}
-        onSampleImageCreated={mockOnSampleImageCreated}
-      />,
-    );
-
-    const button = screen.getByRole("button");
-    fireEvent.click(button);
-
-    await waitFor(() => {
-      expect(mockCivitJobAPI.generateImage).toHaveBeenCalledWith({
-        model: "test-model",
-        params: {
-          prompt: "test prompt",
-          negativePrompt: "test negative",
-          scheduler: "DPM++ 2M",
-          steps: 20,
-          cfgScale: 7.5,
-          width: 512,
-          height: 512,
-          clipSkip: 1,
-        },
-        additionalNetworks: {
-          "test-network-1": { strength: 0.8 },
-          "test-network-2": { strength: 0.6 },
-        },
-      });
+      expect(mockOnSampleImageCreated).toHaveBeenCalledWith("wf_test-456");
     });
   });
 
@@ -211,9 +165,13 @@ describe("SampleImageGenerator", () => {
   });
 
   it("should retry generation when error state button is clicked", async () => {
-    mockCivitJobAPI.generateImage
+    mockCivitOrchestrationAPI.submitWorkflow
       .mockRejectedValueOnce(new Error("First failure"))
-      .mockResolvedValueOnce({ jobs: [{ jobId: "retry-job-123" }] });
+      .mockResolvedValueOnce({
+        id: "wf_retry-123",
+        status: "succeeded",
+        steps: [],
+      });
 
     render(
       <SampleImageGenerator
@@ -224,16 +182,14 @@ describe("SampleImageGenerator", () => {
 
     const button = screen.getByRole("button");
 
-    // First click fails
     fireEvent.click(button);
     await waitFor(() => {
       expect(button).toHaveTextContent("Generation Failed - Retry");
     });
 
-    // Click retry
     fireEvent.click(button);
     await waitFor(() => {
-      expect(mockOnSampleImageCreated).toHaveBeenCalledWith("retry-job-123");
+      expect(mockOnSampleImageCreated).toHaveBeenCalledWith("wf_retry-123");
     });
   });
 });

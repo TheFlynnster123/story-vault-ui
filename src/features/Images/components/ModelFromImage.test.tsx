@@ -23,19 +23,18 @@ describe("ModelFromImage", () => {
     timestampUtcMs: Date.now(),
     name: "Test Model",
     input: {
+      engine: "sdcpp",
+      ecosystem: "sdxl",
+      operation: "createImage",
       model: "test-model",
-      params: {
-        prompt: "test prompt",
-        negativePrompt: "test negative",
-        scheduler: "DPM++ 2M",
-        steps: 20,
-        cfgScale: 7.5,
-        width: 512,
-        height: 512,
-        clipSkip: 1,
-      },
+      prompt: "test prompt",
+      negativePrompt: "test negative",
+      sampleMethod: "dpmpp_2m",
+      steps: 20,
+      cfgScale: 7.5,
+      width: 512,
+      height: 512,
     },
-    sampleImageId: undefined,
   };
 
   beforeEach(() => {

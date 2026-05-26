@@ -17,14 +17,14 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
   onSampleImageCreated,
 }) => {
   const [jobId, setJobId] = useState<string | null>(
-    model.sampleImageId || null,
+    model.sampleWorkflowId || null,
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setJobId(model.sampleImageId || null);
-  }, [model.sampleImageId]);
+    setJobId(model.sampleWorkflowId || null);
+  }, [model.sampleWorkflowId]);
 
   const { photoBase64, jobStatus } = useCivitJob(EMULATED_CHAT_ID, jobId || "");
 
@@ -40,8 +40,10 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
     setJobId(null);
 
     try {
-      const response = await d.CivitJobAPI().generateImage(model.input);
-      const newJobId = response.jobs[0].jobId;
+      const workflow = await d
+        .CivitOrchestrationAPI()
+        .submitWorkflow([{ $type: "imageGen", input: model.input }]);
+      const newJobId = workflow.id;
       setJobId(newJobId);
       onSampleImageCreated?.(newJobId);
     } catch (e) {

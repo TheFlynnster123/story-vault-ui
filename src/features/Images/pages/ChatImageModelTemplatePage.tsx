@@ -97,12 +97,10 @@ interface TemplateListItemProps {
   model: {
     id: string;
     name: string;
-    sampleImageId?: string;
+    sampleWorkflowId?: string;
     input: {
-      params: {
-        prompt?: string;
-        negativePrompt?: string;
-      };
+      prompt?: string;
+      negativePrompt?: string;
     };
   };
   isGloballySelected: boolean;
@@ -123,7 +121,7 @@ const TemplateListItem: React.FC<TemplateListItemProps> = ({
     <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
       <Box>
         <ModelSampleImage
-          sampleImageJobId={model.sampleImageId}
+          sampleImageJobId={model.sampleWorkflowId}
           size="medium"
         />
       </Box>
@@ -138,16 +136,16 @@ const TemplateListItem: React.FC<TemplateListItemProps> = ({
           )}
         </Group>
 
-        {model.input.params.prompt && (
+        {model.input.prompt && (
           <Text size="xs" c="dimmed" lineClamp={2}>
-            <strong>Prompt:</strong> {truncateText(model.input.params.prompt)}
+            <strong>Prompt:</strong> {truncateText(model.input.prompt)}
           </Text>
         )}
 
-        {model.input.params.negativePrompt && (
+        {model.input.negativePrompt && (
           <Text size="xs" c="dimmed" lineClamp={1}>
             <strong>Negative:</strong>{" "}
-            {truncateText(model.input.params.negativePrompt)}
+            {truncateText(model.input.negativePrompt)}
           </Text>
         )}
       </Stack>

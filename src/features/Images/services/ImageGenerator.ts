@@ -139,19 +139,22 @@ export class ImageGenerator {
   }> {
     const selectedModel = await this.resolveModelForJob(preferredImage);
 
-    const modelInput = copyModel(selectedModel);
-    const basePrompt = modelInput.params?.prompt ?? "";
+    const inputCopy = copyInput(selectedModel);
+    const basePrompt = inputCopy.prompt ?? "";
 
     if (characterDescription) {
-      appendPrompt(modelInput, characterDescription);
+      appendToPrompt(inputCopy, characterDescription);
     }
-    appendPrompt(modelInput, sceneDescription);
+    appendToPrompt(inputCopy, sceneDescription);
 
-    const response = await d.CivitJobAPI().generateImage(modelInput);
+    const workflow = await d
+      .CivitOrchestrationAPI()
+      .submitWorkflow([{ $type: "imageGen", input: inputCopy }]);
+
     return {
-      jobId: response?.jobs[0]?.jobId ?? "",
+      jobId: workflow.id,
       modelName: selectedModel.name,
-      fullPrompt: modelInput.params?.prompt ?? sceneDescription,
+      fullPrompt: inputCopy.prompt ?? sceneDescription,
       basePrompt,
       sceneDescription,
     };
@@ -284,9 +287,9 @@ const buildFeedbackMessage = (
 ): string =>
   `The previous image prompt was: \n\n"${originalPrompt}" \n\nPlease regenerate with this feedback: \n\n${feedback}. \n\nRespond ONLY with the new image prompt separated by commas.`;
 
-const appendPrompt = (modelInput: any, prompt: string) => {
-  modelInput.params.prompt =
-    (modelInput.params.prompt ? `${modelInput.params.prompt}, ` : "") + prompt;
+const appendToPrompt = (input: any, prompt: string) => {
+  input.prompt =
+    (input.prompt ? `${input.prompt}, ` : "") + prompt;
 };
 
 const appendPromptSection = (basePrompt: string, prompt: string): string => {
@@ -304,7 +307,7 @@ const appendPromptSection = (basePrompt: string, prompt: string): string => {
   return `${trimmedBasePrompt}\n\n${trimmedPrompt}`;
 };
 
-const copyModel = (selectedModel: ImageModel) =>
+const copyInput = (selectedModel: ImageModel) =>
   JSON.parse(JSON.stringify(selectedModel.input));
 
 const buildPromptMessagesWithCharacter = (
