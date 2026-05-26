@@ -19,15 +19,12 @@ export const PromptsComponent: React.FC<PromptsComponentProps> = ({
       ...imageModel,
       input: {
         ...imageModel.input,
-        params: {
-          ...imageModel.input.params,
-          [field]: value,
-        },
+        [field]: value,
       },
     });
   };
 
-  const prompt = imageModel.input.params.prompt ?? "";
+  const prompt = imageModel.input.prompt ?? "";
   const trainedWords = imageModel.trainedWords ?? [];
 
   const isWordInPrompt = (word: string): boolean => {
@@ -64,7 +61,7 @@ export const PromptsComponent: React.FC<PromptsComponentProps> = ({
       )}
       <Textarea
         label="Negative Prompt"
-        value={imageModel.input.params.negativePrompt || ""}
+        value={imageModel.input.negativePrompt || ""}
         onChange={(e) => handlePromptChange("negativePrompt", e.target.value)}
         autosize
         minRows={3}

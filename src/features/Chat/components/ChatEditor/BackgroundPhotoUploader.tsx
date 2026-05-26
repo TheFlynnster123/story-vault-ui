@@ -63,12 +63,14 @@ export const BackgroundPhotoUploader: React.FC<
       const modelInput = JSON.parse(JSON.stringify(selectedModel.input));
 
       // Append the user's prompt to the model's base prompt
-      modelInput.params.prompt = modelInput.params.prompt
-        ? `${modelInput.params.prompt}, ${prompt}`
+      modelInput.prompt = modelInput.prompt
+        ? `${modelInput.prompt}, ${prompt}`
         : prompt;
 
-      const response = await d.CivitJobAPI().generateImage(modelInput);
-      const newJobId = response.jobs[0].jobId;
+      const workflow = await d
+        .CivitOrchestrationAPI()
+        .submitWorkflow([{ $type: "imageGen", input: modelInput }]);
+      const newJobId = workflow.id;
       onCivitJobIdChange(newJobId);
       setPrompt("");
     } catch (e) {

@@ -65,14 +65,14 @@ describe("ImageModelMapper", () => {
 
   beforeEach(() => {
     BaseModelMapper = vi.fn();
-    SchedulerMapper = vi.fn((displayName: string) => displayName) as any;
+    SchedulerMapper = vi.fn((displayName: string) => ({ sampleMethod: displayName })) as any;
 
     vi.spyOn(d, "BaseModelMapper").mockReturnValue({
       toAIR: BaseModelMapper,
     } as any);
 
     vi.spyOn(d, "SchedulerMapper").mockReturnValue({
-      MapToSchedulerName: SchedulerMapper,
+      MapToSampleMethodParams: SchedulerMapper,
     } as any);
 
     mapper = new ImageModelMapper();
@@ -424,29 +424,80 @@ describe("ImageModelMapper", () => {
     });
   });
 
-  describe("FromTextInput Mapping", () => {
-    it("should map all params correctly with raw scheduler value", () => {
+  describe("mapToImageGenInput", () => {
+    it("should map all params correctly with flat format", () => {
+      SchedulerMapper.mockReturnValue({ sampleMethod: "dpmpp_2m" });
       const params = createMockGeneratedImageParams();
       const generatedImage = createMockGeneratedImage(
         [createMockCheckpointResource()],
         params,
       );
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(result.params).toEqual({
-        prompt: "beautiful landscape",
-        negativePrompt: "ugly, blurry",
-        scheduler: "DPM++ 2M",
-        steps: 20,
-        cfgScale: 7.5,
-        width: 512,
-        height: 768,
-        clipSkip: 1,
-      });
+      expect(result.prompt).toBe("beautiful landscape");
+      expect(result.negativePrompt).toBe("ugly, blurry");
+      expect(result.sampleMethod).toBe("dpmpp_2m");
+      expect(result.steps).toBe(20);
+      expect(result.cfgScale).toBe(7.5);
+      expect(result.width).toBe(512);
+      expect(result.height).toBe(768);
+      expect(result.engine).toBe("sdcpp");
+      expect(result.operation).toBe("createImage");
     });
 
-    it("should handle different sampler types with raw scheduler value", () => {
+    it("should not include clipSkip for SDXL ecosystem", () => {
+      const params = createMockGeneratedImageParams();
+      const generatedImage = createMockGeneratedImage(
+        [createMockCheckpointResource()], // sdxl AIR
+        params,
+      );
+
+      const result = mapper.mapToImageGenInput(generatedImage);
+
+      expect(result.clipSkip).toBeUndefined();
+    });
+
+    it("should include clipSkip for SD1 ecosystem", () => {
+      const sd1Resource = {
+        ...createMockCheckpointResource(),
+        air: "urn:air:sd1:checkpoint:civitai:123456@789012",
+      };
+      const params = {
+        ...createMockGeneratedImageParams(),
+        clipSkip: 2,
+      };
+      const generatedImage = createMockGeneratedImage([sd1Resource], params);
+
+      const result = mapper.mapToImageGenInput(generatedImage);
+
+      expect(result.ecosystem).toBe("sd1");
+      expect(result.clipSkip).toBe(2);
+    });
+
+    it("should detect Anima checkpoint AIRs automatically", () => {
+      const animaResource = {
+        ...createMockCheckpointResource(),
+        air: "urn:air:anima:checkpoint:civitai:2458426@2945208",
+        baseModel: "Anima",
+      };
+      const params = {
+        ...createMockGeneratedImageParams(),
+        sampler: "er_sde",
+      };
+      const generatedImage = createMockGeneratedImage([animaResource], params);
+
+      const result = mapper.mapToImageGenInput(generatedImage);
+
+      expect(result.ecosystem).toBe("anima");
+      expect(result.model).toBe("urn:air:anima:checkpoint:civitai:2458426@2945208");
+      expect(result.sampleMethod).toBe("er_sde");
+      expect(result.schedule).toBe("simple");
+      expect(result.clipSkip).toBeUndefined();
+    });
+
+    it("should handle different sampler types", () => {
+      SchedulerMapper.mockReturnValue({ sampleMethod: "euler_a" });
       const params = {
         ...createMockGeneratedImageParams(),
         sampler: "Euler a" as any,
@@ -456,50 +507,34 @@ describe("ImageModelMapper", () => {
         params,
       );
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(result.params.scheduler).toBe("Euler a");
+      expect(result.sampleMethod).toBe("euler_a");
     });
 
-    it("should map scheduler display name to scheduler name", () => {
-      SchedulerMapper.mockReturnValue("DPM2M");
+    it("should map scheduler display name using MapToSampleMethodParams", () => {
+      SchedulerMapper.mockReturnValue({ sampleMethod: "dpmpp_2m", schedule: "karras" });
       const params = {
         ...createMockGeneratedImageParams(),
-        sampler: "DPM++ 2M" as any,
+        sampler: "DPM++ 2M karras" as any,
       };
       const generatedImage = createMockGeneratedImage(
         [createMockCheckpointResource()],
         params,
       );
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(SchedulerMapper).toHaveBeenCalledWith("DPM++ 2M");
-      expect(result.params.scheduler).toBe("DPM2M");
-    });
-
-    it("should map Euler a display name to EulerA scheduler name", () => {
-      SchedulerMapper.mockReturnValue("EulerA");
-      const params = {
-        ...createMockGeneratedImageParams(),
-        sampler: "Euler a" as any,
-      };
-      const generatedImage = createMockGeneratedImage(
-        [createMockCheckpointResource()],
-        params,
-      );
-
-      const result = mapper.mapToFromTextInput(generatedImage);
-
-      expect(SchedulerMapper).toHaveBeenCalledWith("Euler a");
-      expect(result.params.scheduler).toBe("EulerA");
+      expect(SchedulerMapper).toHaveBeenCalledWith("DPM++ 2M karras");
+      expect(result.sampleMethod).toBe("dpmpp_2m");
+      expect(result.schedule).toBe("karras");
     });
 
     it("should map model from primary resource", () => {
       const checkpointResource = createMockCheckpointResource();
       const generatedImage = createMockGeneratedImage([checkpointResource]);
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
       expect(result.model).toBe(
         "urn:air:sdxl:checkpoint:civitai:123456@789012",
@@ -509,12 +544,12 @@ describe("ImageModelMapper", () => {
     it("should handle missing primary resource", () => {
       const generatedImage = createMockGeneratedImage([]);
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
       expect(result.model).toBe("");
     });
 
-    it("should include additional networks in mapping", () => {
+    it("should include loras in mapping", () => {
       const checkpointResource = createMockCheckpointResource();
       const loraResource = createMockLoraResource();
       const generatedImage = createMockGeneratedImage([
@@ -522,10 +557,10 @@ describe("ImageModelMapper", () => {
         loraResource,
       ]);
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(result.additionalNetworks).toEqual({
-        "urn:air:sdxl:lora:civitai:654321@210987": { strength: 0.8 },
+      expect(result.loras).toEqual({
+        "urn:air:sdxl:lora:civitai:654321@210987": 0.8,
       });
     });
 
@@ -537,11 +572,11 @@ describe("ImageModelMapper", () => {
       loraResource.baseModel = "TestModel";
       const generatedImage = createMockGeneratedImage([loraResource]);
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
       expect(BaseModelMapper).toHaveBeenCalledWith("TestModel");
-      expect(result.additionalNetworks).toEqual({
-        [loraResource.air]: { strength: 0.8 },
+      expect(result.loras).toEqual({
+        [loraResource.air]: 0.8,
       });
       expect(result.model).toBe(mockMappedBaseModelAIR);
     });
@@ -551,7 +586,7 @@ describe("ImageModelMapper", () => {
       checkpointResource.baseModel = "TestModel";
       const generatedImage = createMockGeneratedImage([checkpointResource]);
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
       expect(BaseModelMapper).not.toHaveBeenCalled();
       expect(result.model).toBe(
@@ -572,7 +607,7 @@ describe("ImageModelMapper", () => {
       };
       const generatedImage = createMockGeneratedImage([checkpointResource]);
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
       expect(result.model).toBe("urn:air:sdxl:checkpoint:civitai:999@888");
     });
@@ -587,10 +622,10 @@ describe("ImageModelMapper", () => {
         params,
       );
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(result.params.width).toBe(1024);
-      expect(result.params.height).toBe(1024);
+      expect(result.width).toBe(1024);
+      expect(result.height).toBe(1024);
     });
 
     it("should truncate width to 1024 when over limit", () => {
@@ -603,10 +638,10 @@ describe("ImageModelMapper", () => {
         params,
       );
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(result.params.width).toBe(1024);
-      expect(result.params.height).toBe(768);
+      expect(result.width).toBe(1024);
+      expect(result.height).toBe(768);
     });
 
     it("should truncate height to 1024 when over limit", () => {
@@ -619,10 +654,10 @@ describe("ImageModelMapper", () => {
         params,
       );
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(result.params.width).toBe(512);
-      expect(result.params.height).toBe(1024);
+      expect(result.width).toBe(512);
+      expect(result.height).toBe(1024);
     });
 
     it("should truncate both width and height when both over limit", () => {
@@ -635,10 +670,10 @@ describe("ImageModelMapper", () => {
         params,
       );
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(result.params.width).toBe(1024);
-      expect(result.params.height).toBe(1024);
+      expect(result.width).toBe(1024);
+      expect(result.height).toBe(1024);
     });
 
     it("should not modify dimensions when under 1024 limit", () => {
@@ -652,25 +687,10 @@ describe("ImageModelMapper", () => {
         params,
       );
 
-      const result = mapper.mapToFromTextInput(generatedImage);
+      const result = mapper.mapToImageGenInput(generatedImage);
 
-      expect(result.params.width).toBe(1024);
-      expect(result.params.height).toBe(1024);
-    });
-
-    it("should default clipSkip to 2 when not available", () => {
-      const params = {
-        ...createMockGeneratedImageParams(),
-        clipSkip: undefined as any,
-      };
-      const generatedImage = createMockGeneratedImage(
-        [createMockCheckpointResource()],
-        params,
-      );
-
-      const result = mapper.mapToFromTextInput(generatedImage);
-
-      expect(result.params.clipSkip).toBe(2);
+      expect(result.width).toBe(1024);
+      expect(result.height).toBe(1024);
     });
 
     it("should default to Euler a when sampler is undefined", () => {
@@ -683,7 +703,7 @@ describe("ImageModelMapper", () => {
         params,
       );
 
-      mapper.mapToFromTextInput(generatedImage);
+      mapper.mapToImageGenInput(generatedImage);
 
       expect(SchedulerMapper).toHaveBeenCalledWith("Euler a");
     });
@@ -691,6 +711,7 @@ describe("ImageModelMapper", () => {
 
   describe("FromGeneratedImage", () => {
     it("should map complete GeneratedImage to ImageModel with trainedWords", () => {
+      SchedulerMapper.mockReturnValue({ sampleMethod: "dpmpp_2m" });
       const checkpointResource = createMockCheckpointResource();
       const loraResource = {
         ...createMockLoraResource(),
@@ -705,27 +726,15 @@ describe("ImageModelMapper", () => {
 
       const result = mapper.FromGeneratedImage(generatedImage);
 
-      expect(result).toEqual({
-        id: expect.any(String),
-        name: "Realistic Vision XL - 99999",
-        timestampUtcMs: expect.any(Number),
-        trainedWords: ["building", "tree"],
-        input: {
-          model: "urn:air:sdxl:checkpoint:civitai:123456@789012",
-          params: {
-            prompt: "beautiful landscape",
-            negativePrompt: "ugly, blurry",
-            scheduler: "DPM++ 2M",
-            steps: 20,
-            cfgScale: 7.5,
-            width: 512,
-            height: 768,
-            clipSkip: 1,
-          },
-          additionalNetworks: {
-            "urn:air:sdxl:lora:civitai:654321@210987": { strength: 0.8 },
-          },
-        },
+      expect(result.id).toEqual(expect.any(String));
+      expect(result.name).toBe("Realistic Vision XL - 99999");
+      expect(result.timestampUtcMs).toEqual(expect.any(Number));
+      expect(result.trainedWords).toEqual(["building", "tree"]);
+      expect(result.input.model).toBe("urn:air:sdxl:checkpoint:civitai:123456@789012");
+      expect(result.input.prompt).toBe("beautiful landscape");
+      expect(result.input.negativePrompt).toBe("ugly, blurry");
+      expect(result.input.loras).toEqual({
+        "urn:air:sdxl:lora:civitai:654321@210987": 0.8,
       });
     });
 
@@ -741,11 +750,11 @@ describe("ImageModelMapper", () => {
       expect(result.id).toEqual(expect.any(String));
       expect(result.name).toBe("Generated Model 11111");
       expect(result.input.model).toBe("");
-      expect(result.input.additionalNetworks).toEqual({});
+      expect(result.input.loras).toEqual({});
       expect(result.trainedWords).toEqual([]);
     });
 
-    it("should not include checkpoint in additional networks (case-insensitive)", () => {
+    it("should not include checkpoint in loras (case-insensitive)", () => {
       const checkpoint = {
         ...createMockCheckpointResource(),
         model: { name: "Test", type: "Checkpoint" },
@@ -763,10 +772,8 @@ describe("ImageModelMapper", () => {
       const result = mapper.FromGeneratedImage(generatedImage);
 
       expect(result.input.model).toBe(checkpoint.air);
-      expect(result.input.additionalNetworks).not.toHaveProperty(
-        checkpoint.air,
-      );
-      expect(result.input.additionalNetworks).toHaveProperty(lora.air);
+      expect(result.input.loras).not.toHaveProperty(checkpoint.air);
+      expect(result.input.loras).toHaveProperty(lora.air);
       expect(result.trainedWords).toEqual(["detail"]);
     });
   });

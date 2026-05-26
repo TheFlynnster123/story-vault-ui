@@ -10,6 +10,7 @@ import type {
   BookCreatedEvent,
   BookEditedEvent,
   BookDeletedEvent,
+  CivitJobUpdatedEvent,
   StoryCreatedEvent,
   StoryEditedEvent,
   PlanCreatedEvent,
@@ -148,6 +149,9 @@ export class UserChatProjection {
         break;
       case "CivitJobCreated":
         this.processCivitJobCreated(event);
+        break;
+      case "CivitJobUpdated":
+        this.processCivitJobUpdated(event);
         break;
       case "PlanCreated":
         this.processPlanCreated(event);
@@ -403,6 +407,8 @@ export class UserChatProjection {
     characterName?: string;
     basePrompt?: string;
     sceneDescription?: string;
+    generationStatus?: string;
+    generationError?: string;
   }) {
     this.Messages.push({
       id: event.jobId,
@@ -417,12 +423,30 @@ export class UserChatProjection {
         characterName: event.characterName,
         basePrompt: event.basePrompt,
         sceneDescription: event.sceneDescription,
+        generationStatus: event.generationStatus,
+        generationError: event.generationError,
       },
 
       hiddenByChapterId: undefined,
       deleted: false,
       hidden: false,
     });
+  }
+
+  private processCivitJobUpdated(event: CivitJobUpdatedEvent) {
+    const index = this.Messages.findIndex(
+      (m) => m.id === event.messageId && m.type === "civit-job",
+    );
+    if (index === -1) return;
+
+    const message = this.Messages[index] as CivitJobChatMessage;
+    this.Messages[index] = {
+      ...message,
+      data: {
+        ...message.data,
+        ...event.patch,
+      },
+    };
   }
 
   /**
@@ -630,6 +654,8 @@ export interface CivitJobChatMessage extends UserChatMessage {
     characterName?: string;
     basePrompt?: string;
     sceneDescription?: string;
+    generationStatus?: string;
+    generationError?: string;
   };
 }
 

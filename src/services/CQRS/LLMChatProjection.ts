@@ -97,6 +97,8 @@ export class LLMChatProjection {
         break;
       case "CivitJobCreated":
         break;
+      case "CivitJobUpdated":
+        break;
       case "PlanCreated":
         this.processPlanCreated(event);
         break;

@@ -1,13 +1,9 @@
-import type { FromTextInput } from "civitai/dist/types/Inputs";
+import type { ImageGenInput } from "./api/ImageGenInput";
 import type { ImageModel } from "./modelGeneration/ImageModel";
 
 export type ImageModelVariantOverrides = {
-  input?: {
-    model?: string;
-    params?: Partial<FromTextInput["params"]>;
-    additionalNetworks?: NonNullable<FromTextInput["additionalNetworks"]>;
-  };
-  sampleImageId?: string;
+  input?: Partial<ImageGenInput>;
+  sampleWorkflowId?: string;
   imageGenerationPrompt?: string;
   appendImageGenerationPromptToBase?: boolean;
   trainedWords?: string[];
@@ -32,17 +28,10 @@ export const resolveVariant = (
     timestampUtcMs: variant.timestampUtcMs,
     input: {
       ...parent.input,
-      ...(o.input?.model !== undefined ? { model: o.input.model } : {}),
-      params: {
-        ...parent.input.params,
-        ...o.input?.params,
-      },
-      ...(o.input?.additionalNetworks !== undefined
-        ? { additionalNetworks: o.input.additionalNetworks }
-        : {}),
+      ...o.input,
     },
-    sampleImageId:
-      "sampleImageId" in o ? o.sampleImageId : parent.sampleImageId,
+    sampleWorkflowId:
+      "sampleWorkflowId" in o ? o.sampleWorkflowId : parent.sampleWorkflowId,
     imageGenerationPrompt:
       "imageGenerationPrompt" in o
         ? o.imageGenerationPrompt
@@ -56,29 +45,28 @@ export const resolveVariant = (
 };
 
 export type OverriddenFields = {
-  sampleImageId: boolean;
+  sampleWorkflowId: boolean;
   imageGenerationPrompt: boolean;
   appendImageGenerationPromptToBase: boolean;
   trainedWords: boolean;
   inputModel: boolean;
-  inputParams: Partial<
-    Record<keyof NonNullable<FromTextInput["params"]>, boolean>
-  >;
-  inputAdditionalNetworks: boolean;
+  inputParams: Partial<Record<keyof ImageGenInput, boolean>>;
+  inputLoras: boolean;
 };
 
 export const computeOverriddenFields = (
   overrides: ImageModelVariantOverrides,
 ): OverriddenFields => ({
-  sampleImageId: "sampleImageId" in overrides,
+  sampleWorkflowId: "sampleWorkflowId" in overrides,
   imageGenerationPrompt: "imageGenerationPrompt" in overrides,
   appendImageGenerationPromptToBase:
     "appendImageGenerationPromptToBase" in overrides,
   trainedWords: "trainedWords" in overrides,
   inputModel: overrides.input !== undefined && "model" in overrides.input,
   inputParams: Object.fromEntries(
-    Object.keys(overrides.input?.params ?? {}).map((k) => [k, true]),
+    Object.keys(overrides.input ?? {})
+      .filter((k) => k !== "model" && k !== "loras")
+      .map((k) => [k, true]),
   ),
-  inputAdditionalNetworks:
-    overrides.input !== undefined && "additionalNetworks" in overrides.input,
+  inputLoras: overrides.input !== undefined && "loras" in overrides.input,
 });

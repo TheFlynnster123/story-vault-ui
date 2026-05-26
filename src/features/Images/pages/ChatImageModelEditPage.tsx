@@ -101,7 +101,7 @@ const ChatImageModelEditPage: React.FC = () => {
 
   const handleSampleJobCreated = async (jobId: string) => {
     if (!imageModel) return;
-    const updatedModel = { ...imageModel, sampleImageId: jobId };
+    const updatedModel = { ...imageModel, sampleWorkflowId: jobId };
     setImageModel(updatedModel);
     await service.SaveModel(updatedModel);
   };
@@ -112,13 +112,7 @@ const ChatImageModelEditPage: React.FC = () => {
       ...imageModel,
       name: loadedModel.name,
       trainedWords: loadedModel.trainedWords,
-      input: {
-        model: loadedModel.input.model,
-        params: {
-          ...loadedModel.input.params,
-        },
-        additionalNetworks: loadedModel.input.additionalNetworks || {},
-      },
+      input: { ...loadedModel.input },
     };
     setImageModel(updatedModel);
     service.SaveModel(updatedModel);
@@ -173,7 +167,7 @@ const ChatImageModelEditPage: React.FC = () => {
       <Paper withBorder p="xl" radius="md">
         <Stack>
           <ModelSampleImage
-            sampleImageJobId={imageModel.sampleImageId}
+            sampleImageJobId={imageModel.sampleWorkflowId}
             size="large"
           />
 

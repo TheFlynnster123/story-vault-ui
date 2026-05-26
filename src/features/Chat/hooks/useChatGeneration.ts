@@ -88,15 +88,31 @@ export const useChatGeneration = (chatId: string) => {
       });
   }, [imageGeneration]);
 
+  useEffect(() => {
+    if (imageGeneration?.PendingMissingCharacter?.characterName) {
+      setMissingCharacterName(
+        imageGeneration.PendingMissingCharacter.characterName,
+      );
+    }
+  }, [
+    imageGeneration,
+    imageGeneration?.PendingMissingCharacter?.characterName,
+  ]);
+
   const resolveMissingCharacterDescription = useCallback(
     async (
       decision: MissingCharacterDescriptionDecision,
     ): Promise<"none" | "navigate-to-characters"> => {
-      if (!missingCharacterName) {
+      const activeMissingCharacterName =
+        missingCharacterName ??
+        imageGeneration?.PendingMissingCharacter?.characterName ??
+        null;
+
+      if (!activeMissingCharacterName) {
         return "none";
       }
 
-      const name = missingCharacterName;
+      const name = activeMissingCharacterName;
 
       if (decision === "generate") {
         // Close the modal immediately so the user isn't blocked waiting for
@@ -143,8 +159,16 @@ export const useChatGeneration = (chatId: string) => {
   );
 
   const dismissMissingCharacterDescription = useCallback(() => {
+    if (imageGeneration) {
+      imageGeneration.PendingMissingCharacter = undefined;
+    }
     setMissingCharacterName(null);
-  }, []);
+  }, [imageGeneration]);
+
+  const displayedMissingCharacterName =
+    missingCharacterName ??
+    imageGeneration?.PendingMissingCharacter?.characterName ??
+    null;
 
   const isTextLoading = textGeneration?.IsLoading || false;
   const isImageLoading = imageGeneration?.IsLoading || false;
@@ -155,7 +179,7 @@ export const useChatGeneration = (chatId: string) => {
     regenerateResponse,
     regenerateResponseWithFeedback,
     generateImage,
-    missingCharacterName,
+    missingCharacterName: displayedMissingCharacterName,
     resolveMissingCharacterDescription,
     dismissMissingCharacterDescription,
     status,

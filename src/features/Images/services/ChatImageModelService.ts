@@ -2,6 +2,7 @@ import { d } from "../../../services/Dependencies";
 import type { ImageModel } from "./modelGeneration/ImageModel";
 import type { ChatImageModels } from "./ChatImageModelsManagedBlob";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
+import { migrateImageModel } from "./migrateImageModel";
 
 export const getChatImageModelServiceInstance = createInstanceCache(
   (chatId: string) => new ChatImageModelService(chatId),
@@ -23,7 +24,11 @@ export class ChatImageModelService {
 
   public async GetAll(): Promise<ChatImageModels> {
     const data = await this.blob().get();
-    return data ?? this.createEmpty();
+    if (!data) return this.createEmpty();
+    return {
+      ...data,
+      models: data.models.map(migrateImageModel),
+    };
   }
 
   public async SaveModel(model: ImageModel): Promise<boolean> {

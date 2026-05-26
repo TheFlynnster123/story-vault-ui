@@ -1,4 +1,8 @@
-import type { CivitJobCreatedEvent } from "./ChatEvent";
+import type {
+  CivitJobCreatedEvent,
+  CivitJobGenerationStatus,
+  CivitJobUpdatedEvent,
+} from "./ChatEvent";
 
 export interface CivitJobExtras {
   modelName?: string;
@@ -8,6 +12,8 @@ export interface CivitJobExtras {
   characterName?: string;
   basePrompt?: string;
   sceneDescription?: string;
+  generationStatus?: CivitJobGenerationStatus;
+  generationError?: string;
 }
 
 export class CivitJobCreatedEventUtil {
@@ -21,6 +27,19 @@ export class CivitJobCreatedEventUtil {
       jobId,
       prompt,
       ...extras,
+    };
+  }
+}
+
+export class CivitJobUpdatedEventUtil {
+  public static Create(
+    messageId: string,
+    patch: CivitJobUpdatedEvent["patch"],
+  ): CivitJobUpdatedEvent {
+    return {
+      type: "CivitJobUpdated",
+      messageId,
+      patch,
     };
   }
 }

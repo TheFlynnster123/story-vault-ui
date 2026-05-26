@@ -22,8 +22,10 @@ describe("ImageGenerationService", () => {
   let mockUserChatProjection: {
     GetMessage: ReturnType<typeof vi.fn>;
   };
+  let mockCivitMessage: any;
   let mockChatService: {
     CreateCivitJob: ReturnType<typeof vi.fn>;
+    UpdateCivitJob: ReturnType<typeof vi.fn>;
     DeleteMessage: ReturnType<typeof vi.fn>;
   };
   let mockCharacterDescriptionGenerationService: {
@@ -33,6 +35,16 @@ describe("ImageGenerationService", () => {
     createBlankCharacter: ReturnType<typeof vi.fn>;
     updateCharacter: ReturnType<typeof vi.fn>;
     findByName: ReturnType<typeof vi.fn>;
+  };
+  let mockChatImageVariantService: {
+    getSelectedModelOrDefault: ReturnType<typeof vi.fn>;
+    GetAll: ReturnType<typeof vi.fn>;
+  };
+  let mockImageModelService: {
+    GetAllImageModels: ReturnType<typeof vi.fn>;
+  };
+  let mockErrorService: {
+    log: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -54,8 +66,40 @@ describe("ImageGenerationService", () => {
 
     mockChatService = {
       CreateCivitJob: vi.fn(),
+      UpdateCivitJob: vi.fn(),
       DeleteMessage: vi.fn(),
     };
+    mockCivitMessage = undefined;
+    mockChatService.CreateCivitJob.mockImplementation(
+      (jobId: string, prompt: string, extras?: any) => {
+        mockCivitMessage = {
+          id: jobId,
+          type: "civit-job",
+          data: {
+            jobId,
+            prompt,
+            ...extras,
+          },
+        };
+      },
+    );
+    mockChatService.UpdateCivitJob.mockImplementation(
+      (_messageId: string, patch: any) => {
+        if (mockCivitMessage) {
+          mockCivitMessage = {
+            ...mockCivitMessage,
+            data: {
+              ...mockCivitMessage.data,
+              ...patch,
+            },
+          };
+        }
+      },
+    );
+    mockUserChatProjection.GetMessage.mockImplementation(
+      (messageId: string) =>
+        mockCivitMessage?.id === messageId ? mockCivitMessage : undefined,
+    );
 
     mockCharacterDescriptionGenerationService = {
       generateDescription: vi.fn(),
@@ -65,6 +109,18 @@ describe("ImageGenerationService", () => {
       createBlankCharacter: vi.fn(),
       updateCharacter: vi.fn(),
       findByName: vi.fn().mockResolvedValue(undefined),
+    };
+    mockChatImageVariantService = {
+      getSelectedModelOrDefault: vi
+        .fn()
+        .mockResolvedValue({ id: "model-default", name: "Default Model" }),
+      GetAll: vi.fn().mockResolvedValue({ variants: [] }),
+    };
+    mockImageModelService = {
+      GetAllImageModels: vi.fn().mockResolvedValue({ models: [] }),
+    };
+    mockErrorService = {
+      log: vi.fn(),
     };
 
     vi.mocked(d.ImageGenerator).mockReturnValue(mockImageGenerator as any);
@@ -81,11 +137,16 @@ describe("ImageGenerationService", () => {
     vi.mocked(d.CharacterDescriptionsService).mockReturnValue(
       mockCharacterDescriptionsService as any,
     );
+    vi.mocked(d.ChatImageVariantService).mockReturnValue(
+      mockChatImageVariantService as any,
+    );
+    vi.mocked(d.ImageModelService).mockReturnValue(mockImageModelService as any);
+    vi.mocked(d.ErrorService).mockReturnValue(mockErrorService as any);
 
     service = new ImageGenerationService(chatId);
   });
 
-  it("returns missing-character-description when selected character has no description", async () => {
+  it("creates a pending image message immediately when selected character has no description", async () => {
     mockImageGenerator.resolveCharacterContext.mockResolvedValue({
       type: "missing-description",
       characterName: "Sarah Chen",
@@ -93,17 +154,32 @@ describe("ImageGenerationService", () => {
 
     const result = await service.generateImage();
 
-    expect(result).toEqual({
-      type: "missing-character-description",
+    expect(result).toEqual({ type: "started" });
+    expect(mockChatService.CreateCivitJob).toHaveBeenCalledWith(
+      expect.stringMatching(/^image-gen-/),
+      "",
+      { generationStatus: "determining-character" },
+    );
+
+    await vi.waitFor(() => {
+      expect(mockChatService.UpdateCivitJob).toHaveBeenCalledWith(
+        expect.stringMatching(/^image-gen-/),
+        expect.objectContaining({
+          generationStatus: "missing-character-description",
+          characterName: "Sarah Chen",
+        }),
+      );
+    });
+    expect(service.PendingMissingCharacter).toEqual({
+      messageId: expect.stringMatching(/^image-gen-/),
       characterName: "Sarah Chen",
     });
     expect(
       mockImageGenerator.generatePromptWithCharacterContext,
     ).not.toHaveBeenCalled();
-    expect(mockChatService.CreateCivitJob).not.toHaveBeenCalled();
   });
 
-  it("sets loading immediately while resolving the character context", async () => {
+  it("returns immediately while resolving the character context in the background", async () => {
     let resolveCharacterContext: (value: {
       type: "missing-description";
       characterName: string;
@@ -122,21 +198,25 @@ describe("ImageGenerationService", () => {
 
     const resultPromise = service.generateImage();
 
-    expect(service.IsLoading).toBe(true);
+    await expect(resultPromise).resolves.toEqual({ type: "started" });
+    expect(service.IsLoading).toBe(false);
 
     resolveCharacterContext!({
       type: "missing-description",
       characterName: "Sarah Chen",
     });
 
-    await expect(resultPromise).resolves.toEqual({
-      type: "missing-character-description",
-      characterName: "Sarah Chen",
+    await vi.waitFor(() => {
+      expect(mockChatService.UpdateCivitJob).toHaveBeenCalledWith(
+        expect.stringMatching(/^image-gen-/),
+        expect.objectContaining({
+          generationStatus: "missing-character-description",
+        }),
+      );
     });
-    expect(service.IsLoading).toBe(false);
   });
 
-  it("generates image immediately when character description already exists", async () => {
+  it("creates a pending message immediately and submits image in the background", async () => {
     mockImageGenerator.resolveCharacterContext.mockResolvedValue({
       type: "existing-description",
       characterName: "Sarah Chen",
@@ -154,14 +234,22 @@ describe("ImageGenerationService", () => {
     const result = await service.generateImage();
 
     expect(result).toEqual({ type: "started" });
-    expect(
-      mockImageGenerator.generatePromptWithCharacterContext,
-    ).toHaveBeenCalled();
-    expect(mockChatService.CreateCivitJob).toHaveBeenCalledWith(
-      "job-1",
-      "full combined prompt",
-      expect.objectContaining({ modelName: "Test Model" }),
-    );
+    const messageId = mockChatService.CreateCivitJob.mock.calls[0][0];
+
+    await vi.waitFor(() => {
+      expect(
+        mockImageGenerator.generatePromptWithCharacterContext,
+      ).toHaveBeenCalled();
+      expect(mockChatService.UpdateCivitJob).toHaveBeenCalledWith(
+        messageId,
+        expect.objectContaining({
+          jobId: "job-1",
+          prompt: "full combined prompt",
+          modelName: "Test Model",
+          generationStatus: "submitted",
+        }),
+      );
+    });
   });
 
   it("supports manual path for missing descriptions", async () => {
