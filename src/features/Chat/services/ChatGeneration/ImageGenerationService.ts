@@ -22,6 +22,13 @@ export type GenerateImageResult =
 export class ImageGenerationService extends GenerationOrchestrator {
   private chatId: string;
   private activeGenerationIds = new Set<string>();
+  private leaseOwnerId = createLeaseOwnerId();
+  private activeLeaseKeys = new Set<string>();
+  private leaseHeartbeatIntervals = new Map<
+    string,
+    ReturnType<typeof setInterval>
+  >();
+  private unloadListenerRegistered = false;
 
   public PendingMissingCharacter:
     | { messageId: string; characterName: string }
@@ -30,6 +37,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
   constructor(chatId: string) {
     super();
     this.chatId = chatId;
+    this.registerUnloadLeaseRelease();
   }
 
   async generateImage(): Promise<GenerateImageResult> {
@@ -200,7 +208,21 @@ export class ImageGenerationService extends GenerationOrchestrator {
     const { jobId, modelName, fullPrompt, basePrompt, sceneDescription } =
       await d
         .ImageGenerator(this.chatId)
-        .triggerJob(generatedPrompt, preferredImage, rawCharacterDescription);
+        .triggerJob(
+          generatedPrompt,
+          preferredImage,
+          rawCharacterDescription,
+          async (preparedPrompt) => {
+            if (!messageId) return;
+            await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
+              prompt: preparedPrompt.fullPrompt,
+              basePrompt: preparedPrompt.basePrompt,
+              sceneDescription: preparedPrompt.sceneDescription,
+              modelName: preparedPrompt.modelName,
+              generationStatus: "submitting",
+            });
+          },
+        );
 
     this.setStatus("Saving job...");
     const patch = {
@@ -291,6 +313,11 @@ export class ImageGenerationService extends GenerationOrchestrator {
       .resolveCharacterContext();
 
     if (isMissingCharacterDescription(characterContext)) {
+      const preferredImage = await this.resolveCharacterPreferredImage(
+        characterContext,
+      );
+      const selectedModelName =
+        await this.resolveSelectedModelName(preferredImage);
       this.PendingMissingCharacter = {
         messageId,
         characterName: characterContext.characterName,
@@ -298,6 +325,9 @@ export class ImageGenerationService extends GenerationOrchestrator {
       await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
         generationStatus: "missing-character-description",
         characterName: characterContext.characterName,
+        modelName: selectedModelName,
+        modelId: preferredImage?.id,
+        modelSource: preferredImage?.source,
       });
       this.notifyGenerationSubscribers();
       return;
@@ -379,7 +409,20 @@ export class ImageGenerationService extends GenerationOrchestrator {
     const { jobId, modelName, fullPrompt, basePrompt, sceneDescription } =
       await d
         .ImageGenerator(this.chatId)
-        .triggerJob(generatedPrompt, preferredImage, rawCharacterDescription);
+        .triggerJob(
+          generatedPrompt,
+          preferredImage,
+          rawCharacterDescription,
+          async (preparedPrompt) => {
+            await d.ChatService(this.chatId).UpdateCivitJob(message.id, {
+              prompt: preparedPrompt.fullPrompt,
+              basePrompt: preparedPrompt.basePrompt,
+              sceneDescription: preparedPrompt.sceneDescription,
+              modelName: preparedPrompt.modelName,
+              generationStatus: "submitting",
+            });
+          },
+        );
 
     await d.ChatService(this.chatId).UpdateCivitJob(message.id, {
       jobId,
@@ -408,21 +451,88 @@ export class ImageGenerationService extends GenerationOrchestrator {
 
     const key = this.getGenerationLeaseKey(messageId);
     const now = Date.now();
-    const existing = Number(localStorage.getItem(key) ?? "0");
+    const existing = readGenerationLease(key);
 
-    if (existing > now) return false;
+    if (
+      existing &&
+      existing.ownerId !== this.leaseOwnerId &&
+      existing.expiresAt > now &&
+      now - existing.updatedAt < STALE_GENERATION_LEASE_MS
+    ) {
+      return false;
+    }
 
-    localStorage.setItem(key, String(now + GENERATION_LEASE_TTL_MS));
+    writeGenerationLease(key, {
+      ownerId: this.leaseOwnerId,
+      expiresAt: now + GENERATION_LEASE_TTL_MS,
+      updatedAt: now,
+    });
+    this.activeLeaseKeys.add(key);
+    this.startLeaseHeartbeat(key);
     return true;
   }
 
   private releaseGenerationLease(messageId: string): void {
     if (typeof localStorage === "undefined") return;
-    localStorage.removeItem(this.getGenerationLeaseKey(messageId));
+    const key = this.getGenerationLeaseKey(messageId);
+    this.releaseLeaseKey(key);
   }
 
   private getGenerationLeaseKey(messageId: string): string {
     return `story-vault:image-generation-lease:${this.chatId}:${messageId}`;
+  }
+
+  private startLeaseHeartbeat(key: string): void {
+    this.stopLeaseHeartbeat(key);
+
+    const interval = setInterval(() => {
+      const existing = readGenerationLease(key);
+      if (!existing || existing.ownerId !== this.leaseOwnerId) {
+        this.stopLeaseHeartbeat(key);
+        this.activeLeaseKeys.delete(key);
+        return;
+      }
+
+      const now = Date.now();
+      writeGenerationLease(key, {
+        ownerId: this.leaseOwnerId,
+        expiresAt: now + GENERATION_LEASE_TTL_MS,
+        updatedAt: now,
+      });
+    }, GENERATION_LEASE_HEARTBEAT_MS);
+
+    this.leaseHeartbeatIntervals.set(key, interval);
+  }
+
+  private stopLeaseHeartbeat(key: string): void {
+    const interval = this.leaseHeartbeatIntervals.get(key);
+    if (!interval) return;
+
+    clearInterval(interval);
+    this.leaseHeartbeatIntervals.delete(key);
+  }
+
+  private releaseLeaseKey(key: string): void {
+    this.stopLeaseHeartbeat(key);
+    this.activeLeaseKeys.delete(key);
+
+    const existing = readGenerationLease(key);
+    if (!existing || existing.ownerId === this.leaseOwnerId) {
+      localStorage.removeItem(key);
+    }
+  }
+
+  private registerUnloadLeaseRelease(): void {
+    if (this.unloadListenerRegistered || typeof window === "undefined") {
+      return;
+    }
+
+    this.unloadListenerRegistered = true;
+    window.addEventListener("pagehide", () => {
+      Array.from(this.activeLeaseKeys).forEach((key) =>
+        this.releaseLeaseKey(key),
+      );
+    });
   }
 
   private notifyGenerationSubscribers(): void {
@@ -483,7 +593,43 @@ const isMissingCharacterDescription = (
 ): context is { type: "missing-description"; characterName: string } =>
   context.type === "missing-description";
 
-const GENERATION_LEASE_TTL_MS = 2 * 60 * 1000;
+type GenerationLease = {
+  ownerId: string;
+  expiresAt: number;
+  updatedAt: number;
+};
+
+const GENERATION_LEASE_TTL_MS = 15 * 1000;
+const GENERATION_LEASE_HEARTBEAT_MS = 3 * 1000;
+const STALE_GENERATION_LEASE_MS = 8 * 1000;
+
+const createLeaseOwnerId = (): string => `image-generation-${uuidv4()}`;
+
+const readGenerationLease = (key: string): GenerationLease | null => {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as GenerationLease;
+    if (
+      !parsed.ownerId ||
+      typeof parsed.expiresAt !== "number" ||
+      typeof parsed.updatedAt !== "number"
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    const expiresAt = Number(raw);
+    return Number.isFinite(expiresAt)
+      ? { ownerId: "legacy", expiresAt, updatedAt: 0 }
+      : null;
+  }
+};
+
+const writeGenerationLease = (key: string, lease: GenerationLease): void => {
+  localStorage.setItem(key, JSON.stringify(lease));
+};
 
 const createImageGenerationMessageId = (): string => `image-gen-${uuidv4()}`;
 
@@ -506,7 +652,10 @@ const isResumableImageGenerationMessage = (
 const noCharacterContext = (): CharacterContext => ({ type: "none" });
 
 const getNameFromContext = (context: CharacterContext): string | undefined =>
-  context.type === "existing-description" ? context.characterName : undefined;
+  context.type === "existing-description" ||
+  context.type === "missing-description"
+    ? context.characterName
+    : undefined;
 
 const getRawDescriptionFromContext = (
   context: CharacterContext,

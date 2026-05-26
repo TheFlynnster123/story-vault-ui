@@ -203,11 +203,17 @@ const ActionButtons = ({
   isExpanded: boolean;
 }) => {
   const longPress = useLongPress(onLongPress);
+  const [isImageClickAcknowledged, setIsImageClickAcknowledged] =
+    useState(false);
 
   const handleGenerateImage = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
 
+    if (isImageLoading || isImageClickAcknowledged) return;
+
+    setIsImageClickAcknowledged(true);
+    window.setTimeout(() => setIsImageClickAcknowledged(false), 900);
     onGenerateImage();
   };
 
@@ -229,6 +235,7 @@ const ActionButtons = ({
   };
 
   const sendButtonColor = isGuidanceMode ? "orange" : "blue";
+  const showImageLoading = isImageLoading || isImageClickAcknowledged;
 
   const buttons = (
     <>
@@ -239,11 +246,11 @@ const ActionButtons = ({
         color="blue"
         onMouseDown={handleGenerateImage}
         onTouchEnd={handleGenerateImage}
-        disabled={isImageLoading}
-        aria-label="Generate Image"
+        disabled={showImageLoading}
+        aria-label={showImageLoading ? "Generating image..." : "Generate Image"}
         tabIndex={0}
       >
-        <ImageIcon isLoading={isImageLoading} />
+        <ImageIcon isLoading={showImageLoading} />
       </ActionIcon>
       <ActionIcon
         size="input-md"

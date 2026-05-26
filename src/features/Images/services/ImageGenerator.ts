@@ -19,6 +19,13 @@ export type CharacterContext =
       characterName: string;
     };
 
+export type PreparedImagePrompt = {
+  modelName: string;
+  fullPrompt: string;
+  basePrompt: string;
+  sceneDescription: string;
+};
+
 export class ImageGenerator {
   private chatId: string;
 
@@ -131,6 +138,7 @@ export class ImageGenerator {
     sceneDescription: string,
     preferredImage?: { id: string; source: "system" | "variant" },
     characterDescription?: string,
+    onPromptPrepared?: (prompt: PreparedImagePrompt) => Promise<void> | void,
   ): Promise<{
     jobId: string;
     modelName: string;
@@ -148,14 +156,23 @@ export class ImageGenerator {
     }
     appendToPrompt(inputCopy, sceneDescription);
 
+    const preparedPrompt = {
+      modelName: selectedModel.name,
+      fullPrompt: inputCopy.prompt ?? sceneDescription,
+      basePrompt,
+      sceneDescription,
+    };
+
+    await onPromptPrepared?.(preparedPrompt);
+
     const workflow = await d
       .CivitOrchestrationAPI()
       .submitWorkflow([{ $type: "imageGen", input: inputCopy }]);
 
     return {
       jobId: workflow.id,
-      modelName: selectedModel.name,
-      fullPrompt: inputCopy.prompt ?? sceneDescription,
+      modelName: preparedPrompt.modelName,
+      fullPrompt: preparedPrompt.fullPrompt,
       basePrompt,
       sceneDescription,
     };

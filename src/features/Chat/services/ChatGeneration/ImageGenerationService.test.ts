@@ -21,6 +21,7 @@ describe("ImageGenerationService", () => {
   };
   let mockUserChatProjection: {
     GetMessage: ReturnType<typeof vi.fn>;
+    GetMessages: ReturnType<typeof vi.fn>;
   };
   let mockCivitMessage: any;
   let mockChatService: {
@@ -62,6 +63,7 @@ describe("ImageGenerationService", () => {
 
     mockUserChatProjection = {
       GetMessage: vi.fn(),
+      GetMessages: vi.fn().mockReturnValue([]),
     };
 
     mockChatService = {
@@ -142,6 +144,10 @@ describe("ImageGenerationService", () => {
     );
     vi.mocked(d.ImageModelService).mockReturnValue(mockImageModelService as any);
     vi.mocked(d.ErrorService).mockReturnValue(mockErrorService as any);
+    vi.mocked(d.ChatEventService).mockReturnValue({
+      Initialize: vi.fn().mockResolvedValue(undefined),
+    } as any);
+    localStorage.clear();
 
     service = new ImageGenerationService(chatId);
   });
@@ -167,6 +173,7 @@ describe("ImageGenerationService", () => {
         expect.objectContaining({
           generationStatus: "missing-character-description",
           characterName: "Sarah Chen",
+          modelName: "Default Model",
         }),
       );
     });
@@ -216,7 +223,22 @@ describe("ImageGenerationService", () => {
     });
   });
 
-  it("creates a pending message immediately and submits image in the background", async () => {
+  it("resumes pending generation when a stale refresh lease is present", async () => {
+    const messageId = "image-gen-stale";
+    mockCivitMessage = {
+      id: messageId,
+      type: "civit-job",
+      data: {
+        jobId: messageId,
+        prompt: "",
+        generationStatus: "determining-character",
+      },
+    };
+    mockUserChatProjection.GetMessages.mockReturnValue([mockCivitMessage]);
+    localStorage.setItem(
+      `story-vault:image-generation-lease:${chatId}:${messageId}`,
+      String(Date.now() + 120_000),
+    );
     mockImageGenerator.resolveCharacterContext.mockResolvedValue({
       type: "existing-description",
       characterName: "Sarah Chen",
@@ -226,9 +248,60 @@ describe("ImageGenerationService", () => {
       "image prompt",
     );
     mockImageGenerator.triggerJob.mockResolvedValue({
-      jobId: "job-1",
+      jobId: "job-resumed",
       modelName: "Test Model",
       fullPrompt: "full combined prompt",
+      basePrompt: "base prompt",
+      sceneDescription: "image prompt",
+    });
+
+    await service.resumePendingGenerations();
+
+    await vi.waitFor(() => {
+      expect(mockImageGenerator.resolveCharacterContext).toHaveBeenCalled();
+      expect(mockChatService.UpdateCivitJob).toHaveBeenCalledWith(
+        messageId,
+        expect.objectContaining({
+          jobId: "job-resumed",
+          generationStatus: "submitted",
+        }),
+      );
+    });
+  });
+
+  it("creates a pending message immediately and submits image in the background", async () => {
+    mockImageGenerator.resolveCharacterContext.mockResolvedValue({
+      type: "existing-description",
+      characterName: "Sarah Chen",
+      description: "Dark hair, green eyes",
+    });
+    mockImageGenerator.generatePromptWithCharacterContext.mockResolvedValue(
+      "image prompt",
+    );
+    mockImageGenerator.triggerJob.mockImplementation(
+      async (_prompt, _preferred, _description, onPromptPrepared) => {
+        await onPromptPrepared?.({
+          modelName: "Test Model",
+          fullPrompt: "full combined prompt",
+          basePrompt: "base prompt",
+          sceneDescription: "image prompt",
+        });
+        return {
+          jobId: "job-1",
+          modelName: "Test Model",
+          fullPrompt: "full combined prompt",
+          basePrompt: "base prompt",
+          sceneDescription: "image prompt",
+        };
+      },
+    );
+
+    const submittingPatch = expect.objectContaining({
+      prompt: "full combined prompt",
+      basePrompt: "base prompt",
+      sceneDescription: "image prompt",
+      modelName: "Test Model",
+      generationStatus: "submitting",
     });
 
     const result = await service.generateImage();
@@ -240,6 +313,10 @@ describe("ImageGenerationService", () => {
       expect(
         mockImageGenerator.generatePromptWithCharacterContext,
       ).toHaveBeenCalled();
+      expect(mockChatService.UpdateCivitJob).toHaveBeenCalledWith(
+        messageId,
+        submittingPatch,
+      );
       expect(mockChatService.UpdateCivitJob).toHaveBeenCalledWith(
         messageId,
         expect.objectContaining({
