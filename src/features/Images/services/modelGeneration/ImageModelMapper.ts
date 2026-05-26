@@ -70,6 +70,10 @@ export class ImageModelMapper {
       loras: this.mapLoras(generatedData),
     };
 
+    if (ecosystem === "anima" && !input.schedule) {
+      input.schedule = "simple";
+    }
+
     if (ecosystem === "sd1") {
       input.clipSkip = this.defaultClipSkip(generatedData.params.clipSkip);
     }
@@ -172,6 +176,7 @@ export class ImageModelMapper {
 }
 
 const resolveEcosystem = (airUrn: string): ImageGenEcosystem => {
+  if (airUrn.startsWith("urn:air:anima:")) return "anima";
   if (airUrn.startsWith("urn:air:sd1:")) return "sd1";
   return "sdxl";
 };

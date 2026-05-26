@@ -63,17 +63,18 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
   const schedulerDisplayName = d
     .SchedulerMapper()
     .MapToDisplayName(imageModel.input.sampleMethod ?? "");
+  const modelAir = imageModel.input.model ?? "";
 
   return (
     <Stack>
       <Title order={5}>Parameters</Title>
       <TextInput
         label="Model (AIR)"
-        value={imageModel.input.model}
+        value={modelAir}
         onChange={(e) => handleModelChange(e.target.value)}
       />
       <ModelPreviewImage
-        air={imageModel.input.model}
+        air={modelAir}
         maxHeight="400px"
         maxWidth="100%"
       />

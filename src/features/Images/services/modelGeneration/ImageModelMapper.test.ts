@@ -475,6 +475,27 @@ describe("ImageModelMapper", () => {
       expect(result.clipSkip).toBe(2);
     });
 
+    it("should detect Anima checkpoint AIRs automatically", () => {
+      const animaResource = {
+        ...createMockCheckpointResource(),
+        air: "urn:air:anima:checkpoint:civitai:2458426@2945208",
+        baseModel: "Anima",
+      };
+      const params = {
+        ...createMockGeneratedImageParams(),
+        sampler: "er_sde",
+      };
+      const generatedImage = createMockGeneratedImage([animaResource], params);
+
+      const result = mapper.mapToImageGenInput(generatedImage);
+
+      expect(result.ecosystem).toBe("anima");
+      expect(result.model).toBe("urn:air:anima:checkpoint:civitai:2458426@2945208");
+      expect(result.sampleMethod).toBe("er_sde");
+      expect(result.schedule).toBe("simple");
+      expect(result.clipSkip).toBeUndefined();
+    });
+
     it("should handle different sampler types", () => {
       SchedulerMapper.mockReturnValue({ sampleMethod: "euler_a" });
       const params = {

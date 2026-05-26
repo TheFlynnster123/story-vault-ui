@@ -9,15 +9,15 @@ import { d } from "../../../services/Dependencies";
 export class CivitJobOrchestrator {
   async getOrPollPhoto(chatId: string, workflowId: string): Promise<CivitJobResult> {
     try {
-      const workflow = await d.CivitOrchestrationAPI().getWorkflow(workflowId);
-
-      if (isInProgress(workflow)) return this.loadingResponse();
-
       const storedPhoto = await d
         .PhotoStorageService()
         .getStoredPhoto(chatId, workflowId);
 
       if (storedPhoto) return this.storedPhotoResponse(storedPhoto);
+
+      const workflow = await d.CivitOrchestrationAPI().getWorkflow(workflowId);
+
+      if (isInProgress(workflow)) return this.loadingResponse();
 
       const imageUrl = getFirstImageUrl(workflow);
 
@@ -62,7 +62,15 @@ const isInProgress = (workflow: Workflow): boolean =>
   IN_PROGRESS_WORKFLOW_STATUSES.includes(workflow.status);
 
 const getFirstImageUrl = (workflow: Workflow): string | undefined =>
-  workflow.steps?.[0]?.output?.images?.[0]?.url;
+  workflow.steps?.flatMap(getStepImageUrls)[0];
+
+const getStepImageUrls = (step: Workflow["steps"][number]): string[] => {
+  if (Array.isArray(step.output)) {
+    return step.output.map((image) => image.url).filter(Boolean);
+  }
+
+  return step.output?.images?.map((image) => image.url).filter(Boolean) ?? [];
+};
 
 const buildErrorMessage = (workflow: Workflow): string => {
   if (workflow.status === "failed") return "Image generation failed.";

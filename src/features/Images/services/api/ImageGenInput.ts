@@ -5,7 +5,7 @@
  * Reference: https://developer.civitai.com/orchestration/recipes/sdxl
  */
 export type ImageGenEngine = "sdcpp" | "comfy";
-export type ImageGenEcosystem = "sdxl" | "sd1";
+export type ImageGenEcosystem = "sdxl" | "sd1" | "anima";
 export type ImageGenOperation = "createImage" | "createVariant";
 
 export type ImageGenInput = {
@@ -14,7 +14,7 @@ export type ImageGenInput = {
   operation: ImageGenOperation;
 
   /** AIR URN of the checkpoint model, e.g. urn:air:sdxl:checkpoint:civitai:101055@128078 */
-  model: string;
+  model?: string;
 
   prompt: string;
   negativePrompt?: string;

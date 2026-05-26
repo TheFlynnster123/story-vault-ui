@@ -33,9 +33,11 @@ export interface WorkflowStep {
   name: string;
   $type: string;
   status: WorkflowStatus;
-  output?: {
-    images?: WorkflowImage[];
-  };
+  output?:
+    | {
+        images?: WorkflowImage[];
+      }
+    | WorkflowImage[];
 }
 
 export interface Workflow {

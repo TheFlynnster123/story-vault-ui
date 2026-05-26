@@ -63,6 +63,7 @@ const migrateLoras = (
 };
 
 const resolveEcosystem = (airUrn: string): ImageGenEcosystem => {
+  if (airUrn.startsWith("urn:air:anima:")) return "anima";
   if (airUrn.startsWith("urn:air:sd1:")) return "sd1";
   return "sdxl";
 };

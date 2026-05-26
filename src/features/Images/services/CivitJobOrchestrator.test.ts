@@ -65,14 +65,9 @@ describe("CivitJobOrchestrator", () => {
     steps: [],
   });
 
-  const createSucceededWorkflowNoImage = (): Workflow => ({
-    id: jobId,
-    status: "succeeded",
-    steps: [],
-  });
-
   describe("getOrPollPhoto", () => {
     it("should return isLoading when workflow is still in progress", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
       mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue(
         createInProgressWorkflow(),
       );
@@ -81,13 +76,10 @@ describe("CivitJobOrchestrator", () => {
       const result = await orchestrator.getOrPollPhoto(chatId, jobId);
 
       expect(result).toEqual({ isLoading: true });
-      expect(mockPhotoStorageService.getStoredPhoto).not.toHaveBeenCalled();
+      expectStoredPhotoCalledWith(chatId, jobId);
     });
 
-    it("should return stored photo when available in database", async () => {
-      mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue(
-        createSucceededWorkflowNoImage(),
-      );
+    it("should return stored photo without polling workflow status", async () => {
       mockPhotoStorageService.getStoredPhoto.mockResolvedValue(mockPhotoBase64);
 
       const orchestrator = new CivitJobOrchestrator();
@@ -98,13 +90,42 @@ describe("CivitJobOrchestrator", () => {
         isLoading: false,
       });
       expectStoredPhotoCalledWith(chatId, jobId);
+      expect(mockCivitOrchestrationAPI.getWorkflow).not.toHaveBeenCalled();
     });
 
     it("should download and return photo when workflow succeeded but not stored", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
       mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue(
         createSucceededWorkflow(mockBlobUrl),
       );
+      mockPhotoStorageService.downloadAndSavePhoto.mockResolvedValue(
+        mockPhotoBase64,
+      );
+
+      const orchestrator = new CivitJobOrchestrator();
+      const result = await orchestrator.getOrPollPhoto(chatId, jobId);
+
+      expect(result).toEqual({
+        photoBase64: mockPhotoBase64,
+        isLoading: false,
+      });
+      expectDownloadAndSavePhotoCalledWith(chatId, jobId, mockBlobUrl);
+    });
+
+    it("should download from tRPC-style image output arrays", async () => {
       mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
+      mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue({
+        id: jobId,
+        status: "succeeded",
+        steps: [
+          {
+            name: "$0",
+            $type: "imageGen",
+            status: "succeeded",
+            output: [{ id: "img-1", url: mockBlobUrl }],
+          },
+        ],
+      } satisfies Workflow);
       mockPhotoStorageService.downloadAndSavePhoto.mockResolvedValue(
         mockPhotoBase64,
       );
@@ -120,10 +141,10 @@ describe("CivitJobOrchestrator", () => {
     });
 
     it("should return error when workflow failed", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
       mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue(
         createFailedWorkflow(),
       );
-      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
 
       const orchestrator = new CivitJobOrchestrator();
       const result = await orchestrator.getOrPollPhoto(chatId, jobId);
@@ -136,10 +157,10 @@ describe("CivitJobOrchestrator", () => {
     });
 
     it("should return error when workflow expired", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
       mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue(
         createExpiredWorkflow(),
       );
-      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
 
       const orchestrator = new CivitJobOrchestrator();
       const result = await orchestrator.getOrPollPhoto(chatId, jobId);
@@ -152,6 +173,7 @@ describe("CivitJobOrchestrator", () => {
     });
 
     it("should return error message when Error is thrown", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
       const errorMessage = "Network connection failed";
       mockCivitOrchestrationAPI.getWorkflow.mockRejectedValue(
         new Error(errorMessage),
@@ -168,6 +190,7 @@ describe("CivitJobOrchestrator", () => {
     });
 
     it("should return string error when string is thrown", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
       const errorString = "Something went wrong";
       mockCivitOrchestrationAPI.getWorkflow.mockRejectedValue(errorString);
 
