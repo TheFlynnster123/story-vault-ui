@@ -34,7 +34,14 @@ import {
   AdditionalModelsComponent,
 } from "../components/ImageModelViewComponents";
 import { ConfirmModal } from "../../../components/ConfirmModal";
-import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import type {
+  AnyImageModel,
+  ImageModel,
+} from "../services/modelGeneration/ImageModel";
+import {
+  isLegacyJobImageModel,
+  isWorkflowImageModel,
+} from "../services/modelGeneration/ImageModel";
 import type {
   ImageModelVariant,
   ImageModelVariantOverrides,
@@ -184,7 +191,7 @@ const ChatImageVariantEditPage: React.FC = () => {
   }>();
 
   const [variant, setVariant] = useState<ImageModelVariant | null>(null);
-  const [parent, setParent] = useState<ImageModel | null>(null);
+  const [parent, setParent] = useState<AnyImageModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -219,7 +226,10 @@ const ChatImageVariantEditPage: React.FC = () => {
     loadData();
   }, [chatId, variantId]);
 
-  const resolved = variant && parent ? resolveVariant(variant, parent) : null;
+  const parentIsLegacy = isLegacyJobImageModel(parent);
+  const workflowParent = isWorkflowImageModel(parent) ? parent : null;
+  const resolved =
+    variant && workflowParent ? resolveVariant(variant, workflowParent) : null;
   const overridden = variant
     ? computeOverriddenFields(variant.overrides)
     : null;
@@ -232,8 +242,8 @@ const ChatImageVariantEditPage: React.FC = () => {
   };
 
   const handleResolvedModelChange = async (updatedResolved: ImageModel) => {
-    if (!parent || !variant) return;
-    const newOverrides = computeNewOverrides(updatedResolved, parent);
+    if (!workflowParent || !variant) return;
+    const newOverrides = computeNewOverrides(updatedResolved, workflowParent);
     await saveOverrides(newOverrides);
   };
 
@@ -245,7 +255,7 @@ const ChatImageVariantEditPage: React.FC = () => {
   };
 
   const handleSampleJobCreated = async (jobId: string) => {
-    if (!resolved || !parent || !variant) return;
+    if (!resolved || !workflowParent || !variant) return;
     await handleResolvedModelChange({ ...resolved, sampleWorkflowId: jobId });
   };
 
@@ -264,34 +274,34 @@ const ChatImageVariantEditPage: React.FC = () => {
 
   // Section-level reset helpers
   const resetPromptsSection = async () => {
-    if (!parent || !resolved || !variant) return;
+    if (!workflowParent || !resolved || !variant) return;
     const newResolved: ImageModel = {
       ...resolved,
       input: {
         ...resolved.input,
-        prompt: parent.input.prompt,
-        negativePrompt: parent.input.negativePrompt,
+        prompt: workflowParent.input.prompt,
+        negativePrompt: workflowParent.input.negativePrompt,
       },
-      trainedWords: parent.trainedWords,
+      trainedWords: workflowParent.trainedWords,
     };
     await handleResolvedModelChange(newResolved);
   };
 
   const resetParametersSection = async () => {
-    if (!parent || !resolved || !variant) return;
+    if (!workflowParent || !resolved || !variant) return;
     await handleResolvedModelChange({
       ...resolved,
-      input: { ...parent.input },
+      input: { ...workflowParent.input },
     });
   };
 
   const resetGenerationPromptSection = async () => {
-    if (!parent || !resolved) return;
+    if (!workflowParent || !resolved) return;
     await handleResolvedModelChange({
       ...resolved,
-      imageGenerationPrompt: parent.imageGenerationPrompt,
+      imageGenerationPrompt: workflowParent.imageGenerationPrompt,
       appendImageGenerationPromptToBase:
-        parent.appendImageGenerationPromptToBase,
+        workflowParent.appendImageGenerationPromptToBase,
     });
   };
 
@@ -335,11 +345,20 @@ const ChatImageVariantEditPage: React.FC = () => {
         </Alert>
       )}
 
+      {parentIsLegacy && (
+        <Alert color="yellow" mb="md" title="Parent migration required">
+          This variant is locked because its parent model uses the previous image model
+          format. Migrate the parent model to workflow before editing or
+          selecting this variant.
+        </Alert>
+      )}
+
       <Paper withBorder p="xl" radius="md">
         <Stack>
           <ModelSampleImage
             sampleImageJobId={
-              variant.overrides.sampleWorkflowId ?? parent?.sampleWorkflowId
+              variant.overrides.sampleWorkflowId ??
+              workflowParent?.sampleWorkflowId
             }
             size="large"
           />

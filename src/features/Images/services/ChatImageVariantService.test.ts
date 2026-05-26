@@ -43,6 +43,7 @@ const makeVariant = (id: string, parentModelId = "parent-1"): ImageModelVariant 
 });
 
 const makeModel = (id: string): ImageModel => ({
+  format: "workflow",
   id,
   name: `Model ${id}`,
   timestampUtcMs: Date.now(),

@@ -1,7 +1,8 @@
 import { d } from "../../../../services/Dependencies";
-import type { ImageModel } from "./ImageModel";
+import type { AnyImageModel, ImageModel } from "./ImageModel";
+import { isWorkflowImageModel } from "./ImageModel";
 import type { UserImageModels } from "../ImageModelsManagedBlob";
-import { migrateImageModel } from "../migrateImageModel";
+import { imageModelWorkflowConverter } from "../LegacyImageModelWorkflowConverter";
 
 export class ImageModelService {
   readonly DEFAULT_SELECTED_MODEL_ID = "";
@@ -53,7 +54,9 @@ export class ImageModelService {
       if (!data) return this.createDefaultUserImageModels();
       return {
         ...data,
-        models: data.models.map(migrateImageModel),
+        models: data.models.map((model) =>
+          imageModelWorkflowConverter.classify(model),
+        ),
       };
     } catch (error) {
       d.ErrorService().log("Failed to get image models", error);
@@ -92,6 +95,9 @@ export class ImageModelService {
     if (!selectedModel) {
       throw new Error(`Image model with ID ${modelId} not found`);
     }
+    if (!isWorkflowImageModel(selectedModel)) {
+      throw new Error("Migrate this legacy image model to workflow before selecting it.");
+    }
 
     const updatedUserImageModels: UserImageModels = {
       ...userImageModels,
@@ -107,23 +113,45 @@ export class ImageModelService {
 
     let selectedModel: ImageModel | null = null;
     if (userImageModels.selectedModelId) {
-      selectedModel =
+      const found =
         userImageModels.models.find(
           (model) => model.id === userImageModels.selectedModelId,
         ) || null;
+      selectedModel = isWorkflowImageModel(found) ? found : null;
     }
 
-    // If no selected model, use the first available model or create a default
     if (!selectedModel) {
       selectedModel =
-        userImageModels.models[0] || this.createDefaultImageModel();
+        userImageModels.models.find(isWorkflowImageModel) ||
+        this.createDefaultImageModel();
     }
 
     return selectedModel;
   }
 
+  public async MigrateImageModelToWorkflow(
+    modelId: string,
+  ): Promise<ImageModel | null> {
+    try {
+      const userImageModels = await this.GetAllImageModels();
+      const model = this.findModelById(userImageModels.models, modelId);
+      if (!model) return null;
+
+      const converted = imageModelWorkflowConverter.convert(model);
+      await this.saveUserImageModelsDebounced({
+        ...userImageModels,
+        models: this.updateAnyModel(userImageModels.models, converted),
+      });
+      return converted;
+    } catch (error) {
+      d.ErrorService().log("Failed to migrate image model to workflow", error);
+      return null;
+    }
+  }
+
   private createDefaultImageModel(): ImageModel {
     return {
+      format: "workflow",
       id: "default-image-model",
       name: "Default Image Model",
       timestampUtcMs: Date.now(),
@@ -160,24 +188,32 @@ export class ImageModelService {
     await this.blob().saveDebounced(userImageModels);
   }
 
-  modelExists = (models: ImageModel[], model: ImageModel): boolean =>
+  modelExists = (models: AnyImageModel[], model: ImageModel): boolean =>
     models.some((existingModel) => existingModel.id === model.id);
 
   updateModel = (
-    models: ImageModel[],
+    models: AnyImageModel[],
     updatedModel: ImageModel,
-  ): ImageModel[] =>
+  ): AnyImageModel[] =>
     models.map((model) =>
       model.id === updatedModel.id ? updatedModel : model,
     );
 
-  filterOutModel = (models: ImageModel[], modelId: string): ImageModel[] =>
+  updateAnyModel = (
+    models: AnyImageModel[],
+    updatedModel: AnyImageModel,
+  ): AnyImageModel[] =>
+    models.map((model) =>
+      model.id === updatedModel.id ? updatedModel : model,
+    );
+
+  filterOutModel = (models: AnyImageModel[], modelId: string): AnyImageModel[] =>
     models.filter((model) => model.id.toString() !== modelId);
 
   findModelById = (
-    models: ImageModel[],
+    models: AnyImageModel[],
     modelId: string,
-  ): ImageModel | undefined =>
+  ): AnyImageModel | undefined =>
     models.find((model) => model.id.toString() === modelId);
 }
 

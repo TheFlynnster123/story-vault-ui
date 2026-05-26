@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { d } from "../../../services/Dependencies";
 import type { UserImageModels } from "../services/modelGeneration/ImageModelService";
-import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import type {
+  AnyImageModel,
+  ImageModel,
+} from "../services/modelGeneration/ImageModel";
+import { isWorkflowImageModel } from "../services/modelGeneration/ImageModel";
 
 export const useImageModels = () => {
   const [userImageModels, setUserImageModels] = useState<UserImageModels>({
@@ -44,19 +48,19 @@ export const useImageModels = () => {
     }
   };
 
-  const modelExists = (models: ImageModel[], modelId: string): boolean =>
+  const modelExists = (models: AnyImageModel[], modelId: string): boolean =>
     models.some((m) => m.id === modelId);
 
   const updateExistingModel = (
-    models: ImageModel[],
+    models: AnyImageModel[],
     updatedModel: ImageModel,
-  ): ImageModel[] =>
+  ): AnyImageModel[] =>
     models.map((m) => (m.id === updatedModel.id ? updatedModel : m));
 
   const addNewModel = (
-    models: ImageModel[],
+    models: AnyImageModel[],
     newModel: ImageModel,
-  ): ImageModel[] => [...models, newModel];
+  ): AnyImageModel[] => [...models, newModel];
 
   const updateModelInState = (updatedModel: ImageModel) => {
     setUserImageModels((prev) => ({
@@ -68,9 +72,9 @@ export const useImageModels = () => {
   };
 
   const removeModelById = (
-    models: ImageModel[],
+    models: AnyImageModel[],
     modelId: string,
-  ): ImageModel[] => models.filter((m) => m.id !== modelId);
+  ): AnyImageModel[] => models.filter((m) => m.id !== modelId);
 
   const clearSelectionIfMatch = (
     currentSelection: string,
@@ -120,13 +124,23 @@ export const useImageModels = () => {
     );
   };
 
+  const migrateImageModel = async (
+    modelId: string,
+  ): Promise<ImageModel | null> => {
+    return await withErrorHandling(
+      () => imageModelService.MigrateImageModelToWorkflow(modelId),
+      "Failed to migrate image model",
+      (model) => model && updateModelInState(model),
+    );
+  };
+
   const getSelectedModel = (): ImageModel | null => {
     if (!userImageModels.selectedModelId) return null;
-    return (
+    const selected =
       userImageModels.models.find(
         (model) => model.id === userImageModels.selectedModelId,
-      ) || null
-    );
+      ) || null;
+    return isWorkflowImageModel(selected) ? selected : null;
   };
 
   useEffect(() => {
@@ -140,6 +154,7 @@ export const useImageModels = () => {
     saveImageModel,
     deleteImageModel,
     selectImageModel,
+    migrateImageModel,
     getSelectedModel,
     refreshModels: loadImageModels,
   };

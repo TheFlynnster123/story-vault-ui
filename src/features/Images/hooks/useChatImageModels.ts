@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { d } from "../../../services/Dependencies";
 import type { ChatImageModels } from "../services/ChatImageModelsManagedBlob";
-import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import type {
+  AnyImageModel,
+  ImageModel,
+} from "../services/modelGeneration/ImageModel";
+import { isWorkflowImageModel } from "../services/modelGeneration/ImageModel";
 
 export const useChatImageModels = (chatId: string) => {
   const [chatImageModels, setChatImageModels] = useState<ChatImageModels>({
@@ -45,6 +49,15 @@ export const useChatImageModels = (chatId: string) => {
   };
 
   const updateModelInState = (updatedModel: ImageModel) => {
+    setChatImageModels((prev) => ({
+      ...prev,
+      models: prev.models.some((m) => m.id === updatedModel.id)
+        ? prev.models.map((m) => (m.id === updatedModel.id ? updatedModel : m))
+        : [...prev.models, updatedModel],
+    }));
+  };
+
+  const updateAnyModelInState = (updatedModel: AnyImageModel) => {
     setChatImageModels((prev) => ({
       ...prev,
       models: prev.models.some((m) => m.id === updatedModel.id)
@@ -105,13 +118,21 @@ export const useChatImageModels = (chatId: string) => {
     );
   };
 
+  const migrateModel = async (modelId: string): Promise<ImageModel | null> => {
+    return await withErrorHandling(
+      () => service.MigrateModelToWorkflow(modelId),
+      "Failed to migrate chat image model",
+      (model) => model && updateAnyModelInState(model),
+    );
+  };
+
   const getSelectedModel = (): ImageModel | null => {
     if (!chatImageModels.selectedModelId) return null;
-    return (
+    const selected =
       chatImageModels.models.find(
         (model) => model.id === chatImageModels.selectedModelId,
-      ) || null
-    );
+      ) || null;
+    return isWorkflowImageModel(selected) ? selected : null;
   };
 
   useEffect(() => {
@@ -132,6 +153,7 @@ export const useChatImageModels = (chatId: string) => {
     deleteModel,
     selectModel,
     addFromTemplate,
+    migrateModel,
     getSelectedModel,
     refreshModels: loadModels,
   };

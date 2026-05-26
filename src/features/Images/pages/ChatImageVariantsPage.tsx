@@ -24,6 +24,7 @@ import {
   RiCheckLine,
   RiErrorWarningLine,
   RiExternalLinkLine,
+  RiLockLine,
 } from "react-icons/ri";
 import { useChatImageVariants } from "../hooks/useChatImageVariants";
 import { useImageModels } from "../hooks/useImageModels";
@@ -32,7 +33,14 @@ import { Page } from "../../../components/Page";
 import { Theme } from "../../../components/Theme";
 import { d } from "../../../services/Dependencies";
 import type { ImageModelVariant } from "../services/ImageModelVariant";
-import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import type {
+  AnyImageModel,
+  ImageModel,
+} from "../services/modelGeneration/ImageModel";
+import {
+  isLegacyJobImageModel,
+  isWorkflowImageModel,
+} from "../services/modelGeneration/ImageModel";
 
 export const ChatImageVariantsPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -152,7 +160,9 @@ export const ChatImageVariantsPage: React.FC = () => {
                     onClick={() => setAddModalOpen(true)}
                     style={{ color: Theme.imageModel.primary }}
                     leftSection={<RiAddLine size={16} />}
-                    disabled={userImageModels.models.length === 0}
+                    disabled={
+                      !userImageModels.models.some(isWorkflowImageModel)
+                    }
                   >
                     Add Variant
                   </Button>
@@ -259,12 +269,14 @@ const PageHeader: React.FC<{ onGoBack: () => void }> = ({ onGoBack }) => (
 
 const VariantListItem: React.FC<{
   variant: ImageModelVariant;
-  parent: ImageModel | null;
+  parent: AnyImageModel | null;
   isSelected: boolean;
   onSelect: () => void;
   onEdit: () => void;
 }> = ({ variant, parent, isSelected, onSelect, onEdit }) => {
   const overrideCount = countOverrides(variant);
+  const parentIsLegacy = isLegacyJobImageModel(parent);
+  const canUse = !!parent && !parentIsLegacy;
 
   return (
     <Paper withBorder p="md" mb="md" w="100%">
@@ -286,12 +298,12 @@ const VariantListItem: React.FC<{
             )}
             {parent ? (
               <Badge
-                color="lime"
+                color={parentIsLegacy ? "yellow" : "lime"}
                 variant="light"
                 size="sm"
                 style={{ color: Theme.imageModel.secondary }}
               >
-                {parent.name}
+                {parentIsLegacy ? "Parent needs migration" : parent.name}
               </Badge>
             ) : (
               <Badge color="red" variant="light" size="sm">
@@ -304,10 +316,16 @@ const VariantListItem: React.FC<{
               </Badge>
             )}
           </Group>
-          {parent && (
+          {parent && isWorkflowImageModel(parent) && (
             <Text size="xs" c="dimmed" lineClamp={2}>
               Base: {parent.input.prompt?.slice(0, 80)}
               {(parent.input.prompt?.length ?? 0) > 80 ? "…" : ""}
+            </Text>
+          )}
+          {parentIsLegacy && (
+            <Text size="xs" c="yellow.8">
+              Migrate the parent system model before selecting or editing this
+              variant.
             </Text>
           )}
           {!parent && (
@@ -319,7 +337,13 @@ const VariantListItem: React.FC<{
         </Stack>
 
         <Stack gap="xs" style={{ flexShrink: 0 }}>
-          <Button size="sm" variant="light" onClick={onSelect} fullWidth>
+          <Button
+            size="sm"
+            variant="light"
+            onClick={onSelect}
+            disabled={!canUse}
+            fullWidth
+          >
             {isSelected ? (
               <Group gap="xs">
                 <RiCheckLine size={14} /> Selected
@@ -331,11 +355,13 @@ const VariantListItem: React.FC<{
           <Button
             size="sm"
             variant="outline"
-            leftSection={<RiEditLine size={14} />}
+            leftSection={
+              canUse ? <RiEditLine size={14} /> : <RiLockLine size={14} />
+            }
             onClick={onEdit}
             fullWidth
           >
-            Edit
+            {canUse ? "Edit" : "View locked"}
           </Button>
         </Stack>
       </Group>
@@ -344,10 +370,14 @@ const VariantListItem: React.FC<{
 };
 
 const SystemModelListItem: React.FC<{
-  model: ImageModel;
+  model: AnyImageModel;
   isSelected: boolean;
   onSelect: () => void;
-}> = ({ model, isSelected, onSelect }) => (
+}> = ({ model, isSelected, onSelect }) => {
+  const isLegacy = isLegacyJobImageModel(model);
+  const input = isLegacy ? undefined : model.input;
+
+  return (
   <Paper withBorder p="md" mb="sm" w="100%">
     <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
       <Box>
@@ -361,13 +391,26 @@ const SystemModelListItem: React.FC<{
               Selected
             </Badge>
           )}
+          {isLegacy && (
+            <Badge color="yellow" variant="light" size="sm">
+              Legacy image model
+            </Badge>
+          )}
         </Group>
         <Text size="xs" c="dimmed" lineClamp={2}>
-          {model.input.prompt?.slice(0, 100)}
-          {(model.input.prompt?.length ?? 0) > 100 ? "…" : ""}
+          {isLegacy
+            ? "Migrate this model before selecting it for chat image generation."
+            : input?.prompt?.slice(0, 100)}
+          {(input?.prompt?.length ?? 0) > 100 ? "…" : ""}
         </Text>
       </Stack>
-      <Button size="sm" variant="light" onClick={onSelect} style={{ flexShrink: 0 }}>
+      <Button
+        size="sm"
+        variant="light"
+        onClick={onSelect}
+        disabled={isLegacy}
+        style={{ flexShrink: 0 }}
+      >
         {isSelected ? (
           <Group gap="xs">
             <RiCheckLine size={14} /> Selected
@@ -378,7 +421,8 @@ const SystemModelListItem: React.FC<{
       </Button>
     </Group>
   </Paper>
-);
+  );
+};
 
 const countOverrides = (variant: ImageModelVariant): number => {
   const o = variant.overrides;
@@ -396,7 +440,7 @@ const countOverrides = (variant: ImageModelVariant): number => {
 const SelectParentModal: React.FC<{
   opened: boolean;
   onClose: () => void;
-  models: ImageModel[];
+  models: AnyImageModel[];
   onSelect: (model: ImageModel) => void;
 }> = ({ opened, onClose, models, onSelect }) => (
   <Modal
@@ -410,13 +454,17 @@ const SelectParentModal: React.FC<{
         Choose the system Image Model this variant will be based on. You can
         override individual fields after creation.
       </Text>
-      {models.map((model) => (
+      {models.map((model) => {
+        const isLegacy = isLegacyJobImageModel(model);
+        return (
         <Paper
           key={model.id}
           withBorder
           p="md"
-          style={{ cursor: "pointer" }}
-          onClick={() => onSelect(model)}
+          style={{ cursor: isLegacy ? "not-allowed" : "pointer" }}
+          onClick={() => {
+            if (isWorkflowImageModel(model)) onSelect(model);
+          }}
         >
           <Group wrap="nowrap" gap="md">
             <ModelSampleImage
@@ -426,12 +474,20 @@ const SelectParentModal: React.FC<{
             <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
               <Text fw={500}>{model.name}</Text>
               <Text size="xs" c="dimmed" lineClamp={1}>
-                {model.input.prompt?.slice(0, 80)}
+                {isLegacy
+                  ? "Migrate this model before creating variants."
+                  : model.input.prompt?.slice(0, 80)}
               </Text>
             </Stack>
+            {isLegacy && (
+              <Badge color="yellow" variant="light">
+                Legacy
+              </Badge>
+            )}
           </Group>
         </Paper>
-      ))}
+        );
+      })}
     </Stack>
   </Modal>
 );

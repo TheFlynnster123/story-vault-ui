@@ -15,6 +15,10 @@ import type { PreferredImage } from "../../Characters/services/CharacterDescript
 import { useChatImageVariants } from "../hooks/useChatImageVariants";
 import { useImageModels } from "../hooks/useImageModels";
 import { Theme } from "../../../components/Theme";
+import {
+  isLegacyJobImageModel,
+  isWorkflowImageModel,
+} from "../services/modelGeneration/ImageModel";
 
 export interface CharacterImageModelModalProps {
   opened: boolean;
@@ -39,6 +43,14 @@ export const CharacterImageModelModal: React.FC<
         v.name.toLowerCase().includes(query),
       ),
     [chatImageVariants.variants, query],
+  );
+
+  const workflowParentIds = useMemo(
+    () =>
+      new Set(
+        userImageModels.models.filter(isWorkflowImageModel).map((m) => m.id),
+      ),
+    [userImageModels.models],
   );
 
   const filteredModels = useMemo(
@@ -102,18 +114,29 @@ export const CharacterImageModelModal: React.FC<
                   }
                   labelPosition="left"
                 />
-                {filteredVariants.map((variant) => (
+                {filteredVariants.map((variant) => {
+                  const isLocked = !workflowParentIds.has(
+                    variant.parentModelId,
+                  );
+                  return (
                   <ModelRow
                     key={variant.id}
                     label={variant.name}
                     badge="variant"
-                    badgeColor="violet"
+                    badgeColor={isLocked ? "yellow" : "violet"}
+                    sublabel={
+                      isLocked
+                        ? "Migrate the parent workflow before selecting"
+                        : undefined
+                    }
                     isSelected={isCurrentVariant(variant.id)}
+                    disabled={isLocked}
                     onClick={() =>
                       handleSelect({ id: variant.id, source: "variant" })
                     }
                   />
-                ))}
+                  );
+                })}
               </>
             )}
 
@@ -128,18 +151,27 @@ export const CharacterImageModelModal: React.FC<
                   }
                   labelPosition="left"
                 />
-                {filteredModels.map((model) => (
+                {filteredModels.map((model) => {
+                  const isLegacy = isLegacyJobImageModel(model);
+                  return (
                   <ModelRow
                     key={model.id}
                     label={model.name}
-                    badge="system"
-                    badgeColor="teal"
+                    badge={isLegacy ? "legacy" : "system"}
+                    badgeColor={isLegacy ? "yellow" : "teal"}
+                    sublabel={
+                      isLegacy
+                        ? "Migrate to workflow before selecting"
+                        : undefined
+                    }
                     isSelected={isCurrentSystem(model.id)}
+                    disabled={isLegacy}
                     onClick={() =>
                       handleSelect({ id: model.id, source: "system" })
                     }
                   />
-                ))}
+                  );
+                })}
               </>
             )}
 
@@ -170,6 +202,7 @@ interface ModelRowProps {
   badgeColor?: string;
   isSelected: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }
 
 const ModelRow: React.FC<ModelRowProps> = ({
@@ -179,6 +212,7 @@ const ModelRow: React.FC<ModelRowProps> = ({
   badgeColor,
   isSelected,
   onClick,
+  disabled,
 }) => (
   <Button
     variant={isSelected ? "light" : "subtle"}
@@ -187,6 +221,7 @@ const ModelRow: React.FC<ModelRowProps> = ({
     justify="space-between"
     rightSection={isSelected ? <RiCheckLine size={14} /> : null}
     onClick={onClick}
+    disabled={disabled}
     styles={{
       root: { height: "auto", padding: "8px 12px" },
       inner: { justifyContent: "space-between", width: "100%" },

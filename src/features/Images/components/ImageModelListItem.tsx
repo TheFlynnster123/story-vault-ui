@@ -8,16 +8,19 @@ import {
   Text,
   Box,
   Stack,
+  Tooltip,
 } from "@mantine/core";
-import { RiEditLine } from "react-icons/ri";
+import { RiEditLine, RiLockLine, RiGitBranchLine } from "react-icons/ri";
 import { ModelSampleImage } from "./ModelSampleImage";
-import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import type { AnyImageModel } from "../services/modelGeneration/ImageModel";
+import { isLegacyJobImageModel } from "../services/modelGeneration/ImageModel";
 
 interface ImageModelListItemProps {
-  model: ImageModel;
+  model: AnyImageModel;
   isSelected: boolean;
   onSelect: () => void;
   onEdit: () => void;
+  onMigrate?: () => void;
 }
 
 const truncateText = (text: string, maxLength: number = 100): string => {
@@ -30,7 +33,11 @@ export const ImageModelListItem: React.FC<ImageModelListItemProps> = ({
   isSelected,
   onSelect,
   onEdit,
+  onMigrate,
 }) => {
+  const isLegacy = isLegacyJobImageModel(model);
+  const input = isLegacy ? undefined : model.input;
+
   return (
     <Paper withBorder p="md" mb="md" w="100%">
       <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
@@ -51,35 +58,72 @@ export const ImageModelListItem: React.FC<ImageModelListItemProps> = ({
                 Selected
               </Badge>
             )}
+            {isLegacy ? (
+              <Badge color="yellow" variant="light" size="sm">
+                Legacy image model
+              </Badge>
+            ) : (
+              <Badge color="teal" variant="light" size="sm">
+                Workflow
+              </Badge>
+            )}
           </Group>
 
-          {model.input.prompt && (
-            <Text size="xs" c="dimmed" lineClamp={2}>
-              <strong>Prompt:</strong> {truncateText(model.input.prompt)}
+          {isLegacy && (
+            <Text size="xs" c="yellow.8" lineClamp={2}>
+              This model is locked until it is migrated to workflow format.
             </Text>
           )}
 
-          {model.input.negativePrompt && (
+          {input?.prompt && (
+            <Text size="xs" c="dimmed" lineClamp={2}>
+              <strong>Prompt:</strong> {truncateText(input.prompt)}
+            </Text>
+          )}
+
+          {input?.negativePrompt && (
             <Text size="xs" c="dimmed" lineClamp={1}>
-              <strong>Negative:</strong>{" "}
-              {truncateText(model.input.negativePrompt)}
+              <strong>Negative:</strong> {truncateText(input.negativePrompt)}
             </Text>
           )}
         </Stack>
 
         {/* Right: Actions */}
         <Stack gap="xs" style={{ flexShrink: 0 }}>
-          <Button size="sm" variant="light" onClick={onSelect} fullWidth>
-            Select
-          </Button>
+          <Tooltip
+            disabled={!isLegacy}
+            label="Migrate to workflow before selecting this model"
+          >
+            <Button
+              size="sm"
+              variant="light"
+              onClick={onSelect}
+              disabled={isLegacy}
+              fullWidth
+            >
+              Select
+            </Button>
+          </Tooltip>
+          {isLegacy && onMigrate && (
+            <Button
+              size="sm"
+              variant="filled"
+              color="yellow"
+              leftSection={<RiGitBranchLine />}
+              onClick={onMigrate}
+              fullWidth
+            >
+              Migrate to workflow
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
-            leftSection={<RiEditLine />}
+            leftSection={isLegacy ? <RiLockLine /> : <RiEditLine />}
             onClick={onEdit}
             fullWidth
           >
-            Edit
+            {isLegacy ? "View locked" : "Edit"}
           </Button>
         </Stack>
       </Group>

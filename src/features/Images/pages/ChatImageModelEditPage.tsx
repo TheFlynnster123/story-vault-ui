@@ -11,8 +11,16 @@ import {
   Button,
   Alert,
   Loader,
+  Text,
+  Badge,
 } from "@mantine/core";
-import { RiArrowLeftLine, RiImageLine, RiDeleteBinLine } from "react-icons/ri";
+import {
+  RiArrowLeftLine,
+  RiImageLine,
+  RiDeleteBinLine,
+  RiGitBranchLine,
+  RiLockLine,
+} from "react-icons/ri";
 import { Page } from "../../../components/Page";
 import { d } from "../../../services/Dependencies";
 import { SampleImageGenerator } from "../components/SampleImageGenerator";
@@ -24,14 +32,21 @@ import {
   ParametersComponent,
   AdditionalModelsComponent,
 } from "../components/ImageModelViewComponents";
-import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import type {
+  AnyImageModel,
+  ImageModel,
+} from "../services/modelGeneration/ImageModel";
+import {
+  isLegacyJobImageModel,
+  isWorkflowImageModel,
+} from "../services/modelGeneration/ImageModel";
 import { ConfirmModal } from "../../../components/ConfirmModal";
 import { Theme } from "../../../components/Theme";
 
 const ChatImageModelEditPage: React.FC = () => {
   const navigate = useNavigate();
   const { chatId, modelId } = useParams<{ chatId: string; modelId: string }>();
-  const [imageModel, setImageModel] = useState<ImageModel | null>(null);
+  const [imageModel, setImageModel] = useState<AnyImageModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -44,7 +59,7 @@ const ChatImageModelEditPage: React.FC = () => {
         setLoading(true);
         const chatImageModels = await service.GetAll();
         const model = chatImageModels.models.find(
-          (m: ImageModel) => m.id === modelId,
+          (m: AnyImageModel) => m.id === modelId,
         );
 
         if (model) {
@@ -73,14 +88,14 @@ const ChatImageModelEditPage: React.FC = () => {
   };
 
   const handleModelNameChange = (value: string) => {
-    if (!imageModel) return;
+    if (!isWorkflowImageModel(imageModel)) return;
     const updatedModel = { ...imageModel, name: value };
     setImageModel(updatedModel);
     service.SaveModel(updatedModel);
   };
 
   const handleImageGenerationPromptChange = (value: string) => {
-    if (!imageModel) return;
+    if (!isWorkflowImageModel(imageModel)) return;
     const updatedModel = {
       ...imageModel,
       imageGenerationPrompt: value || undefined,
@@ -90,7 +105,7 @@ const ChatImageModelEditPage: React.FC = () => {
   };
 
   const handleAppendToBasePromptChange = (checked: boolean) => {
-    if (!imageModel) return;
+    if (!isWorkflowImageModel(imageModel)) return;
     const updatedModel = {
       ...imageModel,
       appendImageGenerationPromptToBase: checked,
@@ -100,14 +115,14 @@ const ChatImageModelEditPage: React.FC = () => {
   };
 
   const handleSampleJobCreated = async (jobId: string) => {
-    if (!imageModel) return;
+    if (!isWorkflowImageModel(imageModel)) return;
     const updatedModel = { ...imageModel, sampleWorkflowId: jobId };
     setImageModel(updatedModel);
     await service.SaveModel(updatedModel);
   };
 
   const handleModelFromImage = (loadedModel: ImageModel) => {
-    if (!imageModel) return;
+    if (!isWorkflowImageModel(imageModel)) return;
     const updatedModel: ImageModel = {
       ...imageModel,
       name: loadedModel.name,
@@ -132,6 +147,14 @@ const ChatImageModelEditPage: React.FC = () => {
 
   const handleDeleteCancel = () => {
     setShowDeleteConfirm(false);
+  };
+
+  const handleMigrateToWorkflow = async () => {
+    if (!imageModel) return;
+    const migrated = await service.MigrateModelToWorkflow(imageModel.id);
+    if (migrated) {
+      setImageModel(migrated);
+    }
   };
 
   if (loading) {
@@ -165,6 +188,12 @@ const ChatImageModelEditPage: React.FC = () => {
         onDelete={handleDeleteClick}
       />
       <Paper withBorder p="xl" radius="md">
+        {isLegacyJobImageModel(imageModel) ? (
+          <LegacyModelLockedView
+            model={imageModel}
+            onMigrate={handleMigrateToWorkflow}
+          />
+        ) : (
         <Stack>
           <ModelSampleImage
             sampleImageJobId={imageModel.sampleWorkflowId}
@@ -206,6 +235,7 @@ const ChatImageModelEditPage: React.FC = () => {
             onChange={handleModelChange}
           />
         </Stack>
+        )}
       </Paper>
 
       <ConfirmModal
@@ -247,6 +277,35 @@ const PageHeader: React.FC<{
     </Group>
     <Divider my="xl" style={{ borderColor: Theme.imageModel.border }} />
   </>
+);
+
+const LegacyModelLockedView: React.FC<{
+  model: AnyImageModel;
+  onMigrate: () => void;
+}> = ({ model, onMigrate }) => (
+  <Stack>
+    <Group>
+      <RiLockLine />
+      <Badge color="yellow" variant="light">
+        Legacy image model
+      </Badge>
+    </Group>
+    <Alert color="yellow" title="Migration required">
+      This model was saved with the previous image model format. It cannot be edited
+      or used for new image generation until it is migrated to workflow format.
+    </Alert>
+    <TextInput label="Name" value={model.name} disabled />
+    <Text size="sm" c="dimmed">
+      Migration keeps this model's id and chat references intact.
+    </Text>
+    <Button
+      color="yellow"
+      leftSection={<RiGitBranchLine />}
+      onClick={onMigrate}
+    >
+      Migrate to workflow
+    </Button>
+  </Stack>
 );
 
 export default ChatImageModelEditPage;

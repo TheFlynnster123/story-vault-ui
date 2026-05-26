@@ -1,6 +1,11 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { RiArrowLeftLine, RiImageLine, RiCheckLine } from "react-icons/ri";
+import {
+  RiArrowLeftLine,
+  RiImageLine,
+  RiCheckLine,
+  RiLockLine,
+} from "react-icons/ri";
 import {
   Title,
   Group,
@@ -13,12 +18,15 @@ import {
   Button,
   Box,
   Badge,
+  Tooltip,
 } from "@mantine/core";
 import { useImageModels } from "../hooks/useImageModels";
 import { useChatImageModels } from "../hooks/useChatImageModels";
 import { ModelSampleImage } from "../components/ModelSampleImage";
 import { Page } from "../../../components/Page";
 import { Theme } from "../../../components/Theme";
+import type { AnyImageModel } from "../services/modelGeneration/ImageModel";
+import { isLegacyJobImageModel } from "../services/modelGeneration/ImageModel";
 
 export const ChatImageModelTemplatePage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -94,15 +102,7 @@ export const ChatImageModelTemplatePage: React.FC = () => {
 };
 
 interface TemplateListItemProps {
-  model: {
-    id: string;
-    name: string;
-    sampleWorkflowId?: string;
-    input: {
-      prompt?: string;
-      negativePrompt?: string;
-    };
-  };
+  model: AnyImageModel;
   isGloballySelected: boolean;
   onSelect: () => void;
 }
@@ -116,7 +116,11 @@ const TemplateListItem: React.FC<TemplateListItemProps> = ({
   model,
   isGloballySelected,
   onSelect,
-}) => (
+}) => {
+  const isLegacy = isLegacyJobImageModel(model);
+  const input = isLegacy ? undefined : model.input;
+
+  return (
   <Paper withBorder p="md" mb="md" w="100%">
     <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
       <Box>
@@ -134,36 +138,55 @@ const TemplateListItem: React.FC<TemplateListItemProps> = ({
               Default Selected
             </Badge>
           )}
+          {isLegacy && (
+            <Badge color="yellow" variant="light" size="sm">
+              Legacy image model
+            </Badge>
+          )}
         </Group>
 
-        {model.input.prompt && (
+        {input?.prompt && (
           <Text size="xs" c="dimmed" lineClamp={2}>
-            <strong>Prompt:</strong> {truncateText(model.input.prompt)}
+            <strong>Prompt:</strong> {truncateText(input.prompt)}
           </Text>
         )}
 
-        {model.input.negativePrompt && (
+        {input?.negativePrompt && (
           <Text size="xs" c="dimmed" lineClamp={1}>
-            <strong>Negative:</strong>{" "}
-            {truncateText(model.input.negativePrompt)}
+            <strong>Negative:</strong> {truncateText(input.negativePrompt)}
+          </Text>
+        )}
+
+        {isLegacy && (
+          <Text size="xs" c="yellow.8">
+            Migrate this system model before using it as a chat template.
           </Text>
         )}
       </Stack>
 
       <Stack gap="xs" style={{ flexShrink: 0 }}>
+        <Tooltip
+          disabled={!isLegacy}
+          label="Migrate to workflow before using this template"
+        >
         <Button
           size="sm"
           variant="light"
           onClick={onSelect}
-          leftSection={<RiCheckLine size={16} />}
+          disabled={isLegacy}
+          leftSection={
+            isLegacy ? <RiLockLine size={16} /> : <RiCheckLine size={16} />
+          }
           fullWidth
         >
           Use as Template
         </Button>
+        </Tooltip>
       </Stack>
     </Group>
   </Paper>
-);
+  );
+};
 
 const PageHeader: React.FC<{ onGoBack: () => void }> = ({ onGoBack }) => (
   <>

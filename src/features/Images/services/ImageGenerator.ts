@@ -1,6 +1,7 @@
 import { d } from "../../../services/Dependencies";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { ImageModel } from "./modelGeneration/ImageModel";
+import { isWorkflowImageModel } from "./modelGeneration/ImageModel";
 import type { CharacterDescription } from "../../Characters/services/CharacterDescription";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
@@ -175,12 +176,12 @@ export class ImageGenerator {
         const parent = await d
           .ChatImageVariantService(this.chatId)
           .findParentModel(variant.parentModelId);
-        if (parent) return resolveVariant(variant, parent);
+        if (isWorkflowImageModel(parent)) return resolveVariant(variant, parent);
       }
     } else {
       const allModels = await d.ImageModelService().GetAllImageModels();
       const model = allModels.models.find((m) => m.id === preferredImage.id);
-      if (model) return model;
+      if (isWorkflowImageModel(model)) return model;
     }
 
     return d.ChatImageVariantService(this.chatId).getSelectedModelOrDefault();

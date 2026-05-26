@@ -1,5 +1,6 @@
 import { d } from "../../../services/Dependencies";
-import type { ImageModel } from "./modelGeneration/ImageModel";
+import type { AnyImageModel, ImageModel } from "./modelGeneration/ImageModel";
+import { isWorkflowImageModel } from "./modelGeneration/ImageModel";
 import type { ChatImageVariants } from "./ChatImageVariantsManagedBlob";
 import type { ImageModelVariant } from "./ImageModelVariant";
 import { resolveVariant } from "./ImageModelVariant";
@@ -139,8 +140,8 @@ export class ChatImageVariantService {
         (v) => v.id === data.selectedVariantId,
       );
       if (selected) {
-        const parent = await this.findParentModel(selected.parentModelId);
-        if (parent) {
+      const parent = await this.findParentModel(selected.parentModelId);
+        if (parent && isWorkflowImageModel(parent)) {
           return resolveVariant(selected, parent);
         }
       }
@@ -151,7 +152,7 @@ export class ChatImageVariantService {
       const systemModel = globalModels.models.find(
         (m) => m.id === data.selectedSystemModelId,
       );
-      if (systemModel) {
+      if (isWorkflowImageModel(systemModel)) {
         return systemModel;
       }
     }
@@ -161,7 +162,7 @@ export class ChatImageVariantService {
 
   public async findParentModel(
     parentModelId: string,
-  ): Promise<ImageModel | null> {
+  ): Promise<AnyImageModel | null> {
     const globalModels = await d.ImageModelService().GetAllImageModels();
     return globalModels.models.find((m) => m.id === parentModelId) ?? null;
   }

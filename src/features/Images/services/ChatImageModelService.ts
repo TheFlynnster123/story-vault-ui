@@ -1,8 +1,9 @@
 import { d } from "../../../services/Dependencies";
-import type { ImageModel } from "./modelGeneration/ImageModel";
+import type { AnyImageModel, ImageModel } from "./modelGeneration/ImageModel";
+import { isWorkflowImageModel } from "./modelGeneration/ImageModel";
 import type { ChatImageModels } from "./ChatImageModelsManagedBlob";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
-import { migrateImageModel } from "./migrateImageModel";
+import { imageModelWorkflowConverter } from "./LegacyImageModelWorkflowConverter";
 
 export const getChatImageModelServiceInstance = createInstanceCache(
   (chatId: string) => new ChatImageModelService(chatId),
@@ -27,7 +28,9 @@ export class ChatImageModelService {
     if (!data) return this.createEmpty();
     return {
       ...data,
-      models: data.models.map(migrateImageModel),
+      models: data.models.map((model) =>
+        imageModelWorkflowConverter.classify(model),
+      ),
     };
   }
 
@@ -91,6 +94,13 @@ export class ChatImageModelService {
       );
       return null;
     }
+    if (!isWorkflowImageModel(selectedModel)) {
+      d.ErrorService().log(
+        "Cannot select legacy chat image model before workflow migration",
+        new Error("Legacy image model requires migration"),
+      );
+      return null;
+    }
 
     await this.saveDebounced({ ...chatImageModels, selectedModelId: modelId });
     return selectedModel;
@@ -108,7 +118,7 @@ export class ChatImageModelService {
         (m) => m.id === chatImageModels.selectedModelId,
       );
       if (selectedModel) {
-        return selectedModel;
+        if (isWorkflowImageModel(selectedModel)) return selectedModel;
       }
     }
 
@@ -128,10 +138,10 @@ export class ChatImageModelService {
         (m) => m.id === templateModelId,
       );
 
-      if (!template) {
+      if (!template || !isWorkflowImageModel(template)) {
         d.ErrorService().log(
-          `Template model with ID ${templateModelId} not found`,
-          new Error("Template not found"),
+          `Template model with ID ${templateModelId} not found or requires migration`,
+          new Error("Template not available"),
         );
         return null;
       }
@@ -157,6 +167,26 @@ export class ChatImageModelService {
   subscribe = (callback: () => void) => this.blob().subscribe(callback);
   isLoading = () => this.blob().isLoading();
 
+  public async MigrateModelToWorkflow(
+    modelId: string,
+  ): Promise<ImageModel | null> {
+    try {
+      const chatImageModels = await this.GetAll();
+      const model = chatImageModels.models.find((m) => m.id === modelId);
+      if (!model) return null;
+
+      const converted = imageModelWorkflowConverter.convert(model);
+      await this.saveDebounced({
+        ...chatImageModels,
+        models: this.updateAnyModel(chatImageModels.models, converted),
+      });
+      return converted;
+    } catch (error) {
+      d.ErrorService().log("Failed to migrate chat image model", error);
+      return null;
+    }
+  }
+
   // ---- Private Helpers ----
 
   private createEmpty = (): ChatImageModels => ({
@@ -164,13 +194,19 @@ export class ChatImageModelService {
     models: [],
   });
 
-  private modelExists = (models: ImageModel[], modelId: string): boolean =>
+  private modelExists = (models: AnyImageModel[], modelId: string): boolean =>
     models.some((m) => m.id === modelId);
 
   private updateModel = (
-    models: ImageModel[],
+    models: AnyImageModel[],
     updatedModel: ImageModel,
-  ): ImageModel[] =>
+  ): AnyImageModel[] =>
+    models.map((m) => (m.id === updatedModel.id ? updatedModel : m));
+
+  private updateAnyModel = (
+    models: AnyImageModel[],
+    updatedModel: AnyImageModel,
+  ): AnyImageModel[] =>
     models.map((m) => (m.id === updatedModel.id ? updatedModel : m));
 
   private saveDebounced = async (data: ChatImageModels): Promise<void> =>

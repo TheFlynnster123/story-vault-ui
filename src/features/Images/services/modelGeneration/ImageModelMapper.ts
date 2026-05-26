@@ -10,6 +10,7 @@ export class ImageModelMapper {
   private readonly MAX_DIMENSION = 1024;
 
   FromGeneratedImage = (generatedData: GeneratedImage): ImageModel => ({
+    format: "workflow",
     id: uuidv4().toString(),
     timestampUtcMs: Date.now(),
     name: this.generateModelName(generatedData),
