@@ -58,9 +58,11 @@ const StatusHighlight = styled.span<{ $color: string }>`
 
 const LoadingImageIndicator = ({
   modelName,
+  characterName,
   children,
 }: {
   modelName?: string;
+  characterName?: string;
   children?: React.ReactNode;
 }) => (
   <LoadingBubble style={{ marginBottom: "8px" }}>
@@ -74,6 +76,17 @@ const LoadingImageIndicator = ({
         <Loader size="sm" color="white" />
         {children ?? <span>Generating...</span>}
       </Group>
+      {characterName && (
+        <span
+          style={{
+            fontSize: "0.75rem",
+            color: "#74c0fc",
+            fontWeight: 700,
+          }}
+        >
+          {characterName}
+        </span>
+      )}
       {modelName && (
         <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>{modelName}</span>
       )}
@@ -120,6 +133,9 @@ export const CivitJobMessage = ({
   const shouldShowLoadingIndicator = () =>
     !isPendingGeneration && (isLoading || jobStatus?.isLoading);
   const isImageGenerated = () => !!photoBase64;
+  const canViewPrompt = !!(
+    message.data?.prompt || message.data?.sceneDescription
+  );
 
   const getErrorMessage = () => {
     if (isPendingGeneration) return null;
@@ -167,7 +183,10 @@ export const CivitJobMessage = ({
       <MessageContentWrapper $fitContent>
         <MessageContent className="message-text" onClick={toggle}>
           {shouldShowLoadingIndicator() && (
-            <LoadingImageIndicator modelName={message.data?.modelName} />
+            <LoadingImageIndicator
+              modelName={message.data?.modelName}
+              characterName={message.data?.characterName}
+            />
           )}
           {isPendingGeneration && (
             <GenerationStatusPreview
@@ -185,7 +204,7 @@ export const CivitJobMessage = ({
 
         <MessageOverlay show={showButtons} onBackdropClick={toggle}>
           <Stack gap="xs" justify="center">
-            {message.data?.prompt && (
+            {canViewPrompt && (
               <Button
                 size="xs"
                 variant="light"
@@ -278,7 +297,7 @@ export const CivitJobMessage = ({
 
         <ViewPromptModal
           opened={showPromptModal}
-          prompt={message.data?.prompt ?? ""}
+          prompt={message.data?.prompt ?? message.data?.sceneDescription ?? ""}
           characterDescription={message.data?.characterDescription}
           basePrompt={message.data?.basePrompt}
           sceneDescription={message.data?.sceneDescription}
@@ -310,7 +329,7 @@ const GenerationStatusPreview = ({
 }) => {
   if (status === "failed") {
     return (
-      <LoadingImageIndicator modelName={modelName}>
+      <LoadingImageIndicator modelName={modelName} characterName={characterName}>
         <StatusHighlight $color="#ff6b6b">Failed</StatusHighlight>
         <StatusText>{error ? `: ${error}` : " to generate image"}</StatusText>
       </LoadingImageIndicator>
@@ -319,7 +338,7 @@ const GenerationStatusPreview = ({
 
   if (status === "missing-character-description") {
     return (
-      <LoadingImageIndicator modelName={modelName}>
+      <LoadingImageIndicator modelName={modelName} characterName={characterName}>
         <StatusHighlight $color="#ffd43b">Needs</StatusHighlight>
         <StatusText> character description for </StatusText>
         <StatusHighlight $color="#74c0fc">
@@ -331,7 +350,7 @@ const GenerationStatusPreview = ({
 
   if (status === "generating-prompt") {
     return (
-      <LoadingImageIndicator modelName={modelName}>
+      <LoadingImageIndicator modelName={modelName} characterName={characterName}>
         <StatusHighlight $color="#63e6be">Generating</StatusHighlight>
         <StatusText> scene prompt for </StatusText>
         <StatusHighlight $color="#74c0fc">
@@ -344,7 +363,7 @@ const GenerationStatusPreview = ({
 
   if (status === "submitting") {
     return (
-      <LoadingImageIndicator modelName={modelName}>
+      <LoadingImageIndicator modelName={modelName} characterName={characterName}>
         <StatusHighlight $color="#b197fc">Submitting</StatusHighlight>
         <StatusText> image for generation...</StatusText>
       </LoadingImageIndicator>
@@ -352,7 +371,7 @@ const GenerationStatusPreview = ({
   }
 
   return (
-    <LoadingImageIndicator modelName={modelName}>
+    <LoadingImageIndicator modelName={modelName} characterName={characterName}>
       <StatusHighlight $color="#ffd43b">Determining</StatusHighlight>
       <StatusText> character...</StatusText>
     </LoadingImageIndicator>
