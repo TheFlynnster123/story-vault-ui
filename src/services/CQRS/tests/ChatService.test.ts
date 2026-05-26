@@ -141,6 +141,27 @@ describe("ChatService - General Operations", () => {
     });
   });
 
+  describe("UpdateCivitJob", () => {
+    it("should create CivitJobUpdated event with messageId and patch", async () => {
+      const service = new ChatService(testChatId);
+
+      await service.UpdateCivitJob("image-gen-1", {
+        generationStatus: "submitted",
+        jobId: "workflow-1",
+      });
+
+      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
+      expect(calledEvent).toEqual({
+        type: "CivitJobUpdated",
+        messageId: "image-gen-1",
+        patch: {
+          generationStatus: "submitted",
+          jobId: "workflow-1",
+        },
+      });
+    });
+  });
+
   // ---- EditMessage Tests ----
   describe("EditMessage", () => {
     it("should create MessageEdited event with messageId and newContent", async () => {

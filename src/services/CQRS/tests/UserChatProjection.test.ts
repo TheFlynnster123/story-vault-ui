@@ -520,6 +520,31 @@ describe("UserChatProjection - Core Operations", () => {
 
       expect(projection.Messages[0].hiddenByChapterId).toBeUndefined();
     });
+
+    it("should patch civit-job data with CivitJobUpdated", () => {
+      projection.process({
+        type: "CivitJobCreated",
+        jobId: "image-gen-1",
+        prompt: "",
+        generationStatus: "determining-character",
+      });
+
+      projection.process({
+        type: "CivitJobUpdated",
+        messageId: "image-gen-1",
+        patch: {
+          jobId: "workflow-1",
+          prompt: "final prompt",
+          generationStatus: "submitted",
+        },
+      });
+
+      expect(projection.Messages[0].data).toEqual({
+        jobId: "workflow-1",
+        prompt: "final prompt",
+        generationStatus: "submitted",
+      });
+    });
   });
 
   // ---- GetMessage Tests ----

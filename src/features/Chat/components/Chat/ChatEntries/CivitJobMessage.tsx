@@ -47,7 +47,22 @@ const LoadingBubble = styled.div`
   text-align: center;
 `;
 
-const LoadingImageIndicator = ({ modelName }: { modelName?: string }) => (
+const StatusText = styled.span`
+  color: rgba(255, 255, 255, 0.86);
+`;
+
+const StatusHighlight = styled.span<{ $color: string }>`
+  color: ${(props) => props.$color};
+  font-weight: 700;
+`;
+
+const LoadingImageIndicator = ({
+  modelName,
+  children,
+}: {
+  modelName?: string;
+  children?: React.ReactNode;
+}) => (
   <LoadingBubble style={{ marginBottom: "8px" }}>
     <Group
       gap="md"
@@ -57,7 +72,7 @@ const LoadingImageIndicator = ({ modelName }: { modelName?: string }) => (
       <RiImageLine size={120} />
       <Group gap="sm">
         <Loader size="sm" color="white" />
-        <span>Image is being generated</span>
+        {children ?? <span>Generating...</span>}
       </Group>
       {modelName && (
         <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>{modelName}</span>
@@ -92,16 +107,22 @@ export const CivitJobMessage = ({
     jobId = "";
   }
 
+  const isPendingGeneration =
+    !!message.data?.generationStatus &&
+    message.data.generationStatus !== "submitted";
+
   const {
     photoBase64: photoBase64,
     isLoading,
     jobStatus,
-  } = useCivitJob(chatId, jobId);
+  } = useCivitJob(chatId, isPendingGeneration ? "" : jobId);
 
-  const shouldShowLoadingIndicator = () => isLoading || jobStatus?.isLoading;
+  const shouldShowLoadingIndicator = () =>
+    !isPendingGeneration && (isLoading || jobStatus?.isLoading);
   const isImageGenerated = () => !!photoBase64;
 
   const getErrorMessage = () => {
+    if (isPendingGeneration) return null;
     if (jobStatus?.error) return "Failed to load photo";
     if (!photoBase64 && !shouldShowLoadingIndicator())
       return "No photo available";
@@ -124,7 +145,7 @@ export const CivitJobMessage = ({
 
   const handleRegenerate = () => {
     setShowButtons(false);
-    d.ImageGenerationService(chatId)?.regenerateImage(jobId);
+    d.ImageGenerationService(chatId)?.regenerateImage(message.id);
   };
 
   const handleSetAsBackground = async () => {
@@ -135,7 +156,7 @@ export const CivitJobMessage = ({
   const handleRegenerateWithFeedback = () => {
     setShowButtons(false);
     setShowFeedbackModal(false);
-    d.ImageGenerationService(chatId)?.regenerateImage(jobId, feedback);
+    d.ImageGenerationService(chatId)?.regenerateImage(message.id, feedback);
     setFeedback("");
   };
 
@@ -147,6 +168,14 @@ export const CivitJobMessage = ({
         <MessageContent className="message-text" onClick={toggle}>
           {shouldShowLoadingIndicator() && (
             <LoadingImageIndicator modelName={message.data?.modelName} />
+          )}
+          {isPendingGeneration && (
+            <GenerationStatusPreview
+              status={message.data.generationStatus}
+              characterName={message.data.characterName}
+              error={message.data.generationError}
+              modelName={message.data.modelName}
+            />
           )}
           {getErrorMessage() && (
             <LoadingBubble>{getErrorMessage()}</LoadingBubble>
@@ -265,5 +294,67 @@ export const CivitJobMessage = ({
         />
       </MessageContentWrapper>
     </MessageItem>
+  );
+};
+
+const GenerationStatusPreview = ({
+  status,
+  characterName,
+  error,
+  modelName,
+}: {
+  status?: string;
+  characterName?: string;
+  error?: string;
+  modelName?: string;
+}) => {
+  if (status === "failed") {
+    return (
+      <LoadingImageIndicator modelName={modelName}>
+        <StatusHighlight $color="#ff6b6b">Failed</StatusHighlight>
+        <StatusText>{error ? `: ${error}` : " to generate image"}</StatusText>
+      </LoadingImageIndicator>
+    );
+  }
+
+  if (status === "missing-character-description") {
+    return (
+      <LoadingImageIndicator modelName={modelName}>
+        <StatusHighlight $color="#ffd43b">Needs</StatusHighlight>
+        <StatusText> character description for </StatusText>
+        <StatusHighlight $color="#74c0fc">
+          {characterName ?? "selected character"}
+        </StatusHighlight>
+      </LoadingImageIndicator>
+    );
+  }
+
+  if (status === "generating-prompt") {
+    return (
+      <LoadingImageIndicator modelName={modelName}>
+        <StatusHighlight $color="#63e6be">Generating</StatusHighlight>
+        <StatusText> scene prompt for </StatusText>
+        <StatusHighlight $color="#74c0fc">
+          {characterName ?? "the scene"}
+        </StatusHighlight>
+        <StatusText>...</StatusText>
+      </LoadingImageIndicator>
+    );
+  }
+
+  if (status === "submitting") {
+    return (
+      <LoadingImageIndicator modelName={modelName}>
+        <StatusHighlight $color="#b197fc">Submitting</StatusHighlight>
+        <StatusText> image for generation...</StatusText>
+      </LoadingImageIndicator>
+    );
+  }
+
+  return (
+    <LoadingImageIndicator modelName={modelName}>
+      <StatusHighlight $color="#ffd43b">Determining</StatusHighlight>
+      <StatusText> character...</StatusText>
+    </LoadingImageIndicator>
   );
 };
