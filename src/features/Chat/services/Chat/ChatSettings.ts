@@ -2,6 +2,8 @@ export interface ChatSettings {
   timestampCreatedUtcMs: number;
   chatTitle: string;
   backgroundPhotoBase64?: string;
+  backgroundPhotoWorkflowId?: string;
+  /** Legacy persisted field. Use backgroundPhotoWorkflowId for new writes. */
   backgroundPhotoCivitJobId?: string;
   prompt: string;
   customPrompt?: string;

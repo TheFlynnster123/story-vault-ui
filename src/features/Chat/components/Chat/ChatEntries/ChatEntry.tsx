@@ -15,6 +15,7 @@ import type {
   PlanChatMessage,
   StoryChatMessage,
   UserChatMessage,
+  CivitWorkflowChatMessage,
 } from "../../../../../services/CQRS/UserChatProjection";
 
 interface ChatEntryProps {
@@ -34,11 +35,11 @@ export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
     );
   }
 
-  if (message.type === "civit-job") {
+  if (message.type === "civit-job" || message.type === "civit-workflow") {
     return (
       <CivitJobMessage
         chatId={chatId}
-        message={message as CivitJobChatMessage}
+        message={message as CivitJobChatMessage | CivitWorkflowChatMessage}
         isLastMessage={isLastMessage}
       />
     );

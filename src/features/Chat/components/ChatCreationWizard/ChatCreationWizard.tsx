@@ -54,7 +54,9 @@ export const ChatCreationWizard: React.FC = () => {
         chatTitle: state.title.trim(),
         prompt: state.prompt || "",
         backgroundPhotoBase64: state.backgroundPhotoBase64,
-        backgroundPhotoCivitJobId: state.backgroundPhotoCivitJobId,
+        backgroundPhotoWorkflowId:
+          state.backgroundPhotoWorkflowId ?? state.backgroundPhotoCivitJobId,
+        backgroundPhotoCivitJobId: undefined,
       };
 
       await createChat({

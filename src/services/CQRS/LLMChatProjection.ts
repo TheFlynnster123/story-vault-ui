@@ -95,6 +95,10 @@ export class LLMChatProjection {
       case "BookDeleted":
         this.processBookDeleted(event);
         break;
+      case "CivitWorkflowCreated":
+        break;
+      case "CivitWorkflowUpdated":
+        break;
       case "CivitJobCreated":
         break;
       case "CivitJobUpdated":

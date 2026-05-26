@@ -4,14 +4,13 @@ import { d } from "../../../services/Dependencies";
 
 const POLL_INTERVAL_MS = 5000;
 
-export const useCivitJob = (chatId: string, jobId: string) => {
+export const useWorkflowImage = (chatId: string, workflowId: string) => {
   const queryResult = useQuery<CivitJobResult>({
-    queryKey: ["civit-job", chatId, jobId],
-    // Enable
-    enabled: !!chatId && !!jobId,
+    queryKey: ["workflow-image", chatId, workflowId],
+    enabled: !!chatId && !!workflowId,
 
     queryFn: async () =>
-      await d.CivitJobOrchestrator().getOrPollPhoto(chatId, jobId),
+      await d.CivitJobOrchestrator().getOrPollPhoto(chatId, workflowId),
 
     refetchInterval: (query) => shouldPoll(query),
 
@@ -35,6 +34,8 @@ export const useCivitJob = (chatId: string, jobId: string) => {
     jobStatus: queryResult.data,
   };
 };
+
+export const useCivitJob = useWorkflowImage;
 
 const shouldPoll = (
   query: Query<CivitJobResult, Error, CivitJobResult, readonly unknown[]>,

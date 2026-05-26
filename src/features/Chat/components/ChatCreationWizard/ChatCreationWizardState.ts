@@ -6,6 +6,8 @@ export interface ChatCreationWizardState {
   selectedPromptPresetId?: string;
   prompt?: string;
   backgroundPhotoBase64?: string;
+  backgroundPhotoWorkflowId?: string;
+  /** Legacy compatibility field. New writes should use backgroundPhotoWorkflowId. */
   backgroundPhotoCivitJobId?: string;
   generateImage: boolean;
 }

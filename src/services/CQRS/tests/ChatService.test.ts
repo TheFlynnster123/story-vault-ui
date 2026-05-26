@@ -162,6 +162,47 @@ describe("ChatService - General Operations", () => {
     });
   });
 
+  describe("CreateCivitWorkflow", () => {
+    it("should create CivitWorkflowCreated event with messageId and optional workflowId", async () => {
+      const service = new ChatService(testChatId);
+
+      await service.CreateCivitWorkflow("image-gen-1", "test prompt", {
+        workflowId: "workflow-1",
+        generationStatus: "submitted",
+      });
+
+      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
+      expect(calledEvent).toEqual({
+        type: "CivitWorkflowCreated",
+        messageId: "image-gen-1",
+        prompt: "test prompt",
+        workflowId: "workflow-1",
+        generationStatus: "submitted",
+      });
+    });
+  });
+
+  describe("UpdateCivitWorkflow", () => {
+    it("should create CivitWorkflowUpdated event with messageId and patch", async () => {
+      const service = new ChatService(testChatId);
+
+      await service.UpdateCivitWorkflow("image-gen-1", {
+        generationStatus: "submitted",
+        workflowId: "workflow-1",
+      });
+
+      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
+      expect(calledEvent).toEqual({
+        type: "CivitWorkflowUpdated",
+        messageId: "image-gen-1",
+        patch: {
+          generationStatus: "submitted",
+          workflowId: "workflow-1",
+        },
+      });
+    });
+  });
+
   // ---- EditMessage Tests ----
   describe("EditMessage", () => {
     it("should create MessageEdited event with messageId and newContent", async () => {
