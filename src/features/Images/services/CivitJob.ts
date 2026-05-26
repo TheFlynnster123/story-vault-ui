@@ -46,11 +46,13 @@ export interface Workflow {
   steps: WorkflowStep[];
 }
 
-export interface CivitJobResult {
+export interface WorkflowImageResult {
   photoBase64?: string | undefined;
   isLoading: boolean;
   error?: string | undefined;
 }
+
+export type CivitJobResult = WorkflowImageResult;
 
 export interface PhotoData {
   base64: string;

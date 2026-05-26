@@ -10,6 +10,8 @@ import type {
   BookCreatedEvent,
   BookEditedEvent,
   BookDeletedEvent,
+  CivitWorkflowCreatedEvent,
+  CivitWorkflowUpdatedEvent,
   CivitJobUpdatedEvent,
   StoryCreatedEvent,
   StoryEditedEvent,
@@ -146,6 +148,12 @@ export class UserChatProjection {
         break;
       case "BookDeleted":
         this.processBookDeleted(event);
+        break;
+      case "CivitWorkflowCreated":
+        this.processCivitWorkflowCreated(event);
+        break;
+      case "CivitWorkflowUpdated":
+        this.processCivitWorkflowUpdated(event);
         break;
       case "CivitJobCreated":
         this.processCivitJobCreated(event);
@@ -433,6 +441,46 @@ export class UserChatProjection {
     });
   }
 
+  private processCivitWorkflowCreated(event: CivitWorkflowCreatedEvent) {
+    this.Messages.push({
+      id: event.messageId,
+      type: "civit-workflow",
+      data: {
+        workflowId: event.workflowId,
+        prompt: event.prompt,
+        modelName: event.modelName,
+        modelId: event.modelId,
+        modelSource: event.modelSource,
+        characterDescription: event.characterDescription,
+        characterName: event.characterName,
+        basePrompt: event.basePrompt,
+        sceneDescription: event.sceneDescription,
+        generationStatus: event.generationStatus,
+        generationError: event.generationError,
+      },
+
+      hiddenByChapterId: undefined,
+      deleted: false,
+      hidden: false,
+    });
+  }
+
+  private processCivitWorkflowUpdated(event: CivitWorkflowUpdatedEvent) {
+    const index = this.Messages.findIndex(
+      (m) => m.id === event.messageId && m.type === "civit-workflow",
+    );
+    if (index === -1) return;
+
+    const message = this.Messages[index] as CivitWorkflowChatMessage;
+    this.Messages[index] = {
+      ...message,
+      data: {
+        ...message.data,
+        ...definedFields(event.patch),
+      },
+    };
+  }
+
   private processCivitJobUpdated(event: CivitJobUpdatedEvent) {
     const index = this.Messages.findIndex(
       (m) => m.id === event.messageId && m.type === "civit-job",
@@ -444,7 +492,7 @@ export class UserChatProjection {
       ...message,
       data: {
         ...message.data,
-        ...event.patch,
+        ...definedFields(event.patch),
       },
     };
   }
@@ -528,6 +576,7 @@ export class UserChatProjection {
     "system-message",
     "assistant",
     "civit-job",
+    "civit-workflow",
     "story",
   ]);
 
@@ -617,6 +666,7 @@ export interface UserChatMessage {
     | "system-message"
     | "assistant"
     | "civit-job"
+    | "civit-workflow"
     | "chapter"
     | "book"
     | "plan"
@@ -644,8 +694,26 @@ export interface UserChatMessage {
 }
 
 export interface CivitJobChatMessage extends UserChatMessage {
+  type: "civit-job";
   data: {
     jobId: string;
+    prompt: string;
+    modelName?: string;
+    modelId?: string;
+    modelSource?: "system" | "variant";
+    characterDescription?: string;
+    characterName?: string;
+    basePrompt?: string;
+    sceneDescription?: string;
+    generationStatus?: string;
+    generationError?: string;
+  };
+}
+
+export interface CivitWorkflowChatMessage extends UserChatMessage {
+  type: "civit-workflow";
+  data: {
+    workflowId?: string;
     prompt: string;
     modelName?: string;
     modelId?: string;
@@ -698,9 +766,22 @@ export interface NoteChatMessage extends UserChatMessage {
   };
 }
 
+const definedFields = <T extends Record<string, unknown>>(
+  value: T,
+): Partial<T> =>
+  Object.fromEntries(
+    Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined),
+  ) as Partial<T>;
+
 function toType(
   role: "assistant" | "user" | "system",
-): "chapter" | "assistant" | "user-message" | "system-message" | "civit-job" {
+):
+  | "chapter"
+  | "assistant"
+  | "user-message"
+  | "system-message"
+  | "civit-job"
+  | "civit-workflow" {
   switch (role) {
     case "assistant":
       return "assistant";

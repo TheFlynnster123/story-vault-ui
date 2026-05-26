@@ -5,6 +5,7 @@ import type {
   MessageDeletedEvent,
   MessageEditedEvent,
   MessagesDeletedEvent,
+  CivitWorkflowCreatedEvent,
 } from "../events/ChatEvent";
 import {
   getUserChatProjectionInstance,
@@ -541,6 +542,51 @@ describe("UserChatProjection - Core Operations", () => {
 
       expect(projection.Messages[0].data).toEqual({
         jobId: "workflow-1",
+        prompt: "final prompt",
+        generationStatus: "submitted",
+      });
+    });
+  });
+
+  describe("Workflow Event Processing", () => {
+    it("should add workflow message with separate message and workflow ids", () => {
+      const event: CivitWorkflowCreatedEvent = {
+        type: "CivitWorkflowCreated",
+        messageId: "image-gen-1",
+        workflowId: "workflow-123",
+        prompt: "Generate image",
+      };
+
+      projection.process(event);
+
+      expect(projection.Messages[0].type).toBe("civit-workflow");
+      expect(projection.Messages[0].id).toBe("image-gen-1");
+      expect(projection.Messages[0].data).toEqual({
+        workflowId: "workflow-123",
+        prompt: "Generate image",
+      });
+    });
+
+    it("should patch civit workflow data with CivitWorkflowUpdated", () => {
+      projection.process({
+        type: "CivitWorkflowCreated",
+        messageId: "image-gen-1",
+        prompt: "",
+        generationStatus: "determining-character",
+      });
+
+      projection.process({
+        type: "CivitWorkflowUpdated",
+        messageId: "image-gen-1",
+        patch: {
+          workflowId: "workflow-1",
+          prompt: "final prompt",
+          generationStatus: "submitted",
+        },
+      });
+
+      expect(projection.Messages[0].data).toEqual({
+        workflowId: "workflow-1",
         prompt: "final prompt",
         generationStatus: "submitted",
       });

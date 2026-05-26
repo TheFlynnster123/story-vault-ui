@@ -35,22 +35,30 @@ export class ChatSettingsService {
     await this.saveDebounced({
       ...currentSettings,
       backgroundPhotoBase64: base64,
+      backgroundPhotoWorkflowId: undefined,
       backgroundPhotoCivitJobId: undefined,
     });
   }
 
   /**
-   * Sets the background photo from a CivitJob ID and clears any uploaded background.
+   * Sets the background photo from a workflow ID and clears any uploaded background.
    */
-  async setBackgroundPhotoCivitJobId(jobId: string | undefined): Promise<void> {
+  async setBackgroundPhotoWorkflowId(
+    workflowId: string | undefined,
+  ): Promise<void> {
     const currentSettings = await this.Get();
     if (!currentSettings) return;
 
     await this.saveDebounced({
       ...currentSettings,
       backgroundPhotoBase64: undefined,
-      backgroundPhotoCivitJobId: jobId,
+      backgroundPhotoWorkflowId: workflowId,
+      backgroundPhotoCivitJobId: undefined,
     });
+  }
+
+  async setBackgroundPhotoCivitJobId(jobId: string | undefined): Promise<void> {
+    await this.setBackgroundPhotoWorkflowId(jobId);
   }
 
   /**

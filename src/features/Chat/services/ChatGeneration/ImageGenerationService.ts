@@ -2,7 +2,11 @@ import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { CharacterContext } from "../../../Images/services/ImageGenerator";
-import type { CivitJobChatMessage } from "../../../../services/CQRS/UserChatProjection";
+import type {
+  CivitJobChatMessage,
+  UserChatMessage,
+  CivitWorkflowChatMessage,
+} from "../../../../services/CQRS/UserChatProjection";
 import { v4 as uuidv4 } from "uuid";
 
 export const getImageGenerationServiceInstance = createInstanceCache(
@@ -43,7 +47,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
   async generateImage(): Promise<GenerateImageResult> {
     const messageId = createImageGenerationMessageId();
 
-    await d.ChatService(this.chatId).CreateCivitJob(messageId, "", {
+    await d.ChatService(this.chatId).CreateCivitWorkflow(messageId, "", {
       generationStatus: "determining-character",
     });
 
@@ -116,20 +120,20 @@ export class ImageGenerationService extends GenerationOrchestrator {
     pendingMessages.forEach((message) => this.startGenerationRunner(message.id));
   }
 
-  async regenerateImage(jobId: string, feedback?: string): Promise<void> {
-    const message = d.UserChatProjection(this.chatId).GetMessage(jobId);
+  async regenerateImage(messageId: string, feedback?: string): Promise<void> {
+    const message = d.UserChatProjection(this.chatId).GetMessage(messageId);
 
-    if (!message || message.type !== "civit-job") {
-      console.warn(`CivitJob with id ${jobId} not found`);
+    if (!message || !isImageWorkflowMessage(message)) {
+      console.warn(`Image workflow message with id ${messageId} not found`);
       return;
     }
 
     await this.orchestrate(async () => {
-      const originalPrompt = message.data?.prompt;
+      const originalPrompt = getImageWorkflowData(message).prompt;
       const originalModel = getOriginalModelFromData(message.data);
-      const characterName = message.data?.characterName;
+      const characterName = getImageWorkflowData(message).characterName;
 
-      await d.ChatService(this.chatId).DeleteMessage(jobId);
+      await d.ChatService(this.chatId).DeleteMessage(messageId);
 
       this.setStatus("Generating image prompt...");
       const messageList = d.LLMChatProjection(this.chatId).GetMessages();
@@ -150,13 +154,20 @@ export class ImageGenerationService extends GenerationOrchestrator {
       const rawCharacterDescription = getRawDescriptionFromContext(characterContext);
 
       this.setStatus("Triggering image generation...");
-      const { jobId: newJobId, modelName, fullPrompt, basePrompt, sceneDescription } =
+      const {
+        workflowId,
+        modelName,
+        fullPrompt,
+        basePrompt,
+        sceneDescription,
+      } =
         await d
           .ImageGenerator(this.chatId)
           .triggerJob(generatedPrompt, originalModel, rawCharacterDescription);
 
       this.setStatus("Saving job...");
-      await d.ChatService(this.chatId).CreateCivitJob(newJobId, fullPrompt, {
+      await d.ChatService(this.chatId).CreateCivitWorkflow(workflowId, fullPrompt, {
+        workflowId,
         modelName,
         modelId: originalModel?.id,
         modelSource: originalModel?.source,
@@ -181,7 +192,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
       : undefined;
 
     if (messageId) {
-      await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
+      await this.updateImageGenerationMessage(messageId, {
         generationStatus: "generating-prompt",
         characterName: getNameFromContext(characterContext),
         characterDescription: getRawDescriptionFromContext(characterContext),
@@ -198,14 +209,14 @@ export class ImageGenerationService extends GenerationOrchestrator {
     const rawCharacterDescription = getRawDescriptionFromContext(characterContext);
 
     if (messageId) {
-      await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
+      await this.updateImageGenerationMessage(messageId, {
         sceneDescription: generatedPrompt,
         generationStatus: "submitting",
       });
     }
 
     this.setStatus("Triggering image generation...");
-    const { jobId, modelName, fullPrompt, basePrompt, sceneDescription } =
+    const { workflowId, modelName, fullPrompt, basePrompt, sceneDescription } =
       await d
         .ImageGenerator(this.chatId)
         .triggerJob(
@@ -214,7 +225,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
           rawCharacterDescription,
           async (preparedPrompt) => {
             if (!messageId) return;
-            await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
+            await this.updateImageGenerationMessage(messageId, {
               prompt: preparedPrompt.fullPrompt,
               basePrompt: preparedPrompt.basePrompt,
               sceneDescription: preparedPrompt.sceneDescription,
@@ -226,7 +237,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
 
     this.setStatus("Saving job...");
     const patch = {
-      jobId,
+      workflowId,
       prompt: fullPrompt,
       modelName,
       modelId: preferredImage?.id,
@@ -239,9 +250,9 @@ export class ImageGenerationService extends GenerationOrchestrator {
     };
 
     if (messageId) {
-      await d.ChatService(this.chatId).UpdateCivitJob(messageId, patch);
+      await this.updateImageGenerationMessage(messageId, patch);
     } else {
-      await d.ChatService(this.chatId).CreateCivitJob(jobId, fullPrompt, patch);
+      await d.ChatService(this.chatId).CreateCivitWorkflow(workflowId, fullPrompt, patch);
     }
   }
 
@@ -260,7 +271,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
     try {
       await this.resumeGenerationFromCurrentState(messageId);
     } catch (error) {
-      await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
+      await this.updateImageGenerationMessage(messageId, {
         generationStatus: "failed",
         generationError:
           error instanceof Error ? error.message : "Image generation failed.",
@@ -304,7 +315,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
   }
 
   private async resolveCharacterForMessage(messageId: string): Promise<void> {
-    await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
+    await this.updateImageGenerationMessage(messageId, {
       generationStatus: "determining-character",
     });
 
@@ -322,7 +333,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
         messageId,
         characterName: characterContext.characterName,
       };
-      await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
+      await this.updateImageGenerationMessage(messageId, {
         generationStatus: "missing-character-description",
         characterName: characterContext.characterName,
         modelName: selectedModelName,
@@ -377,36 +388,38 @@ export class ImageGenerationService extends GenerationOrchestrator {
   }
 
   private async generatePromptForExistingMessage(
-    message: CivitJobChatMessage,
+    message: ImageCivitWorkflowChatMessage,
   ): Promise<void> {
-    const characterContext = message.data.characterName
-      ? await resolveCharacterContextByName(this.chatId, message.data.characterName)
+    const data = getImageWorkflowData(message);
+    const characterContext = data.characterName
+      ? await resolveCharacterContextByName(this.chatId, data.characterName)
       : noCharacterContext();
 
     await this.runImageGenerationSteps(characterContext, message.id);
   }
 
   private async submitGeneratedPrompt(
-    message: CivitJobChatMessage,
+    message: ImageCivitWorkflowChatMessage,
   ): Promise<void> {
-    await d.ChatService(this.chatId).UpdateCivitJob(message.id, {
+    await this.updateImageWorkflowMessage(message.id, message.type, {
       generationStatus: "submitting",
     });
 
+    const data = getImageWorkflowData(message);
     const preferredImage =
       getOriginalModelFromData(message.data) ??
-      (message.data.characterName
+      (data.characterName
         ? await this.resolveCharacterPreferredImage({
           type: "existing-description",
-          characterName: message.data.characterName,
-          description: message.data.characterDescription ?? "",
+          characterName: data.characterName,
+          description: data.characterDescription ?? "",
         })
         : undefined);
 
-    const rawCharacterDescription = message.data.characterDescription;
-    const generatedPrompt = message.data.sceneDescription ?? "";
+    const rawCharacterDescription = data.characterDescription;
+    const generatedPrompt = data.sceneDescription ?? "";
 
-    const { jobId, modelName, fullPrompt, basePrompt, sceneDescription } =
+    const { workflowId, modelName, fullPrompt, basePrompt, sceneDescription } =
       await d
         .ImageGenerator(this.chatId)
         .triggerJob(
@@ -414,7 +427,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
           preferredImage,
           rawCharacterDescription,
           async (preparedPrompt) => {
-            await d.ChatService(this.chatId).UpdateCivitJob(message.id, {
+            await this.updateImageWorkflowMessage(message.id, message.type, {
               prompt: preparedPrompt.fullPrompt,
               basePrompt: preparedPrompt.basePrompt,
               sceneDescription: preparedPrompt.sceneDescription,
@@ -424,14 +437,14 @@ export class ImageGenerationService extends GenerationOrchestrator {
           },
         );
 
-    await d.ChatService(this.chatId).UpdateCivitJob(message.id, {
-      jobId,
+    await this.updateImageWorkflowMessage(message.id, message.type, {
+      workflowId,
       prompt: fullPrompt,
       modelName,
       modelId: preferredImage?.id,
       modelSource: preferredImage?.source,
       characterDescription: rawCharacterDescription,
-      characterName: message.data.characterName,
+      characterName: data.characterName,
       basePrompt,
       sceneDescription,
       generationStatus: "submitted",
@@ -440,10 +453,39 @@ export class ImageGenerationService extends GenerationOrchestrator {
 
   private getImageGenerationMessage(
     messageId: string,
-  ): CivitJobChatMessage | undefined {
+  ): ImageCivitWorkflowChatMessage | undefined {
     const message = d.UserChatProjection(this.chatId).GetMessage(messageId);
-    if (!message || message.type !== "civit-job") return undefined;
-    return message as CivitJobChatMessage;
+    if (!message || !isImageWorkflowMessage(message)) return undefined;
+    return message;
+  }
+
+  private async updateImageWorkflowMessage(
+    messageId: string,
+    messageType: ImageCivitWorkflowChatMessage["type"],
+    workflowPatch: ImageWorkflowPatch,
+  ): Promise<void> {
+    if (messageType === "civit-job") {
+      const { workflowId, ...patch } = workflowPatch;
+      await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
+        ...patch,
+        ...(workflowId ? { jobId: workflowId } : {}),
+      });
+      return;
+    }
+
+    await d.ChatService(this.chatId).UpdateCivitWorkflow(messageId, workflowPatch);
+  }
+
+  private async updateImageGenerationMessage(
+    messageId: string,
+    workflowPatch: ImageWorkflowPatch,
+  ): Promise<void> {
+    const message = this.getImageGenerationMessage(messageId);
+    await this.updateImageWorkflowMessage(
+      messageId,
+      message?.type ?? "civit-workflow",
+      workflowPatch,
+    );
   }
 
   private acquireGenerationLease(messageId: string): boolean {
@@ -633,13 +675,35 @@ const writeGenerationLease = (key: string, lease: GenerationLease): void => {
 
 const createImageGenerationMessageId = (): string => `image-gen-${uuidv4()}`;
 
+type ImageCivitWorkflowChatMessage = CivitJobChatMessage | CivitWorkflowChatMessage;
+
+type ImageWorkflowPatch = Partial<{
+  workflowId: string;
+  prompt: string;
+  modelName: string;
+  modelId: string;
+  modelSource: "system" | "variant";
+  characterDescription: string;
+  characterName: string;
+  basePrompt: string;
+  sceneDescription: string;
+  generationStatus:
+    | "determining-character"
+    | "missing-character-description"
+    | "generating-prompt"
+    | "submitting"
+    | "submitted"
+    | "failed";
+  generationError: string;
+}>;
+
 const isResumableImageGenerationMessage = (
   message: unknown,
-): message is CivitJobChatMessage => {
+): message is ImageCivitWorkflowChatMessage => {
   if (!message || typeof message !== "object") return false;
 
-  const candidate = message as CivitJobChatMessage;
-  if (candidate.type !== "civit-job") return false;
+  const candidate = message as ImageCivitWorkflowChatMessage;
+  if (!isImageWorkflowMessage(candidate)) return false;
 
   return [
     "determining-character",
@@ -648,6 +712,15 @@ const isResumableImageGenerationMessage = (
     "submitting",
   ].includes(candidate.data?.generationStatus ?? "");
 };
+
+const isImageWorkflowMessage = (
+  message: UserChatMessage,
+): message is ImageCivitWorkflowChatMessage =>
+  message.type === "civit-job" || message.type === "civit-workflow";
+
+const getImageWorkflowData = (
+  message: ImageCivitWorkflowChatMessage,
+): ImageCivitWorkflowChatMessage["data"] => message.data;
 
 const noCharacterContext = (): CharacterContext => ({ type: "none" });
 
@@ -682,8 +755,18 @@ const resolveCharacterContextByName = async (
 };
 
 const getOriginalModelFromData = (
-  data: any,
+  data: unknown,
 ): { id: string; source: "system" | "variant" } | undefined => {
-  if (!data?.modelId || !data?.modelSource) return undefined;
-  return { id: data.modelId, source: data.modelSource };
+  if (!data || typeof data !== "object") return undefined;
+  const candidate = data as {
+    modelId?: unknown;
+    modelSource?: unknown;
+  };
+  if (
+    typeof candidate.modelId !== "string" ||
+    (candidate.modelSource !== "system" && candidate.modelSource !== "variant")
+  ) {
+    return undefined;
+  }
+  return { id: candidate.modelId, source: candidate.modelSource };
 };

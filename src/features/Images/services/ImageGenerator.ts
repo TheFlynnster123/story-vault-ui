@@ -140,7 +140,7 @@ export class ImageGenerator {
     characterDescription?: string,
     onPromptPrepared?: (prompt: PreparedImagePrompt) => Promise<void> | void,
   ): Promise<{
-    jobId: string;
+    workflowId: string;
     modelName: string;
     fullPrompt: string;
     basePrompt: string;
@@ -170,7 +170,7 @@ export class ImageGenerator {
       .submitWorkflow([{ $type: "imageGen", input: inputCopy }]);
 
     return {
-      jobId: workflow.id,
+      workflowId: workflow.id,
       modelName: preparedPrompt.modelName,
       fullPrompt: preparedPrompt.fullPrompt,
       basePrompt,

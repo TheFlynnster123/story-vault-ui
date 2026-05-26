@@ -16,7 +16,10 @@ import { RegenerateFeedbackModal } from "./ChatEntryButtons/RegenerateFeedbackMo
 import { ViewPromptModal } from "./ChatEntryButtons/ViewPromptModal.tsx";
 import { DeleteConfirmModal } from "./ChatEntryButtons/DeleteConfirmModal.tsx";
 import { Theme } from "../../../../../components/Theme";
-import type { CivitJobChatMessage } from "../../../../../services/CQRS/UserChatProjection.ts";
+import type {
+  CivitJobChatMessage,
+  CivitWorkflowChatMessage,
+} from "../../../../../services/CQRS/UserChatProjection.ts";
 import { useCivitJob } from "../../../../Images/hooks/useCivitJob.ts";
 import { d } from "../../../../../services/Dependencies.ts";
 
@@ -45,6 +48,13 @@ const LoadingBubble = styled.div`
   padding: 10px 20px;
   border-radius: 20px;
   text-align: center;
+  box-sizing: border-box;
+  width: clamp(280px, 52vw, 520px);
+  max-width: calc(100vw - 32px);
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const StatusText = styled.span`
@@ -65,14 +75,18 @@ const LoadingImageIndicator = ({
   characterName?: string;
   children?: React.ReactNode;
 }) => (
-  <LoadingBubble style={{ marginBottom: "8px" }}>
+  <LoadingBubble>
     <Group
       gap="md"
       justify="center"
-      style={{ flexDirection: "column", padding: "40px 20px" }}
+      style={{
+        flexDirection: "column",
+        padding: "40px 20px",
+        width: "100%",
+      }}
     >
       <RiImageLine size={120} />
-      <Group gap="sm">
+      <Group gap="sm" justify="center" wrap="wrap">
         <Loader size="sm" color="white" />
         {children ?? <span>Generating...</span>}
       </Group>
@@ -88,7 +102,15 @@ const LoadingImageIndicator = ({
         </span>
       )}
       {modelName && (
-        <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>{modelName}</span>
+        <span
+          style={{
+            fontSize: "0.75rem",
+            opacity: 0.6,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {modelName}
+        </span>
       )}
     </Group>
   </LoadingBubble>
@@ -96,7 +118,7 @@ const LoadingImageIndicator = ({
 
 interface CivitJobMessageProps {
   chatId: string;
-  message: CivitJobChatMessage;
+  message: CivitJobChatMessage | CivitWorkflowChatMessage;
   isLastMessage: boolean;
 }
 
@@ -112,12 +134,15 @@ export const CivitJobMessage = ({
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedback, setFeedback] = useState("");
 
-  let jobId: string;
+  let workflowId: string;
   try {
-    jobId = message?.data?.jobId;
+    workflowId =
+      message.type === "civit-workflow"
+        ? (message.data.workflowId ?? "")
+        : message.data.jobId;
   } catch (e) {
-    d.ErrorService().log("Failed to parse jobId from message content", e);
-    jobId = "";
+    d.ErrorService().log("Failed to parse workflowId from message content", e);
+    workflowId = "";
   }
 
   const isPendingGeneration =
@@ -128,7 +153,7 @@ export const CivitJobMessage = ({
     photoBase64: photoBase64,
     isLoading,
     jobStatus,
-  } = useCivitJob(chatId, isPendingGeneration ? "" : jobId);
+  } = useCivitJob(chatId, isPendingGeneration ? "" : workflowId);
 
   const shouldShowLoadingIndicator = () =>
     !isPendingGeneration && (isLoading || jobStatus?.isLoading);
@@ -166,7 +191,7 @@ export const CivitJobMessage = ({
 
   const handleSetAsBackground = async () => {
     setShowButtons(false);
-    await d.ChatSettingsService(chatId).setBackgroundPhotoCivitJobId(jobId);
+    await d.ChatSettingsService(chatId).setBackgroundPhotoWorkflowId(workflowId);
   };
 
   const handleRegenerateWithFeedback = () => {

@@ -60,7 +60,10 @@ export const ChatEditorPage: React.FC = () => {
           <BackgroundPhotoUploader
             chatId={chatId}
             backgroundPhotoBase64={form.values.backgroundPhotoBase64}
-            backgroundPhotoCivitJobId={form.values.backgroundPhotoCivitJobId}
+            backgroundPhotoCivitJobId={
+              form.values.backgroundPhotoWorkflowId ??
+              form.values.backgroundPhotoCivitJobId
+            }
             onPhotoUpload={handlePhotoUpload}
             onRemovePhoto={removePhoto}
             onCivitJobIdChange={handleCivitJobIdChange}
@@ -107,6 +110,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       timestampCreatedUtcMs: Date.now(),
       chatTitle: "",
       backgroundPhotoBase64: undefined as string | undefined,
+      backgroundPhotoWorkflowId: undefined as string | undefined,
       backgroundPhotoCivitJobId: undefined as string | undefined,
       prompt: "",
     },
@@ -130,7 +134,12 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
         timestampCreatedUtcMs: Date.now(),
         chatTitle: chatSettings.chatTitle || "",
         backgroundPhotoBase64: chatSettings.backgroundPhotoBase64,
-        backgroundPhotoCivitJobId: chatSettings.backgroundPhotoCivitJobId,
+        backgroundPhotoWorkflowId:
+          chatSettings.backgroundPhotoWorkflowId ??
+          chatSettings.backgroundPhotoCivitJobId,
+        backgroundPhotoCivitJobId:
+          chatSettings.backgroundPhotoWorkflowId ??
+          chatSettings.backgroundPhotoCivitJobId,
         prompt: chatSettings.prompt || "",
       };
       form.setInitialValues(values);
@@ -160,9 +169,11 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
         const base64String = event.target?.result as string;
         form.setFieldValue("backgroundPhotoBase64", base64String);
         // Clear CivitJob when uploading a new photo
+        form.setFieldValue("backgroundPhotoWorkflowId", undefined);
         form.setFieldValue("backgroundPhotoCivitJobId", undefined);
         onFormUpdated({
           backgroundPhotoBase64: base64String,
+          backgroundPhotoWorkflowId: undefined,
           backgroundPhotoCivitJobId: undefined,
         });
       };
@@ -172,21 +183,25 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
 
   const removePhoto = () => {
     form.setFieldValue("backgroundPhotoBase64", undefined);
+    form.setFieldValue("backgroundPhotoWorkflowId", undefined);
     form.setFieldValue("backgroundPhotoCivitJobId", undefined);
     onFormUpdated({
       backgroundPhotoBase64: undefined,
+      backgroundPhotoWorkflowId: undefined,
       backgroundPhotoCivitJobId: undefined,
     });
   };
 
   const handleCivitJobIdChange = (jobId: string | undefined) => {
+    form.setFieldValue("backgroundPhotoWorkflowId", jobId);
     form.setFieldValue("backgroundPhotoCivitJobId", jobId);
     // Clear uploaded photo when setting CivitJob
     if (jobId) {
       form.setFieldValue("backgroundPhotoBase64", undefined);
     }
     onFormUpdated({
-      backgroundPhotoCivitJobId: jobId,
+      backgroundPhotoWorkflowId: jobId,
+      backgroundPhotoCivitJobId: undefined,
       backgroundPhotoBase64: jobId
         ? undefined
         : form.values.backgroundPhotoBase64,

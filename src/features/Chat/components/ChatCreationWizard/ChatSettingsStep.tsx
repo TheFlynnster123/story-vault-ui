@@ -41,14 +41,17 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Use CivitJob to resolve background from jobId if set
+  const backgroundPhotoWorkflowId =
+    state.backgroundPhotoWorkflowId ?? state.backgroundPhotoCivitJobId;
+
+  // Resolve background from workflow id if set
   const { photoBase64: civitJobPhoto, jobStatus } = useCivitJob(
     chatId,
-    state.backgroundPhotoCivitJobId || "",
+    backgroundPhotoWorkflowId || "",
   );
 
   const isLoadingCivitJob =
-    state.backgroundPhotoCivitJobId && !civitJobPhoto && jobStatus?.isLoading;
+    backgroundPhotoWorkflowId && !civitJobPhoto && jobStatus?.isLoading;
 
   const displayPhoto = civitJobPhoto || state.backgroundPhotoBase64;
 
@@ -84,8 +87,11 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
       const workflow = await d
         .CivitOrchestrationAPI()
         .submitWorkflow([{ $type: "imageGen", input: modelInput }]);
-      const newJobId = workflow.id;
-      updateState({ backgroundPhotoCivitJobId: newJobId });
+      const workflowId = workflow.id;
+      updateState({
+        backgroundPhotoWorkflowId: workflowId,
+        backgroundPhotoCivitJobId: undefined,
+      });
       setPrompt("");
     } catch (e) {
       d.ErrorService().log("Failed to generate background image", e);
@@ -98,6 +104,7 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
   const handleRemove = () => {
     updateState({
       backgroundPhotoBase64: undefined,
+      backgroundPhotoWorkflowId: undefined,
       backgroundPhotoCivitJobId: undefined,
     });
     setError(null);
