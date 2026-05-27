@@ -6,63 +6,65 @@ export type SdCppSamplerParams = {
 
 export class SchedulerMapper {
   private readonly schedulerMappings = {
-    "Euler a": "EulerA",
-    Euler: "Euler",
-    LMS: "LMS",
-    Heun: "Heun",
-    DPM2: "DPM2",
-    "DPM2 a": "DPM2A",
-    "DPM++ 2S a": "DPM2SA",
-    "DPM++ 2M": "DPM2M",
-    "DPM++ SDE": "DPMSDE",
-    "DPM fast": "DPMFast",
-    "DPM adaptive": "DPMAdaptive",
-    "LMS Karras": "LMSKarras",
-    "DPM2 Karras": "DPM2Karras",
-    "DPM2 a Karras": "DPM2AKarras",
-    "DPM++ 2S a karras": "DPM2SAKarras",
-    "DPM++ 2M karras": "DPM2MKarras",
-    "DPM++ SDE Karras": "DPMSDEKarras",
-    DDIM: "DDIM",
-    PLMS: "PLMS",
-    UniPC: "UniPC",
-    LCM: "LCM",
-    DDPM: "DDPM",
-    DEIS: "DEIS",
-    "DPM++ 2M SDE": "DPM2MSDE",
-    "DPM++ 2M SDE Karras": "DPM2MSDEKarras",
+    Euler: "euler",
+    "Euler a": "euler_a",
+    Heun: "heun",
+    DPM2: "dpm2",
+    "DPM++ 2S a": "dpm++2s_a",
+    "DPM++ 2M": "dpm++2m",
+    "DPM++ 2M v2": "dpm++2mv2",
+    IPNDM: "ipndm",
+    "IPNDM V": "ipndm_v",
+    "DDIM Trailing": "ddim_trailing",
+    LCM: "lcm",
+    "Res Multistep": "res_multistep",
+    "Res 2S": "res_2s",
+    TCD: "tcd",
+    "ER SDE": "er_sde",
+    "DPM++ 2M Karras": "dpm++2m:karras",
+    "DPM++ 2M v2 Karras": "dpm++2mv2:karras",
+    "DPM++ 2S a Karras": "dpm++2s_a:karras",
   };
 
   /**
-   * Maps from the orchestration API's sampleMethod value back to the legacy SDK name.
-   * Karras variants use the base method + "karras" schedule.
+   * Maps legacy scheduler names from older Civitai/SDK metadata to the current
+   * Orchestration API SdCppSampleMethod enum. Karras variants use the base
+   * sample method plus the separate schedule field.
    */
   private readonly sampleMethodMappings: Record<string, SdCppSamplerParams> = {
-    EulerA: { sampleMethod: "euler_a" },
+    euler: { sampleMethod: "euler" },
+    euler_a: { sampleMethod: "euler_a" },
+    heun: { sampleMethod: "heun" },
+    dpm2: { sampleMethod: "dpm2" },
+    "dpm++2s_a": { sampleMethod: "dpm++2s_a" },
+    "dpm++2m": { sampleMethod: "dpm++2m" },
+    "dpm++2mv2": { sampleMethod: "dpm++2mv2" },
+    ipndm: { sampleMethod: "ipndm" },
+    ipndm_v: { sampleMethod: "ipndm_v" },
+    ddim_trailing: { sampleMethod: "ddim_trailing" },
+    lcm: { sampleMethod: "lcm" },
+    res_multistep: { sampleMethod: "res_multistep" },
+    res_2s: { sampleMethod: "res_2s" },
+    tcd: { sampleMethod: "tcd" },
+    er_sde: { sampleMethod: "er_sde" },
     Euler: { sampleMethod: "euler" },
-    LMS: { sampleMethod: "lms" },
+    EulerA: { sampleMethod: "euler_a" },
     Heun: { sampleMethod: "heun" },
     DPM2: { sampleMethod: "dpm2" },
-    DPM2A: { sampleMethod: "dpm2_a" },
-    DPM2SA: { sampleMethod: "dpmpp_2s_a" },
-    DPM2M: { sampleMethod: "dpmpp_2m" },
-    DPMSDE: { sampleMethod: "dpmpp_sde" },
-    DPMFast: { sampleMethod: "dpm_fast" },
-    DPMAdaptive: { sampleMethod: "dpm_adaptive" },
-    LMSKarras: { sampleMethod: "lms", schedule: "karras" },
-    DPM2Karras: { sampleMethod: "dpm2", schedule: "karras" },
-    DPM2AKarras: { sampleMethod: "dpm2_a", schedule: "karras" },
-    DPM2SAKarras: { sampleMethod: "dpmpp_2s_a", schedule: "karras" },
-    DPM2MKarras: { sampleMethod: "dpmpp_2m", schedule: "karras" },
-    DPMSDEKarras: { sampleMethod: "dpmpp_sde", schedule: "karras" },
-    DDIM: { sampleMethod: "ddim" },
-    PLMS: { sampleMethod: "plms" },
-    UniPC: { sampleMethod: "uni_pc" },
+    DPM2SA: { sampleMethod: "dpm++2s_a" },
+    DPM2M: { sampleMethod: "dpm++2m" },
+    DPM2MV2: { sampleMethod: "dpm++2mv2" },
+    DPM2SAKarras: { sampleMethod: "dpm++2s_a", schedule: "karras" },
+    DPM2MKarras: { sampleMethod: "dpm++2m", schedule: "karras" },
+    DPM2MV2Karras: { sampleMethod: "dpm++2mv2", schedule: "karras" },
+    IPNDM: { sampleMethod: "ipndm" },
+    IPNDMV: { sampleMethod: "ipndm_v" },
+    DDIMTrailing: { sampleMethod: "ddim_trailing" },
     LCM: { sampleMethod: "lcm" },
-    DDPM: { sampleMethod: "ddpm" },
-    DEIS: { sampleMethod: "deis" },
-    DPM2MSDE: { sampleMethod: "dpmpp_2m_sde" },
-    DPM2MSDEKarras: { sampleMethod: "dpmpp_2m_sde", schedule: "karras" },
+    ResMultistep: { sampleMethod: "res_multistep" },
+    Res2S: { sampleMethod: "res_2s" },
+    TCD: { sampleMethod: "tcd" },
+    ERSDE: { sampleMethod: "er_sde" },
   };
 
   /**
@@ -70,16 +72,16 @@ export class SchedulerMapper {
    * Accepts either display names ("Euler a") or legacy SDK names ("EulerA").
    */
   MapToSampleMethodParams(displayName: string): SdCppSamplerParams {
-    // First try mapping display name → legacy SDK name → sampleMethod
     const legacyName = this.MapToSchedulerName(displayName);
+    const splitParams = this.splitSampleMethodAndSchedule(legacyName);
+    if (splitParams) return splitParams;
+
     const params = this.sampleMethodMappings[legacyName];
     if (params) return params;
 
-    // Direct lookup by legacy SDK name (already in legacy format)
     const directParams = this.sampleMethodMappings[displayName];
     if (directParams) return directParams;
 
-    // Default fallback: use the display name as sampleMethod as-is
     return { sampleMethod: displayName };
   }
 
@@ -103,8 +105,20 @@ export class SchedulerMapper {
   }
 
   MapToDisplayName(schedulerName: string): string {
+    const normalizedSchedulerName = `${schedulerName}`.toLowerCase();
+    const legacyParams = this.sampleMethodMappings[schedulerName];
+    const normalizedLegacyValue = legacyParams?.schedule
+      ? `${legacyParams.sampleMethod}:${legacyParams.schedule}`
+      : legacyParams?.sampleMethod;
+    if (
+      normalizedLegacyValue &&
+      normalizedLegacyValue.toLowerCase() !== normalizedSchedulerName
+    ) {
+      return this.MapToDisplayName(normalizedLegacyValue);
+    }
+
     const mapping = Object.entries(this.schedulerMappings).find(
-      ([, value]) => value.toLowerCase() === schedulerName.toLowerCase()
+      ([, value]) => value.toLowerCase() === normalizedSchedulerName
     );
 
     if (mapping) {
@@ -112,5 +126,11 @@ export class SchedulerMapper {
     }
 
     return schedulerName;
+  }
+
+  private splitSampleMethodAndSchedule(value: string): SdCppSamplerParams | undefined {
+    const [sampleMethod, schedule] = value.split(":");
+    if (!schedule) return undefined;
+    return { sampleMethod, schedule };
   }
 }

@@ -490,7 +490,10 @@ describe("ImageModelMapper", () => {
       const result = mapper.mapToImageGenInput(generatedImage);
 
       expect(result.ecosystem).toBe("anima");
-      expect(result.model).toBe("urn:air:anima:checkpoint:civitai:2458426@2945208");
+      expect(result.model).toBeUndefined();
+      expect(result.diffuserModel).toBe(
+        "urn:air:anima:checkpoint:civitai:2458426@2945208",
+      );
       expect(result.sampleMethod).toBe("er_sde");
       expect(result.schedule).toBe("simple");
       expect(result.clipSkip).toBeUndefined();

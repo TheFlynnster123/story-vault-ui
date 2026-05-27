@@ -16,6 +16,9 @@ export type ImageGenInput = {
   /** AIR URN of the checkpoint model, e.g. urn:air:sdxl:checkpoint:civitai:101055@128078 */
   model?: string;
 
+  /** Optional Anima/Z-Image diffuser override. Anima does not accept `model`. */
+  diffuserModel?: string;
+
   prompt: string;
   negativePrompt?: string;
 
