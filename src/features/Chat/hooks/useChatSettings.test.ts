@@ -9,6 +9,7 @@ vi.mock("../../../services/Dependencies");
 const mockUseCivitJob = vi.fn();
 vi.mock("../../Images/hooks/useCivitJob", () => ({
   useCivitJob: (...args: unknown[]) => mockUseCivitJob(...args),
+  useWorkflowImage: (...args: unknown[]) => mockUseCivitJob(...args),
 }));
 
 const CHAT_ID = "test-chat-456";
