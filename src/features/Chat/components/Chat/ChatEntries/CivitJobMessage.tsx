@@ -66,6 +66,22 @@ const StatusHighlight = styled.span<{ $color: string }>`
   font-weight: 700;
 `;
 
+const StatusLine = styled.span`
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+  line-height: 1.4;
+`;
+
+const CostLine = styled.div`
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  padding-top: 2px;
+  text-align: center;
+`;
+
 const LoadingImageIndicator = ({
   modelName,
   characterName,
@@ -154,6 +170,13 @@ export const CivitJobMessage = ({
     isLoading,
     jobStatus,
   } = useCivitJob(chatId, isPendingGeneration ? "" : workflowId);
+  const cost =
+    message.data.costAmount !== undefined
+      ? {
+          amount: message.data.costAmount,
+          currency: message.data.costCurrency,
+        }
+      : jobStatus?.cost;
 
   const shouldShowLoadingIndicator = () =>
     !isPendingGeneration && (isLoading || jobStatus?.isLoading);
@@ -310,6 +333,9 @@ export const CivitJobMessage = ({
             >
               Delete All Below
             </Button>
+            {isImageGenerated() && cost && (
+              <CostLine>{formatCost(cost)}</CostLine>
+            )}
           </Stack>
         </MessageOverlay>
 
@@ -355,8 +381,10 @@ const GenerationStatusPreview = ({
   if (status === "failed") {
     return (
       <LoadingImageIndicator modelName={modelName} characterName={characterName}>
-        <StatusHighlight $color="#ff6b6b">Failed</StatusHighlight>
-        <StatusText>{error ? `: ${error}` : " to generate image"}</StatusText>
+        <StatusLine>
+          <StatusHighlight $color="#ff6b6b">Failed</StatusHighlight>
+          <StatusText>{error ? `: ${error}` : "to generate image"}</StatusText>
+        </StatusLine>
       </LoadingImageIndicator>
     );
   }
@@ -364,11 +392,13 @@ const GenerationStatusPreview = ({
   if (status === "missing-character-description") {
     return (
       <LoadingImageIndicator modelName={modelName} characterName={characterName}>
-        <StatusHighlight $color="#ffd43b">Needs</StatusHighlight>
-        <StatusText> character description for </StatusText>
-        <StatusHighlight $color="#74c0fc">
-          {characterName ?? "selected character"}
-        </StatusHighlight>
+        <StatusLine>
+          <StatusHighlight $color="#ffd43b">Needs</StatusHighlight>
+          <StatusText>character description for</StatusText>
+          <StatusHighlight $color="#74c0fc">
+            {characterName ?? "selected character"}
+          </StatusHighlight>
+        </StatusLine>
       </LoadingImageIndicator>
     );
   }
@@ -376,12 +406,14 @@ const GenerationStatusPreview = ({
   if (status === "generating-prompt") {
     return (
       <LoadingImageIndicator modelName={modelName} characterName={characterName}>
-        <StatusHighlight $color="#63e6be">Generating</StatusHighlight>
-        <StatusText> scene prompt for </StatusText>
-        <StatusHighlight $color="#74c0fc">
-          {characterName ?? "the scene"}
-        </StatusHighlight>
-        <StatusText>...</StatusText>
+        <StatusLine>
+          <StatusHighlight $color="#63e6be">Generating</StatusHighlight>
+          <StatusText>scene prompt for</StatusText>
+          <StatusHighlight $color="#74c0fc">
+            {characterName ?? "the scene"}
+          </StatusHighlight>
+          <StatusText>...</StatusText>
+        </StatusLine>
       </LoadingImageIndicator>
     );
   }
@@ -389,16 +421,30 @@ const GenerationStatusPreview = ({
   if (status === "submitting") {
     return (
       <LoadingImageIndicator modelName={modelName} characterName={characterName}>
-        <StatusHighlight $color="#b197fc">Submitting</StatusHighlight>
-        <StatusText> image for generation...</StatusText>
+        <StatusLine>
+          <StatusHighlight $color="#b197fc">Submitting</StatusHighlight>
+          <StatusText>image for generation...</StatusText>
+        </StatusLine>
       </LoadingImageIndicator>
     );
   }
 
   return (
     <LoadingImageIndicator modelName={modelName} characterName={characterName}>
-      <StatusHighlight $color="#ffd43b">Determining</StatusHighlight>
-      <StatusText> character...</StatusText>
+      <StatusLine>
+        <StatusHighlight $color="#ffd43b">Determining</StatusHighlight>
+        <StatusText>character...</StatusText>
+      </StatusLine>
     </LoadingImageIndicator>
   );
 };
+
+const formatCost = (cost: { amount: number; currency?: string }): string => {
+  const amount = Number.isInteger(cost.amount)
+    ? cost.amount.toString()
+    : cost.amount.toFixed(2);
+  return `${amount}${cost.currency ? ` ${cost.currency}` : ""} Buzz (~${formatEstimatedUsd(cost.amount)})`;
+};
+
+const formatEstimatedUsd = (buzzAmount: number): string =>
+  `$${(buzzAmount / 1000).toFixed(3)}`;

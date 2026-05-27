@@ -156,6 +156,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
       this.setStatus("Triggering image generation...");
       const {
         workflowId,
+        cost,
         modelName,
         fullPrompt,
         basePrompt,
@@ -168,6 +169,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
       this.setStatus("Saving job...");
       await d.ChatService(this.chatId).CreateCivitWorkflow(workflowId, fullPrompt, {
         workflowId,
+        ...toCostPatch(cost),
         modelName,
         modelId: originalModel?.id,
         modelSource: originalModel?.source,
@@ -216,7 +218,14 @@ export class ImageGenerationService extends GenerationOrchestrator {
     }
 
     this.setStatus("Triggering image generation...");
-    const { workflowId, modelName, fullPrompt, basePrompt, sceneDescription } =
+    const {
+      workflowId,
+      cost,
+      modelName,
+      fullPrompt,
+      basePrompt,
+      sceneDescription,
+    } =
       await d
         .ImageGenerator(this.chatId)
         .triggerJob(
@@ -238,6 +247,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
     this.setStatus("Saving job...");
     const patch = {
       workflowId,
+      ...toCostPatch(cost),
       prompt: fullPrompt,
       modelName,
       modelId: preferredImage?.id,
@@ -419,7 +429,14 @@ export class ImageGenerationService extends GenerationOrchestrator {
     const rawCharacterDescription = data.characterDescription;
     const generatedPrompt = data.sceneDescription ?? "";
 
-    const { workflowId, modelName, fullPrompt, basePrompt, sceneDescription } =
+    const {
+      workflowId,
+      cost,
+      modelName,
+      fullPrompt,
+      basePrompt,
+      sceneDescription,
+    } =
       await d
         .ImageGenerator(this.chatId)
         .triggerJob(
@@ -439,6 +456,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
 
     await this.updateImageWorkflowMessage(message.id, message.type, {
       workflowId,
+      ...toCostPatch(cost),
       prompt: fullPrompt,
       modelName,
       modelId: preferredImage?.id,
@@ -695,7 +713,19 @@ type ImageWorkflowPatch = Partial<{
     | "submitted"
     | "failed";
   generationError: string;
+  costAmount: number;
+  costCurrency: string;
 }>;
+
+const toCostPatch = (
+  cost: { amount: number; currency?: string } | undefined,
+): Pick<ImageWorkflowPatch, "costAmount" | "costCurrency"> =>
+  cost
+    ? {
+        costAmount: cost.amount,
+        costCurrency: cost.currency,
+      }
+    : {};
 
 const isResumableImageGenerationMessage = (
   message: unknown,

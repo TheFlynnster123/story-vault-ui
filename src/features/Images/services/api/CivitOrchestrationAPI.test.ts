@@ -37,6 +37,7 @@ describe("normalizeImageGenInputForSubmission", () => {
       cfgScale: 5,
       width: 1024,
       height: 1024,
+      diffuserModel: "urn:air:anima:checkpoint:civitai:2458426@2945208",
       loras: {
         "urn:air:anima:lora:civitai:199258@2964979": 1,
       },
@@ -58,7 +59,7 @@ describe("normalizeImageGenInputForSubmission", () => {
 
     const result = normalizeImageGenInputForSubmission(input);
 
-    expect(result.sampleMethod).toBe("er_sde");
+    expect(result.sampleMethod).toBe("euler");
     expect(result.schedule).toBe("simple");
   });
 });

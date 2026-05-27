@@ -5,6 +5,7 @@ import type {
 } from "./GeneratedImage";
 import { v4 as uuidv4 } from "uuid";
 import { d } from "../../../../services/Dependencies";
+import { parseAir } from "./AirUtils";
 
 export class ImageModelMapper {
   private readonly MAX_DIMENSION = 1024;
@@ -59,7 +60,6 @@ export class ImageModelMapper {
       engine: "sdcpp",
       ecosystem,
       operation: "createImage",
-      model: modelAir,
       prompt: generatedData.params.prompt,
       negativePrompt: generatedData.params.negativePrompt,
       sampleMethod: samplerParams.sampleMethod,
@@ -70,6 +70,12 @@ export class ImageModelMapper {
       height: this.truncateDimension(height),
       loras: this.mapLoras(generatedData),
     };
+
+    if (ecosystem === "anima") {
+      input.diffuserModel = modelAir || undefined;
+    } else {
+      input.model = modelAir;
+    }
 
     if (ecosystem === "anima" && !input.schedule) {
       input.schedule = "simple";
@@ -177,7 +183,8 @@ export class ImageModelMapper {
 }
 
 const resolveEcosystem = (airUrn: string): ImageGenEcosystem => {
-  if (airUrn.startsWith("urn:air:anima:")) return "anima";
-  if (airUrn.startsWith("urn:air:sd1:")) return "sd1";
+  const ecosystem = parseAir(airUrn)?.ecosystem?.toLowerCase();
+  if (ecosystem === "anima") return "anima";
+  if (ecosystem === "sd1" || ecosystem === "sd15") return "sd1";
   return "sdxl";
 };

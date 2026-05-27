@@ -14,6 +14,8 @@ export interface CivitJobExtras {
   sceneDescription?: string;
   generationStatus?: CivitJobGenerationStatus;
   generationError?: string;
+  costAmount?: number;
+  costCurrency?: string;
 }
 
 export class CivitJobCreatedEventUtil {

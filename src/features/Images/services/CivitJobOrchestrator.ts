@@ -1,4 +1,4 @@
-import type { CivitJobResult, Workflow } from "./CivitJob";
+import type { CivitJobResult, Workflow, WorkflowCost } from "./CivitJob";
 import { IN_PROGRESS_WORKFLOW_STATUSES } from "./CivitJob";
 import { d } from "../../../services/Dependencies";
 
@@ -16,14 +16,17 @@ export class CivitJobOrchestrator {
       if (storedPhoto) return this.storedPhotoResponse(storedPhoto);
 
       const workflow = await d.CivitOrchestrationAPI().getWorkflow(workflowId);
+      const cost = getWorkflowCost(workflow);
 
-      if (isInProgress(workflow)) return this.loadingResponse();
+      if (isInProgress(workflow)) return this.loadingResponse(cost);
 
       const imageUrl = getFirstImageUrl(workflow);
 
-      if (imageUrl) return await this.downloadPhoto(chatId, workflowId, imageUrl);
+      if (imageUrl) {
+        return await this.downloadPhoto(chatId, workflowId, imageUrl, cost);
+      }
 
-      return this.errorResponse(buildErrorMessage(workflow));
+      return this.errorResponse(buildErrorMessage(workflow), cost);
     } catch (error: any) {
       return this.errorResponse(error);
     }
@@ -33,6 +36,7 @@ export class CivitJobOrchestrator {
     chatId: string,
     workflowId: string,
     imageUrl: string,
+    cost?: WorkflowCost,
   ): Promise<CivitJobResult> {
     const photoBase64 = await d
       .PhotoStorageService()
@@ -41,20 +45,28 @@ export class CivitJobOrchestrator {
     return {
       photoBase64,
       isLoading: false,
+      ...(cost ? { cost } : {}),
     };
   }
 
-  private loadingResponse = (): CivitJobResult => ({ isLoading: true });
+  private loadingResponse = (cost?: WorkflowCost): CivitJobResult => ({
+    isLoading: true,
+    ...(cost ? { cost } : {}),
+  });
 
   private storedPhotoResponse = (photoBase64: string): CivitJobResult => ({
     photoBase64,
     isLoading: false,
   });
 
-  private errorResponse = (error: Error | string): CivitJobResult => ({
+  private errorResponse = (
+    error: Error | string,
+    cost?: WorkflowCost,
+  ): CivitJobResult => ({
     isLoading: false,
     photoBase64: undefined,
     error: error instanceof Error ? error.message : error,
+    ...(cost ? { cost } : {}),
   });
 }
 
@@ -77,4 +89,35 @@ const buildErrorMessage = (workflow: Workflow): string => {
   if (workflow.status === "expired") return "Image generation timed out.";
   if (workflow.status === "canceled") return "Image generation was canceled.";
   return "No image available.";
+};
+
+export const getWorkflowCost = (
+  workflow: Workflow,
+): WorkflowCost | undefined => {
+  const topLevelTotal = workflow.cost?.total;
+  if (typeof topLevelTotal === "number" && topLevelTotal > 0) {
+    return { amount: topLevelTotal };
+  }
+
+  const stepJobCost = workflow.steps
+    ?.flatMap((step) => step.jobs ?? [])
+    .map((job) => job.cost)
+    .find((cost) => typeof cost === "number" && cost > 0);
+  if (typeof stepJobCost === "number") return { amount: stepJobCost };
+
+  const transactions = Array.isArray(workflow.transactions)
+    ? workflow.transactions
+    : workflow.transactions?.list;
+  const debit = transactions?.find(
+    (transaction) =>
+      transaction.type === "debit" &&
+      typeof transaction.amount === "number" &&
+      transaction.amount > 0,
+  );
+
+  if (debit?.amount) {
+    return { amount: debit.amount, currency: debit.accountType };
+  }
+
+  return undefined;
 };

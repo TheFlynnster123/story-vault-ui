@@ -2,6 +2,7 @@ import Config from "../../../../services/Config";
 import type { Workflow } from "../CivitJob";
 import type { ImageGenInput, ImageGenStep } from "./ImageGenInput";
 import { d } from "../../../../services/Dependencies";
+import { parseAir } from "../modelGeneration/AirUtils";
 
 /**
  * Frontend client for the CivitAI Orchestration API.
@@ -72,6 +73,9 @@ export const normalizeImageGenInputForSubmission = (
   if (!isAnimaInput(input)) return input;
 
   const normalizedInput: ImageGenInput = { ...input };
+  if (normalizedInput.model && !normalizedInput.diffuserModel) {
+    normalizedInput.diffuserModel = normalizedInput.model;
+  }
   delete normalizedInput.model;
   delete normalizedInput.clipSkip;
   delete normalizedInput.sampler;
@@ -82,12 +86,17 @@ export const normalizeImageGenInputForSubmission = (
     ecosystem: "anima",
     engine: "sdcpp",
     operation: "createImage",
-    sampleMethod: normalizedInput.sampleMethod || "er_sde",
+    sampleMethod: normalizedInput.sampleMethod || "euler",
     schedule: normalizedInput.schedule || "simple",
   };
 };
 
+const getAirEcosystem = (air: string): string | undefined =>
+  parseAir(air)?.ecosystem?.toLowerCase();
+
 const isAnimaInput = (input: ImageGenInput): boolean =>
   input.ecosystem === "anima" ||
-  input.model?.startsWith("urn:air:anima:") === true ||
-  Object.keys(input.loras ?? {}).some((air) => air.startsWith("urn:air:anima:"));
+  (input.model ? getAirEcosystem(input.model) === "anima" : false) ||
+  Object.keys(input.loras ?? {}).some(
+    (air) => getAirEcosystem(air) === "anima",
+  );
