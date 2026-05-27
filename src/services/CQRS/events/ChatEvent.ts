@@ -76,6 +76,8 @@ export interface CivitJobCreatedEvent {
   sceneDescription?: string;
   generationStatus?: CivitJobGenerationStatus;
   generationError?: string;
+  costAmount?: number;
+  costCurrency?: string;
 }
 
 export type CivitWorkflowGenerationStatus =
@@ -102,6 +104,8 @@ export interface CivitWorkflowCreatedEvent {
   sceneDescription?: string;
   generationStatus?: CivitWorkflowGenerationStatus;
   generationError?: string;
+  costAmount?: number;
+  costCurrency?: string;
 }
 
 export interface CivitWorkflowUpdatedEvent {
@@ -119,6 +123,8 @@ export interface CivitWorkflowUpdatedEvent {
     sceneDescription: string;
     generationStatus: CivitWorkflowGenerationStatus;
     generationError: string;
+    costAmount: number;
+    costCurrency: string;
   }>;
 }
 
@@ -137,6 +143,8 @@ export interface CivitJobUpdatedEvent {
     sceneDescription: string;
     generationStatus: CivitJobGenerationStatus;
     generationError: string;
+    costAmount: number;
+    costCurrency: string;
   }>;
 }
 

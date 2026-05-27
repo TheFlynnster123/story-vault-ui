@@ -15,6 +15,8 @@ export interface CivitWorkflowExtras {
   sceneDescription?: string;
   generationStatus?: CivitWorkflowGenerationStatus;
   generationError?: string;
+  costAmount?: number;
+  costCurrency?: string;
 }
 
 export class CivitWorkflowCreatedEventUtil {

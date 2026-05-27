@@ -79,6 +79,40 @@ describe("CivitJobOrchestrator", () => {
       expectStoredPhotoCalledWith(chatId, jobId);
     });
 
+    it("should include workflow cost while workflow is still in progress", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
+      mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue({
+        ...createInProgressWorkflow(),
+        cost: { total: 23 },
+      });
+
+      const orchestrator = new CivitJobOrchestrator();
+      const result = await orchestrator.getOrPollPhoto(chatId, jobId);
+
+      expect(result).toEqual({
+        isLoading: true,
+        cost: { amount: 23 },
+      });
+    });
+
+    it("should fall back to debit transaction cost when total is unavailable", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
+      mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue({
+        ...createInProgressWorkflow(),
+        transactions: {
+          list: [{ type: "debit", amount: 16, accountType: "blue" }],
+        },
+      });
+
+      const orchestrator = new CivitJobOrchestrator();
+      const result = await orchestrator.getOrPollPhoto(chatId, jobId);
+
+      expect(result).toEqual({
+        isLoading: true,
+        cost: { amount: 16, currency: "blue" },
+      });
+    });
+
     it("should return stored photo without polling workflow status", async () => {
       mockPhotoStorageService.getStoredPhoto.mockResolvedValue(mockPhotoBase64);
 

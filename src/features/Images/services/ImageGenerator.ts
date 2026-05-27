@@ -6,6 +6,8 @@ import type { CharacterDescription } from "../../Characters/services/CharacterDe
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import { resolveVariant } from "./ImageModelVariant";
+import type { WorkflowCost } from "./CivitJob";
+import { getWorkflowCost } from "./CivitJobOrchestrator";
 
 export type CharacterContext =
   | { type: "none" }
@@ -141,6 +143,7 @@ export class ImageGenerator {
     onPromptPrepared?: (prompt: PreparedImagePrompt) => Promise<void> | void,
   ): Promise<{
     workflowId: string;
+    cost?: WorkflowCost;
     modelName: string;
     fullPrompt: string;
     basePrompt: string;
@@ -171,6 +174,7 @@ export class ImageGenerator {
 
     return {
       workflowId: workflow.id,
+      cost: getWorkflowCost(workflow),
       modelName: preparedPrompt.modelName,
       fullPrompt: preparedPrompt.fullPrompt,
       basePrompt,

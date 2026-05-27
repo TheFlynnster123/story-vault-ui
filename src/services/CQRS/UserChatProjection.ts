@@ -417,6 +417,8 @@ export class UserChatProjection {
     sceneDescription?: string;
     generationStatus?: string;
     generationError?: string;
+    costAmount?: number;
+    costCurrency?: string;
   }) {
     this.Messages.push({
       id: event.jobId,
@@ -433,6 +435,8 @@ export class UserChatProjection {
         sceneDescription: event.sceneDescription,
         generationStatus: event.generationStatus,
         generationError: event.generationError,
+        costAmount: event.costAmount,
+        costCurrency: event.costCurrency,
       },
 
       hiddenByChapterId: undefined,
@@ -457,6 +461,8 @@ export class UserChatProjection {
         sceneDescription: event.sceneDescription,
         generationStatus: event.generationStatus,
         generationError: event.generationError,
+        costAmount: event.costAmount,
+        costCurrency: event.costCurrency,
       },
 
       hiddenByChapterId: undefined,
@@ -707,6 +713,8 @@ export interface CivitJobChatMessage extends UserChatMessage {
     sceneDescription?: string;
     generationStatus?: string;
     generationError?: string;
+    costAmount?: number;
+    costCurrency?: string;
   };
 }
 
@@ -724,6 +732,8 @@ export interface CivitWorkflowChatMessage extends UserChatMessage {
     sceneDescription?: string;
     generationStatus?: string;
     generationError?: string;
+    costAmount?: number;
+    costCurrency?: string;
   };
 }
 

@@ -277,13 +277,16 @@ const VariantListItem: React.FC<{
   const overrideCount = countOverrides(variant);
   const parentIsLegacy = isLegacyJobImageModel(parent);
   const canUse = !!parent && !parentIsLegacy;
+  const sampleWorkflowId =
+    variant.overrides.sampleWorkflowId ??
+    (isWorkflowImageModel(parent) ? parent.sampleWorkflowId : undefined);
 
   return (
     <Paper withBorder p="md" mb="md" w="100%">
       <Group wrap="nowrap" align="flex-start" gap="md" w="100%">
         <Box>
           <ModelSampleImage
-            sampleImageJobId={variant.overrides.sampleWorkflowId}
+            sampleImageJobId={sampleWorkflowId}
             size="medium"
           />
         </Box>
