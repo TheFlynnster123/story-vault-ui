@@ -64,6 +64,11 @@ export interface SystemPrompts {
 
   /** System prompt used during plan discussion conversations */
   discussPlanPrompt: string;
+
+  /** Prompt used to analyze a chat turn and suggest agentic flow actions */
+  agentIntentPrompt: string;
+  /** Model override for agent intent generation (empty = use default) */
+  agentIntentModel?: string;
 }
 
 export const DEFAULT_SYSTEM_PROMPTS: SystemPrompts = {
@@ -107,7 +112,7 @@ Example:
 
   characterSelectionPrompt:
     "Review the conversation above and identify which character should be depicted in the next image. Choose the character most prominently featured in the current scene or narrative moment - this may not be the main character. Consider who is actively participating in the scene, who the narrative is focusing on, and who would be most meaningful to visualize. Respond with ONLY the character's name, nothing else. If you are highly confident, respond with just the name. If uncertain, respond with 'UNCLEAR'.",
-  characterSelectionModel: "x-ai/grok-4.1-fast",
+  characterSelectionModel: "x-ai/grok-4.3",
 
   characterDescriptionPrompt: `Consider the character present.
 
@@ -133,4 +138,18 @@ Example:
 
   discussPlanPrompt:
     "You are helping the user discuss and refine their story plan.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the story plan should contain.\nEngage in a helpful, creative conversation about story possibilities.\nSuggest ideas, ask clarifying questions, and help them refine their vision.\nKeep responses concise and focused on actionable plan improvements.",
+
+  agentIntentPrompt: `Analyze the chat history and suggest low-risk agentic workflow actions that would help the user maintain continuity, organize context, or trigger relevant creative workflows.
+
+Focus on actions that are valuable now:
+- update_memory: durable facts, continuity constraints, character details, setting details, plot decisions
+- generate_image: a visually concrete current scene or character moment
+- refresh_plan: plans likely stale after meaningful story movement
+- create_chapter: a natural chapter boundary or summary opportunity
+- add_note: short-lived instruction useful for the next few messages
+- ask_user: a missing decision blocks a useful workflow
+- continue_chat: no workflow action is useful yet
+
+Return exactly one JSON object matching the configured response schema. Do not return a bare intent string. Return conservative suggestions. Prefer no action when the signal is weak. Do not invent facts not present in the chat.`,
+  agentIntentModel: "x-ai/grok-4.3",
 };

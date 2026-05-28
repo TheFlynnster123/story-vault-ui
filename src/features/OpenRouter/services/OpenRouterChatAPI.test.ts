@@ -64,6 +64,70 @@ describe("OpenRouterChatAPI", () => {
       });
     });
 
+    it("should send strict response format for structured chat", async () => {
+      const responseBody = {
+        reply: JSON.stringify({
+          intent: "continue_chat",
+          confidence: 0.2,
+          rationale: "No action needed.",
+          proposedActions: [],
+        }),
+      };
+      const fetchSpy = vi
+        .spyOn(global, "fetch")
+        .mockResolvedValue(
+          new Response(JSON.stringify(responseBody), { status: 200 }),
+        );
+
+      const responseFormat = {
+        type: "json_schema" as const,
+        json_schema: {
+          name: "test_schema",
+          strict: true,
+          schema: { type: "object" },
+        },
+      };
+
+      const result = await api.postStructuredChat<{
+        intent: string;
+        confidence: number;
+      }>([{ role: "user", content: "Hi" }], responseFormat, "x-ai/grok-4.3");
+
+      const sentBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(result.intent).toBe("continue_chat");
+      expect(sentBody.model).toBe("x-ai/grok-4.3");
+      expect(sentBody.response_format).toEqual(responseFormat);
+      expect(sentBody.provider).toEqual({ require_parameters: true });
+      expect(sentBody.plugins).toEqual([{ id: "response-healing" }]);
+    });
+
+    it("can return plain text for structured chat when fallback is allowed", async () => {
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ reply: "update_memory" }), {
+          status: 200,
+        }),
+      );
+
+      const responseFormat = {
+        type: "json_schema" as const,
+        json_schema: {
+          name: "test_schema",
+          strict: true,
+          schema: { type: "object" },
+        },
+      };
+
+      const result = await api.postStructuredChat<string>(
+        [{ role: "user", content: "Hi" }],
+        responseFormat,
+        "x-ai/grok-4.3",
+        "Agent Intent",
+        true,
+      );
+
+      expect(result).toBe("update_memory");
+    });
+
     it("should refresh credits after a streamed response completes", async () => {
       const encoder = new TextEncoder();
       const stream = new ReadableStream({

@@ -19,6 +19,7 @@ import {
   LuLibrary,
   LuBookMarked,
   LuMessageCircle,
+  LuWorkflow,
 } from "react-icons/lu";
 
 const PromptSection: React.FC<{ children: React.ReactNode }> = ({
@@ -319,6 +320,30 @@ export const SystemPromptsEditor: React.FC = () => {
             handlePromptChange({ bookTitleModel: value || undefined })
           }
           label="Book Title Model"
+          withDescription={false}
+        />
+      </PromptSection>
+
+      <PromptSection>
+        <PromptInput
+          id="agentIntentPrompt"
+          label="Agent Intent Prompt"
+          helpText="This prompt instructs the AI how to analyze the current chat and suggest agentic workflow actions such as updating memory, generating images, refreshing plans, or creating chapters."
+          value={localPrompts.agentIntentPrompt || ""}
+          isHighlighted={highlightedPrompt === "agentIntentPrompt"}
+          onChange={(value) => handlePromptChange({ agentIntentPrompt: value })}
+          onReset={() =>
+            handleResetClick("agentIntentPrompt", "Agent Intent Prompt")
+          }
+          minRows={8}
+          icon={<LuWorkflow size={18} color="orange" />}
+        />
+        <ModelSelect
+          value={localPrompts.agentIntentModel || ""}
+          onChange={(value) =>
+            handlePromptChange({ agentIntentModel: value || undefined })
+          }
+          label="Agent Intent Model"
           withDescription={false}
         />
       </PromptSection>
