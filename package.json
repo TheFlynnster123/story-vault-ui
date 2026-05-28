@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "debug": "concurrently \"google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug http://localhost:5173\" \"vite\"",
-    "dev": "vite",
-    "start": "vite",
+    "debug": "concurrently \"google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug https://localhost:5173\" \"npm run start-secure\"",
+    "dev": "npm run start-secure",
+    "start": "npm run start-secure",
     "start-secure": "cross-env VITE_USE_HTTPS=true vite --host",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
