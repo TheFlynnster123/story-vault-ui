@@ -20,6 +20,20 @@ interface UsageResponse {
 interface PostChatRequest {
   messages: CleanMessage[];
   model?: string;
+  response_format?: OpenRouterResponseFormat;
+  provider?: {
+    require_parameters?: boolean;
+  };
+  plugins?: Array<{ id: string; [key: string]: unknown }>;
+}
+
+interface OpenRouterResponseFormat {
+  type: "json_schema" | "json_object";
+  json_schema?: {
+    name: string;
+    strict?: boolean;
+    schema: Record<string, unknown>;
+  };
 }
 
 export class OpenRouterChatAPI {
@@ -35,7 +49,7 @@ export class OpenRouterChatAPI {
     requestType: RequestType = "chat",
     requestLabel: string = "LLM",
   ): Promise<string> {
-    var openRouterEncryptionKey = await d
+    const openRouterEncryptionKey = await d
       .EncryptionManager()
       .getOpenRouterEncryptionKey();
 
@@ -80,6 +94,65 @@ export class OpenRouterChatAPI {
     });
 
     return response.reply;
+  }
+
+  public async postStructuredChat<T>(
+    messages: LLMMessage[],
+    responseFormat: OpenRouterResponseFormat,
+    modelOverride?: string,
+    requestLabel: string = "Agent Intent",
+    allowPlainTextFallback: boolean = false,
+  ): Promise<T> {
+    const openRouterEncryptionKey = await d
+      .EncryptionManager()
+      .getOpenRouterEncryptionKey();
+
+    const headers: Record<string, string> = {
+      EncryptionKey: openRouterEncryptionKey,
+    };
+
+    const systemSettings = await d.SystemSettingsService().Get();
+
+    const requestBody: PostChatRequest = {
+      messages: cleanMessages(messages),
+      ...systemSettings?.chatGenerationSettings,
+      response_format: responseFormat,
+      provider: {
+        require_parameters: true,
+      },
+      plugins: [{ id: "response-healing" }],
+    };
+
+    if (modelOverride) {
+      requestBody.model = modelOverride;
+    }
+
+    const response = await this.makeRequest<{
+      reply: string;
+      usage: UsageResponse | null;
+    }>(`/api/PostChat`, {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+      headers,
+    });
+
+    d.RequestTracker().record({
+      label: requestLabel,
+      type: "agent-intent",
+      model: requestBody.model,
+      timestamp: new Date(),
+      inputMessageCount: messages.length,
+      inputCharCount: sumMessageChars(messages),
+      responseCharCount: response.reply.length,
+      inputMessages: cleanMessages(messages),
+      responseContent: response.reply,
+      actualCost: response.usage?.cost ?? undefined,
+      promptTokens: response.usage?.promptTokens ?? undefined,
+      completionTokens: response.usage?.completionTokens ?? undefined,
+      reasoningTokens: response.usage?.reasoningTokens ?? undefined,
+    });
+
+    return parseStructuredReply<T>(response.reply, allowPlainTextFallback);
   }
 
   public async postChatStream(
@@ -225,14 +298,17 @@ export class OpenRouterChatAPI {
       const json = await response.json();
       await this.refreshCredits();
       return json;
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof OpenRouterError) {
         d.ErrorService().log(e.message, e);
         throw e;
       }
 
       d.ErrorService().log("Network error — please check your connection", e);
-      throw new OpenRouterError(0, e?.message || "Unknown network error");
+      throw new OpenRouterError(
+        0,
+        e instanceof Error ? e.message : "Unknown network error",
+      );
     }
   }
 
@@ -260,3 +336,30 @@ export const cleanMessages = (messages: LLMMessage[]): CleanMessage[] =>
 
 const sumMessageChars = (messages: LLMMessage[]): number =>
   messages.reduce((sum, m) => sum + m.content.length, 0);
+
+const parseStructuredReply = <T>(
+  reply: string,
+  allowPlainTextFallback: boolean,
+): T => {
+  const cleanedReply = stripJsonCodeFence(reply);
+  try {
+    return JSON.parse(cleanedReply) as T;
+  } catch (error) {
+    if (allowPlainTextFallback) {
+      return cleanedReply as T;
+    }
+
+    throw new OpenRouterError(
+      0,
+      `Structured response was not valid JSON: ${
+        error instanceof Error ? error.message : "Unknown parse error"
+      }`,
+    );
+  }
+};
+
+const stripJsonCodeFence = (reply: string): string => {
+  const trimmed = reply.trim();
+  const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return match ? match[1].trim() : trimmed;
+};

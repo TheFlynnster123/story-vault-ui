@@ -12,6 +12,7 @@ import { PlanSection } from "../../../../Plans/components/PlanSection";
 import { CharacterDescriptionsSection } from "../../../../Characters/components/CharacterDescriptionsSection";
 import { TransparencySlider } from "./TransparencySlider";
 import { CreditsSection } from "./CreditsSection";
+import { AgentFlowSection } from "./AgentFlowSection";
 
 interface FlowAccordionProps {
   chatId: string;
@@ -45,6 +46,11 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
               <TransparencySlider chatId={chatId} />
               <ChatModelSection chatId={chatId} />
               <CreditsSection chatId={chatId} />
+              <AgentFlowSection
+                chatId={chatId}
+                onNavigateToMemories={navigateToMemories}
+                onNavigateToPlans={navigateToPlan}
+              />
               <ChatImageModelsSection
                 chatId={chatId}
                 onNavigate={navigateToChatImageModels}

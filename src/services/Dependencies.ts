@@ -22,6 +22,7 @@ import { getImageGenerationServiceInstance } from "../features/Chat/services/Cha
 import { getChapterGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/ChapterGenerationService";
 import { getBookGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/BookGenerationService";
 import { getLLMMessageContextServiceInstance } from "../features/Chat/services/ChatGeneration/LLMMessageContextService";
+import { getAgentFlowServiceInstance } from "../features/Chat/services/AgentFlow/AgentFlowService";
 import { ImageGenerator } from "../features/Images/services/ImageGenerator";
 import { getChatImageModelServiceInstance } from "../features/Images/services/ChatImageModelService";
 import { getChatImageVariantServiceInstance } from "../features/Images/services/ChatImageVariantService";
@@ -167,6 +168,9 @@ export class Dependencies {
   }
   LLMMessageContextService(chatId: string) {
     return getLLMMessageContextServiceInstance(chatId);
+  }
+  AgentFlowService(chatId: string) {
+    return getAgentFlowServiceInstance(chatId);
   }
   OpenRouterChatAPI() {
     return new OpenRouterChatAPI();

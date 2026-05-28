@@ -26,6 +26,7 @@ export interface OpenRouterModel {
   description?: string;
   context_length?: number;
   pricing?: OpenRouterModelPricing;
+  supported_parameters?: string[];
 }
 
 interface OpenRouterModelsResponse {
