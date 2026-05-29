@@ -69,7 +69,9 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
   const effectiveRequestSettings = useMemo(
     () =>
       requestSettings ??
-      (reasoningEffort ? { reasoning: { effort: reasoningEffort } } : undefined),
+      (reasoningEffort
+        ? { reasoning: { effort: reasoningEffort } }
+        : undefined),
     [reasoningEffort, requestSettings],
   );
 
@@ -155,9 +157,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
               </span>
             )}
             {hasOpenRouterRequestSettings(filteredRequestSettings) && (
-              <span style={{ color: "#bfdbfe", marginLeft: 8 }}>
-                Advanced
-              </span>
+              <span style={{ color: "#bfdbfe", marginLeft: 8 }}>Advanced</span>
             )}
           </span>
           <span
