@@ -16,12 +16,13 @@ import type {
   PlanHiddenEvent,
   NoteCreatedEvent,
   NoteEditedEvent,
+  AgentClarificationCreatedEvent,
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
 
 export const getLLMChatProjectionInstance = createInstanceCache(
-  (_chatId: string) => new LLMChatProjection(),
+  () => new LLMChatProjection(),
 );
 
 // ---- LLM Chat Projection ----
@@ -114,6 +115,9 @@ export class LLMChatProjection {
         break;
       case "NoteEdited":
         this.processNoteEdited(event);
+        break;
+      case "AgentClarificationCreated":
+        this.processAgentClarificationCreated(event);
         break;
     }
   }
@@ -219,7 +223,7 @@ export class LLMChatProjection {
     this.hideMessages(event.chapterId, event.coveredMessageIds);
 
     const previousLastChapter = this.getLastChapter();
-    if (!!previousLastChapter)
+    if (previousLastChapter)
       this.updateChapterToSimpleFormat(previousLastChapter.id);
 
     const chapterContent = this.formatChapterContentFull(
@@ -431,6 +435,26 @@ export class LLMChatProjection {
   formatNoteContent = (content: string): string =>
     `[Note]\n${content}\n[End of Note]`;
 
+  processAgentClarificationCreated(event: AgentClarificationCreatedEvent) {
+    const clarificationMessage = this.createMessageState(
+      event.clarificationId,
+      "agent-clarification",
+      "system",
+      this.formatAgentClarificationContent(event.question, event.answer),
+    );
+    clarificationMessage.data = {
+      question: event.question,
+      answer: event.answer,
+    };
+    this.messages.push(clarificationMessage);
+  }
+
+  formatAgentClarificationContent = (
+    question: string,
+    answer: string,
+  ): string =>
+    `[User Clarification]\nQuestion: ${question}\nAnswer: ${answer}\n[End of User Clarification]`;
+
   formatPlanContent = (planName: string, content: string): string =>
     `[Plan: ${planName}]\n${content}\n[End of Plan]`;
 
@@ -604,7 +628,13 @@ export class LLMChatProjection {
 
   createMessageState(
     id: string,
-    type: "message" | "chapter" | "book" | "plan" | "note",
+    type:
+      | "message"
+      | "chapter"
+      | "book"
+      | "plan"
+      | "note"
+      | "agent-clarification",
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[],
@@ -626,7 +656,13 @@ export class LLMChatProjection {
 // ---- Types ----
 interface MessageState {
   id: string;
-  type: "message" | "chapter" | "book" | "plan" | "note";
+  type:
+    | "message"
+    | "chapter"
+    | "book"
+    | "plan"
+    | "note"
+    | "agent-clarification";
   role: "user" | "assistant" | "system";
   content: string;
   hiddenByChapterId: string | null;
@@ -648,6 +684,8 @@ interface MessageState {
     planName?: string;
     rawContent?: string;
     expiresAfterMessages?: number | null;
+    question?: string;
+    answer?: string;
   };
 }
 

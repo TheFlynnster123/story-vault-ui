@@ -18,7 +18,8 @@ export type ChatEvent =
   | PlanCreatedEvent
   | PlanHiddenEvent
   | NoteCreatedEvent
-  | NoteEditedEvent;
+  | NoteEditedEvent
+  | AgentClarificationCreatedEvent;
 
 export interface MessageCreatedEvent {
   type: "MessageCreated";
@@ -229,4 +230,16 @@ export interface NoteEditedEvent {
   noteId: string;
   content: string;
   expiresAfterMessages: number | null;
+}
+
+/**
+ * Stores a user clarification captured by Agent Flow.
+ * Clarifications are distinct from normal chat messages so they can be
+ * rendered and deleted as workflow artifacts while still informing LLM context.
+ */
+export interface AgentClarificationCreatedEvent {
+  type: "AgentClarificationCreated";
+  clarificationId: string;
+  question: string;
+  answer: string;
 }

@@ -4,6 +4,11 @@ import { FlowStyles } from "./FlowStyles";
 
 interface FlowButtonProps {
   onClick: () => void;
+  onMouseDown?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onMouseUp?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onMouseLeave?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onTouchStart?: (event: React.TouchEvent<HTMLButtonElement>) => void;
+  onTouchEnd?: (event: React.TouchEvent<HTMLButtonElement>) => void;
   leftSection?: React.ReactNode;
   rightSection?: React.ReactNode;
   children: React.ReactNode;
@@ -11,6 +16,11 @@ interface FlowButtonProps {
 
 export const FlowButton: React.FC<FlowButtonProps> = ({
   onClick,
+  onMouseDown,
+  onMouseUp,
+  onMouseLeave,
+  onTouchStart,
+  onTouchEnd,
   leftSection,
   rightSection,
   children,
@@ -23,6 +33,11 @@ export const FlowButton: React.FC<FlowButtonProps> = ({
     leftSection={leftSection}
     rightSection={rightSection}
     onClick={onClick}
+    onMouseDown={onMouseDown}
+    onMouseUp={onMouseUp}
+    onMouseLeave={onMouseLeave}
+    onTouchStart={onTouchStart}
+    onTouchEnd={onTouchEnd}
     styles={{
       root: {
         backgroundColor: FlowStyles.buttonBackground,

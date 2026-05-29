@@ -20,6 +20,8 @@ export const ChatModelSection: React.FC<ChatModelSectionProps> = ({
   const {
     activeModelId,
     activeModel,
+    activeReasoningEffort,
+    activeRequestSettings,
     isOverridden,
     setModelOverride,
     clearModelOverride,
@@ -78,6 +80,11 @@ export const ChatModelSection: React.FC<ChatModelSectionProps> = ({
             >
               {isLoading ? "Loading..." : truncateModelName(displayName)}
             </Text>
+            {activeReasoningEffort && (
+              <Text size="xs" style={{ color: "rgba(147, 197, 253, 0.85)" }}>
+                {activeReasoningEffort}
+              </Text>
+            )}
           </Group>
         </FlowButton>
       </Box>
@@ -104,7 +111,10 @@ export const ChatModelSection: React.FC<ChatModelSectionProps> = ({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         selectedModelId={activeModelId}
-        onSelect={(modelId) => setModelOverride(modelId)}
+        selectedRequestSettings={activeRequestSettings}
+        onSelect={(modelId, requestSettings) =>
+          setModelOverride(modelId, requestSettings)
+        }
       />
     </Box>
   );

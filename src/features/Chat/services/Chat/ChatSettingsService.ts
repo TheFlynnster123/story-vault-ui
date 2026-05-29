@@ -1,6 +1,7 @@
 import { d } from "../../../../services/Dependencies";
 import type { ChatSettings } from "./ChatSettings";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
+import type { OpenRouterRequestSettings } from "../../../OpenRouter/services/OpenRouterRequestSettings";
 
 export const getChatSettingsServiceInstance = createInstanceCache(
   (chatId: string) => new ChatSettingsService(chatId),
@@ -26,14 +27,37 @@ export class ChatSettingsService {
   isLoading = () => this.blob().isLoading();
 
   /**
-   * Sets the background photo from a base64 string and clears any CivitJob background.
+   * Updates specific chat settings fields without replacing unrelated settings.
+   * Prefer this for feature-owned updates so newer settings are preserved.
    */
-  async setBackgroundPhotoBase64(base64: string | undefined): Promise<void> {
+  async update(updates: Partial<ChatSettings>): Promise<void> {
     const currentSettings = await this.Get();
     if (!currentSettings) return;
 
-    await this.saveDebounced({
+    await this.save({
       ...currentSettings,
+      ...updates,
+    });
+  }
+
+  /**
+   * Debounced variant of update() for form controls and sliders.
+   */
+  async updateDebounced(updates: Partial<ChatSettings>): Promise<void> {
+    const currentSettings = await this.Get();
+    if (!currentSettings) return;
+
+    this.saveDebounced({
+      ...currentSettings,
+      ...updates,
+    });
+  }
+
+  /**
+   * Sets the background photo from a base64 string and clears any CivitJob background.
+   */
+  async setBackgroundPhotoBase64(base64: string | undefined): Promise<void> {
+    await this.updateDebounced({
       backgroundPhotoBase64: base64,
       backgroundPhotoWorkflowId: undefined,
       backgroundPhotoCivitJobId: undefined,
@@ -46,11 +70,7 @@ export class ChatSettingsService {
   async setBackgroundPhotoWorkflowId(
     workflowId: string | undefined,
   ): Promise<void> {
-    const currentSettings = await this.Get();
-    if (!currentSettings) return;
-
-    await this.saveDebounced({
-      ...currentSettings,
+    await this.updateDebounced({
       backgroundPhotoBase64: undefined,
       backgroundPhotoWorkflowId: workflowId,
       backgroundPhotoCivitJobId: undefined,
@@ -64,13 +84,14 @@ export class ChatSettingsService {
   /**
    * Sets a per-chat model override, overriding the system default model for this chat.
    */
-  async setModelOverride(modelId: string | undefined): Promise<void> {
-    const currentSettings = await this.Get();
-    if (!currentSettings) return;
-
-    await this.save({
-      ...currentSettings,
+  async setModelOverride(
+    modelId: string | undefined,
+    requestSettings?: OpenRouterRequestSettings,
+  ): Promise<void> {
+    await this.update({
       modelOverride: modelId,
+      modelRequestSettingsOverride: modelId ? requestSettings : undefined,
+      modelReasoningEffortOverride: undefined,
     });
   }
 
@@ -78,11 +99,7 @@ export class ChatSettingsService {
    * Sets the per-chat message transparency (0-1).
    */
   async setMessageTransparency(value: number): Promise<void> {
-    const currentSettings = await this.Get();
-    if (!currentSettings) return;
-
-    await this.saveDebounced({
-      ...currentSettings,
+    await this.updateDebounced({
       messageTransparency: value,
     });
   }

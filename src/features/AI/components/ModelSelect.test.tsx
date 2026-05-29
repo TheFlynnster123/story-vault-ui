@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "../../../testing";
+import { render, screen, userEvent, waitFor } from "../../../testing";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { ModelSelect } from "./ModelSelect";
@@ -103,6 +103,31 @@ describe("ModelSelect with ModelSelectorModal", () => {
     });
   });
 
+  it("should support a hidden visible label with a custom empty value label", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(createMockModelsResponse([])), {
+        status: 200,
+      }),
+    );
+
+    renderWithProviders(
+      <ModelSelect
+        value=""
+        onChange={() => {}}
+        ariaLabel="Chat Model"
+        emptyValueLabel="Default Chat Model"
+        hideLabel
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Chat Model")).toBeInTheDocument();
+      expect(screen.getByText("Default Chat Model")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/^Model$/)).not.toBeInTheDocument();
+  });
+
   it("should render without crashing when API fails", async () => {
     vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network error"));
 
@@ -126,6 +151,8 @@ describe("ModelSelect with ModelSelectorModal", () => {
   });
 
   it("should open modal when button is clicked", async () => {
+    const user = userEvent.setup();
+
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify(
@@ -141,7 +168,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
     });
 
-    screen.getByLabelText("Model").click();
+    await user.click(screen.getByLabelText("Model"));
 
     await waitFor(() => {
       expect(screen.getByText("Select Model")).toBeInTheDocument();
@@ -171,6 +198,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
 
   it("should call onChange with null when clear is clicked", async () => {
     const handleChange = vi.fn();
+    const user = userEvent.setup();
 
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
@@ -191,7 +219,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
       ).toBeInTheDocument();
     });
 
-    screen.getByLabelText("Clear model selection").click();
+    await user.click(screen.getByLabelText("Clear model selection"));
 
     expect(handleChange).toHaveBeenCalledWith(null);
   });

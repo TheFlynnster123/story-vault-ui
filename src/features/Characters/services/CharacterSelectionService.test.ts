@@ -130,7 +130,7 @@ describe("CharacterSelectionService", () => {
       await service.selectCharacterForImage();
 
       const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0];
-      expect(callArgs[1]).toBe("x-ai/grok-4.1-fast");
+      expect(callArgs[1]).toBe("x-ai/grok-4.3");
     });
 
     it("should include chat messages in prompt", async () => {

@@ -30,6 +30,7 @@ const createMockModelsResponse = (
     description?: string;
     context_length?: number;
     pricing?: { prompt?: string; completion?: string };
+    supported_parameters?: string[];
   }>,
 ) => ({ data: models });
 
@@ -63,6 +64,8 @@ const MOCK_MODELS = [
   },
 ];
 
+type MockModel = Parameters<typeof createMockModelsResponse>[0][number];
+
 describe("ModelSelectorModal", () => {
   let queryClient: QueryClient;
 
@@ -79,7 +82,7 @@ describe("ModelSelectorModal", () => {
     queryClient.clear();
   });
 
-  const mockFetchModels = (models = MOCK_MODELS) => {
+  const mockFetchModels = (models: MockModel[] = MOCK_MODELS) => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(JSON.stringify(createMockModelsResponse(models)), {
         status: 200,
@@ -173,6 +176,28 @@ describe("ModelSelectorModal", () => {
       // GPT-4 prompt: 0.00003 * 1M = $30.00
       expect(screen.getByText(/Prompt: \$30\.00/)).toBeInTheDocument();
     });
+  });
+
+  it("should show reasoning level selector for models that support reasoning", async () => {
+    mockFetchModels([
+      {
+        id: "openai/o4-mini",
+        name: "o4-mini",
+        supported_parameters: ["reasoning"],
+      },
+    ]);
+    const user = userEvent.setup();
+    renderModal();
+
+    await waitFor(() => {
+      expect(screen.getByText("o4-mini")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Advanced settings for o4-mini"));
+
+    expect(
+      screen.getByLabelText("Reasoning level for o4-mini"),
+    ).toBeInTheDocument();
   });
 
   // --- Search ---
@@ -273,6 +298,37 @@ describe("ModelSelectorModal", () => {
 
     expect(onSelect).toHaveBeenCalledWith("openai/gpt-4");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("should pass selected advanced settings when a supported model is clicked", async () => {
+    mockFetchModels([
+      {
+        id: "openai/o4-mini",
+        name: "o4-mini",
+        supported_parameters: ["reasoning", "temperature"],
+      },
+    ]);
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderModal({ onSelect });
+
+    await waitFor(() => {
+      expect(screen.getByText("o4-mini")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Advanced settings for o4-mini"));
+    await user.selectOptions(
+      screen.getByLabelText("Reasoning level for o4-mini"),
+      "high",
+    );
+    await user.clear(screen.getByLabelText("Temperature"));
+    await user.type(screen.getByLabelText("Temperature"), "0.4");
+    screen.getByText("o4-mini").click();
+
+    expect(onSelect).toHaveBeenCalledWith("openai/o4-mini", {
+      reasoning: { effort: "high" },
+      temperature: 0.4,
+    });
   });
 
   it("should track the selected model in recent models", async () => {

@@ -4,6 +4,14 @@ import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels"
 import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
 import { d } from "../../../services/Dependencies";
 import { ModelSelectorModal } from "./ModelSelectorModal";
+import type {
+  OpenRouterReasoningEffort,
+  OpenRouterRequestSettings,
+} from "../../OpenRouter/services/OpenRouterRequestSettings";
+import {
+  filterSettingsForModel,
+  hasOpenRouterRequestSettings,
+} from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 const findModelName = (
   models: OpenRouterModel[],
@@ -14,53 +22,101 @@ const findModelName = (
 interface ModelSelectProps {
   value: string | null;
   onChange: (value: string | null) => void;
+  reasoningEffort?: OpenRouterReasoningEffort;
+  onReasoningEffortChange?: (
+    reasoningEffort: OpenRouterReasoningEffort | undefined,
+  ) => void;
+  requestSettings?: OpenRouterRequestSettings;
+  onRequestSettingsChange?: (
+    requestSettings: OpenRouterRequestSettings | undefined,
+  ) => void;
   label?: string;
+  ariaLabel?: string;
+  emptyValueLabel?: string;
+  hideLabel?: boolean;
   withDescription?: boolean;
 }
 
 export const ModelSelect: React.FC<ModelSelectProps> = ({
   value,
   onChange,
+  reasoningEffort,
+  onReasoningEffortChange,
+  requestSettings,
+  onRequestSettingsChange,
   label = "Model",
+  ariaLabel,
+  emptyValueLabel = "Default",
+  hideLabel = false,
   withDescription = true,
 }) => {
   const { models, isLoading } = useOpenRouterModels();
   const recentModelsService = useRef(d.RecentModelsService()).current;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const accessibleLabel = ariaLabel ?? label ?? "Model";
+  const visibleLabel = hideLabel ? undefined : label;
 
   const displayName = useMemo(
-    () => findModelName(models, value) ?? (value || "Default"),
+    () => findModelName(models, value) ?? (value || emptyValueLabel),
+    [emptyValueLabel, models, value],
+  );
+
+  const selectedModel = useMemo(
+    () => (value ? models.find((model) => model.id === value) : undefined),
     [models, value],
   );
 
+  const effectiveRequestSettings = useMemo(
+    () =>
+      requestSettings ??
+      (reasoningEffort
+        ? { reasoning: { effort: reasoningEffort } }
+        : undefined),
+    [reasoningEffort, requestSettings],
+  );
+
+  const filteredRequestSettings = useMemo(
+    () => filterSettingsForModel(effectiveRequestSettings, selectedModel),
+    [effectiveRequestSettings, selectedModel],
+  );
+
   const handleSelect = useCallback(
-    (modelId: string) => {
+    (modelId: string, selectedRequestSettings?: OpenRouterRequestSettings) => {
       recentModelsService.trackModel(modelId);
       onChange(modelId);
+      onRequestSettingsChange?.(selectedRequestSettings);
+      onReasoningEffortChange?.(selectedRequestSettings?.reasoning?.effort);
     },
-    [recentModelsService, onChange],
+    [
+      recentModelsService,
+      onChange,
+      onRequestSettingsChange,
+      onReasoningEffortChange,
+    ],
   );
 
   const handleClear = useCallback(() => {
     onChange(null);
-  }, [onChange]);
+    onRequestSettingsChange?.(undefined);
+    onReasoningEffortChange?.(undefined);
+  }, [onChange, onRequestSettingsChange, onReasoningEffortChange]);
 
   return (
     <Stack gap="xs">
       <div>
-        {label && (
+        {visibleLabel && (
           <Text
             component="label"
             size="sm"
             fw={500}
             style={{ display: "block", marginBottom: 4 }}
           >
-            {label}
+            {visibleLabel}
           </Text>
         )}
         <button
           type="button"
-          aria-label={label}
+          aria-label={accessibleLabel}
           onClick={() => setIsModalOpen(true)}
           style={{
             display: "flex",
@@ -95,6 +151,14 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
             }}
           >
             {displayName}
+            {filteredRequestSettings?.reasoning?.effort && (
+              <span style={{ color: "#93c5fd", marginLeft: 8 }}>
+                Reasoning: {filteredRequestSettings.reasoning.effort}
+              </span>
+            )}
+            {hasOpenRouterRequestSettings(filteredRequestSettings) && (
+              <span style={{ color: "#bfdbfe", marginLeft: 8 }}>Advanced</span>
+            )}
           </span>
           <span
             style={{
@@ -146,6 +210,10 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         selectedModelId={value || undefined}
+        allowAdvancedSettings={
+          !!onRequestSettingsChange || !!onReasoningEffortChange
+        }
+        selectedRequestSettings={filteredRequestSettings}
         onSelect={handleSelect}
       />
     </Stack>

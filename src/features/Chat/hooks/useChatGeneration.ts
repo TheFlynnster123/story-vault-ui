@@ -28,6 +28,7 @@ export const useChatGeneration = (chatId: string) => {
       try {
         if (userInput.trim()) {
           await d.ChatService(chatId).AddUserMessage(userInput);
+          void maybeAutoRunAgentFlow(chatId);
         }
 
         return (await textGeneration.generateResponse(guidance)) ?? "";
@@ -38,7 +39,7 @@ export const useChatGeneration = (chatId: string) => {
         return "";
       }
     },
-    [textGeneration],
+    [chatId, textGeneration],
   );
 
   const regenerateResponse = useCallback(
@@ -186,4 +187,30 @@ export const useChatGeneration = (chatId: string) => {
     isTextLoading,
     isImageLoading,
   };
+};
+
+const maybeAutoRunAgentFlow = async (chatId: string): Promise<void> => {
+  try {
+    const chatSettingsService = d.ChatSettingsService(chatId);
+    const settings = await chatSettingsService.Get();
+    if (!settings?.agentFlowAutoRunEnabled) return;
+
+    const interval = Math.max(1, settings.agentFlowAutoRunInterval ?? 3);
+    const nextCount = (settings.agentFlowMessagesSinceLastRun ?? 0) + 1;
+
+    if (nextCount < interval) {
+      await chatSettingsService.update({
+        agentFlowMessagesSinceLastRun: nextCount,
+      });
+      return;
+    }
+
+    await chatSettingsService.update({
+      agentFlowMessagesSinceLastRun: 0,
+    });
+
+    await d.AgentFlowService(chatId).analyzeIntentSuggestion();
+  } catch (error) {
+    d.ErrorService().log("Failed to auto-run agent flow", error);
+  }
 };

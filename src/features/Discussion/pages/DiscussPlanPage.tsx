@@ -18,6 +18,7 @@ const pageConfig: DiscussionPageConfig = {
   title: "Discuss Plan",
   description:
     'Discuss the plan with the AI. When you\'re satisfied, click "Generate Updated Story Plan" to regenerate the plan using this conversation as feedback.',
+  descriptionInInfoPopover: true,
   inputPlaceholder: "Discuss plan…",
   generateButtonLabel: "Generate Updated Story Plan",
   finalFeedbackButtonLabel: "Send & Generate Plan",

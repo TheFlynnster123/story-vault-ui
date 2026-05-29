@@ -1,8 +1,20 @@
 import { Container } from "@mantine/core";
 
-export const Page: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface PageProps {
+  children: React.ReactNode;
+  padding?: string | number;
+  width?: string | number;
+  minWidth?: string | number;
+}
+
+export const Page: React.FC<PageProps> = ({
+  children,
+  padding = "md",
+  width = "95vw",
+  minWidth = "95vw",
+}) => {
   return (
-    <Container miw={"95vw"} w={"95vw"} p="md">
+    <Container miw={minWidth} w={width} p={padding}>
       {children}
     </Container>
   );
