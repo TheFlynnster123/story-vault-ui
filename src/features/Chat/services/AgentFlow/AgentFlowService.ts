@@ -103,12 +103,37 @@ const AGENT_INTENT_RESPONSE_FORMAT = {
 
 export class AgentFlowService {
   private readonly chatId: string;
+  private subscribers = new Set<() => void>();
+
+  public CurrentSuggestion: AgentFlowSuggestion | null = null;
+  public IsLoading: boolean = false;
 
   constructor(chatId: string) {
     this.chatId = chatId;
   }
 
-  async generateIntentSuggestion(): Promise<AgentFlowSuggestion> {
+  subscribe(callback: () => void): () => void {
+    this.subscribers.add(callback);
+    return () => this.subscribers.delete(callback);
+  }
+
+  async analyzeIntentSuggestion(
+    selectedIntent?: AgentIntent,
+  ): Promise<AgentFlowSuggestion> {
+    this.setIsLoading(true);
+    try {
+      const suggestion = await this.generateIntentSuggestion(selectedIntent);
+      this.CurrentSuggestion = suggestion;
+      this.notifySubscribers();
+      return suggestion;
+    } finally {
+      this.setIsLoading(false);
+    }
+  }
+
+  async generateIntentSuggestion(
+    selectedIntent?: AgentIntent,
+  ): Promise<AgentFlowSuggestion> {
     const systemPrompts = await d.SystemPromptsService().Get();
     const prompt =
       systemPrompts?.agentIntentPrompt?.trim() ||
@@ -121,7 +146,11 @@ export class AgentFlowService {
       .LLMMessageContextService(this.chatId)
       .buildGenerationRequestMessages(false);
 
-    const messages = buildIntentMessages(contextMessages, prompt);
+    const messages = buildIntentMessages(
+      contextMessages,
+      prompt,
+      selectedIntent,
+    );
     const response = await d.OpenRouterChatAPI().postStructuredChat<unknown>(
       messages,
       AGENT_INTENT_RESPONSE_FORMAT,
@@ -130,19 +159,32 @@ export class AgentFlowService {
       true,
     );
 
-    return normalizeSuggestion(response);
+    return normalizeSuggestion(response, selectedIntent);
+  }
+
+  private setIsLoading(isLoading: boolean): void {
+    this.IsLoading = isLoading;
+    this.notifySubscribers();
+  }
+
+  private notifySubscribers(): void {
+    this.subscribers.forEach((callback) => callback());
   }
 }
 
 const buildIntentMessages = (
   contextMessages: LLMMessage[],
   prompt: string,
+  selectedIntent?: AgentIntent,
 ): LLMMessage[] => [
   ...contextMessages,
   toSystemMessage(prompt),
   toUserMessage(
     [
       "Analyze the current chat state and return exactly one JSON object.",
+      selectedIntent
+        ? `The user manually selected intent "${selectedIntent}". Prefer that intent and generate useful proposedActions for it when the chat context supports it. If required details are missing, use ask_user.`
+        : "Select the most useful intent yourself.",
       "Do not return a bare intent string.",
       "Use this shape:",
       `{"intent":"continue_chat","confidence":0.25,"rationale":"No workflow action is useful yet.","proposedActions":[]}`,
@@ -152,38 +194,137 @@ const buildIntentMessages = (
 
 const normalizeSuggestion = (
   suggestion: unknown,
+  selectedIntent?: AgentIntent,
 ): AgentFlowSuggestion => {
   if (typeof suggestion === "string") {
     const intent = suggestion.trim();
-    return {
+    return ensureExecutableSuggestion({
       intent: isAgentIntent(intent) ? intent : "continue_chat",
       confidence: isAgentIntent(intent) ? 0.35 : 0,
       rationale: isAgentIntent(intent)
         ? "The model returned only an intent. Run analysis again for detailed actions."
         : "The model did not return a usable agent flow suggestion.",
       proposedActions: [],
-    };
+    }, selectedIntent);
   }
 
   if (!suggestion || typeof suggestion !== "object") {
-    return {
+    return ensureExecutableSuggestion({
       intent: "continue_chat",
       confidence: 0,
       rationale: "The model did not return a usable agent flow suggestion.",
       proposedActions: [],
-    };
+    }, selectedIntent);
   }
 
   const parsed = suggestion as Partial<AgentFlowSuggestion>;
 
-  return {
+  return ensureExecutableSuggestion({
     intent: isAgentIntent(parsed.intent) ? parsed.intent : "continue_chat",
     confidence: clampConfidence(parsed.confidence),
     rationale: String(parsed.rationale ?? ""),
     proposedActions: Array.isArray(parsed.proposedActions)
       ? parsed.proposedActions.filter(isAgentFlowAction).slice(0, 3)
       : [],
+  }, selectedIntent);
+};
+
+const ensureExecutableSuggestion = (
+  suggestion: AgentFlowSuggestion,
+  selectedIntent?: AgentIntent,
+): AgentFlowSuggestion => {
+  const intent = selectedIntent ?? suggestion.intent;
+  if (suggestion.proposedActions.length > 0) {
+    return suggestion;
+  }
+
+  const action = createFallbackAction(intent, suggestion.rationale);
+  if (!action) return suggestion;
+
+  return {
+    ...suggestion,
+    intent,
+    proposedActions: [action],
   };
+};
+
+const createFallbackAction = (
+  intent: AgentIntent,
+  rationale: string,
+): AgentFlowAction | null => {
+  const reason = rationale.trim() || fallbackReason(intent);
+
+  switch (intent) {
+    case "update_memory":
+      return {
+        tool: "save_memory",
+        title: "Open memories",
+        reason,
+        args: {},
+        requiresConfirmation: true,
+      };
+    case "generate_image":
+      return {
+        tool: "generate_image",
+        title: "Generate image",
+        reason,
+        args: {},
+        requiresConfirmation: true,
+      };
+    case "refresh_plan":
+      return {
+        tool: "refresh_plan",
+        title: "Open plans",
+        reason,
+        args: {},
+        requiresConfirmation: true,
+      };
+    case "create_chapter":
+      return {
+        tool: "create_chapter",
+        title: "Create chapter",
+        reason,
+        args: {},
+        requiresConfirmation: true,
+      };
+    case "add_note":
+      return {
+        tool: "add_note",
+        title: "Add note",
+        reason,
+        args: {},
+        requiresConfirmation: true,
+      };
+    case "ask_user":
+      return {
+        tool: "ask_user",
+        title: "Ask user",
+        reason,
+        args: { question: reason },
+        requiresConfirmation: true,
+      };
+    case "continue_chat":
+      return null;
+  }
+};
+
+const fallbackReason = (intent: AgentIntent): string => {
+  switch (intent) {
+    case "update_memory":
+      return "Review or add durable memory for this chat.";
+    case "generate_image":
+      return "Start image generation for the current chat moment.";
+    case "refresh_plan":
+      return "Review plans and refresh the relevant one.";
+    case "create_chapter":
+      return "Create a chapter from the current chat context.";
+    case "add_note":
+      return "Add short-lived guidance for upcoming turns.";
+    case "ask_user":
+      return "What should be clarified before taking the next workflow action?";
+    case "continue_chat":
+      return "No workflow action is needed.";
+  }
 };
 
 const clampConfidence = (value: unknown): number => {

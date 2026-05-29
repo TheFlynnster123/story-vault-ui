@@ -90,14 +90,35 @@ describe("useChatModelOverride", () => {
 
     expect(result.current.activeModelId).toBe("openai/gpt-4");
     expect(result.current.activeModel?.name).toBe("GPT-4");
+    expect(result.current.activeReasoningEffort).toBeUndefined();
     expect(result.current.isOverridden).toBe(false);
+  });
+
+  it("should expose system default reasoning effort when no chat override exists", async () => {
+    mockUseSystemSettings.mockReturnValue({
+      systemSettings: {
+        chatGenerationSettings: {
+          model: "openai/gpt-4",
+          reasoning: { effort: "high" },
+        },
+      },
+      isLoading: false,
+    });
+
+    const useChatModelOverride = await importHook();
+    const { result } = renderHook(() => useChatModelOverride(CHAT_ID));
+
+    expect(result.current.activeReasoningEffort).toBe("high");
   });
 
   // --- Chat override takes precedence ---
 
   it("should use chat override when present", async () => {
     mockUseChatSettings.mockReturnValue({
-      chatSettings: { modelOverride: "anthropic/claude-3" },
+      chatSettings: {
+        modelOverride: "anthropic/claude-3",
+        modelReasoningEffortOverride: "low",
+      },
       isLoading: false,
     });
     mockUseSystemSettings.mockReturnValue({
@@ -112,6 +133,7 @@ describe("useChatModelOverride", () => {
 
     expect(result.current.activeModelId).toBe("anthropic/claude-3");
     expect(result.current.activeModel?.name).toBe("Claude 3");
+    expect(result.current.activeReasoningEffort).toBe("low");
     expect(result.current.isOverridden).toBe(true);
   });
 
@@ -124,6 +146,20 @@ describe("useChatModelOverride", () => {
     await result.current.setModelOverride("anthropic/claude-3");
 
     expect(mockSetModelOverride).toHaveBeenCalledWith("anthropic/claude-3");
+  });
+
+  it("should call ChatSettingsService.setModelOverride with request settings", async () => {
+    const useChatModelOverride = await importHook();
+    const { result } = renderHook(() => useChatModelOverride(CHAT_ID));
+
+    await result.current.setModelOverride("anthropic/claude-3", {
+      reasoning: { effort: "medium" },
+    });
+
+    expect(mockSetModelOverride).toHaveBeenCalledWith(
+      "anthropic/claude-3",
+      { reasoning: { effort: "medium" } },
+    );
   });
 
   // --- clearModelOverride ---

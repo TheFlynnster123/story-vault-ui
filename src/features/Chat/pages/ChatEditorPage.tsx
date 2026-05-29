@@ -152,13 +152,13 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
   }, [chatSettings, presets, systemPrompts.defaultThirdPersonPrompt]);
 
   const onFormUpdated = (overrides?: Partial<ChatSettings>) => {
-    const settingsToSave: ChatSettings = {
+    const settingsToSave: Partial<ChatSettings> = {
       ...form.values,
       ...overrides,
       chatTitle: (overrides?.chatTitle ?? form.values.chatTitle).trim(),
     };
 
-    d.ChatSettingsService(chatId).saveDebounced(settingsToSave);
+    d.ChatSettingsService(chatId).updateDebounced(settingsToSave);
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -11,14 +11,20 @@ export interface TrackedRequest {
   id: string;
   label: string;
   type: RequestType;
+  status: "success" | "error";
   /** Resolved model string, e.g. "openai/gpt-4o", or undefined if using provider default */
   model: string | undefined;
   timestamp: Date;
+  durationMs?: number;
+  timeToFirstTokenMs?: number;
   inputMessageCount: number;
   inputCharCount: number;
   responseCharCount: number;
   inputMessages: TrackedMessage[];
   responseContent: string;
+  requestSettings?: Record<string, unknown>;
+  httpStatus?: number;
+  errorMessage?: string;
   /** Exact billed cost in USD as reported by OpenRouter. Undefined when not available. */
   actualCost?: number;
   /** Actual prompt token count from OpenRouter's native tokenizer. */
@@ -29,20 +35,47 @@ export interface TrackedRequest {
   reasoningTokens?: number;
 }
 
-const MAX_REQUESTS = 20;
+export const DEFAULT_TRACKED_REQUEST_LIMIT = 20;
+export const MIN_TRACKED_REQUEST_LIMIT = 1;
+export const MAX_TRACKED_REQUEST_LIMIT = 200;
+
+export const normalizeTrackedRequestLimit = (limit: unknown): number => {
+  if (typeof limit !== "number" || !Number.isFinite(limit)) {
+    return DEFAULT_TRACKED_REQUEST_LIMIT;
+  }
+
+  return Math.min(
+    MAX_TRACKED_REQUEST_LIMIT,
+    Math.max(MIN_TRACKED_REQUEST_LIMIT, Math.round(limit)),
+  );
+};
 
 export class RequestTracker {
   private requests: TrackedRequest[] = [];
   private listeners: Array<() => void> = [];
+  private requestLimit = DEFAULT_TRACKED_REQUEST_LIMIT;
 
   record(request: Omit<TrackedRequest, "id">): void {
     const entry: TrackedRequest = { id: crypto.randomUUID(), ...request };
-    this.requests = [entry, ...this.requests].slice(0, MAX_REQUESTS);
+    this.requests = [entry, ...this.requests].slice(0, this.requestLimit);
     this.notifyListeners();
   }
 
   getRequests(): TrackedRequest[] {
     return this.requests;
+  }
+
+  setRequestLimit(limit: number): void {
+    const normalized = normalizeTrackedRequestLimit(limit);
+    if (normalized === this.requestLimit) return;
+
+    this.requestLimit = normalized;
+    this.requests = this.requests.slice(0, this.requestLimit);
+    this.notifyListeners();
+  }
+
+  getRequestLimit(): number {
+    return this.requestLimit;
   }
 
   subscribe(listener: () => void): () => void {

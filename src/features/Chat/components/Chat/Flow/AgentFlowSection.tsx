@@ -1,15 +1,31 @@
-import React, { useState } from "react";
-import { Badge, Box, Button, Group, Stack, Text } from "@mantine/core";
+import React, { useEffect, useState } from "react";
+import {
+  ActionIcon,
+  Badge,
+  Box,
+  Button,
+  Group,
+  Modal,
+  Stack,
+  Text,
+  Textarea,
+  Tooltip,
+  UnstyledButton,
+} from "@mantine/core";
 import { LuSparkles } from "react-icons/lu";
 import { v4 as uuidv4 } from "uuid";
 import { d } from "../../../../../services/Dependencies";
 import { Theme } from "../../../../../components/Theme";
 import type {
   AgentFlowAction,
+  AgentIntent,
   AgentFlowSuggestion,
 } from "../../../services/AgentFlow/AgentFlowService";
 import { FlowButton } from "./FlowButton";
 import { FlowStyles } from "./FlowStyles";
+import { useLongPress } from "../../../hooks/useLongPress";
+import { CreateNoteModal } from "../ChatControls/CreateNoteModal";
+import { CreateChapterModal } from "../ChatControls/CreateChapterModal";
 
 interface AgentFlowSectionProps {
   chatId: string;
@@ -22,29 +38,109 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
   onNavigateToMemories,
   onNavigateToPlans,
 }) => {
+  const agentFlowService = d.AgentFlowService(chatId);
   const [suggestion, setSuggestion] = useState<AgentFlowSuggestion | null>(
-    null,
+    agentFlowService.CurrentSuggestion,
   );
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(agentFlowService.IsLoading);
   const [runningActionIndex, setRunningActionIndex] = useState<number | null>(
     null,
   );
   const [status, setStatus] = useState<string | null>(null);
+  const [autoRunEnabled, setAutoRunEnabled] = useState(false);
+  const [autoRunInterval, setAutoRunInterval] = useState(3);
+  const [isIntentModalOpen, setIsIntentModalOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState({
+    opened: false,
+    content: "",
+    hasExpiration: false,
+    expiresAfterMessages: 10,
+  });
+  const [chapterDraft, setChapterDraft] = useState({
+    opened: false,
+    title: "",
+    summary: "",
+    isGeneratingTitle: false,
+    isCreating: false,
+  });
+  const [clarificationDraft, setClarificationDraft] = useState({
+    opened: false,
+    question: "",
+    answer: "",
+    options: [] as string[],
+  });
+  const longPress = useLongPress(() => setIsIntentModalOpen(true));
 
-  const analyzeFlow = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    const updateState = () => {
+      setSuggestion(agentFlowService.CurrentSuggestion);
+      setIsLoading(agentFlowService.IsLoading);
+    };
+    return agentFlowService.subscribe(updateState);
+  }, [agentFlowService]);
+
+  useEffect(() => {
+    const chatSettingsService = d.ChatSettingsService(chatId);
+    const loadSettings = async () => {
+      const settings = await chatSettingsService.Get();
+      setAutoRunEnabled(settings?.agentFlowAutoRunEnabled ?? false);
+      setAutoRunInterval(settings?.agentFlowAutoRunInterval ?? 3);
+    };
+
+    const unsubscribe = chatSettingsService.subscribe(() => {
+      void loadSettings();
+    });
+    void loadSettings();
+
+    return unsubscribe;
+  }, [chatId]);
+
+  const analyzeFlow = async (selectedIntent?: AgentIntent) => {
     setStatus(null);
     try {
-      const nextSuggestion = await d
-        .AgentFlowService(chatId)
-        .generateIntentSuggestion();
-      setSuggestion(nextSuggestion);
+      await agentFlowService.analyzeIntentSuggestion(selectedIntent);
     } catch (error) {
       d.ErrorService().log("Failed to analyze agent flow", error);
       setStatus("Could not analyze flow.");
-    } finally {
-      setIsLoading(false);
     }
+  };
+
+  const startLongPress = (event: React.MouseEvent | React.TouchEvent) => {
+    event.stopPropagation();
+    longPress.start();
+  };
+
+  const completePress = (event: React.MouseEvent | React.TouchEvent) => {
+    event.stopPropagation();
+    longPress.cancel();
+
+    if (!longPress.wasLongPress()) {
+      void analyzeFlow();
+    }
+  };
+
+  const selectIntent = (intent: AgentIntent) => {
+    setIsIntentModalOpen(false);
+    void analyzeFlow(intent);
+  };
+
+  const updateAutoRunEnabled = (enabled: boolean) => {
+    setAutoRunEnabled(enabled);
+    void d.ChatSettingsService(chatId).update({
+      agentFlowAutoRunEnabled: enabled,
+      agentFlowAutoRunInterval: autoRunInterval,
+      agentFlowMessagesSinceLastRun: 0,
+    });
+  };
+
+  const updateAutoRunInterval = (interval: number) => {
+    const nextInterval = Math.max(1, interval);
+    setAutoRunInterval(nextInterval);
+    void d.ChatSettingsService(chatId).update({
+      agentFlowAutoRunEnabled: autoRunEnabled,
+      agentFlowAutoRunInterval: nextInterval,
+      agentFlowMessagesSinceLastRun: 0,
+    });
   };
 
   const runAction = async (action: AgentFlowAction, index: number) => {
@@ -56,6 +152,9 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
         action,
         onNavigateToMemories,
         onNavigateToPlans,
+        openNoteDraft,
+        openChapterDraft,
+        openClarificationDraft,
       );
       setStatus(result);
     } catch (error) {
@@ -66,28 +165,265 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     }
   };
 
+  const openClarificationDraft = (
+    question: string,
+    options: string[] = [],
+  ) => {
+    setClarificationDraft({
+      opened: true,
+      question,
+      answer: "",
+      options,
+    });
+  };
+
+  const closeClarificationDraft = () => {
+    setClarificationDraft((draft) => ({ ...draft, opened: false }));
+  };
+
+  const submitClarificationDraft = async () => {
+    const answer = clarificationDraft.answer.trim();
+    if (!answer) return;
+
+    await d
+      .ChatService(chatId)
+      .AddAgentClarification(clarificationDraft.question, answer);
+    closeClarificationDraft();
+    setStatus("Clarification saved.");
+  };
+
+  const openNoteDraft = (content: string = "") => {
+    setNoteDraft({
+      opened: true,
+      content,
+      hasExpiration: false,
+      expiresAfterMessages: 10,
+    });
+  };
+
+  const closeNoteDraft = () => {
+    setNoteDraft((draft) => ({ ...draft, opened: false }));
+  };
+
+  const submitNoteDraft = async () => {
+    const content = noteDraft.content.trim();
+    if (!content) return;
+
+    await d.ChatService(chatId).AddNote(
+      content,
+      noteDraft.hasExpiration ? noteDraft.expiresAfterMessages : null,
+    );
+    closeNoteDraft();
+    setStatus("Note added.");
+  };
+
+  const openChapterDraft = (title: string = "", summary: string = "") => {
+    setChapterDraft({
+      opened: true,
+      title,
+      summary,
+      isGeneratingTitle: false,
+      isCreating: false,
+    });
+  };
+
+  const closeChapterDraft = () => {
+    setChapterDraft((draft) => ({ ...draft, opened: false }));
+  };
+
+  const submitChapterDraft = async () => {
+    const title = chapterDraft.title.trim();
+    const summary = chapterDraft.summary.trim();
+    if (!title || !summary) return;
+
+    setChapterDraft((draft) => ({ ...draft, isCreating: true }));
+    try {
+      await d.ChatService(chatId).AddChapter(title, summary);
+      closeChapterDraft();
+      setStatus("Chapter created.");
+    } finally {
+      setChapterDraft((draft) => ({ ...draft, isCreating: false }));
+    }
+  };
+
+  const generateChapterTitle = async () => {
+    setChapterDraft((draft) => ({ ...draft, isGeneratingTitle: true }));
+    try {
+      const title = await d.ChapterGenerationService(chatId).generateChapterTitle();
+      if (title) {
+        setChapterDraft((draft) => ({ ...draft, title }));
+      }
+    } finally {
+      setChapterDraft((draft) => ({ ...draft, isGeneratingTitle: false }));
+    }
+  };
+
+  const generateChapterSummary = async () => {
+    const title = chapterDraft.title.trim();
+    if (!title) return;
+
+    setChapterDraft((draft) => ({ ...draft, isCreating: true }));
+    try {
+      const summary = await d
+        .ChapterGenerationService(chatId)
+        .generateChapterSummary();
+      if (summary) {
+        setChapterDraft((draft) => ({ ...draft, summary }));
+      }
+    } finally {
+      setChapterDraft((draft) => ({ ...draft, isCreating: false }));
+    }
+  };
+
   return (
     <Box>
-      <FlowButton
-        onClick={analyzeFlow}
-        leftSection={<LuSparkles size={18} color={Theme.plan.primary} />}
+      <Box
+        style={{
+          display: "flex",
+          alignItems: "center",
+          backgroundColor: FlowStyles.buttonBackground,
+          borderRadius: "4px",
+        }}
       >
-        <Group justify="space-between" wrap="nowrap" style={{ width: "100%" }}>
-          <Box ta="left">
-            <Text size="sm" fw={500}>
-              Agent Flow
-            </Text>
-            <Text size="xs" c="dimmed">
-              {isLoading ? "Analyzing..." : "Suggest next workflow actions"}
-            </Text>
-          </Box>
-          {suggestion && (
-            <Badge color={getConfidenceColor(suggestion.confidence)} size="sm">
-              {Math.round(suggestion.confidence * 100)}%
-            </Badge>
-          )}
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <FlowButton
+            onClick={() => undefined}
+            onMouseDown={startLongPress}
+            onMouseUp={completePress}
+            onMouseLeave={() => longPress.cancel()}
+            onTouchStart={startLongPress}
+            onTouchEnd={completePress}
+            leftSection={<LuSparkles size={18} color={Theme.plan.primary} />}
+          >
+            <Group
+              justify="space-between"
+              wrap="nowrap"
+              style={{ width: "100%", minWidth: 0 }}
+            >
+              <Box ta="left" style={{ minWidth: 0 }}>
+                <Text size="sm" fw={500}>
+                  Agent Flow
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {isLoading ? "Analyzing..." : "Suggest next workflow actions"}
+                </Text>
+              </Box>
+              {suggestion && (
+                <Badge
+                  color={getSignalColor(suggestion)}
+                  size="sm"
+                  title={`Confidence: ${Math.round(suggestion.confidence * 100)}%`}
+                  style={{ flexShrink: 0 }}
+                >
+                  {getSignalLabel(suggestion)}
+                </Badge>
+              )}
+            </Group>
+          </FlowButton>
+        </Box>
+
+        <Group gap={2} wrap="nowrap" style={{ flexShrink: 0, marginRight: 4 }}>
+          <Tooltip label={autoRunEnabled ? "Disable auto analysis" : "Enable auto analysis"}>
+            <ActionIcon
+              size="sm"
+              variant={autoRunEnabled ? "filled" : "subtle"}
+              color={autoRunEnabled ? "cyan" : "gray"}
+              onClick={() => updateAutoRunEnabled(!autoRunEnabled)}
+              aria-label={
+                autoRunEnabled
+                  ? "Disable Agent Flow auto analysis"
+                  : "Enable Agent Flow auto analysis"
+              }
+            >
+              A
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Decrease auto interval">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="gray"
+              onClick={() => updateAutoRunInterval(autoRunInterval - 1)}
+              disabled={autoRunInterval <= 1}
+              aria-label="Decrease agent flow interval"
+            >
+              -
+            </ActionIcon>
+          </Tooltip>
+          <Text
+            size="xs"
+            c={autoRunEnabled ? "cyan" : "dimmed"}
+            style={{ minWidth: 12, textAlign: "center" }}
+          >
+            {autoRunInterval}
+          </Text>
+          <Tooltip label="Increase auto interval">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="gray"
+              onClick={() => updateAutoRunInterval(autoRunInterval + 1)}
+              aria-label="Increase agent flow interval"
+            >
+              +
+            </ActionIcon>
+          </Tooltip>
         </Group>
-      </FlowButton>
+      </Box>
+
+      <AgentIntentPickerModal
+        opened={isIntentModalOpen}
+        onClose={() => setIsIntentModalOpen(false)}
+        onSelect={selectIntent}
+      />
+
+      <CreateNoteModal
+        opened={noteDraft.opened}
+        content={noteDraft.content}
+        hasExpiration={noteDraft.hasExpiration}
+        expiresAfterMessages={noteDraft.expiresAfterMessages}
+        onContentChange={(content) =>
+          setNoteDraft((draft) => ({ ...draft, content }))
+        }
+        onHasExpirationChange={(hasExpiration) =>
+          setNoteDraft((draft) => ({ ...draft, hasExpiration }))
+        }
+        onExpiresAfterMessagesChange={(expiresAfterMessages) =>
+          setNoteDraft((draft) => ({ ...draft, expiresAfterMessages }))
+        }
+        onSubmit={submitNoteDraft}
+        onCancel={closeNoteDraft}
+      />
+
+      <CreateChapterModal
+        opened={chapterDraft.opened}
+        title={chapterDraft.title}
+        summary={chapterDraft.summary}
+        isGeneratingTitle={chapterDraft.isGeneratingTitle}
+        isCreating={chapterDraft.isCreating}
+        onTitleChange={(title) =>
+          setChapterDraft((draft) => ({ ...draft, title }))
+        }
+        onSummaryChange={(summary) =>
+          setChapterDraft((draft) => ({ ...draft, summary }))
+        }
+        onGenerateTitle={generateChapterTitle}
+        onGenerate={generateChapterSummary}
+        onSubmit={submitChapterDraft}
+        onCancel={closeChapterDraft}
+      />
+
+      <AgentClarificationModal
+        opened={clarificationDraft.opened}
+        question={clarificationDraft.question}
+        answer={clarificationDraft.answer}
+        options={clarificationDraft.options}
+        onAnswerChange={(answer) =>
+          setClarificationDraft((draft) => ({ ...draft, answer }))
+        }
+        onSubmit={submitClarificationDraft}
+        onCancel={closeClarificationDraft}
+      />
 
       {(suggestion || status) && (
         <Box
@@ -127,7 +463,7 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
                         loading={runningActionIndex === index}
                         onClick={() => runAction(action, index)}
                       >
-                        Run
+                        {getActionButtonLabel(action)}
                       </Button>
                     </Group>
                   </Box>
@@ -146,11 +482,170 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
   );
 };
 
+interface AgentIntentPickerModalProps {
+  opened: boolean;
+  onClose: () => void;
+  onSelect: (intent: AgentIntent) => void;
+}
+
+const INTENT_OPTIONS: Array<{
+  intent: AgentIntent;
+  title: string;
+  description: string;
+}> = [
+  {
+    intent: "update_memory",
+    title: "Update Memory",
+    description: "Extract durable continuity or character facts.",
+  },
+  {
+    intent: "generate_image",
+    title: "Generate Image",
+    description: "Prepare an image action for the current scene.",
+  },
+  {
+    intent: "refresh_plan",
+    title: "Refresh Plan",
+    description: "Update a stale story, plot, or character plan.",
+  },
+  {
+    intent: "create_chapter",
+    title: "Create Chapter",
+    description: "Compress a natural boundary into a chapter.",
+  },
+  {
+    intent: "add_note",
+    title: "Add Note",
+    description: "Create short-lived guidance for upcoming turns.",
+  },
+  {
+    intent: "ask_user",
+    title: "Ask User",
+    description: "Find a missing decision before taking action.",
+  },
+  {
+    intent: "continue_chat",
+    title: "Continue Chat",
+    description: "Check whether no workflow action is needed.",
+  },
+];
+
+const AgentIntentPickerModal: React.FC<AgentIntentPickerModalProps> = ({
+  opened,
+  onClose,
+  onSelect,
+}) => (
+  <Modal opened={opened} onClose={onClose} title="Agent Intent" size="lg">
+    <Stack gap="xs">
+      {INTENT_OPTIONS.map((option) => (
+        <UnstyledButton
+          key={option.intent}
+          onClick={() => onSelect(option.intent)}
+          style={{
+            display: "block",
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 6,
+            border: `1px solid ${FlowStyles.border}`,
+            backgroundColor: "rgba(255, 255, 255, 0.04)",
+            color: FlowStyles.text,
+            textAlign: "left",
+          }}
+        >
+          <Text size="sm" fw={600}>
+            {option.title}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {option.description}
+          </Text>
+        </UnstyledButton>
+      ))}
+    </Stack>
+  </Modal>
+);
+
+interface AgentClarificationModalProps {
+  opened: boolean;
+  question: string;
+  answer: string;
+  options: string[];
+  onAnswerChange: (answer: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+}
+
+const AgentClarificationModal: React.FC<AgentClarificationModalProps> = ({
+  opened,
+  question,
+  answer,
+  options,
+  onAnswerChange,
+  onSubmit,
+  onCancel,
+}) => (
+  <Modal opened={opened} onClose={onCancel} title="Clarify Agent Flow" size="lg">
+    <Stack>
+      <Text size="sm" fw={600}>
+        {question}
+      </Text>
+
+      {options.length > 0 && (
+        <Stack gap="xs">
+          {options.map((option) => (
+            <UnstyledButton
+              key={option}
+              onClick={() => onAnswerChange(option)}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 6,
+                border:
+                  answer === option
+                    ? `1px solid ${Theme.plan.primary}`
+                    : `1px solid ${FlowStyles.border}`,
+                backgroundColor:
+                  answer === option
+                    ? "rgba(0, 188, 212, 0.15)"
+                    : "rgba(255, 255, 255, 0.04)",
+                color: FlowStyles.text,
+                textAlign: "left",
+              }}
+            >
+              <Text size="sm">{option}</Text>
+            </UnstyledButton>
+          ))}
+        </Stack>
+      )}
+
+      <Textarea
+        label="Type your own"
+        value={answer}
+        onChange={(event) => onAnswerChange(event.currentTarget.value)}
+        minRows={3}
+        autosize
+      />
+
+      <Group justify="flex-end">
+        <Button variant="default" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={onSubmit} disabled={!answer.trim()}>
+          Save Clarification
+        </Button>
+      </Group>
+    </Stack>
+  </Modal>
+);
+
 const executeAction = async (
   chatId: string,
   action: AgentFlowAction,
   onNavigateToMemories: () => void,
   onNavigateToPlans: () => void,
+  openNoteDraft: (content?: string) => void,
+  openChapterDraft: (title?: string, summary?: string) => void,
+  openClarificationDraft: (question: string, options?: string[]) => void,
 ): Promise<string> => {
   switch (action.tool) {
     case "save_memory": {
@@ -167,7 +662,10 @@ const executeAction = async (
     }
     case "add_note": {
       const content = getStringArg(action, "content");
-      if (!content) return "No note content was provided.";
+      if (!content) {
+        openNoteDraft();
+        return "Opened note editor.";
+      }
       await d
         .ChatService(chatId)
         .AddNote(content, getNumberArg(action, "expiresAfterMessages"));
@@ -190,12 +688,22 @@ const executeAction = async (
     case "create_chapter": {
       const title = getStringArg(action, "title");
       const summary = getStringArg(action, "summary");
-      if (!title) return "No chapter title was provided.";
+      if (!title || !summary) {
+        openChapterDraft(title, summary);
+        return "Opened chapter editor.";
+      }
       await d.ChatService(chatId).AddChapter(title, summary ?? "");
       return "Chapter created.";
     }
     case "ask_user":
-      return getStringArg(action, "question") || action.reason;
+      openClarificationDraft(
+        getStringArg(action, "question") || action.reason,
+        getStringArrayArg(action, "options") ||
+          getStringArrayArg(action, "answers") ||
+          getStringArrayArg(action, "choices") ||
+          [],
+      );
+      return "Opened clarification prompt.";
   }
 };
 
@@ -217,6 +725,21 @@ const getNumberArg = (
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+const getStringArrayArg = (
+  action: AgentFlowAction,
+  key: string,
+): string[] | undefined => {
+  const value = action.args[key];
+  if (!Array.isArray(value)) return undefined;
+
+  const options = value.filter(
+    (option): option is string =>
+      typeof option === "string" && option.trim().length > 0,
+  );
+
+  return options.length > 0 ? options : undefined;
+};
+
 const labelIntent = (intent: AgentFlowSuggestion["intent"]): string =>
   intent
     .split("_")
@@ -229,8 +752,22 @@ const labelTool = (tool: AgentFlowAction["tool"]): string =>
     .map((part) => part[0].toUpperCase() + part.slice(1))
     .join(" ");
 
-const getConfidenceColor = (confidence: number): string => {
-  if (confidence >= 0.75) return "green";
-  if (confidence >= 0.45) return "yellow";
+const getActionButtonLabel = (action: AgentFlowAction): string => {
+  if (action.tool === "ask_user") return "Ask";
+  if (action.tool === "generate_image") return "Start";
+  return "Run";
+};
+
+const getSignalLabel = (suggestion: AgentFlowSuggestion): string => {
+  if (suggestion.proposedActions.length === 0) return "No action";
+  if (suggestion.confidence >= 0.75) return "Suggested";
+  if (suggestion.confidence >= 0.45) return "Review";
+  return "Partial";
+};
+
+const getSignalColor = (suggestion: AgentFlowSuggestion): string => {
+  if (suggestion.proposedActions.length === 0) return "gray";
+  if (suggestion.confidence >= 0.75) return "green";
+  if (suggestion.confidence >= 0.45) return "yellow";
   return "gray";
 };

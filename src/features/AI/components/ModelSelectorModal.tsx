@@ -9,6 +9,16 @@ import { GroupedVirtuoso } from "react-virtuoso";
 import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
 import { d } from "../../../services/Dependencies";
 import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
+import {
+  OPENROUTER_REASONING_EFFORTS,
+  type OpenRouterReasoningEffort,
+} from "../../OpenRouter/services/OpenRouterReasoning";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import {
+  filterSettingsForModel,
+  hasOpenRouterRequestSettings,
+  supportsParameter,
+} from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 // --- Constants ---
 
@@ -35,6 +45,72 @@ const PRICE_THRESHOLDS = {
   cheap: 1,
   moderate: 5,
 } as const;
+
+const REASONING_LABELS: Record<OpenRouterReasoningEffort, string> = {
+  none: "None",
+  minimal: "Minimal",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "X-High",
+};
+
+const NUMBER_PARAMETERS = [
+  {
+    key: "temperature",
+    label: "Temperature",
+    min: 0,
+    max: 2,
+    step: 0.1,
+    placeholder: "1.0",
+  },
+  {
+    key: "top_p",
+    label: "Top P",
+    min: 0,
+    max: 1,
+    step: 0.05,
+    placeholder: "1.0",
+  },
+  {
+    key: "max_tokens",
+    label: "Max Tokens",
+    min: 1,
+    step: 1,
+    placeholder: "Auto",
+  },
+  {
+    key: "frequency_penalty",
+    label: "Frequency Penalty",
+    min: -2,
+    max: 2,
+    step: 0.1,
+    placeholder: "0",
+  },
+  {
+    key: "presence_penalty",
+    label: "Presence Penalty",
+    min: -2,
+    max: 2,
+    step: 0.1,
+    placeholder: "0",
+  },
+  {
+    key: "repetition_penalty",
+    label: "Repetition Penalty",
+    min: 0,
+    max: 2,
+    step: 0.05,
+    placeholder: "1.0",
+  },
+  {
+    key: "seed",
+    label: "Seed",
+    min: 0,
+    step: 1,
+    placeholder: "Random",
+  },
+] as const;
 
 // --- Helpers ---
 
@@ -150,13 +226,215 @@ const ModelStatBadge: React.FC<{
   </span>
 );
 
+const hasAdvancedControls = (model: OpenRouterModel): boolean =>
+  supportsParameter(model, "reasoning") ||
+  NUMBER_PARAMETERS.some(({ key }) => supportsParameter(model, key));
+
+const AdvancedNumberInput: React.FC<{
+  label: string;
+  value: number | undefined;
+  min?: number;
+  max?: number;
+  step?: number;
+  placeholder?: string;
+  onChange: (value: number | undefined) => void;
+}> = ({ label, value, min, max, step, placeholder, onChange }) => (
+  <label
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 96px",
+      alignItems: "center",
+      gap: "8px",
+      fontSize: "12px",
+      color: "#ddd",
+    }}
+  >
+    <span>{label}</span>
+    <input
+      type="number"
+      value={value ?? ""}
+      min={min}
+      max={max}
+      step={step}
+      placeholder={placeholder}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => {
+        const raw = e.currentTarget.value;
+        onChange(raw === "" ? undefined : Number(raw));
+      }}
+      style={{
+        width: "96px",
+        padding: "4px 6px",
+        backgroundColor: "rgba(0,0,0,0.28)",
+        border: "1px solid rgba(255,255,255,0.16)",
+        borderRadius: "4px",
+        color: "#fff",
+        fontSize: "12px",
+        boxSizing: "border-box",
+      }}
+    />
+  </label>
+);
+
+const AdvancedSettingsPanel: React.FC<{
+  model: OpenRouterModel;
+  settings: OpenRouterRequestSettings | undefined;
+  onChange: (settings: OpenRouterRequestSettings | undefined) => void;
+}> = ({ model, settings, onChange }) => {
+  const updateSetting = (
+    key: keyof OpenRouterRequestSettings,
+    value: OpenRouterRequestSettings[keyof OpenRouterRequestSettings],
+  ) => {
+    const next: OpenRouterRequestSettings = { ...(settings ?? {}) };
+    if (value === undefined) {
+      delete next[key];
+    } else {
+      (next as Record<string, unknown>)[key] = value;
+    }
+    onChange(Object.keys(next).length > 0 ? next : undefined);
+  };
+
+  const supportedNumberParameters = NUMBER_PARAMETERS.filter(({ key }) =>
+    supportsParameter(model, key),
+  );
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        marginTop: "10px",
+        padding: "10px",
+        borderRadius: "6px",
+        border: "1px solid rgba(147, 197, 253, 0.2)",
+        backgroundColor: "rgba(8, 12, 20, 0.52)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "8px",
+          marginBottom: "8px",
+        }}
+      >
+        <span style={{ fontSize: "12px", fontWeight: 600, color: "#bfdbfe" }}>
+          Advanced
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(undefined);
+          }}
+          style={{
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "rgba(255,255,255,0.05)",
+            borderRadius: "4px",
+            color: "#ccc",
+            cursor: "pointer",
+            fontSize: "11px",
+            padding: "2px 6px",
+          }}
+        >
+          Reset
+        </button>
+      </div>
+
+      <div style={{ display: "grid", gap: "8px" }}>
+        {supportsParameter(model, "reasoning") && (
+          <label
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 120px",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "12px",
+              color: "#ddd",
+            }}
+          >
+            <span>Reasoning</span>
+            <select
+              aria-label={`Reasoning level for ${model.name}`}
+              value={settings?.reasoning?.effort ?? ""}
+              onChange={(e) => {
+                const effort = e.currentTarget.value as
+                  | OpenRouterReasoningEffort
+                  | "";
+                updateSetting(
+                  "reasoning",
+                  effort ? { effort } : undefined,
+                );
+              }}
+              style={{
+                width: "120px",
+                padding: "4px 6px",
+                backgroundColor: "rgba(0,0,0,0.28)",
+                border: "1px solid rgba(255,255,255,0.16)",
+                borderRadius: "4px",
+                color: "#fff",
+                fontSize: "12px",
+              }}
+            >
+              <option value="">Auto</option>
+              {OPENROUTER_REASONING_EFFORTS.map((effort) => (
+                <option key={effort} value={effort}>
+                  {REASONING_LABELS[effort]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {supportedNumberParameters.map((parameter) => (
+          <AdvancedNumberInput
+            key={parameter.key}
+            label={parameter.label}
+            value={settings?.[parameter.key]}
+            min={parameter.min}
+            max={"max" in parameter ? parameter.max : undefined}
+            step={parameter.step}
+            placeholder={parameter.placeholder}
+            onChange={(value) => updateSetting(parameter.key, value)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const ModelItem: React.FC<{
   model: OpenRouterModel;
   isSelected: boolean;
+  allowAdvancedSettings: boolean;
+  requestSettings?: OpenRouterRequestSettings;
+  isAdvancedOpen: boolean;
+  onAdvancedToggle: () => void;
+  onRequestSettingsChange: (
+    modelId: string,
+    settings: OpenRouterRequestSettings | undefined,
+  ) => void;
   onClick: () => void;
-}> = ({ model, isSelected, onClick }) => (
-  <button
+}> = ({
+  model,
+  isSelected,
+  allowAdvancedSettings,
+  requestSettings,
+  isAdvancedOpen,
+  onAdvancedToggle,
+  onRequestSettingsChange,
+  onClick,
+}) => (
+  <div
+    role="button"
+    tabIndex={0}
     onClick={onClick}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onClick();
+      }
+    }}
     style={{
       display: "block",
       width: "100%",
@@ -180,7 +458,33 @@ const ModelItem: React.FC<{
     }}
   >
     <div style={{ fontWeight: 500, fontSize: "14px", marginBottom: "2px" }}>
-      {model.name}
+      <span>{model.name}</span>
+      {allowAdvancedSettings && hasAdvancedControls(model) && (
+        <button
+          type="button"
+          aria-label={`Advanced settings for ${model.name}`}
+          title="Advanced settings"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAdvancedToggle();
+          }}
+          style={{
+            float: "right",
+            width: "24px",
+            height: "24px",
+            border: "1px solid rgba(147, 197, 253, 0.25)",
+            borderRadius: "4px",
+            backgroundColor: isAdvancedOpen
+              ? "rgba(147, 197, 253, 0.18)"
+              : "rgba(255,255,255,0.05)",
+            color: "#bfdbfe",
+            cursor: "pointer",
+            lineHeight: "20px",
+          }}
+        >
+          ⚙
+        </button>
+      )}
     </div>
     <div
       style={{
@@ -210,8 +514,25 @@ const ModelItem: React.FC<{
         value={formatPrice(model.pricing?.completion)}
         color={getPriceColor(model.pricing?.completion)}
       />
+      {requestSettings?.reasoning?.effort && (
+        <ModelStatBadge
+          label="Reasoning"
+          value={requestSettings.reasoning.effort}
+          color="#93c5fd"
+        />
+      )}
+      {hasOpenRouterRequestSettings(requestSettings) && (
+        <ModelStatBadge label="Advanced" value="Set" color="#bfdbfe" />
+      )}
     </div>
-  </button>
+    {allowAdvancedSettings && isAdvancedOpen && (
+      <AdvancedSettingsPanel
+        model={model}
+        settings={requestSettings}
+        onChange={(settings) => onRequestSettingsChange(model.id, settings)}
+      />
+    )}
+  </div>
 );
 
 const GroupHeader: React.FC<{ label: string }> = ({ label }) => (
@@ -246,19 +567,30 @@ interface ModelSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedModelId: string | undefined;
-  onSelect: (modelId: string) => void;
+  allowAdvancedSettings?: boolean;
+  selectedRequestSettings?: OpenRouterRequestSettings;
+  onSelect: (
+    modelId: string,
+    requestSettings?: OpenRouterRequestSettings,
+  ) => void;
 }
 
 export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   isOpen,
   onClose,
   selectedModelId,
+  allowAdvancedSettings = true,
+  selectedRequestSettings,
   onSelect,
 }) => {
   const { models, isLoading } = useOpenRouterModels();
   const recentModelsService = useRef(d.RecentModelsService()).current;
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
+  const [advancedModelId, setAdvancedModelId] = useState<string | null>(null);
+  const [requestSettingsByModel, setRequestSettingsByModel] = useState<
+    Record<string, OpenRouterRequestSettings | undefined>
+  >({});
 
   const recentIds = useMemo(
     () => recentModelsService.getRecentModels(),
@@ -290,18 +622,41 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSearch("");
+      setAdvancedModelId(null);
+      setRequestSettingsByModel(
+        selectedModelId ? { [selectedModelId]: selectedRequestSettings } : {},
+      );
       // Focus search input after modal opens
       requestAnimationFrame(() => searchInputRef.current?.focus());
     }
-  }, [isOpen]);
+  }, [isOpen, selectedModelId, selectedRequestSettings]);
 
   const handleSelect = useCallback(
-    (modelId: string) => {
+    (model: OpenRouterModel) => {
+      const modelId = model.id;
+      const requestSettings = filterSettingsForModel(
+        requestSettingsByModel[modelId],
+        model,
+      );
       recentModelsService.trackModel(modelId);
-      onSelect(modelId);
+      if (requestSettings) {
+        onSelect(modelId, requestSettings);
+      } else {
+        onSelect(modelId);
+      }
       onClose();
     },
-    [recentModelsService, onSelect, onClose],
+    [recentModelsService, onSelect, onClose, requestSettingsByModel],
+  );
+
+  const handleRequestSettingsChange = useCallback(
+    (modelId: string, settings: OpenRouterRequestSettings | undefined) => {
+      setRequestSettingsByModel((current) => ({
+        ...current,
+        [modelId]: settings,
+      }));
+    },
+    [],
   );
 
   const handleBackdropClick = useCallback(
@@ -453,7 +808,19 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                       <ModelItem
                         model={model}
                         isSelected={model.id === selectedModelId}
-                        onClick={() => handleSelect(model.id)}
+                        allowAdvancedSettings={allowAdvancedSettings}
+                        requestSettings={filterSettingsForModel(
+                          requestSettingsByModel[model.id],
+                          model,
+                        )}
+                        isAdvancedOpen={advancedModelId === model.id}
+                        onAdvancedToggle={() =>
+                          setAdvancedModelId((current) =>
+                            current === model.id ? null : model.id,
+                          )
+                        }
+                        onRequestSettingsChange={handleRequestSettingsChange}
+                        onClick={() => handleSelect(model)}
                       />
                     );
                   }

@@ -40,6 +40,7 @@ describe("OpenRouterChatAPI", () => {
 
     vi.mocked(d.RequestTracker).mockReturnValue({
       record: vi.fn(),
+      setRequestLimit: vi.fn(),
     } as any);
   });
 
@@ -99,6 +100,75 @@ describe("OpenRouterChatAPI", () => {
       expect(sentBody.response_format).toEqual(responseFormat);
       expect(sentBody.provider).toEqual({ require_parameters: true });
       expect(sentBody.plugins).toEqual([{ id: "response-healing" }]);
+    });
+
+    it("should include system reasoning settings when no model override is provided", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            model: "openai/o4-mini",
+            reasoning: { effort: "high" },
+          },
+        }),
+      } as any);
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ reply: "ok" }), { status: 200 }),
+      );
+
+      await api.postChat([{ role: "user", content: "Hi" }]);
+
+      const sentBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(sentBody.model).toBe("openai/o4-mini");
+      expect(sentBody.reasoning).toEqual({ effort: "high" });
+    });
+
+    it("should replace system reasoning settings for explicit model overrides", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            model: "openai/o4-mini",
+            reasoning: { effort: "high" },
+          },
+        }),
+      } as any);
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ reply: "ok" }), { status: 200 }),
+      );
+
+      await api.postChat(
+        [{ role: "user", content: "Hi" }],
+        "anthropic/claude-sonnet-4.5",
+        "chat",
+        "LLM",
+        { reasoning: { effort: "low" } },
+      );
+
+      const sentBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(sentBody.model).toBe("anthropic/claude-sonnet-4.5");
+      expect(sentBody.reasoning).toEqual({ effort: "low" });
+    });
+
+    it("should remove system reasoning settings for explicit model overrides without reasoning", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            model: "openai/o4-mini",
+            reasoning: { effort: "high" },
+          },
+        }),
+      } as any);
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ reply: "ok" }), { status: 200 }),
+      );
+
+      await api.postChat(
+        [{ role: "user", content: "Hi" }],
+        "anthropic/claude-3",
+      );
+
+      const sentBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(sentBody.model).toBe("anthropic/claude-3");
+      expect(sentBody.reasoning).toBeUndefined();
     });
 
     it("can return plain text for structured chat when fallback is allowed", async () => {

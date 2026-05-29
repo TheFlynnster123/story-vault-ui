@@ -36,6 +36,7 @@ import {
   NoteCreatedEventUtil,
   NoteEditedEventUtil,
 } from "./events/NoteEventUtils";
+import { AgentClarificationCreatedEventUtil } from "./events/AgentClarificationEventUtils";
 import { d } from "../Dependencies";
 
 export class ChatService {
@@ -248,6 +249,16 @@ export class ChatService {
       content,
       expiresAfterMessages,
     );
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  // ---- Agent Flow Operations ----
+
+  public async AddAgentClarification(
+    question: string,
+    answer: string,
+  ): Promise<void> {
+    const event = AgentClarificationCreatedEventUtil.Create(question, answer);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 }

@@ -1,6 +1,7 @@
 import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
+import type { OpenRouterRequestSettings } from "../../../OpenRouter/services/OpenRouterRequestSettings";
 
 export const getTextGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new TextGenerationService(chatId),
@@ -14,9 +15,24 @@ export class TextGenerationService extends GenerationOrchestrator {
     this.chatId = chatId;
   }
 
-  private async getChatModelOverride(): Promise<string | undefined> {
+  private async getChatModelOverride(): Promise<
+    | {
+        model?: string;
+        requestSettings?: OpenRouterRequestSettings;
+      }
+    | undefined
+  > {
     const chatSettings = await d.ChatSettingsService(this.chatId).Get();
-    return chatSettings?.modelOverride;
+    if (!chatSettings?.modelOverride) return undefined;
+
+    return {
+      model: chatSettings.modelOverride,
+      requestSettings:
+        chatSettings.modelRequestSettingsOverride ??
+        (chatSettings.modelReasoningEffortOverride
+          ? { reasoning: { effort: chatSettings.modelReasoningEffortOverride } }
+          : undefined),
+    };
   }
 
   async generateResponse(guidance?: string): Promise<string | undefined> {
@@ -40,7 +56,8 @@ export class TextGenerationService extends GenerationOrchestrator {
           (content) => {
             projection.updateStreamingMessage(content);
           },
-          modelOverride,
+          modelOverride?.model,
+          modelOverride?.requestSettings,
         );
 
         this.setStatus("Saving...");
@@ -87,7 +104,8 @@ export class TextGenerationService extends GenerationOrchestrator {
           (content) => {
             projection.updateStreamingMessage(content);
           },
-          modelOverride,
+          modelOverride?.model,
+          modelOverride?.requestSettings,
         );
 
         this.setStatus("Saving....");

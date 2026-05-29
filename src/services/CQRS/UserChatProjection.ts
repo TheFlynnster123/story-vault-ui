@@ -19,12 +19,13 @@ import type {
   PlanHiddenEvent,
   NoteCreatedEvent,
   NoteEditedEvent,
+  AgentClarificationCreatedEvent,
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
 
 export const getUserChatProjectionInstance = createInstanceCache(
-  (_chatId: string) => new UserChatProjection(),
+  () => new UserChatProjection(),
 );
 
 export class UserChatProjection {
@@ -172,6 +173,9 @@ export class UserChatProjection {
         break;
       case "NoteEdited":
         this.processNoteEdited(event);
+        break;
+      case "AgentClarificationCreated":
+        this.processAgentClarificationCreated(event);
         break;
     }
   }
@@ -577,6 +581,23 @@ export class UserChatProjection {
     }
   }
 
+  private processAgentClarificationCreated(
+    event: AgentClarificationCreatedEvent,
+  ) {
+    this.Messages.push({
+      id: event.clarificationId,
+      type: "agent-clarification",
+      content: event.answer,
+      data: {
+        question: event.question,
+        answer: event.answer,
+      },
+      hiddenByChapterId: undefined,
+      deleted: false,
+      hidden: false,
+    });
+  }
+
   private static HIDEABLE_TYPES: ReadonlySet<string> = new Set([
     "user-message",
     "system-message",
@@ -676,10 +697,12 @@ export interface UserChatMessage {
     | "chapter"
     | "book"
     | "plan"
-    | "note";
+    | "note"
+    | "agent-clarification";
 
   content?: string; // Text-based content of the message
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any; // Data specific to message type
 
   hiddenByChapterId: string | undefined;
@@ -773,6 +796,15 @@ export interface NoteChatMessage extends UserChatMessage {
   data: {
     expiresAfterMessages: number | null;
     expired: boolean;
+  };
+}
+
+export interface AgentClarificationChatMessage extends UserChatMessage {
+  type: "agent-clarification";
+  content: string;
+  data: {
+    question: string;
+    answer: string;
   };
 }
 

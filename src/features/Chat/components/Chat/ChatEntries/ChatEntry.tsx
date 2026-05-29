@@ -7,7 +7,9 @@ import { BookMessage } from "./BookMessage";
 import { StoryMessage } from "./StoryMessage";
 import { PlanMessage } from "./PlanMessage";
 import { NoteMessage } from "./NoteMessage";
+import { AgentClarificationMessage } from "./AgentClarificationMessage";
 import type {
+  AgentClarificationChatMessage,
   BookChatMessage,
   ChapterChatMessage,
   CivitJobChatMessage,
@@ -61,6 +63,15 @@ export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
 
   if (message.type === "note") {
     return <NoteMessage chatId={chatId} message={message as NoteChatMessage} />;
+  }
+
+  if (message.type === "agent-clarification") {
+    return (
+      <AgentClarificationMessage
+        chatId={chatId}
+        message={message as AgentClarificationChatMessage}
+      />
+    );
   }
 
   if (message.type === "user-message") {

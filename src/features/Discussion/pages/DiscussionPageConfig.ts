@@ -19,6 +19,8 @@ export interface DiscussionPageConfig {
   title: string;
   /** Description text below the title */
   description: string;
+  /** When true, hides the inline description and exposes it through an info popover next to the title. */
+  descriptionInInfoPopover?: boolean;
   /** Placeholder text for the input field */
   inputPlaceholder: string;
   /** Label for the generate button */

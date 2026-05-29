@@ -33,6 +33,52 @@ describe("ChatSettingsService", () => {
     vi.clearAllMocks();
   });
 
+  describe("partial updates", () => {
+    it("should merge partial updates with existing settings when saving immediately", async () => {
+      const existingSettings = createMockSettings({
+        modelOverride: "openai/o4-mini",
+        modelReasoningEffortOverride: "high",
+        messageTransparency: 0.4,
+      });
+      mockManagedBlob.get.mockResolvedValue(existingSettings);
+
+      const service = new ChatSettingsService(CHAT_ID);
+      await service.update({ chatTitle: "Updated Title" });
+
+      expect(mockManagedBlob.save).toHaveBeenCalledWith({
+        ...existingSettings,
+        chatTitle: "Updated Title",
+      });
+    });
+
+    it("should merge partial updates with existing settings when saving debounced", async () => {
+      const existingSettings = createMockSettings({
+        modelOverride: "anthropic/claude-3",
+        modelReasoningEffortOverride: "medium",
+        messageTransparency: 0.2,
+      });
+      mockManagedBlob.get.mockResolvedValue(existingSettings);
+
+      const service = new ChatSettingsService(CHAT_ID);
+      await service.updateDebounced({ prompt: "Updated prompt" });
+
+      expect(mockManagedBlob.saveDebounced).toHaveBeenCalledWith({
+        ...existingSettings,
+        prompt: "Updated prompt",
+      });
+    });
+
+    it("should not save partial updates when settings do not exist", async () => {
+      mockManagedBlob.get.mockResolvedValue(undefined);
+
+      const service = new ChatSettingsService(CHAT_ID);
+      await service.updateDebounced({ chatTitle: "Ignored" });
+
+      expect(mockManagedBlob.save).not.toHaveBeenCalled();
+      expect(mockManagedBlob.saveDebounced).not.toHaveBeenCalled();
+    });
+  });
+
   describe("setMessageTransparency", () => {
     it("should save transparency value with debounce", async () => {
       const existingSettings = createMockSettings();
@@ -111,6 +157,47 @@ describe("ChatSettingsService", () => {
       expect(mockManagedBlob.saveDebounced).toHaveBeenCalledWith({
         ...existingSettings,
         messageTransparency: 0.2,
+      });
+    });
+  });
+
+  describe("setModelOverride", () => {
+    it("should save model override with request settings", async () => {
+      const existingSettings = createMockSettings();
+      mockManagedBlob.get.mockResolvedValue(existingSettings);
+
+      const service = new ChatSettingsService(CHAT_ID);
+      await service.setModelOverride("openai/o4-mini", {
+        reasoning: { effort: "high" },
+        temperature: 0.4,
+      });
+
+      expect(mockManagedBlob.save).toHaveBeenCalledWith({
+        ...existingSettings,
+        modelOverride: "openai/o4-mini",
+        modelRequestSettingsOverride: {
+          reasoning: { effort: "high" },
+          temperature: 0.4,
+        },
+        modelReasoningEffortOverride: undefined,
+      });
+    });
+
+    it("should clear reasoning effort when clearing model override", async () => {
+      const existingSettings = createMockSettings({
+        modelOverride: "openai/o4-mini",
+        modelReasoningEffortOverride: "high",
+      });
+      mockManagedBlob.get.mockResolvedValue(existingSettings);
+
+      const service = new ChatSettingsService(CHAT_ID);
+      await service.setModelOverride(undefined);
+
+      expect(mockManagedBlob.save).toHaveBeenCalledWith({
+        ...existingSettings,
+        modelOverride: undefined,
+        modelRequestSettingsOverride: undefined,
+        modelReasoningEffortOverride: undefined,
       });
     });
   });

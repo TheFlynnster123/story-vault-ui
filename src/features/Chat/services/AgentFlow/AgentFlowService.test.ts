@@ -87,6 +87,23 @@ describe("AgentFlowService", () => {
     expect(postStructuredChat.mock.calls[0][2]).toBe("openai/gpt-4.1");
   });
 
+  it("passes a manually selected intent into the request prompt", async () => {
+    const service = new AgentFlowService(chatId);
+    await service.generateIntentSuggestion("generate_image");
+
+    const sentMessages = postStructuredChat.mock.calls[0][0];
+    expect(sentMessages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: "user",
+          content: expect.stringContaining(
+            'The user manually selected intent "generate_image"',
+          ),
+        }),
+      ]),
+    );
+  });
+
   it("normalizes malformed confidence and invalid actions", async () => {
     postStructuredChat.mockResolvedValue({
       intent: "not-real",
@@ -124,7 +141,40 @@ describe("AgentFlowService", () => {
       confidence: 0.35,
       rationale:
         "The model returned only an intent. Run analysis again for detailed actions.",
+      proposedActions: [
+        {
+          tool: "save_memory",
+          title: "Open memories",
+          reason:
+            "The model returned only an intent. Run analysis again for detailed actions.",
+          args: {},
+          requiresConfirmation: true,
+        },
+      ],
+    });
+  });
+
+  it("creates an executable ask_user action when none is returned", async () => {
+    postStructuredChat.mockResolvedValue({
+      intent: "ask_user",
+      confidence: 0.6,
+      rationale: "Should the scene move to the alley or stay inside?",
       proposedActions: [],
     });
+
+    const service = new AgentFlowService(chatId);
+    const suggestion = await service.generateIntentSuggestion("ask_user");
+
+    expect(suggestion.proposedActions).toEqual([
+      {
+        tool: "ask_user",
+        title: "Ask user",
+        reason: "Should the scene move to the alley or stay inside?",
+        args: {
+          question: "Should the scene move to the alley or stay inside?",
+        },
+        requiresConfirmation: true,
+      },
+    ]);
   });
 });

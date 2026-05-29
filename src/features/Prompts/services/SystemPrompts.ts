@@ -150,6 +150,8 @@ Focus on actions that are valuable now:
 - ask_user: a missing decision blocks a useful workflow
 - continue_chat: no workflow action is useful yet
 
+For ask_user actions, include args.question and, when useful, args.options as an array of short possible answers.
+
 Return exactly one JSON object matching the configured response schema. Do not return a bare intent string. Return conservative suggestions. Prefer no action when the signal is weak. Do not invent facts not present in the chat.`,
   agentIntentModel: "x-ai/grok-4.3",
 };
