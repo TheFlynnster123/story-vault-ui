@@ -2,6 +2,7 @@ import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 /**
  * Creates a DiscussionConfig for discussing a new chapter's summary BEFORE
@@ -16,6 +17,7 @@ export const createNewChapterDiscussionConfig = (
   chatId: string,
   chapterTitle: string,
   chapterSummaryModel?: string,
+  chapterSummaryRequestSettings?: OpenRouterRequestSettings,
   chapterSummaryPrompt?: string,
   discussChapterPrompt?: string,
 ): DiscussionConfig => {
@@ -45,6 +47,9 @@ export const createNewChapterDiscussionConfig = (
   const getDefaultModel = (): string | undefined =>
     chapterSummaryModel || undefined;
 
+  const getDefaultRequestSettings = (): OpenRouterRequestSettings | undefined =>
+    chapterSummaryRequestSettings;
+
   const generateFromFeedback = async (feedback: string): Promise<void> => {
     const chatMessages = getChatMessages();
     const systemPrompt = [
@@ -67,7 +72,15 @@ export const createNewChapterDiscussionConfig = (
     ];
 
     const model = chapterSummaryModel || undefined;
-    const summary = await d.OpenRouterChatAPI().postChat(messages, model);
+    const summary = await d
+      .OpenRouterChatAPI()
+      .postChat(
+        messages,
+        model,
+        "chat",
+        "LLM",
+        chapterSummaryRequestSettings,
+      );
 
     await d.ChatService(chatId).AddChapter(chapterTitle, summary);
   };
@@ -80,6 +93,7 @@ export const createNewChapterDiscussionConfig = (
     buildSystemPrompt,
     getChatMessages,
     getDefaultModel,
+    getDefaultRequestSettings,
     generateFromFeedback,
     buildInitialPrompt,
     acceptMessage,

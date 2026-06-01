@@ -10,8 +10,16 @@ import {
   Collapse,
   Checkbox,
   Alert,
+  ActionIcon,
+  Tooltip,
 } from "@mantine/core";
-import { RiArrowDownSLine, RiArrowRightSLine, RiErrorWarningLine } from "react-icons/ri";
+import {
+  RiArrowDownSLine,
+  RiArrowRightSLine,
+  RiErrorWarningLine,
+  RiSparklingLine,
+} from "react-icons/ri";
+import { VscRefresh } from "react-icons/vsc";
 import type { ChapterChatMessage } from "../../../../../services/CQRS/UserChatProjection";
 import { areChapterIdsContiguous } from "./areChapterIdsContiguous";
 import {
@@ -33,7 +41,8 @@ interface CreateBookModalProps {
   onTitleChange: (title: string) => void;
   onSummaryChange: (summary: string) => void;
   onSelectionChange: (ids: string[]) => void;
-  onGenerateSummary: () => void;
+  onGenerateTitle: () => void;
+  onGenerate: () => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -48,7 +57,8 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
   onTitleChange,
   onSummaryChange,
   onSelectionChange,
-  onGenerateSummary,
+  onGenerateTitle,
+  onGenerate,
   onSubmit,
   onCancel,
 }) => {
@@ -58,12 +68,19 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
 
   const isContiguous = areChapterIdsContiguous(chapters, selectedChapterIds);
 
-  const canSubmit =
+  const canSubmit = Boolean(
     title.trim() &&
-    summary.trim() &&
-    selectedChapterIds.length > 0 &&
-    isContiguous &&
-    !isGenerating;
+      summary.trim() &&
+      selectedChapterIds.length > 0 &&
+      isContiguous &&
+      !isGenerating,
+  );
+  const canGenerate = Boolean(
+    title.trim() &&
+      selectedChapterIds.length > 0 &&
+      isContiguous &&
+      !isGenerating,
+  );
 
   const toggleExpand = (chapterId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -93,7 +110,10 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
               No chapters available to compress.
             </Text>
           ) : (
-            <Checkbox.Group value={selectedChapterIds} onChange={onSelectionChange}>
+            <Checkbox.Group
+              value={selectedChapterIds}
+              onChange={onSelectionChange}
+            >
               <ChapterList>
                 {chapters.map((chapter) => {
                   const isExpanded = expandedChapters.has(chapter.id);
@@ -136,33 +156,39 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
           )}
         </Stack>
 
-        <TextInput
-          label="Book Title"
-          placeholder="Enter a title for this book..."
-          value={title}
-          onChange={(e) => onTitleChange(e.currentTarget.value)}
-          required
-        />
+        <Group align="flex-end" gap="xs">
+          <TextInput
+            label="Book Title"
+            placeholder="Enter a title for this book..."
+            value={title}
+            onChange={(e) => onTitleChange(e.currentTarget.value)}
+            required
+            style={{ flex: 1 }}
+          />
+          <Tooltip label="Generate title with AI">
+            <ActionIcon
+              variant="light"
+              color="green"
+              size="input-sm"
+              onClick={onGenerateTitle}
+              loading={isGenerating}
+              disabled={selectedChapterIds.length === 0 || !isContiguous}
+              aria-label="Generate title with AI"
+            >
+              <RiSparklingLine size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
 
         <Stack gap="xs">
           <Textarea
-            label="Book Summary"
-            placeholder="Click 'Generate Summary' or enter manually..."
+            label="Book Summary (optional for Generate)"
+            placeholder="Enter a summary manually, or click Generate to workshop one with the AI..."
             value={summary}
             onChange={(e) => onSummaryChange(e.currentTarget.value)}
-            minRows={12}
+            minRows={8}
             autosize
-            required
           />
-          <Button
-            variant="light"
-            onClick={onGenerateSummary}
-            loading={isGenerating}
-            disabled={selectedChapterIds.length === 0 || !isContiguous}
-            fullWidth
-          >
-            Generate Summary
-          </Button>
         </Stack>
 
         <Group justify="flex-end" mt="md">
@@ -171,6 +197,15 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({
           </Button>
           <Button color="blue" onClick={onSubmit} disabled={!canSubmit}>
             Create Book
+          </Button>
+          <Button
+            color="green"
+            onClick={onGenerate}
+            disabled={!canGenerate}
+            loading={isGenerating}
+            leftSection={<VscRefresh size={16} />}
+          >
+            Generate
           </Button>
         </Group>
       </Stack>

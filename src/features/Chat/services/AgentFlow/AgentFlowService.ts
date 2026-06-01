@@ -141,6 +141,9 @@ export class AgentFlowService {
     const model =
       systemPrompts?.agentIntentModel ||
       DEFAULT_SYSTEM_PROMPTS.agentIntentModel;
+    const requestSettings = systemPrompts?.agentIntentRequestSettings;
+    const chatSettings = await d.ChatSettingsService(this.chatId).Get();
+    const sensitivity = chatSettings?.agentFlowSensitivity ?? 50;
 
     const contextMessages = await d
       .LLMMessageContextService(this.chatId)
@@ -150,6 +153,7 @@ export class AgentFlowService {
       contextMessages,
       prompt,
       selectedIntent,
+      sensitivity,
     );
     const response = await d.OpenRouterChatAPI().postStructuredChat<unknown>(
       messages,
@@ -157,6 +161,7 @@ export class AgentFlowService {
       model,
       "Agent Intent",
       true,
+      requestSettings,
     );
 
     return normalizeSuggestion(response, selectedIntent);
@@ -176,12 +181,14 @@ const buildIntentMessages = (
   contextMessages: LLMMessage[],
   prompt: string,
   selectedIntent?: AgentIntent,
+  sensitivity: number = 50,
 ): LLMMessage[] => [
   ...contextMessages,
   toSystemMessage(prompt),
   toUserMessage(
     [
       "Analyze the current chat state and return exactly one JSON object.",
+      formatSensitivityInstruction(sensitivity),
       selectedIntent
         ? `The user manually selected intent "${selectedIntent}". Prefer that intent and generate useful proposedActions for it when the chat context supports it. If required details are missing, use ask_user.`
         : "Select the most useful intent yourself.",
@@ -191,6 +198,20 @@ const buildIntentMessages = (
     ].join("\n"),
   ),
 ];
+
+const formatSensitivityInstruction = (sensitivity: number): string => {
+  const normalized = Math.min(100, Math.max(0, Math.round(sensitivity)));
+
+  if (normalized <= 33) {
+    return `Agent flow sensitivity: ${normalized}/100 (Conservative). Only suggest workflow actions when the benefit is strong and obvious. Prefer continue_chat when uncertain.`;
+  }
+
+  if (normalized <= 66) {
+    return `Agent flow sensitivity: ${normalized}/100 (Balanced). Suggest workflow actions when they are likely useful, but avoid noisy or speculative actions.`;
+  }
+
+  return `Agent flow sensitivity: ${normalized}/100 (Proactive). Prefer a useful workflow action when there is plausible benefit. Use ask_user when details are missing instead of defaulting to continue_chat.`;
+};
 
 const normalizeSuggestion = (
   suggestion: unknown,

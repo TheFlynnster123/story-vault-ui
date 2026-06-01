@@ -1,3 +1,5 @@
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+
 /**
  * System Prompts Configuration
  *
@@ -10,6 +12,8 @@ export interface SystemPrompts {
   newStoryPrompt: string;
   /** Model override for story generation (empty = use default) */
   newStoryModel?: string;
+  /** OpenRouter request settings paired with the story generation model override */
+  newStoryRequestSettings?: OpenRouterRequestSettings;
 
   /** Prompt for generating first-person narrative content. Pre-filled into ChatSettings.prompt at chat creation. */
   defaultFirstPersonPrompt: string;
@@ -22,36 +26,50 @@ export interface SystemPrompts {
   defaultImagePrompt: string;
   /** Model override for image prompt generation (empty = use default) */
   defaultImageModel?: string;
+  /** OpenRouter request settings paired with the image prompt generation model override */
+  defaultImageRequestSettings?: OpenRouterRequestSettings;
 
   /** Prompt for generating chapter summaries */
   chapterSummaryPrompt: string;
   /** Model override for chapter summary generation (empty = use default) */
   chapterSummaryModel?: string;
+  /** OpenRouter request settings paired with the chapter summary model override */
+  chapterSummaryRequestSettings?: OpenRouterRequestSettings;
 
   /** Prompt for generating chapter titles */
   chapterTitlePrompt: string;
   /** Model override for chapter title generation (empty = use default) */
   chapterTitleModel?: string;
+  /** OpenRouter request settings paired with the chapter title model override */
+  chapterTitleRequestSettings?: OpenRouterRequestSettings;
 
   /** Prompt for generating book summaries (summaries of multiple chapters) */
   bookSummaryPrompt: string;
   /** Model override for book summary generation (empty = use default) */
   bookSummaryModel?: string;
+  /** OpenRouter request settings paired with the book summary model override */
+  bookSummaryRequestSettings?: OpenRouterRequestSettings;
 
   /** Prompt for generating book titles */
   bookTitlePrompt: string;
   /** Model override for book title generation (empty = use default) */
   bookTitleModel?: string;
+  /** OpenRouter request settings paired with the book title model override */
+  bookTitleRequestSettings?: OpenRouterRequestSettings;
 
   /** Prompt for selecting which character to depict in an image */
   characterSelectionPrompt: string;
   /** Model override for character selection (empty = use default) */
   characterSelectionModel?: string;
+  /** OpenRouter request settings paired with the character selection model override */
+  characterSelectionRequestSettings?: OpenRouterRequestSettings;
 
   /** Prompt for generating character descriptions */
   characterDescriptionPrompt: string;
   /** Model override for character description generation (empty = use default) */
   characterDescriptionModel?: string;
+  /** OpenRouter request settings paired with the character description model override */
+  characterDescriptionRequestSettings?: OpenRouterRequestSettings;
 
   /** System prompt used during chapter discussion conversations */
   discussChapterPrompt: string;
@@ -69,6 +87,11 @@ export interface SystemPrompts {
   agentIntentPrompt: string;
   /** Model override for agent intent generation (empty = use default) */
   agentIntentModel?: string;
+  /** OpenRouter request settings paired with the agent intent model override */
+  agentIntentRequestSettings?: OpenRouterRequestSettings;
+
+  /** Prompt used to create a private reasoning message before the next chat response */
+  reasoningPrompt: string;
 }
 
 export const DEFAULT_SYSTEM_PROMPTS: SystemPrompts = {
@@ -154,4 +177,7 @@ For ask_user actions, include args.question and, when useful, args.options as an
 
 Return exactly one JSON object matching the configured response schema. Do not return a bare intent string. Return conservative suggestions. Prefer no action when the signal is weak. Do not invent facts not present in the chat.`,
   agentIntentModel: "x-ai/grok-4.3",
+
+  reasoningPrompt:
+    "Review the conversation above and reason about the next response. Focus on continuity, character intent, immediate consequences, and any constraints the response should respect. Do not write the final story response. Provide concise reasoning for the next response only.",
 };

@@ -8,6 +8,7 @@ import { useSystemSettings } from "../../SystemSettings/hooks/useSystemSettings"
 import { useSystemPrompts } from "../../Prompts/hooks/useSystemPrompts";
 import { d } from "../../../services/Dependencies";
 import { OpenRouterError } from "../../OpenRouter/services/OpenRouterError";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 interface StoryGeneratorModalProps {
   onStoryGenerated?: (story: string) => void;
@@ -22,6 +23,9 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
   const [opened, setOpened] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<string | null>(null);
+  const [requestSettings, setRequestSettings] = useState<
+    OpenRouterRequestSettings | undefined
+  >();
   const [isGenerating, setIsGenerating] = useState(false);
 
   const defaultModel = useMemo(
@@ -31,11 +35,19 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
     [systemSettings, systemPrompts],
   );
 
+  const defaultRequestSettings = useMemo(
+    () =>
+      systemPrompts?.newStoryRequestSettings ??
+      systemSettings?.chatGenerationSettings,
+    [systemSettings, systemPrompts],
+  );
+
   useEffect(() => {
     if (!opened) return;
     setPrompt("");
     setModel(defaultModel || "");
-  }, [opened, defaultModel]);
+    setRequestSettings(defaultRequestSettings);
+  }, [opened, defaultModel, defaultRequestSettings]);
 
   const handleClose = () => setOpened(false);
 
@@ -62,7 +74,7 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
 
       const generatedStory = await d
         .OpenRouterChatAPI()
-        .postChat(messages, model || undefined);
+        .postChat(messages, model || undefined, "chat", "LLM", requestSettings);
 
       onStoryGenerated?.(generatedStory);
       handleClose();
@@ -103,7 +115,12 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
           />
 
           <Stack gap="xs">
-            <ModelSelect value={model ?? ""} onChange={setModel} />
+            <ModelSelect
+              value={model ?? ""}
+              onChange={setModel}
+              requestSettings={requestSettings}
+              onRequestSettingsChange={setRequestSettings}
+            />
             <Group justify="space-between" align="center">
               <Text size="sm" c="dimmed" style={{ flex: 1 }}>
                 The AI will generate a story opening or template based on your

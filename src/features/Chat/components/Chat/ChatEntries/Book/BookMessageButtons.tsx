@@ -2,6 +2,7 @@ import { Stack } from "@mantine/core";
 import { EditBookButton } from "./EditBookButton";
 import { DeleteBookButton } from "./DeleteBookButton";
 import { DiscussBookButton } from "./DiscussBookButton";
+import { InspectMessageButton } from "../ChatEntryButtons/InspectMessageButton";
 
 interface BookMessageButtonsProps {
   chatId: string;
@@ -14,6 +15,7 @@ export const BookMessageButtons: React.FC<BookMessageButtonsProps> = ({
 }) => {
   return (
     <Stack gap="xs" justify="center" mt="md">
+      <InspectMessageButton chatId={chatId} messageId={bookId} />
       <EditBookButton chatId={chatId} bookId={bookId} />
       <DiscussBookButton chatId={chatId} bookId={bookId} />
       <DeleteBookButton chatId={chatId} bookId={bookId} />

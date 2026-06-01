@@ -36,15 +36,28 @@ const ExpandButtonContainer = styled.div`
   margin-top: 0.5rem;
 `;
 
+const TrailingContextBanner = styled.div`
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.78rem;
+  line-height: 1.35;
+`;
+
 interface ChapterMessageProps {
   chatId: string;
   chapter: ChapterChatMessage;
   isLastMessage?: boolean;
+  trailingMessageCount?: number;
 }
 
 export const ChapterMessage: React.FC<ChapterMessageProps> = ({
   chatId,
   chapter,
+  trailingMessageCount,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -59,6 +72,14 @@ export const ChapterMessage: React.FC<ChapterMessageProps> = ({
         <ChapterHeader>📖 {chapter.data.title}</ChapterHeader>
 
         <ChapterContent chapter={chapter} />
+
+        {trailingMessageCount !== undefined && trailingMessageCount > 0 && (
+          <TrailingContextBanner>
+            {trailingMessageCount} prior chapter message
+            {trailingMessageCount === 1 ? "" : "s"} are still included in LLM
+            context.
+          </TrailingContextBanner>
+        )}
 
         <ExpandButtonContainer>
           <Button

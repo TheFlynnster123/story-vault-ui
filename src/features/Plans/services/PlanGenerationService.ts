@@ -212,7 +212,15 @@ export class PlanGenerationService {
         ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
         : buildPromptMessages(chatMessages, plan);
 
-      const response = await d.OpenRouterChatAPI().postChat(promptMessages, plan.model || undefined);
+      const response = await d
+        .OpenRouterChatAPI()
+        .postChat(
+          promptMessages,
+          plan.model || undefined,
+          "chat",
+          "LLM",
+          plan.modelRequestSettings,
+        );
       const content = stripMarkdownCodeFence(response);
       await d
         .ChatService(this.chatId)
@@ -269,7 +277,15 @@ export class PlanGenerationService {
     chatMessages: LLMMessage[],
   ): Promise<void> => {
     const promptMessages = buildPromptMessages(chatMessages, plan);
-    const response = await d.OpenRouterChatAPI().postChat(promptMessages, plan.model || undefined);
+    const response = await d
+      .OpenRouterChatAPI()
+      .postChat(
+        promptMessages,
+        plan.model || undefined,
+        "chat",
+        "LLM",
+        plan.modelRequestSettings,
+      );
     const content = stripMarkdownCodeFence(response);
     await d
       .ChatService(this.chatId)

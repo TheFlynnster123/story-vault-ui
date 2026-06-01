@@ -3,6 +3,7 @@ import type { BookChatMessage } from "../../../services/CQRS/UserChatProjection"
 import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 /**
  * Creates a DiscussionConfig for discussing a specific book's summary.
@@ -18,6 +19,7 @@ export const createBookDiscussionConfig = (
   chatId: string,
   bookId: string,
   bookSummaryModel?: string,
+  bookSummaryRequestSettings?: OpenRouterRequestSettings,
   bookSummaryPrompt?: string,
   discussBookPrompt?: string,
 ): DiscussionConfig => {
@@ -61,6 +63,9 @@ export const createBookDiscussionConfig = (
   const getDefaultModel = (): string | undefined =>
     bookSummaryModel || undefined;
 
+  const getDefaultRequestSettings = (): OpenRouterRequestSettings | undefined =>
+    bookSummaryRequestSettings;
+
   const generateFromFeedback = async (feedback: string): Promise<void> => {
     const book = findBook();
     if (!book) return;
@@ -94,7 +99,15 @@ export const createBookDiscussionConfig = (
     ];
 
     const model = bookSummaryModel || undefined;
-    const response = await d.OpenRouterChatAPI().postChat(messages, model);
+    const response = await d
+      .OpenRouterChatAPI()
+      .postChat(
+        messages,
+        model,
+        "chat",
+        "LLM",
+        bookSummaryRequestSettings,
+      );
 
     await d.ChatService(chatId).EditBook(bookId, title, response);
   };
@@ -103,6 +116,7 @@ export const createBookDiscussionConfig = (
     buildSystemPrompt,
     getChatMessages,
     getDefaultModel,
+    getDefaultRequestSettings,
     generateFromFeedback,
     buildInitialPrompt,
   };

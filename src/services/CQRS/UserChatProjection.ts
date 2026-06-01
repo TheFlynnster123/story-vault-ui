@@ -1,6 +1,7 @@
 import type {
   ChatEvent,
   MessageCreatedEvent,
+  ReasoningCreatedEvent,
   MessageEditedEvent,
   MessageDeletedEvent,
   MessagesDeletedEvent,
@@ -122,6 +123,9 @@ export class UserChatProjection {
         break;
       case "MessageCreated":
         this.processMessageCreated(event);
+        break;
+      case "ReasoningCreated":
+        this.processReasoningCreated(event);
         break;
       case "MessageEdited":
         this.processMessageEdited(event);
@@ -251,6 +255,17 @@ export class UserChatProjection {
     this.Messages.push({
       id: event.messageId,
       type: toType(event.role),
+      content: event.content,
+      hiddenByChapterId: undefined,
+      deleted: false,
+      hidden: false,
+    });
+  }
+
+  private processReasoningCreated(event: ReasoningCreatedEvent) {
+    this.Messages.push({
+      id: event.messageId,
+      type: "reasoning",
       content: event.content,
       hiddenByChapterId: undefined,
       deleted: false,
@@ -602,6 +617,7 @@ export class UserChatProjection {
     "user-message",
     "system-message",
     "assistant",
+    "reasoning",
     "civit-job",
     "civit-workflow",
     "story",
@@ -624,48 +640,39 @@ export class UserChatProjection {
   private computeNoteExpiration(
     messages: UserChatMessage[],
   ): UserChatMessage[] {
-    const result: UserChatMessage[] = [];
-    const noteIndices: number[] = [];
+    return messages.map((msg) => {
+      if (msg.type !== "note") return msg;
 
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      if (msg.type === "note") {
-        result.push(msg);
-        noteIndices.push(i);
-      } else {
-        result.push(msg);
-
-        if (UserChatProjection.NOTE_EXPIRATION_TYPES.has(msg.type)) {
-          for (const noteIdx of noteIndices) {
-            const note = result[noteIdx] as NoteChatMessage;
-            if (note.data.expiresAfterMessages === null || note.data.expired)
-              continue;
-
-            const messagesAfterNote = this.countMessagesSinceIndex(
-              messages,
-              noteIdx,
-            );
-            if (messagesAfterNote >= note.data.expiresAfterMessages) {
-              result[noteIdx] = {
-                ...note,
-                data: { ...note.data, expired: true },
-              };
-            }
-          }
-        }
-      }
-    }
-
-    return result;
+      const note = msg as NoteChatMessage;
+      return {
+        ...note,
+        data: {
+          ...note.data,
+          expired: this.isNoteExpired(note),
+        },
+      };
+    });
   }
 
-  private countMessagesSinceIndex(
-    messages: UserChatMessage[],
-    noteIndex: number,
-  ): number {
+  private isNoteExpired(note: NoteChatMessage): boolean {
+    if (note.data.expiresAfterMessages === null) return false;
+
+    return (
+      this.countMessagesAfterNote(note.id) >= note.data.expiresAfterMessages
+    );
+  }
+
+  private countMessagesAfterNote(noteId: string): number {
+    const noteIndex = this.Messages.findIndex((m) => m.id === noteId);
+    if (noteIndex === -1) return 0;
+
     let count = 0;
-    for (let i = noteIndex + 1; i < messages.length; i++) {
-      if (UserChatProjection.NOTE_EXPIRATION_TYPES.has(messages[i].type)) {
+    for (let i = noteIndex + 1; i < this.Messages.length; i++) {
+      const message = this.Messages[i];
+      if (
+        !message.deleted &&
+        UserChatProjection.NOTE_EXPIRATION_TYPES.has(message.type)
+      ) {
         count++;
       }
     }
@@ -692,6 +699,7 @@ export interface UserChatMessage {
     | "user-message"
     | "system-message"
     | "assistant"
+    | "reasoning"
     | "civit-job"
     | "civit-workflow"
     | "chapter"
@@ -805,6 +813,14 @@ export interface AgentClarificationChatMessage extends UserChatMessage {
   data: {
     question: string;
     answer: string;
+  };
+}
+
+export interface ReasoningChatMessage extends UserChatMessage {
+  type: "reasoning";
+  content: string;
+  data?: {
+    disabled?: boolean;
   };
 }
 

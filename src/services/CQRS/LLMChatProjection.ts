@@ -1,6 +1,7 @@
 import type {
   ChatEvent,
   MessageCreatedEvent,
+  ReasoningCreatedEvent,
   MessageEditedEvent,
   MessageDeletedEvent,
   MessagesDeletedEvent,
@@ -69,6 +70,9 @@ export class LLMChatProjection {
       case "MessageCreated":
         this.processMessageCreated(event);
         break;
+      case "ReasoningCreated":
+        this.processReasoningCreated(event);
+        break;
       case "MessageEdited":
         this.processMessageEdited(event);
         break;
@@ -123,6 +127,10 @@ export class LLMChatProjection {
   }
 
   // ---- LLM Message Retrieval ----
+  public SetPreviousChapterMessageBuffer(count: number): void {
+    this.numberOfPreviousChapterMessages = Math.max(0, Math.round(count));
+  }
+
   public GetMessages(): LLMMessage[] {
     const lastChapter = this.getLastChapter();
     let messages: MessageState[];
@@ -202,6 +210,19 @@ export class LLMChatProjection {
     this.updateLastChapterFormat();
   }
 
+  processReasoningCreated(event: ReasoningCreatedEvent) {
+    this.messages.push(
+      this.createMessageState(
+        event.messageId,
+        "reasoning",
+        "assistant",
+        this.formatReasoningContent(event.content),
+      ),
+    );
+
+    this.updateLastChapterFormat();
+  }
+
   processMessageEdited(event: MessageEditedEvent) {
     const msg = this.getMessage(event.messageId);
     if (msg && !msg.deleted) msg.content = event.newContent;
@@ -257,7 +278,7 @@ export class LLMChatProjection {
   }
 
   private isHideableByChapter = (msg: MessageState): boolean =>
-    msg.type === "message";
+    msg.type === "message" || msg.type === "reasoning";
 
   processChapterEdited(event: ChapterEditedEvent) {
     const chapter = this.getMessage(event.chapterId);
@@ -458,6 +479,9 @@ export class LLMChatProjection {
   formatPlanContent = (planName: string, content: string): string =>
     `[Plan: ${planName}]\n${content}\n[End of Plan]`;
 
+  formatReasoningContent = (content: string): string =>
+    `[Reasoning]\n${content}\n[End of Reasoning]`;
+
   formatBookContent = (title: string, summary: string): string =>
     `[Book Summary: ${title}]\n${summary}\n[End of Book Summary]`;
 
@@ -483,15 +507,25 @@ export class LLMChatProjection {
       )
         return true;
 
-      const noteIndex = messages.indexOf(msg);
-      let count = 0;
-      for (let i = noteIndex + 1; i < messages.length; i++) {
-        if (LLMChatProjection.NOTE_EXPIRATION_TYPES.has(messages[i].type)) {
-          count++;
-        }
-      }
-      return count < msg.data.expiresAfterMessages;
+      return this.countMessagesAfterNote(msg.id) < msg.data.expiresAfterMessages;
     });
+  }
+
+  private countMessagesAfterNote(noteId: string): number {
+    const noteIndex = this.messages.findIndex((m) => m.id === noteId);
+    if (noteIndex === -1) return 0;
+
+    let count = 0;
+    for (let i = noteIndex + 1; i < this.messages.length; i++) {
+      const message = this.messages[i];
+      if (
+        !message.deleted &&
+        LLMChatProjection.NOTE_EXPIRATION_TYPES.has(message.type)
+      ) {
+        count++;
+      }
+    }
+    return count;
   }
 
   getMessagesSinceChapter = (lastChapter: MessageState) =>
@@ -507,6 +541,7 @@ export class LLMChatProjection {
   };
 
   shouldIncludePreviousChapterBuffer = (messagesSinceChapter: MessageState[]) =>
+    this.numberOfPreviousChapterMessages === 0 ||
     messagesSinceChapter.length >= this.numberOfPreviousChapterMessages;
 
   getMessage = (id: string): MessageState | undefined =>
@@ -554,6 +589,8 @@ export class LLMChatProjection {
 
   getPreviousChapterBufferMessages(lastChapter: MessageState): MessageState[] {
     if (!lastChapter.coveredMessageIds) return [];
+    if (this.numberOfPreviousChapterMessages === 0) return [];
+
     const bufferIds = lastChapter.coveredMessageIds.slice(
       -this.numberOfPreviousChapterMessages,
     );
@@ -633,6 +670,7 @@ export class LLMChatProjection {
       | "chapter"
       | "book"
       | "plan"
+      | "reasoning"
       | "note"
       | "agent-clarification",
     role: "user" | "assistant" | "system",
@@ -661,6 +699,7 @@ interface MessageState {
     | "chapter"
     | "book"
     | "plan"
+    | "reasoning"
     | "note"
     | "agent-clarification";
   role: "user" | "assistant" | "system";
@@ -691,6 +730,7 @@ interface MessageState {
 
 export interface LLMMessage {
   id?: string;
+  type?: string;
   role: "user" | "assistant" | "system";
   content: string;
 }

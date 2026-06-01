@@ -51,7 +51,7 @@ const defaultBookHook = {
   handleOpenModal: vi.fn(),
   handleCloseModal: vi.fn(),
   handleSelectionChange: vi.fn(),
-  handleGenerateSummary: vi.fn(),
+  handleGenerateTitle: vi.fn(),
   handleSubmit: vi.fn(),
 };
 

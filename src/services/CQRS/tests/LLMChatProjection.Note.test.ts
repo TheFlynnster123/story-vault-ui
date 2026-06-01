@@ -52,7 +52,7 @@ describe("LLMChatProjection - Note Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.noteId) as any;
+      const message = getInternalMessage(projection, event.noteId);
       expect(message?.data?.expiresAfterMessages).toBe(5);
     });
 
@@ -61,7 +61,7 @@ describe("LLMChatProjection - Note Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.noteId) as any;
+      const message = getInternalMessage(projection, event.noteId);
       expect(message?.data?.rawContent).toBe("Raw note content");
     });
 
@@ -79,7 +79,7 @@ describe("LLMChatProjection - Note Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.noteId) as any;
+      const message = getInternalMessage(projection, event.noteId);
       expect(message?.hidden).toBe(false);
     });
 
@@ -88,7 +88,7 @@ describe("LLMChatProjection - Note Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.noteId) as any;
+      const message = getInternalMessage(projection, event.noteId);
       expect(message?.deleted).toBe(false);
     });
   });
@@ -114,7 +114,7 @@ describe("LLMChatProjection - Note Events", () => {
         NoteEditedEventUtil.Create(createEvent.noteId, "Note", 20),
       );
 
-      const message = projection.GetMessage(createEvent.noteId) as any;
+      const message = getInternalMessage(projection, createEvent.noteId);
       expect(message?.data?.expiresAfterMessages).toBe(20);
     });
 
@@ -126,7 +126,7 @@ describe("LLMChatProjection - Note Events", () => {
         NoteEditedEventUtil.Create(createEvent.noteId, "New raw", 10),
       );
 
-      const message = projection.GetMessage(createEvent.noteId) as any;
+      const message = getInternalMessage(projection, createEvent.noteId);
       expect(message?.data?.rawContent).toBe("New raw");
     });
   });
@@ -319,5 +319,41 @@ describe("LLMChatProjection - Note Events", () => {
       expect(hasNote).toBe(true);
       expect(hasChapter).toBe(true);
     });
+
+    it("should keep expired notes out of LLM context after chapter compression hides the expiring messages", () => {
+      const noteEvent = NoteCreatedEventUtil.Create("Temporary note", 2);
+      projection.process(noteEvent);
+      const msg1 = MessageCreatedEventUtil.Create("user", "Msg 1");
+      const msg2 = MessageCreatedEventUtil.Create("assistant", "Reply 1");
+      projection.process(msg1);
+      projection.process(msg2);
+
+      projection.process(
+        createChapterEvent("ch-1", [msg1.messageId, msg2.messageId]),
+      );
+      for (let i = 0; i < 10; i++) {
+        projection.process(
+          MessageCreatedEventUtil.Create("user", `Post chapter ${i}`),
+        );
+      }
+
+      const messages = projection.GetMessages();
+      expect(messages.some((m) => m.content.includes("[Note]"))).toBe(false);
+    });
   });
 });
+
+interface InternalMessageForTest {
+  data?: {
+    expiresAfterMessages?: number | null;
+    rawContent?: string;
+  };
+  hidden?: boolean;
+  deleted?: boolean;
+}
+
+const getInternalMessage = (
+  projection: LLMChatProjection,
+  messageId: string,
+): InternalMessageForTest | null =>
+  projection.GetMessage(messageId) as unknown as InternalMessageForTest | null;

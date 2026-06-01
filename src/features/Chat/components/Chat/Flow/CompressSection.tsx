@@ -18,11 +18,22 @@ export const CompressSection: React.FC<CompressSectionProps> = ({ chatId }) => {
   const chapter = useAddChapter({ chatId });
   const book = useAddBook({ chatId });
 
-  const onGenerate = async () => {
+  const onGenerateChapter = async () => {
     if (!chapter.title.trim()) return;
     const encodedTitle = encodeURIComponent(chapter.title);
     chapter.handleCloseModal();
     navigate(`/chat/${chatId}/chapter/discuss?title=${encodedTitle}`);
+  };
+
+  const onGenerateBook = async () => {
+    if (!book.title.trim() || book.selectedChapterIds.length === 0) return;
+
+    const params = new URLSearchParams();
+    params.set("title", book.title);
+    book.selectedChapterIds.forEach((id) => params.append("chapterId", id));
+
+    book.handleCloseModal();
+    navigate(`/chat/${chatId}/book/discuss?${params.toString()}`);
   };
 
   return (
@@ -45,7 +56,7 @@ export const CompressSection: React.FC<CompressSectionProps> = ({ chatId }) => {
         onTitleChange={chapter.setTitle}
         onSummaryChange={chapter.setSummary}
         onGenerateTitle={chapter.handleGenerateTitle}
-        onGenerate={onGenerate}
+        onGenerate={onGenerateChapter}
         onSubmit={chapter.handleSubmit}
         onCancel={chapter.handleCloseModal}
       />
@@ -60,7 +71,8 @@ export const CompressSection: React.FC<CompressSectionProps> = ({ chatId }) => {
         onTitleChange={book.setTitle}
         onSummaryChange={book.setSummary}
         onSelectionChange={book.handleSelectionChange}
-        onGenerateSummary={book.handleGenerateSummary}
+        onGenerateTitle={book.handleGenerateTitle}
+        onGenerate={onGenerateBook}
         onSubmit={book.handleSubmit}
         onCancel={book.handleCloseModal}
       />

@@ -1,4 +1,5 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 /**
  * Configuration that defines how a specific discussion variant behaves.
@@ -13,6 +14,9 @@ export interface DiscussionConfig {
 
   /** Get the default model for this discussion (if any) */
   getDefaultModel: () => string | undefined;
+
+  /** Get the default OpenRouter request settings for this discussion (if any) */
+  getDefaultRequestSettings?: () => OpenRouterRequestSettings | undefined;
 
   /**
    * Execute the "generate" action using the conversation as feedback.

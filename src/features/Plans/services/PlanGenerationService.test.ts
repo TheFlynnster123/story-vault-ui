@@ -1020,6 +1020,9 @@ describe("PlanGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "anthropic/claude-opus-4",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -1032,6 +1035,9 @@ describe("PlanGenerationService", () => {
 
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
+        undefined,
+        "chat",
+        "LLM",
         undefined,
       );
     });
@@ -1046,6 +1052,29 @@ describe("PlanGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
+      );
+    });
+
+    it("should pass plan request settings to postChat", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({
+        id: "plan-1",
+        model: "openai/gpt-5",
+        modelRequestSettings: { temperature: 0.4 },
+      });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.generatePlanNow("plan-1");
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "openai/gpt-5",
+        "chat",
+        "LLM",
+        { temperature: 0.4 },
       );
     });
 
@@ -1059,6 +1088,9 @@ describe("PlanGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "openai/gpt-5",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -1078,6 +1110,9 @@ describe("PlanGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "google/gemini-2.5-pro",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
   });

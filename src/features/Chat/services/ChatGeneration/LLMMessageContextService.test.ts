@@ -19,6 +19,8 @@ import { d } from "../../../../services/Dependencies";
 import type { ChatSettings } from "../Chat/ChatSettings";
 import type { SystemPromptsService } from "../../../Prompts/services/SystemPromptsService";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
+import type { SystemSettingsService } from "../../../SystemSettings/services/SystemSettingsService";
+import { DEFAULT_TRAILING_CHAPTER_MESSAGES } from "../../../SystemSettings/services/SystemSettings";
 
 vi.mock("../../../../services/Dependencies");
 
@@ -29,28 +31,35 @@ describe("LLMMessageContextService", () => {
   let LLMChatProjection: Mocked<LLMChatProjection>;
   let MemoriesService: Mocked<MemoriesService>;
   let SystemPromptsService: Mocked<SystemPromptsService>;
+  let SystemSettingsService: Mocked<SystemSettingsService>;
 
   beforeEach(() => {
     ChatSettingsService = {
       Get: vi.fn().mockResolvedValue(createDefaultChatSettings()),
-    } as any;
+    } as unknown as Mocked<ChatSettingsService>;
 
     LLMChatProjection = {
       GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
-    } as any;
+      SetPreviousChapterMessageBuffer: vi.fn(),
+    } as unknown as Mocked<LLMChatProjection>;
 
     MemoriesService = {
       get: vi.fn().mockResolvedValue([]),
-    } as any;
+    } as unknown as Mocked<MemoriesService>;
 
     SystemPromptsService = {
       Get: vi.fn().mockResolvedValue(DEFAULT_SYSTEM_PROMPTS),
-    } as any;
+    } as unknown as Mocked<SystemPromptsService>;
+
+    SystemSettingsService = {
+      Get: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Mocked<SystemSettingsService>;
 
     vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
     vi.mocked(d.LLMChatProjection).mockReturnValue(LLMChatProjection);
     vi.mocked(d.MemoriesService).mockReturnValue(MemoriesService);
     vi.mocked(d.SystemPromptsService).mockReturnValue(SystemPromptsService);
+    vi.mocked(d.SystemSettingsService).mockReturnValue(SystemSettingsService);
   });
 
   afterEach(() => {
@@ -117,6 +126,31 @@ describe("LLMMessageContextService", () => {
 
       expect(d.LLMChatProjection).toHaveBeenCalledWith(testChatId);
       expect(LLMChatProjection.GetMessages).toHaveBeenCalled();
+    });
+
+    it("should apply system trailing chapter message setting before reading chat messages", async () => {
+      SystemSettingsService.Get.mockResolvedValue({
+        chapterCompressionSettings: {
+          trailingChapterMessages: 3,
+        },
+      });
+      const service = new LLMMessageContextService(testChatId);
+
+      await service.buildGenerationRequestMessages();
+
+      expect(
+        LLMChatProjection.SetPreviousChapterMessageBuffer,
+      ).toHaveBeenCalledWith(3);
+    });
+
+    it("should default trailing chapter message setting when system setting is unset", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      await service.buildGenerationRequestMessages();
+
+      expect(
+        LLMChatProjection.SetPreviousChapterMessageBuffer,
+      ).toHaveBeenCalledWith(DEFAULT_TRAILING_CHAPTER_MESSAGES);
     });
 
     it("should fetch memories", async () => {
@@ -204,6 +238,114 @@ describe("LLMMessageContextService", () => {
         m.content.includes("Be concise"),
       );
       expect(guidanceIndex).toBeGreaterThan(storyPromptIndex);
+    });
+  });
+
+  describe("buildReasoningRequestMessages", () => {
+    it("should use the system reasoning prompt by default", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildReasoningRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.content).toBe(DEFAULT_SYSTEM_PROMPTS.reasoningPrompt);
+    });
+
+    it("should use a chat-specific reasoning prompt override when configured", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        reasoningPromptOverride: "Custom chat reasoning prompt",
+      });
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildReasoningRequestMessages();
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.content).toBe("Custom chat reasoning prompt");
+    });
+
+    it("should append guidance after the reasoning prompt", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildReasoningRequestMessages("Go darker");
+
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.role).toBe("user");
+      expect(lastMessage.content).toContain("Go darker");
+      expect(result[result.length - 2].content).toBe(
+        DEFAULT_SYSTEM_PROMPTS.reasoningPrompt,
+      );
+    });
+  });
+
+  describe("disabled reasoning context filtering", () => {
+    it("excludes reasoning after the configured number of newer regular messages", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        reasoningExpiresAfterMessages: 2,
+      });
+      LLMChatProjection.GetMessages.mockReturnValue([
+        {
+          id: "reasoning-1",
+          type: "reasoning",
+          role: "assistant",
+          content: "[Reasoning]\nOld reasoning\n[End of Reasoning]",
+        },
+        { id: "msg-1", type: "message", role: "user", content: "First" },
+        { id: "msg-2", type: "message", role: "assistant", content: "Second" },
+      ]);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(false);
+
+      expect(result.some((m) => m.id === "reasoning-1")).toBe(false);
+      expect(result.map((m) => m.id)).toContain("msg-1");
+      expect(result.map((m) => m.id)).toContain("msg-2");
+    });
+
+    it("keeps reasoning when expiration is disabled", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        reasoningExpiresAfterMessages: null,
+      });
+      LLMChatProjection.GetMessages.mockReturnValue([
+        {
+          id: "reasoning-1",
+          type: "reasoning",
+          role: "assistant",
+          content: "[Reasoning]\nPersistent reasoning\n[End of Reasoning]",
+        },
+        { id: "msg-1", type: "message", role: "user", content: "First" },
+        { id: "msg-2", type: "message", role: "assistant", content: "Second" },
+      ]);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(false);
+
+      expect(result.map((m) => m.id)).toContain("reasoning-1");
+    });
+
+    it("keeps reasoning before it reaches the configured message limit", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        reasoningExpiresAfterMessages: 3,
+      });
+      LLMChatProjection.GetMessages.mockReturnValue([
+        {
+          id: "reasoning-1",
+          type: "reasoning",
+          role: "assistant",
+          content: "[Reasoning]\nRecent reasoning\n[End of Reasoning]",
+        },
+        { id: "msg-1", type: "message", role: "user", content: "First" },
+        { id: "msg-2", type: "message", role: "assistant", content: "Second" },
+      ]);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(false);
+
+      expect(result.map((m) => m.id)).toContain("reasoning-1");
     });
   });
 

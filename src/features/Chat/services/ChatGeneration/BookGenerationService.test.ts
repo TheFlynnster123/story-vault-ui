@@ -75,6 +75,9 @@ describe("BookGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -95,6 +98,9 @@ describe("BookGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -110,6 +116,28 @@ describe("BookGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "anthropic/claude-opus-4",
+        "chat",
+        "LLM",
+        undefined,
+      );
+    });
+
+    it("should pass request settings when bookSummaryRequestSettings is configured", async () => {
+      mockSystemPromptsService.Get.mockResolvedValue({
+        ...DEFAULT_SYSTEM_PROMPTS,
+        bookSummaryModel: "anthropic/claude-opus-4",
+        bookSummaryRequestSettings: { temperature: 0.4 },
+      });
+      const service = new BookGenerationService(testChatId);
+
+      await service.generateBookSummary(["Summary"]);
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "anthropic/claude-opus-4",
+        "chat",
+        "LLM",
+        { temperature: 0.4 },
       );
     });
 
@@ -125,6 +153,9 @@ describe("BookGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -136,6 +167,9 @@ describe("BookGenerationService", () => {
 
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
+        undefined,
+        "chat",
+        "LLM",
         undefined,
       );
     });
@@ -171,6 +205,9 @@ describe("BookGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -186,6 +223,9 @@ describe("BookGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "openai/gpt-5",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -200,6 +240,9 @@ describe("BookGenerationService", () => {
 
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
+        undefined,
+        "chat",
+        "LLM",
         undefined,
       );
     });

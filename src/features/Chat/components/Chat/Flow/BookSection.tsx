@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { CreateBookModal } from "../ChatControls/CreateBookModal";
 import { useAddBook } from "../ChatControls/useAddBook";
 import { CompressToBookButton } from "./CompressToBookButton";
@@ -8,6 +9,7 @@ interface BookSectionProps {
 }
 
 export const BookSection: React.FC<BookSectionProps> = ({ chatId }) => {
+  const navigate = useNavigate();
   const {
     showModal,
     title,
@@ -20,9 +22,20 @@ export const BookSection: React.FC<BookSectionProps> = ({ chatId }) => {
     handleOpenModal,
     handleCloseModal,
     handleSelectionChange,
-    handleGenerateSummary,
+    handleGenerateTitle,
     handleSubmit,
   } = useAddBook({ chatId });
+
+  const onGenerate = async () => {
+    if (!title.trim() || selectedChapterIds.length === 0) return;
+
+    const params = new URLSearchParams();
+    params.set("title", title);
+    selectedChapterIds.forEach((id) => params.append("chapterId", id));
+
+    handleCloseModal();
+    navigate(`/chat/${chatId}/book/discuss?${params.toString()}`);
+  };
 
   return (
     <>
@@ -37,7 +50,8 @@ export const BookSection: React.FC<BookSectionProps> = ({ chatId }) => {
         onTitleChange={setTitle}
         onSummaryChange={setSummary}
         onSelectionChange={handleSelectionChange}
-        onGenerateSummary={handleGenerateSummary}
+        onGenerateTitle={handleGenerateTitle}
+        onGenerate={onGenerate}
         onSubmit={handleSubmit}
         onCancel={handleCloseModal}
       />

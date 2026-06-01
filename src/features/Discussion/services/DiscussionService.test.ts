@@ -142,6 +142,9 @@ describe("DiscussionService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "user-selected-model",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -154,6 +157,9 @@ describe("DiscussionService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "config-model",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -166,6 +172,9 @@ describe("DiscussionService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "user-selected-model",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -415,6 +424,9 @@ describe("DiscussionService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "custom-model",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
   });

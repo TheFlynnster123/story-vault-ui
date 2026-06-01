@@ -12,6 +12,7 @@ import {
   Tooltip,
   UnstyledButton,
 } from "@mantine/core";
+import { RiSettings3Line } from "react-icons/ri";
 import { LuSparkles } from "react-icons/lu";
 import { v4 as uuidv4 } from "uuid";
 import { d } from "../../../../../services/Dependencies";
@@ -31,12 +32,14 @@ interface AgentFlowSectionProps {
   chatId: string;
   onNavigateToMemories: () => void;
   onNavigateToPlans: () => void;
+  onNavigateToSettings: () => void;
 }
 
 export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
   chatId,
   onNavigateToMemories,
   onNavigateToPlans,
+  onNavigateToSettings,
 }) => {
   const agentFlowService = d.AgentFlowService(chatId);
   const [suggestion, setSuggestion] = useState<AgentFlowSuggestion | null>(
@@ -47,8 +50,6 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     null,
   );
   const [status, setStatus] = useState<string | null>(null);
-  const [autoRunEnabled, setAutoRunEnabled] = useState(false);
-  const [autoRunInterval, setAutoRunInterval] = useState(3);
   const [isIntentModalOpen, setIsIntentModalOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState({
     opened: false,
@@ -79,22 +80,6 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     return agentFlowService.subscribe(updateState);
   }, [agentFlowService]);
 
-  useEffect(() => {
-    const chatSettingsService = d.ChatSettingsService(chatId);
-    const loadSettings = async () => {
-      const settings = await chatSettingsService.Get();
-      setAutoRunEnabled(settings?.agentFlowAutoRunEnabled ?? false);
-      setAutoRunInterval(settings?.agentFlowAutoRunInterval ?? 3);
-    };
-
-    const unsubscribe = chatSettingsService.subscribe(() => {
-      void loadSettings();
-    });
-    void loadSettings();
-
-    return unsubscribe;
-  }, [chatId]);
-
   const analyzeFlow = async (selectedIntent?: AgentIntent) => {
     setStatus(null);
     try {
@@ -122,25 +107,6 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
   const selectIntent = (intent: AgentIntent) => {
     setIsIntentModalOpen(false);
     void analyzeFlow(intent);
-  };
-
-  const updateAutoRunEnabled = (enabled: boolean) => {
-    setAutoRunEnabled(enabled);
-    void d.ChatSettingsService(chatId).update({
-      agentFlowAutoRunEnabled: enabled,
-      agentFlowAutoRunInterval: autoRunInterval,
-      agentFlowMessagesSinceLastRun: 0,
-    });
-  };
-
-  const updateAutoRunInterval = (interval: number) => {
-    const nextInterval = Math.max(1, interval);
-    setAutoRunInterval(nextInterval);
-    void d.ChatSettingsService(chatId).update({
-      agentFlowAutoRunEnabled: autoRunEnabled,
-      agentFlowAutoRunInterval: nextInterval,
-      agentFlowMessagesSinceLastRun: 0,
-    });
   };
 
   const runAction = async (action: AgentFlowAction, index: number) => {
@@ -323,49 +289,15 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
         </Box>
 
         <Group gap={2} wrap="nowrap" style={{ flexShrink: 0, marginRight: 4 }}>
-          <Tooltip label={autoRunEnabled ? "Disable auto analysis" : "Enable auto analysis"}>
-            <ActionIcon
-              size="sm"
-              variant={autoRunEnabled ? "filled" : "subtle"}
-              color={autoRunEnabled ? "cyan" : "gray"}
-              onClick={() => updateAutoRunEnabled(!autoRunEnabled)}
-              aria-label={
-                autoRunEnabled
-                  ? "Disable Agent Flow auto analysis"
-                  : "Enable Agent Flow auto analysis"
-              }
-            >
-              A
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Decrease auto interval">
+          <Tooltip label="Agent Flow settings">
             <ActionIcon
               size="sm"
               variant="subtle"
               color="gray"
-              onClick={() => updateAutoRunInterval(autoRunInterval - 1)}
-              disabled={autoRunInterval <= 1}
-              aria-label="Decrease agent flow interval"
+              onClick={onNavigateToSettings}
+              aria-label="Agent Flow settings"
             >
-              -
-            </ActionIcon>
-          </Tooltip>
-          <Text
-            size="xs"
-            c={autoRunEnabled ? "cyan" : "dimmed"}
-            style={{ minWidth: 12, textAlign: "center" }}
-          >
-            {autoRunInterval}
-          </Text>
-          <Tooltip label="Increase auto interval">
-            <ActionIcon
-              size="sm"
-              variant="subtle"
-              color="gray"
-              onClick={() => updateAutoRunInterval(autoRunInterval + 1)}
-              aria-label="Increase agent flow interval"
-            >
-              +
+              <RiSettings3Line size={16} color="rgba(255, 255, 255, 0.7)" />
             </ActionIcon>
           </Tooltip>
         </Group>

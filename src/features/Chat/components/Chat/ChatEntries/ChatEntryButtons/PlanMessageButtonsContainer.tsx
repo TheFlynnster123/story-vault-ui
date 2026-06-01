@@ -5,6 +5,7 @@ import { BringForwardPlanButton } from "./BringForwardPlanButton";
 import { DiscussPlanButton } from "./DiscussPlanButton";
 import { EditButton } from "./EditButton";
 import { DeleteButton } from "./DeleteButton";
+import { InspectMessageButton } from "./InspectMessageButton";
 
 interface PlanMessageButtonsContainerProps {
   chatId: string;
@@ -19,6 +20,7 @@ export const PlanMessageButtonsContainer: React.FC<
 > = ({ chatId, messageId, planDefinitionId, planName, priorContent }) => {
   return (
     <Stack gap="xs" justify="center">
+      <InspectMessageButton chatId={chatId} messageId={messageId} />
       <RegeneratePlanButton
         chatId={chatId}
         planDefinitionId={planDefinitionId}

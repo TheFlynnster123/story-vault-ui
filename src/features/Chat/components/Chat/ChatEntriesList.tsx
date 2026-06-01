@@ -4,6 +4,9 @@ import styled, { keyframes } from "styled-components";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { ChatEntry } from "./ChatEntries/ChatEntry";
 import { useUserChatProjection } from "../../hooks/useUserChatProjection";
+import { useSystemSettings } from "../../../SystemSettings/hooks/useSystemSettings";
+import { DEFAULT_TRAILING_CHAPTER_MESSAGES } from "../../../SystemSettings/services/SystemSettings";
+import type { UserChatMessage } from "../../../../services/CQRS/UserChatProjection";
 
 interface IChatEntriesList {
   chatId: string;
@@ -12,6 +15,11 @@ interface IChatEntriesList {
 export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const { messages } = useUserChatProjection(chatId);
+  const { systemSettings } = useSystemSettings();
+  const trailingChapterMessages =
+    systemSettings?.chapterCompressionSettings?.trailingChapterMessages ??
+    DEFAULT_TRAILING_CHAPTER_MESSAGES;
+  const trailingCue = getTrailingChapterCue(messages, trailingChapterMessages);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   return (
@@ -28,6 +36,9 @@ export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
             chatId={chatId}
             message={msg}
             isLastMessage={index === messages.length - 1}
+            trailingChapterMessageCount={
+              trailingCue?.chapterId === msg.id ? trailingCue.count : undefined
+            }
           />
         )}
         increaseViewportBy={{ top: 800, bottom: 800 }}
@@ -52,6 +63,33 @@ const ChatEntriesContainer = styled.div`
   height: 100%;
   width: 100%;
 `;
+
+const getTrailingChapterCue = (
+  messages: UserChatMessage[],
+  trailingChapterMessages: number,
+): { chapterId: string; count: number } | undefined => {
+  if (trailingChapterMessages <= 0) return undefined;
+
+  const lastChapterIndex = findLastChapterIndex(messages);
+  if (lastChapterIndex === -1) return undefined;
+
+  const messagesSinceChapter = messages.slice(lastChapterIndex + 1);
+  if (messagesSinceChapter.length >= trailingChapterMessages) return undefined;
+
+  const chapter = messages[lastChapterIndex];
+  const coveredMessageIds =
+    chapter.type === "chapter" ? chapter.data.coveredMessageIds : [];
+  const count = Math.min(trailingChapterMessages, coveredMessageIds.length);
+
+  return count > 0 ? { chapterId: chapter.id, count } : undefined;
+};
+
+const findLastChapterIndex = (messages: UserChatMessage[]): number => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].type === "chapter") return i;
+  }
+  return -1;
+};
 
 const moreBelowIndicatorAnimation = keyframes`
   0%,

@@ -29,7 +29,7 @@ interface AgentFlowSuggestion {
 
 Suggestions are shown in the Flow panel. Nothing mutates chat state until the user clicks the action button.
 
-The Agent Flow bar also has an **Auto** toggle. When enabled, Agent Flow automatically analyzes after every configured number of saved user messages. This updates the shared suggestion state only; it does not execute actions automatically.
+The Agent Flow row has a settings icon that opens the per-chat Agent Flow settings page. That page owns automatic analysis cadence and intent boldness.
 
 ## Defaults and Configuration
 
@@ -77,16 +77,28 @@ Per-chat settings:
   agentFlowAutoRunEnabled?: boolean;
   agentFlowAutoRunInterval?: number;
   agentFlowMessagesSinceLastRun?: number;
+  agentFlowSensitivity?: number;
 }
 ```
 
 Behavior:
 
-- The user enables Auto from the Agent Flow bar.
-- The user adjusts the cadence with the up/down controls.
+- The user opens Agent Flow settings from the settings icon on the Agent Flow row.
+- The user enables Auto from the settings page.
+- The user adjusts the cadence with the message interval control.
 - After a saved user message, the counter increments.
 - When the counter reaches the configured interval, Agent Flow analyzes the chat and resets the counter.
 - Auto-run updates the suggestion shown in the Flow panel. It does not run actions.
+
+## Intent Boldness
+
+`agentFlowSensitivity` is a per-chat number from 0 to 100:
+
+- `0-33`: Conservative. Only suggest actions when the benefit is strong and obvious.
+- `34-66`: Balanced. Suggest actions when they are likely useful.
+- `67-100`: Proactive. Prefer useful workflow actions and use `ask_user` when details are missing.
+
+The default is `50`, which is Balanced.
 
 ## Actions
 

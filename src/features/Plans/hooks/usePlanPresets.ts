@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { d } from "../../../services/Dependencies";
 import type { PlanPreset, PlanPresets } from "../services/PlanPreset";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 interface SavePresetArgs {
   id?: string;
   name: string;
   prompt: string;
   model?: string;
+  modelRequestSettings?: OpenRouterRequestSettings;
   refreshInterval: number;
   consolidateMessageHistory: boolean;
   hideOtherPlans: boolean;
@@ -61,6 +63,7 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
     name,
     prompt,
     model,
+    modelRequestSettings,
     refreshInterval,
     consolidateMessageHistory,
     hideOtherPlans,
@@ -82,6 +85,7 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
         name: trimmedName,
         prompt,
         model,
+        modelRequestSettings,
         refreshInterval,
         consolidateMessageHistory,
         hideOtherPlans,
@@ -95,6 +99,7 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
         name: trimmedName,
         prompt,
         model,
+        modelRequestSettings,
         refreshInterval,
         consolidateMessageHistory,
         hideOtherPlans,

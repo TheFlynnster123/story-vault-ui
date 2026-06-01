@@ -9,11 +9,13 @@ import DefaultImageModelsPage from "./features/Images/pages/DefaultImageModelsPa
 import ImageModelEditPage from "./features/Images/pages/ImageModelEditPage";
 import { ChatEditorPage } from "./features/Chat/pages/ChatEditorPage";
 import ChatPage from "./features/Chat/pages/ChatPage";
+import { ChatMessageInspectionPage } from "./features/Chat/pages/ChatMessageInspectionPage";
 import { PlanPage } from "./features/Plans/pages/PlanPage";
 import { DiscussPlanPage } from "./features/Discussion/pages/DiscussPlanPage";
 import { DiscussChapterPage } from "./features/Discussion/pages/DiscussChapterPage";
 import { DiscussNewChapterPage } from "./features/Discussion/pages/DiscussNewChapterPage";
 import { DiscussBookPage } from "./features/Discussion/pages/DiscussBookPage";
+import { DiscussNewBookPage } from "./features/Discussion/pages/DiscussNewBookPage";
 import { DiscussStoryPage } from "./features/Discussion/pages/DiscussStoryPage";
 import { MemoriesPage } from "./features/Memories/pages/MemoriesPage";
 import { CharacterDescriptionsPage } from "./features/Characters/pages/CharacterDescriptionsPage";
@@ -27,11 +29,11 @@ import ProtectedRoute from "./features/Auth/components/ProtectedRoute";
 import LogoutPage from "./features/Auth/pages/LogoutPage";
 import { ChatCreationWizard } from "./features/Chat/components/ChatCreationWizard/ChatCreationWizard";
 import { CreditsPage } from "./features/OpenRouter/pages/CreditsPage";
+import { AgentFlowSettingsPage } from "./features/Chat/pages/AgentFlowSettingsPage";
+import { ReasoningSettingsPage } from "./features/Chat/pages/ReasoningSettingsPage";
 import { QUERY_CLIENT } from "./services/QueryClient";
 
-interface AppProps {}
-
-const App: React.FC<AppProps> = () => {
+const App: React.FC = () => {
   return (
     <QueryClientProvider client={QUERY_CLIENT}>
       <Router>
@@ -51,6 +53,14 @@ const App: React.FC<AppProps> = () => {
             element={
               <ProtectedRoute>
                 <ChatPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/message/:messageId"
+            element={
+              <ProtectedRoute>
+                <ChatMessageInspectionPage />
               </ProtectedRoute>
             }
           />
@@ -95,6 +105,14 @@ const App: React.FC<AppProps> = () => {
             }
           />
           <Route
+            path="/chat/:chatId/book/discuss"
+            element={
+              <ProtectedRoute>
+                <DiscussNewBookPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/chat/:chatId/book/:bookId/discuss"
             element={
               <ProtectedRoute>
@@ -123,6 +141,22 @@ const App: React.FC<AppProps> = () => {
             element={
               <ProtectedRoute>
                 <CreditsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/agent-flow"
+            element={
+              <ProtectedRoute>
+                <AgentFlowSettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/reasoning"
+            element={
+              <ProtectedRoute>
+                <ReasoningSettingsPage />
               </ProtectedRoute>
             }
           />

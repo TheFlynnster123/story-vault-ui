@@ -4,6 +4,7 @@ import { RegenerateWithFeedbackButton } from "./RegenerateWithFeedbackButton";
 import { EditButton } from "./EditButton";
 import { DeleteButton } from "./DeleteButton";
 import { DeleteAllBelowButton } from "./DeleteAllBelowButton";
+import { InspectMessageButton } from "./InspectMessageButton";
 
 interface MessageButtonsContainerProps {
   chatId: string;
@@ -18,6 +19,7 @@ export const MessageButtonsContainer: React.FC<
 > = ({ chatId, messageId, showRegenerate = false, onRegenerate }) => {
   return (
     <Stack gap="xs" justify="center">
+      <InspectMessageButton chatId={chatId} messageId={messageId} />
       {showRegenerate && (
         <>
           <RegenerateButton

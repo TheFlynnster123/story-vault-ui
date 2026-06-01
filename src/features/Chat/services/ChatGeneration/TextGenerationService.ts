@@ -39,6 +39,10 @@ export class TextGenerationService extends GenerationOrchestrator {
     return this.orchestrate(async () => {
       d.PlanGenerationService(this.chatId).onMessageSent();
 
+      if (await this.shouldGenerateReasoning()) {
+        await this.generateReasoning(guidance);
+      }
+
       const requestMessages = await d
         .LLMMessageContextService(this.chatId)
         .buildGenerationRequestMessages(true, guidance);
@@ -70,6 +74,32 @@ export class TextGenerationService extends GenerationOrchestrator {
         throw error;
       }
     });
+  }
+
+  private async shouldGenerateReasoning(): Promise<boolean> {
+    const chatSettings = await d.ChatSettingsService(this.chatId).Get();
+    return chatSettings?.reasoningEnabled ?? true;
+  }
+
+  private async generateReasoning(guidance?: string): Promise<void> {
+    const requestMessages = await d
+      .LLMMessageContextService(this.chatId)
+      .buildReasoningRequestMessages(guidance);
+
+    this.setStatus("Reasoning...");
+
+    const modelOverride = await this.getChatModelOverride();
+    const reasoning = await d.OpenRouterChatAPI().postChat(
+      requestMessages,
+      modelOverride?.model,
+      "chat",
+      "Reasoning",
+      modelOverride?.requestSettings,
+    );
+
+    if (reasoning.trim()) {
+      await d.ChatService(this.chatId).AddReasoningMessage(reasoning);
+    }
   }
 
   async regenerateResponse(

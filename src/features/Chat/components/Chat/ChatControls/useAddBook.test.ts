@@ -53,51 +53,10 @@ describe("useAddBook", () => {
     return mod.useAddBook;
   };
 
-  it("keeps the generated summary when title generation fails", async () => {
-    const titleError = new Error("title failed");
-    mockBookGenerationService.generateBookTitle.mockRejectedValue(titleError);
-    mockBookGenerationService.generateBookSummary.mockResolvedValue(
-      "Generated summary",
-    );
-
-    const useAddBook = await importHook();
-    const { result } = renderHook(() => useAddBook({ chatId: CHAT_ID }));
-
-    await act(async () => {
-      await result.current.handleOpenModal();
-    });
-
-    act(() => {
-      result.current.handleSelectionChange(["chapter-1"]);
-    });
-
-    await act(async () => {
-      await result.current.handleGenerateSummary();
-    });
-
-    await waitFor(() => {
-      expect(result.current.summary).toBe("Generated summary");
-    });
-
-    expect(result.current.title).toBe("");
-    expect(mockBookGenerationService.generateBookTitle).toHaveBeenCalledWith([
-      "Summary 1",
-    ]);
-    expect(mockBookGenerationService.generateBookSummary).toHaveBeenCalledWith([
-      "Summary 1",
-    ]);
-    expect(mockErrorLog).toHaveBeenCalledWith(
-      "Failed to generate book title",
-      titleError,
-    );
-  });
-
-  it("keeps the generated title when summary generation fails", async () => {
-    const summaryError = new Error("summary failed");
+  it("generates a book title from selected chapter summaries", async () => {
     mockBookGenerationService.generateBookTitle.mockResolvedValue(
       "Generated title",
     );
-    mockBookGenerationService.generateBookSummary.mockRejectedValue(summaryError);
 
     const useAddBook = await importHook();
     const { result } = renderHook(() => useAddBook({ chatId: CHAT_ID }));
@@ -111,17 +70,45 @@ describe("useAddBook", () => {
     });
 
     await act(async () => {
-      await result.current.handleGenerateSummary();
+      await result.current.handleGenerateTitle();
     });
 
     await waitFor(() => {
       expect(result.current.title).toBe("Generated title");
     });
 
-    expect(result.current.summary).toBe("");
+    expect(mockBookGenerationService.generateBookTitle).toHaveBeenCalledWith([
+      "Summary 1",
+    ]);
+    expect(mockBookGenerationService.generateBookSummary).not.toHaveBeenCalled();
+  });
+
+  it("logs title generation failures", async () => {
+    const titleError = new Error("title failed");
+    mockBookGenerationService.generateBookTitle.mockRejectedValue(titleError);
+
+    const useAddBook = await importHook();
+    const { result } = renderHook(() => useAddBook({ chatId: CHAT_ID }));
+
+    await act(async () => {
+      await result.current.handleOpenModal();
+    });
+
+    act(() => {
+      result.current.handleSelectionChange(["chapter-1"]);
+    });
+
+    await act(async () => {
+      await result.current.handleGenerateTitle();
+    });
+
+    expect(result.current.title).toBe("");
+    expect(mockBookGenerationService.generateBookTitle).toHaveBeenCalledWith([
+      "Summary 1",
+    ]);
     expect(mockErrorLog).toHaveBeenCalledWith(
-      "Failed to generate book summary",
-      summaryError,
+      "Failed to generate book title",
+      titleError,
     );
   });
 });

@@ -13,6 +13,7 @@ import { CharacterDescriptionsSection } from "../../../../Characters/components/
 import { TransparencySlider } from "./TransparencySlider";
 import { CreditsSection } from "./CreditsSection";
 import { AgentFlowSection } from "./AgentFlowSection";
+import { ReasoningSection } from "./ReasoningSection";
 
 interface FlowAccordionProps {
   chatId: string;
@@ -28,6 +29,10 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
   const navigateToCharacters = () => navigate(`/chat/${chatId}/characters`);
   const navigateToChatImageModels = () =>
     navigate(`/chat/${chatId}/image-variants`);
+  const navigateToAgentFlowSettings = () =>
+    navigate(`/chat/${chatId}/agent-flow`);
+  const navigateToReasoningSettings = () =>
+    navigate(`/chat/${chatId}/reasoning`);
 
   return (
     <Box
@@ -46,10 +51,15 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
               <TransparencySlider chatId={chatId} />
               <ChatModelSection chatId={chatId} />
               <CreditsSection chatId={chatId} />
+              <ReasoningSection
+                chatId={chatId}
+                onNavigateToSettings={navigateToReasoningSettings}
+              />
               <AgentFlowSection
                 chatId={chatId}
                 onNavigateToMemories={navigateToMemories}
                 onNavigateToPlans={navigateToPlan}
+                onNavigateToSettings={navigateToAgentFlowSettings}
               />
               <ChatImageModelsSection
                 chatId={chatId}

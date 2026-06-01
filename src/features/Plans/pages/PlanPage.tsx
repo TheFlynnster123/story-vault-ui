@@ -37,7 +37,7 @@ import {
   Radio,
 } from "@mantine/core";
 import type { ComboboxData } from "@mantine/core";
-import type { Plan } from "../services/Plan";
+import type { Plan, PlanFieldValue } from "../services/Plan";
 import {
   DEFAULT_REFRESH_INTERVAL,
   formatRefreshStatus,
@@ -113,9 +113,12 @@ export const PlanPage: React.FC = () => {
   const handlePlanChange = (
     id: string,
     field: keyof Plan,
-    value: string | number | boolean,
+    value: PlanFieldValue,
   ) => {
-    if (field === "refreshInterval" && typeof value !== "boolean") {
+    if (
+      field === "refreshInterval" &&
+      (typeof value === "number" || typeof value === "string")
+    ) {
       updatePlanDefinition?.(id, field, normalizeRefreshInterval(value));
       return;
     }
@@ -127,6 +130,11 @@ export const PlanPage: React.FC = () => {
     updatePlanDefinition?.(planId, "name", preset.name);
     updatePlanDefinition?.(planId, "prompt", preset.prompt);
     updatePlanDefinition?.(planId, "model", preset.model || "");
+    updatePlanDefinition?.(
+      planId,
+      "modelRequestSettings",
+      preset.modelRequestSettings,
+    );
     updatePlanDefinition?.(planId, "refreshInterval", preset.refreshInterval);
     updatePlanDefinition?.(planId, "consolidateMessageHistory", preset.consolidateMessageHistory);
     updatePlanDefinition?.(planId, "hideOtherPlans", preset.hideOtherPlans);
@@ -229,7 +237,7 @@ interface PlanListProps {
   onChange: (
     id: string,
     field: keyof Plan,
-    value: string | number | boolean,
+    value: PlanFieldValue,
   ) => void;
   onApplyPreset: (planId: string, preset: PlanPreset) => void;
   onGenerateNow: (planId: string) => void;
@@ -285,7 +293,7 @@ interface PlanEditorProps {
   onChange: (
     id: string,
     field: keyof Plan,
-    value: string | number | boolean,
+    value: PlanFieldValue,
   ) => void;
   onApplyPreset: (planId: string, preset: PlanPreset) => void;
   onGenerateNow: (planId: string) => void;
@@ -412,6 +420,7 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
     name: savePresetName,
     prompt: plan.prompt,
     model: plan.model,
+    modelRequestSettings: plan.modelRequestSettings,
     refreshInterval: plan.refreshInterval,
     consolidateMessageHistory: plan.consolidateMessageHistory,
     hideOtherPlans: plan.hideOtherPlans,
@@ -537,6 +546,10 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
       <ModelSelect
         value={plan.model || ""}
         onChange={(value) => onChange(plan.id, "model", value || "")}
+        requestSettings={plan.modelRequestSettings}
+        onRequestSettingsChange={(requestSettings) =>
+          onChange(plan.id, "modelRequestSettings", requestSettings)
+        }
         label="Plan Model"
         withDescription={false}
       />
