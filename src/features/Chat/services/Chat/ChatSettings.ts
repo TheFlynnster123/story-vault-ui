@@ -24,6 +24,12 @@ export interface ChatSettings {
   messageTransparency?: number;
   /** Whether the chat should generate a reasoning message before assistant replies. Defaults to true. */
   reasoningEnabled?: boolean;
+  /** Per-chat model override for reasoning generation. */
+  reasoningModelOverride?: string;
+  /** Per-chat OpenRouter request settings paired with the reasoning model override. */
+  reasoningModelRequestSettingsOverride?: OpenRouterRequestSettings;
+  /** Whether to consolidate reasoning context into a single message. Defaults to true. */
+  reasoningConsolidateMessageHistory?: boolean;
   /** Optional per-chat override for the system reasoning prompt. */
   reasoningPromptOverride?: string;
   /** Number of regular chat messages after which a reasoning message is disabled for LLM context. Null means never disable. */

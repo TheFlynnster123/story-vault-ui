@@ -35,6 +35,23 @@ export class TextGenerationService extends GenerationOrchestrator {
     };
   }
 
+  private async getReasoningModelOverride(): Promise<
+    | {
+        model?: string;
+        requestSettings?: OpenRouterRequestSettings;
+      }
+    | undefined
+  > {
+    const chatSettings = await d.ChatSettingsService(this.chatId).Get();
+    if (chatSettings?.reasoningModelOverride) {
+      return {
+        model: chatSettings.reasoningModelOverride,
+        requestSettings: chatSettings.reasoningModelRequestSettingsOverride,
+      };
+    }
+    return this.getChatModelOverride();
+  }
+
   async generateResponse(guidance?: string): Promise<string | undefined> {
     return this.orchestrate(async () => {
       d.PlanGenerationService(this.chatId).onMessageSent();
@@ -88,7 +105,7 @@ export class TextGenerationService extends GenerationOrchestrator {
 
     this.setStatus("Reasoning...");
 
-    const modelOverride = await this.getChatModelOverride();
+    const modelOverride = await this.getReasoningModelOverride();
     const reasoning = await d.OpenRouterChatAPI().postChat(
       requestMessages,
       modelOverride?.model,

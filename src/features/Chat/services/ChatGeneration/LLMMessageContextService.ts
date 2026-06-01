@@ -17,6 +17,19 @@ export const getLLMMessageContextServiceInstance = createInstanceCache(
   (chatId: string) => new LLMMessageContextService(chatId),
 );
 
+const consolidateMessagesToString = (messages: LLMMessage[]): string =>
+  messages
+    .map((msg) => {
+      const roleLabel =
+        msg.role === "user"
+          ? "User"
+          : msg.role === "assistant"
+            ? "Assistant"
+            : "System";
+      return `${roleLabel}: ${msg.content}`;
+    })
+    .join("\n\n");
+
 export class LLMMessageContextService {
   private chatId: string;
 
@@ -51,6 +64,20 @@ export class LLMMessageContextService {
     const chatMessages = this.getChatMessages(chatSettings);
     const memories = await this.fetchMemories();
     const reasoningPrompt = await this.fetchReasoningPrompt();
+    const shouldConsolidateHistory =
+      chatSettings.reasoningConsolidateMessageHistory ?? true;
+
+    if (shouldConsolidateHistory) {
+      const consolidatedReasoningContext = this.buildConsolidatedReasoningContext(
+        chatMessages,
+        memories,
+        reasoningPrompt,
+      );
+      return this.appendGuidanceMessage(
+        [toSystemMessage(consolidatedReasoningContext)],
+        guidance,
+      );
+    }
 
     const messages: LLMMessage[] = [
       ...chatMessages,
@@ -246,6 +273,22 @@ export class LLMMessageContextService {
       .map((s, i) => `Chapter ${i + 1}:\n${s}`)
       .join("\n\n");
     return [toSystemMessage(summariesContent), toUserMessage(bookTitlePrompt)];
+  }
+
+  private buildConsolidatedReasoningContext(
+    chatMessages: LLMMessage[],
+    memories: Memory[],
+    reasoningPrompt: string,
+  ): string {
+    const sections = [
+      `Chat History:\n\n${consolidateMessagesToString(chatMessages)}`,
+      `Reasoning Instructions:\n\n${reasoningPrompt}`,
+    ];
+    const memoryContent = this.combineMemoryContent(memories);
+    if (memoryContent) {
+      sections.splice(1, 0, `Memories:\n\n${memoryContent}`);
+    }
+    return sections.join("\n\n---\n\n");
   }
 
   private appendFeedbackMessage(

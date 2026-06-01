@@ -200,5 +200,60 @@ describe("ChatSettingsService", () => {
         modelReasoningEffortOverride: undefined,
       });
     });
+
+    describe("reasoning settings", () => {
+      it("should save reasoning model override with request settings", async () => {
+        const existingSettings = createMockSettings();
+        mockManagedBlob.get.mockResolvedValue(existingSettings);
+
+        const service = new ChatSettingsService(CHAT_ID);
+        await service.setReasoningModelOverride("anthropic/claude-4-sonnet", {
+          reasoning: { effort: "medium" },
+          temperature: 0.3,
+        });
+
+        expect(mockManagedBlob.save).toHaveBeenCalledWith({
+          ...existingSettings,
+          reasoningModelOverride: "anthropic/claude-4-sonnet",
+          reasoningModelRequestSettingsOverride: {
+            reasoning: { effort: "medium" },
+            temperature: 0.3,
+          },
+        });
+      });
+
+      it("should clear reasoning request settings when clearing reasoning model", async () => {
+        const existingSettings = createMockSettings({
+          reasoningModelOverride: "anthropic/claude-4-sonnet",
+          reasoningModelRequestSettingsOverride: {
+            reasoning: { effort: "high" },
+            top_p: 0.9,
+          },
+        });
+        mockManagedBlob.get.mockResolvedValue(existingSettings);
+
+        const service = new ChatSettingsService(CHAT_ID);
+        await service.setReasoningModelOverride(undefined);
+
+        expect(mockManagedBlob.save).toHaveBeenCalledWith({
+          ...existingSettings,
+          reasoningModelOverride: undefined,
+          reasoningModelRequestSettingsOverride: undefined,
+        });
+      });
+
+      it("should save reasoning message history consolidation setting", async () => {
+        const existingSettings = createMockSettings();
+        mockManagedBlob.get.mockResolvedValue(existingSettings);
+
+        const service = new ChatSettingsService(CHAT_ID);
+        await service.setReasoningConsolidateMessageHistory(false);
+
+        expect(mockManagedBlob.save).toHaveBeenCalledWith({
+          ...existingSettings,
+          reasoningConsolidateMessageHistory: false,
+        });
+      });
+    });
   });
 });
