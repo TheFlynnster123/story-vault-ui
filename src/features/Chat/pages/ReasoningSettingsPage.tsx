@@ -16,6 +16,9 @@ import {
 } from "@mantine/core";
 import { RiArrowLeftLine } from "react-icons/ri";
 import { LuBrain } from "react-icons/lu";
+import { ModelSelectorModal } from "../../AI/components/ModelSelectorModal";
+import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 import { Page } from "../../../components/Page";
 import { Theme } from "../../../components/Theme";
 import { d } from "../../../services/Dependencies";
@@ -25,11 +28,20 @@ import { DEFAULT_REASONING_RETENTION_MESSAGES } from "../services/Chat/ChatSetti
 export const ReasoningSettingsPage: React.FC = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
+  const { models } = useOpenRouterModels();
   const [enabled, setEnabledState] = useState(true);
   const [hasExpiration, setHasExpiration] = useState(true);
   const [expiresAfterMessages, setExpiresAfterMessages] = useState(
     DEFAULT_REASONING_RETENTION_MESSAGES,
   );
+  const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
+  const [reasoningModelOverride, setReasoningModelOverrideState] = useState<
+    string | undefined
+  >(undefined);
+  const [reasoningModelRequestSettings, setReasoningModelRequestSettings] =
+    useState<OpenRouterRequestSettings | undefined>(undefined);
+  const [consolidateMessageHistory, setConsolidateMessageHistoryState] =
+    useState(true);
   const [promptOverride, setPromptOverrideState] = useState("");
   const [systemPrompt, setSystemPrompt] = useState(
     DEFAULT_SYSTEM_PROMPTS.reasoningPrompt,
@@ -49,6 +61,13 @@ export const ReasoningSettingsPage: React.FC = () => {
       setExpiresAfterMessages(
         settings?.reasoningExpiresAfterMessages ??
           DEFAULT_REASONING_RETENTION_MESSAGES,
+      );
+      setReasoningModelOverrideState(settings?.reasoningModelOverride);
+      setReasoningModelRequestSettings(
+        settings?.reasoningModelRequestSettingsOverride,
+      );
+      setConsolidateMessageHistoryState(
+        settings?.reasoningConsolidateMessageHistory ?? true,
       );
       setPromptOverrideState(settings?.reasoningPromptOverride ?? "");
       setSystemPrompt(
@@ -106,6 +125,36 @@ export const ReasoningSettingsPage: React.FC = () => {
     }
   };
 
+  const setReasoningModelOverride = (
+    modelId: string,
+    requestSettings?: OpenRouterRequestSettings,
+  ) => {
+    setReasoningModelOverrideState(modelId);
+    setReasoningModelRequestSettings(requestSettings);
+    void d
+      .ChatSettingsService(chatId)
+      .setReasoningModelOverride(modelId, requestSettings);
+  };
+
+  const clearReasoningModelOverride = () => {
+    setReasoningModelOverrideState(undefined);
+    setReasoningModelRequestSettings(undefined);
+    void d.ChatSettingsService(chatId).setReasoningModelOverride(undefined);
+  };
+
+  const setConsolidateMessageHistory = (value: boolean) => {
+    setConsolidateMessageHistoryState(value);
+    void d.ChatSettingsService(chatId).setReasoningConsolidateMessageHistory(
+      value,
+    );
+  };
+
+  const selectedReasoningModel = reasoningModelOverride
+    ? models.find((model) => model.id === reasoningModelOverride)
+    : undefined;
+  const reasoningModelLabel =
+    selectedReasoningModel?.name ?? reasoningModelOverride ?? "Use chat model";
+
   return (
     <Page>
       <Paper mt={20} p="xl">
@@ -141,6 +190,47 @@ export const ReasoningSettingsPage: React.FC = () => {
             />
           </Stack>
 
+          <Stack gap="xs">
+            <Group justify="space-between" align="flex-end">
+              <div>
+                <Text fw={600}>Reasoning model</Text>
+                <Text size="sm" c="dimmed">
+                  Uses the chat model when no override is selected.
+                </Text>
+              </div>
+              <Group gap="xs">
+                <Button
+                  size="compact-sm"
+                  variant="default"
+                  onClick={() => setIsModelSelectorOpen(true)}
+                  disabled={!enabled}
+                >
+                  Select Model
+                </Button>
+                <Button
+                  size="compact-sm"
+                  variant="light"
+                  color="gray"
+                  onClick={clearReasoningModelOverride}
+                  disabled={!enabled || !reasoningModelOverride}
+                >
+                  Use Chat Model
+                </Button>
+              </Group>
+            </Group>
+            <Text size="sm">{reasoningModelLabel}</Text>
+          </Stack>
+
+          <Checkbox
+            checked={consolidateMessageHistory}
+            onChange={(event) =>
+              setConsolidateMessageHistory(event.currentTarget.checked)
+            }
+            disabled={!enabled}
+            label="Consolidate message history for reasoning"
+            description="When enabled, reasoning receives chat history as one compressed context message."
+          />
+
           <Divider />
 
           <Stack gap="sm">
@@ -172,6 +262,13 @@ export const ReasoningSettingsPage: React.FC = () => {
             />
           </Stack>
         </Stack>
+        <ModelSelectorModal
+          isOpen={isModelSelectorOpen}
+          onClose={() => setIsModelSelectorOpen(false)}
+          selectedModelId={reasoningModelOverride}
+          selectedRequestSettings={reasoningModelRequestSettings}
+          onSelect={setReasoningModelOverride}
+        />
       </Paper>
     </Page>
   );

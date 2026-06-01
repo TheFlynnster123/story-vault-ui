@@ -242,14 +242,17 @@ describe("LLMMessageContextService", () => {
   });
 
   describe("buildReasoningRequestMessages", () => {
-    it("should use the system reasoning prompt by default", async () => {
+    it("should consolidate chat history and use system reasoning prompt by default", async () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildReasoningRequestMessages();
 
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("system");
-      expect(lastMessage.content).toBe(DEFAULT_SYSTEM_PROMPTS.reasoningPrompt);
+      expect(result).toHaveLength(1);
+      const [message] = result;
+      expect(message.role).toBe("system");
+      expect(message.content).toContain("Chat History:");
+      expect(message.content).toContain("Reasoning Instructions:");
+      expect(message.content).toContain(DEFAULT_SYSTEM_PROMPTS.reasoningPrompt);
     });
 
     it("should use a chat-specific reasoning prompt override when configured", async () => {
@@ -261,11 +264,10 @@ describe("LLMMessageContextService", () => {
 
       const result = await service.buildReasoningRequestMessages();
 
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe("Custom chat reasoning prompt");
+      expect(result[0].content).toContain("Custom chat reasoning prompt");
     });
 
-    it("should append guidance after the reasoning prompt", async () => {
+    it("should append guidance after the consolidated reasoning context", async () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildReasoningRequestMessages("Go darker");
@@ -273,9 +275,24 @@ describe("LLMMessageContextService", () => {
       const lastMessage = result[result.length - 1];
       expect(lastMessage.role).toBe("user");
       expect(lastMessage.content).toContain("Go darker");
-      expect(result[result.length - 2].content).toBe(
+      expect(result[result.length - 2].content).toContain(
         DEFAULT_SYSTEM_PROMPTS.reasoningPrompt,
       );
+    });
+
+    it("should send chat context as an array when consolidation is disabled", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        reasoningConsolidateMessageHistory: false,
+      });
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildReasoningRequestMessages();
+
+      expect(result.length).toBeGreaterThan(1);
+      const lastMessage = result[result.length - 1];
+      expect(lastMessage.role).toBe("system");
+      expect(lastMessage.content).toBe(DEFAULT_SYSTEM_PROMPTS.reasoningPrompt);
     });
   });
 

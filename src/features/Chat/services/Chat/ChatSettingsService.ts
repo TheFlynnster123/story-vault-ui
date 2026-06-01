@@ -110,6 +110,22 @@ export class ChatSettingsService {
     });
   }
 
+  async setReasoningModelOverride(
+    modelId: string | undefined,
+    requestSettings?: OpenRouterRequestSettings,
+  ): Promise<void> {
+    await this.update({
+      reasoningModelOverride: modelId,
+      reasoningModelRequestSettingsOverride: modelId ? requestSettings : undefined,
+    });
+  }
+
+  async setReasoningConsolidateMessageHistory(value: boolean): Promise<void> {
+    await this.update({
+      reasoningConsolidateMessageHistory: value,
+    });
+  }
+
   async setReasoningPromptOverride(prompt: string | undefined): Promise<void> {
     await this.updateDebounced({
       reasoningPromptOverride: prompt,

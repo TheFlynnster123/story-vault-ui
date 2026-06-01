@@ -68,6 +68,37 @@ describe("TextGenerationService reasoning", () => {
     expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
   });
 
+  it("uses reasoning model override for reasoning and chat model override for response", async () => {
+    vi.mocked(d.ChatSettingsService).mockReturnValue({
+      Get: vi.fn().mockResolvedValue({
+        reasoningEnabled: true,
+        modelOverride: "openai/gpt-4.1",
+        modelRequestSettingsOverride: { temperature: 0.4 },
+        reasoningModelOverride: "anthropic/claude-4-sonnet",
+        reasoningModelRequestSettingsOverride: {
+          reasoning: { effort: "high" },
+        },
+      }),
+    } as unknown as ReturnType<typeof d.ChatSettingsService>);
+    const service = new TextGenerationService(CHAT_ID);
+
+    await service.generateResponse();
+
+    expect(d.OpenRouterChatAPI().postChat).toHaveBeenCalledWith(
+      mockReasoningMessages,
+      "anthropic/claude-4-sonnet",
+      "chat",
+      "Reasoning",
+      { reasoning: { effort: "high" } },
+    );
+    expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalledWith(
+      mockRequestMessages,
+      expect.any(Function),
+      "openai/gpt-4.1",
+      { temperature: 0.4 },
+    );
+  });
+
   it("skips the reasoning request when reasoning is disabled", async () => {
     vi.mocked(d.ChatSettingsService).mockReturnValue({
       Get: vi.fn().mockResolvedValue({ reasoningEnabled: false }),
