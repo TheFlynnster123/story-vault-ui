@@ -3,6 +3,7 @@ import { d } from "../../../services/Dependencies";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import type { DiscussionConfig } from "./DiscussionConfig";
 import type { DiscussionMessage } from "./DiscussionMessage";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 /**
  * Manages an ephemeral conversation for discussing and refining content.
@@ -39,6 +40,10 @@ export class DiscussionService {
   public getDefaultModel = (): string | undefined =>
     this.config.getDefaultModel();
 
+  public getDefaultRequestSettings = ():
+    | OpenRouterRequestSettings
+    | undefined => this.config.getDefaultRequestSettings?.();
+
   /** Returns the full prompt that will be sent to the LLM on the next call. */
   public getLLMContext = (): LLMMessage[] => this.buildConversationPrompt();
 
@@ -49,6 +54,7 @@ export class DiscussionService {
   public sendMessage = async (
     userMessage: string,
     modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
   ): Promise<void> => {
     if (!userMessage.trim() || this.generating) return;
 
@@ -59,9 +65,11 @@ export class DiscussionService {
     try {
       const promptMessages = this.buildConversationPrompt();
       const model = modelOverride || this.config.getDefaultModel();
+      const requestSettings =
+        requestSettingsOverride ?? this.config.getDefaultRequestSettings?.();
       const response = await d
         .OpenRouterChatAPI()
-        .postChat(promptMessages, model);
+        .postChat(promptMessages, model, "chat", "LLM", requestSettings);
 
       this.messages = [
         ...this.messages,
@@ -128,6 +136,7 @@ export class DiscussionService {
    */
   public generateInitialMessage = async (
     modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
   ): Promise<void> => {
     if (this.messages.length > 0 || this.generating) return;
 
@@ -142,9 +151,11 @@ export class DiscussionService {
       promptMessages.push({ role: "user", content: initialPrompt });
 
       const model = modelOverride || this.config.getDefaultModel();
+      const requestSettings =
+        requestSettingsOverride ?? this.config.getDefaultRequestSettings?.();
       const response = await d
         .OpenRouterChatAPI()
-        .postChat(promptMessages, model);
+        .postChat(promptMessages, model, "chat", "LLM", requestSettings);
 
       this.messages = [{ role: "assistant", content: response }];
     } catch (e) {

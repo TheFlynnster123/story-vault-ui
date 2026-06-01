@@ -2,6 +2,7 @@ import { d } from "../../../services/Dependencies";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { toUserMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 export class CharacterSelectionService {
   private chatId: string;
@@ -13,12 +14,12 @@ export class CharacterSelectionService {
   selectCharacterForImage = async (): Promise<string | null> => {
     const messages = this.getChatMessages();
     const prompt = await this.getCharacterSelectionPrompt();
-    const model = await this.getCharacterSelectionModel();
+    const { model, requestSettings } = await this.getCharacterSelectionModel();
 
     const promptMessages = buildPromptMessages(messages, prompt);
     const response = await d
       .OpenRouterChatAPI()
-      .postChat(promptMessages, model);
+      .postChat(promptMessages, model, "chat", "LLM", requestSettings);
 
     return parseCharacterName(response);
   };
@@ -34,15 +35,18 @@ export class CharacterSelectionService {
     );
   };
 
-  private getCharacterSelectionModel = async (): Promise<
-    string | undefined
-  > => {
+  private getCharacterSelectionModel = async (): Promise<{
+    model: string | undefined;
+    requestSettings: OpenRouterRequestSettings | undefined;
+  }> => {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return (
-      systemPrompts?.characterSelectionModel ||
-      DEFAULT_SYSTEM_PROMPTS.characterSelectionModel ||
-      undefined
-    );
+    return {
+      model:
+        systemPrompts?.characterSelectionModel ||
+        DEFAULT_SYSTEM_PROMPTS.characterSelectionModel ||
+        undefined,
+      requestSettings: systemPrompts?.characterSelectionRequestSettings,
+    };
   };
 }
 

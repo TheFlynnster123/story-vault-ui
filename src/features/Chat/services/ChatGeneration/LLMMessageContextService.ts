@@ -6,7 +6,10 @@ import {
 } from "../../../../services/Utils/MessageUtils";
 import type { Memory } from "../../../Memories/services/Memory";
 import type { ChatSettings } from "../Chat/ChatSettings";
+import { DEFAULT_REASONING_RETENTION_MESSAGES } from "../Chat/ChatSettings";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
+import { DEFAULT_TRAILING_CHAPTER_MESSAGES } from "../../../SystemSettings/services/SystemSettings";
+import type { SystemSettings } from "../../../SystemSettings/services/SystemSettings";
 
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
@@ -28,7 +31,8 @@ export class LLMMessageContextService {
     guidance?: string,
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
-    const chatMessages = this.getChatMessages();
+    await this.applySystemContextSettings();
+    const chatMessages = this.getChatMessages(chatSettings);
     const memories = await this.fetchMemories();
 
     const messages = this.assembleGenerationMessages(
@@ -37,6 +41,22 @@ export class LLMMessageContextService {
       memories,
       includeResponsePrompt,
     );
+
+    return this.appendGuidanceMessage(messages, guidance);
+  }
+
+  async buildReasoningRequestMessages(guidance?: string): Promise<LLMMessage[]> {
+    const chatSettings = await this.fetchChatSettings();
+    await this.applySystemContextSettings();
+    const chatMessages = this.getChatMessages(chatSettings);
+    const memories = await this.fetchMemories();
+    const reasoningPrompt = await this.fetchReasoningPrompt();
+
+    const messages: LLMMessage[] = [
+      ...chatMessages,
+      ...this.buildMemoryMessages(memories),
+      toSystemMessage(reasoningPrompt),
+    ];
 
     return this.appendGuidanceMessage(messages, guidance);
   }
@@ -59,7 +79,8 @@ export class LLMMessageContextService {
   }
 
   async buildChapterSummaryRequestMessages(): Promise<LLMMessage[]> {
-    const chatMessages = this.getChatMessages();
+    await this.applySystemContextSettings();
+    const chatMessages = this.getChatMessages(await this.fetchChatSettings());
     const chapterSummaryPrompt = await this.fetchChapterSummaryPrompt();
     return this.assembleChapterSummaryMessages(
       chatMessages,
@@ -68,7 +89,8 @@ export class LLMMessageContextService {
   }
 
   async buildChapterTitleRequestMessages(): Promise<LLMMessage[]> {
-    const chatMessages = this.getChatMessages();
+    await this.applySystemContextSettings();
+    const chatMessages = this.getChatMessages(await this.fetchChatSettings());
     const chapterTitlePrompt = await this.fetchChapterTitlePrompt();
     return this.assembleChapterTitleMessages(chatMessages, chapterTitlePrompt);
   }
@@ -103,8 +125,24 @@ export class LLMMessageContextService {
     return d.ChatSettingsService(this.chatId).Get() as Promise<ChatSettings>;
   }
 
-  private getChatMessages(): LLMMessage[] {
-    return d.LLMChatProjection(this.chatId).GetMessages();
+  private getChatMessages(chatSettings: ChatSettings): LLMMessage[] {
+    return this.excludeDisabledReasoningMessages(
+      d.LLMChatProjection(this.chatId).GetMessages(),
+      chatSettings.reasoningExpiresAfterMessages ??
+        DEFAULT_REASONING_RETENTION_MESSAGES,
+    );
+  }
+
+  private async applySystemContextSettings(): Promise<void> {
+    const settings = await this.fetchSystemSettings();
+    d.LLMChatProjection(this.chatId).SetPreviousChapterMessageBuffer(
+      settings?.chapterCompressionSettings?.trailingChapterMessages ??
+        DEFAULT_TRAILING_CHAPTER_MESSAGES,
+    );
+  }
+
+  private fetchSystemSettings(): Promise<SystemSettings | undefined> {
+    return d.SystemSettingsService().Get();
   }
 
   private async fetchMemories(): Promise<Memory[]> {
@@ -139,6 +177,18 @@ export class LLMMessageContextService {
     const systemPrompts = await d.SystemPromptsService().Get();
     return (
       systemPrompts?.bookTitlePrompt || DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt
+    );
+  }
+
+  private async fetchReasoningPrompt(): Promise<string> {
+    const chatSettings = await this.fetchChatSettings();
+    if (chatSettings.reasoningPromptOverride?.trim()) {
+      return chatSettings.reasoningPromptOverride;
+    }
+
+    const systemPrompts = await d.SystemPromptsService().Get();
+    return (
+      systemPrompts?.reasoningPrompt || DEFAULT_SYSTEM_PROMPTS.reasoningPrompt
     );
   }
 
@@ -267,4 +317,26 @@ export class LLMMessageContextService {
 
   private formatGuidanceMessage = (guidance: string): string =>
     `User guidance for the next response: ${guidance}`;
+
+  private excludeDisabledReasoningMessages(
+    messages: LLMMessage[],
+    expiresAfterMessages: number | null,
+  ): LLMMessage[] {
+    if (expiresAfterMessages === null) return messages;
+
+    return messages.filter(
+      (message, index) =>
+        message.type !== "reasoning" ||
+        this.countRegularMessagesAfter(messages, index) < expiresAfterMessages,
+    );
+  }
+
+  private countRegularMessagesAfter(
+    messages: LLMMessage[],
+    index: number,
+  ): number {
+    return messages
+      .slice(index + 1)
+      .filter((message) => message.type === "message").length;
+  }
 }

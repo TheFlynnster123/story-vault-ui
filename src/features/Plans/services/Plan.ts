@@ -1,15 +1,20 @@
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+
 export interface Plan {
   id: string;
   type: PlanType;
   name: string;
   prompt: string;
   model?: string;
+  modelRequestSettings?: OpenRouterRequestSettings;
   refreshInterval: number;
   messagesSinceLastUpdate: number;
   consolidateMessageHistory: boolean;
   hideOtherPlans: boolean;
   excludeOwnPlanFromHistory: boolean;
 }
+
+export type PlanFieldValue = Plan[keyof Plan];
 
 /**
  * @deprecated Represents the legacy plan shape that included blob-stored content.
@@ -48,6 +53,7 @@ export const applyPlanDefaults = (
   name: plan.name,
   prompt: plan.prompt,
   model: plan.model,
+  modelRequestSettings: plan.modelRequestSettings,
   refreshInterval: plan.refreshInterval ?? DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: plan.messagesSinceLastUpdate ?? 0,
   consolidateMessageHistory: plan.consolidateMessageHistory ?? false,

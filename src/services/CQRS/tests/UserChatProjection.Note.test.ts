@@ -332,5 +332,23 @@ describe("UserChatProjection - Note Events", () => {
       expect(types).toContain("note");
       expect(types).toContain("chapter");
     });
+
+    it("should keep a note expired after chapter compression hides the expiring messages", () => {
+      const noteEvent = NoteCreatedEventUtil.Create("Temporary note", 2);
+      projection.process(noteEvent);
+      const msg1 = MessageCreatedEventUtil.Create("user", "Msg 1");
+      const msg2 = MessageCreatedEventUtil.Create("assistant", "Reply 1");
+      projection.process(msg1);
+      projection.process(msg2);
+
+      projection.process(
+        createChapterEvent("ch-1", [msg1.messageId, msg2.messageId]),
+      );
+
+      const note = projection
+        .GetMessages()
+        .find((m) => m.type === "note") as NoteChatMessage;
+      expect(note.data.expired).toBe(true);
+    });
   });
 });

@@ -8,6 +8,7 @@ import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import { resolveVariant } from "./ImageModelVariant";
 import type { WorkflowCost } from "./CivitJob";
 import { getWorkflowCost } from "./CivitJobOrchestrator";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 export type CharacterContext =
   | { type: "none" }
@@ -61,10 +62,16 @@ export class ImageGenerator {
       imageGenerationPrompt,
     );
 
-    const model = await this.resolveImageModel();
+    const { model, requestSettings } = await this.resolveImageModel();
     return await d
       .OpenRouterChatAPI()
-      .postChat(promptMessages, model, "image-prompt", "Image Prompt");
+      .postChat(
+        promptMessages,
+        model,
+        "image-prompt",
+        "Image Prompt",
+        requestSettings,
+      );
   }
 
   public async generatePromptWithFeedback(
@@ -103,10 +110,16 @@ export class ImageGenerator {
       feedbackMessage,
     );
 
-    const model = await this.resolveImageModel();
+    const { model, requestSettings } = await this.resolveImageModel();
     return await d
       .OpenRouterChatAPI()
-      .postChat(promptMessages, model, "image-prompt", "Image Prompt");
+      .postChat(
+        promptMessages,
+        model,
+        "image-prompt",
+        "Image Prompt",
+        requestSettings,
+      );
   }
 
   public async resolveCharacterContext(): Promise<CharacterContext> {
@@ -197,7 +210,8 @@ export class ImageGenerator {
         const parent = await d
           .ChatImageVariantService(this.chatId)
           .findParentModel(variant.parentModelId);
-        if (isWorkflowImageModel(parent)) return resolveVariant(variant, parent);
+        if (isWorkflowImageModel(parent))
+          return resolveVariant(variant, parent);
       }
     } else {
       const allModels = await d.ImageModelService().GetAllImageModels();
@@ -247,9 +261,15 @@ export class ImageGenerator {
   /**
    * Resolves the LLM model for image prompt generation.
    */
-  private async resolveImageModel(): Promise<string | undefined> {
+  private async resolveImageModel(): Promise<{
+    model: string | undefined;
+    requestSettings: OpenRouterRequestSettings | undefined;
+  }> {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return systemPrompts?.defaultImageModel || undefined;
+    return {
+      model: systemPrompts?.defaultImageModel || undefined,
+      requestSettings: systemPrompts?.defaultImageRequestSettings,
+    };
   }
 
   private async resolveCharacterContextForLegacyFlow(): Promise<CharacterContext> {
@@ -310,8 +330,7 @@ const buildFeedbackMessage = (
   `The previous image prompt was: \n\n"${originalPrompt}" \n\nPlease regenerate with this feedback: \n\n${feedback}. \n\nRespond ONLY with the new image prompt separated by commas.`;
 
 const appendToPrompt = (input: any, prompt: string) => {
-  input.prompt =
-    (input.prompt ? `${input.prompt}, ` : "") + prompt;
+  input.prompt = (input.prompt ? `${input.prompt}, ` : "") + prompt;
 };
 
 const appendPromptSection = (basePrompt: string, prompt: string): string => {

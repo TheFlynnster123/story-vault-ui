@@ -7,7 +7,6 @@ import {
   RiCheckDoubleLine,
   RiArrowDownSLine,
   RiArrowUpSLine,
-  RiInformationLine,
 } from "react-icons/ri";
 import {
   Title,
@@ -25,7 +24,6 @@ import {
   Collapse,
   UnstyledButton,
   Badge,
-  Popover,
 } from "@mantine/core";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { Theme } from "../../../components/Theme";
@@ -36,6 +34,7 @@ import { useDiscussionChat } from "../hooks/useDiscussionChat";
 import type { DiscussionService } from "../services/DiscussionService";
 import type { DiscussionMessage } from "../services/DiscussionMessage";
 import type { DiscussionPageConfig } from "./DiscussionPageConfig";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 import ReactMarkdown from "react-markdown";
 import styled from "styled-components";
 
@@ -56,6 +55,7 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     messages,
     isGenerating,
     defaultModel,
+    defaultRequestSettings,
     getLLMContext,
     sendMessage,
     generateInitialMessage,
@@ -64,18 +64,25 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     canAcceptMessage,
   } = useDiscussionChat(service);
   const [chatModel, setChatModel] = useState<string | null>(null);
+  const [chatRequestSettings, setChatRequestSettings] = useState<
+    OpenRouterRequestSettings | undefined
+  >();
   const [modelInitialized, setModelInitialized] = useState(false);
 
   useEffect(() => {
-    if (!modelInitialized && defaultModel !== undefined) {
+    if (
+      !modelInitialized &&
+      (defaultModel !== undefined || defaultRequestSettings !== undefined)
+    ) {
       setChatModel(defaultModel || "");
+      setChatRequestSettings(defaultRequestSettings);
       setModelInitialized(true);
     }
-  }, [defaultModel, modelInitialized]);
+  }, [defaultModel, defaultRequestSettings, modelInitialized]);
 
   useEffect(() => {
     generateInitialMessage();
-  }, []);
+  }, [generateInitialMessage]);
 
   const handleGoBack = () => {
     navigate(`/chat/${chatId}`);
@@ -90,7 +97,7 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
 
     const message = inputValue;
     setInputValue("");
-    await sendMessage(message, chatModel || undefined);
+    await sendMessage(message, chatModel || undefined, chatRequestSettings);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -132,6 +139,8 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
           <ModelSelect
             value={chatModel}
             onChange={setChatModel}
+            requestSettings={chatRequestSettings}
+            onRequestSettingsChange={setChatRequestSettings}
             ariaLabel="Chat Model"
             emptyValueLabel="Default Chat Model"
             hideLabel
@@ -254,63 +263,19 @@ const DiscussionHeader: React.FC<DiscussionHeaderProps> = ({
           <RiArrowLeftLine color={Theme.page.text} />
         </ActionIcon>
         {config.icon}
-        <Group gap={6} align="center">
-          <Title order={2} fw={400} style={{ color: config.primaryColor }}>
-            {config.title}
-          </Title>
-          {config.descriptionInInfoPopover && (
-            <DescriptionInfoPopover
-              description={config.description}
-              color={config.primaryColor}
-            />
-          )}
-        </Group>
+        <Title order={2} fw={400} style={{ color: config.primaryColor }}>
+          {config.title}
+        </Title>
       </Group>
       {onEditPrompt && (
         <EditPromptButton onClick={onEditPrompt}>Edit Prompt</EditPromptButton>
       )}
     </Group>
-    {!config.descriptionInInfoPopover && (
-      <Text size="sm" c="dimmed" mb="xs">
-        {config.description}
-      </Text>
-    )}
+    <Text size="sm" c="dimmed" mb="xs">
+      {config.description}
+    </Text>
     <Divider mb="xs" style={{ borderColor: config.borderColor }} />
   </>
-);
-
-interface DescriptionInfoPopoverProps {
-  description: string;
-  color: string;
-}
-
-const DescriptionInfoPopover: React.FC<DescriptionInfoPopoverProps> = ({
-  description,
-  color,
-}) => (
-  <Popover width={320} position="bottom-start" withArrow shadow="md">
-    <Popover.Target>
-      <ActionIcon
-        variant="subtle"
-        radius="xl"
-        size="sm"
-        aria-label="Show discussion info"
-      >
-        <RiInformationLine size={16} color={color} />
-      </ActionIcon>
-    </Popover.Target>
-    <Popover.Dropdown
-      style={{
-        background: "rgba(18, 18, 24, 0.96)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        padding: "10px 12px",
-      }}
-    >
-      <Text size="sm" c={Theme.page.textMuted}>
-        {description}
-      </Text>
-    </Popover.Dropdown>
-  </Popover>
 );
 
 interface DiscussionChatAreaProps {

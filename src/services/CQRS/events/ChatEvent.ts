@@ -1,5 +1,6 @@
 export type ChatEvent =
   | MessageCreatedEvent
+  | ReasoningCreatedEvent
   | MessageEditedEvent
   | MessageDeletedEvent
   | MessagesDeletedEvent
@@ -25,6 +26,12 @@ export interface MessageCreatedEvent {
   type: "MessageCreated";
   messageId: string;
   role: "assistant" | "user" | "system";
+  content: string;
+}
+
+export interface ReasoningCreatedEvent {
+  type: "ReasoningCreated";
+  messageId: string;
   content: string;
 }
 

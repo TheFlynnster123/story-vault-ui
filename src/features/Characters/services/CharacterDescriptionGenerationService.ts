@@ -2,6 +2,7 @@ import { d } from "../../../services/Dependencies";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { toUserMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 export class CharacterDescriptionGenerationService {
   private chatId: string;
@@ -13,12 +14,13 @@ export class CharacterDescriptionGenerationService {
   generateDescription = async (characterName: string): Promise<string> => {
     const messages = this.getChatMessages();
     const prompt = await this.getCharacterDescriptionPrompt(characterName);
-    const model = await this.getCharacterDescriptionModel();
+    const { model, requestSettings } =
+      await this.getCharacterDescriptionModel();
 
     const promptMessages = buildPromptMessages(messages, prompt);
     const response = await d
       .OpenRouterChatAPI()
-      .postChat(promptMessages, model);
+      .postChat(promptMessages, model, "chat", "LLM", requestSettings);
 
     return cleanDescription(response);
   };
@@ -41,11 +43,15 @@ export class CharacterDescriptionGenerationService {
     );
   };
 
-  private getCharacterDescriptionModel = async (): Promise<
-    string | undefined
-  > => {
+  private getCharacterDescriptionModel = async (): Promise<{
+    model: string | undefined;
+    requestSettings: OpenRouterRequestSettings | undefined;
+  }> => {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return systemPrompts?.characterDescriptionModel || undefined;
+    return {
+      model: systemPrompts?.characterDescriptionModel || undefined,
+      requestSettings: systemPrompts?.characterDescriptionRequestSettings,
+    };
   };
 }
 

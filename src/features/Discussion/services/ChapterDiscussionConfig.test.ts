@@ -108,6 +108,9 @@ describe("ChapterDiscussionConfig", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "anthropic/claude-opus-4",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -119,6 +122,9 @@ describe("ChapterDiscussionConfig", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -127,6 +133,7 @@ describe("ChapterDiscussionConfig", () => {
       const config = createChapterDiscussionConfig(
         testChatId,
         testChapterId,
+        undefined,
         undefined,
         customPrompt,
       );
@@ -214,6 +221,7 @@ describe("ChapterDiscussionConfig", () => {
       const config = createChapterDiscussionConfig(
         testChatId,
         testChapterId,
+        undefined,
         undefined,
         customPrompt,
       );

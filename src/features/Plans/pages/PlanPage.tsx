@@ -37,7 +37,7 @@ import {
   Radio,
 } from "@mantine/core";
 import type { ComboboxData } from "@mantine/core";
-import type { Plan } from "../services/Plan";
+import type { Plan, PlanFieldValue } from "../services/Plan";
 import {
   DEFAULT_REFRESH_INTERVAL,
   formatRefreshStatus,
@@ -113,9 +113,12 @@ export const PlanPage: React.FC = () => {
   const handlePlanChange = (
     id: string,
     field: keyof Plan,
-    value: string | number | boolean,
+    value: PlanFieldValue,
   ) => {
-    if (field === "refreshInterval" && typeof value !== "boolean") {
+    if (
+      field === "refreshInterval" &&
+      (typeof value === "number" || typeof value === "string")
+    ) {
       updatePlanDefinition?.(id, field, normalizeRefreshInterval(value));
       return;
     }
@@ -127,10 +130,23 @@ export const PlanPage: React.FC = () => {
     updatePlanDefinition?.(planId, "name", preset.name);
     updatePlanDefinition?.(planId, "prompt", preset.prompt);
     updatePlanDefinition?.(planId, "model", preset.model || "");
+    updatePlanDefinition?.(
+      planId,
+      "modelRequestSettings",
+      preset.modelRequestSettings,
+    );
     updatePlanDefinition?.(planId, "refreshInterval", preset.refreshInterval);
-    updatePlanDefinition?.(planId, "consolidateMessageHistory", preset.consolidateMessageHistory);
+    updatePlanDefinition?.(
+      planId,
+      "consolidateMessageHistory",
+      preset.consolidateMessageHistory,
+    );
     updatePlanDefinition?.(planId, "hideOtherPlans", preset.hideOtherPlans);
-    updatePlanDefinition?.(planId, "excludeOwnPlanFromHistory", preset.excludeOwnPlanFromHistory);
+    updatePlanDefinition?.(
+      planId,
+      "excludeOwnPlanFromHistory",
+      preset.excludeOwnPlanFromHistory,
+    );
   };
 
   const handleGenerateNow = (id: string) => {
@@ -226,11 +242,7 @@ interface PlanListProps {
   chatId: string;
   plans: Plan[];
   onAdd: () => void;
-  onChange: (
-    id: string,
-    field: keyof Plan,
-    value: string | number | boolean,
-  ) => void;
+  onChange: (id: string, field: keyof Plan, value: PlanFieldValue) => void;
   onApplyPreset: (planId: string, preset: PlanPreset) => void;
   onGenerateNow: (planId: string) => void;
   onClearPlan: (planId: string) => void;
@@ -282,11 +294,7 @@ const PlanList: React.FC<PlanListProps> = ({
 interface PlanEditorProps {
   chatId: string;
   plan: Plan;
-  onChange: (
-    id: string,
-    field: keyof Plan,
-    value: string | number | boolean,
-  ) => void;
+  onChange: (id: string, field: keyof Plan, value: PlanFieldValue) => void;
   onApplyPreset: (planId: string, preset: PlanPreset) => void;
   onGenerateNow: (planId: string) => void;
   onClearPlan: (planId: string) => void;
@@ -353,10 +361,7 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
 
     if (userPresetData.length === 0) return builtInData;
 
-    return [
-      ...builtInData,
-      { group: "Saved Presets", items: userPresetData },
-    ];
+    return [...builtInData, { group: "Saved Presets", items: userPresetData }];
   }, [presets]);
 
   const handlePresetSelect = (presetId: string | null) => {
@@ -412,6 +417,7 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
     name: savePresetName,
     prompt: plan.prompt,
     model: plan.model,
+    modelRequestSettings: plan.modelRequestSettings,
     refreshInterval: plan.refreshInterval,
     consolidateMessageHistory: plan.consolidateMessageHistory,
     hideOtherPlans: plan.hideOtherPlans,
@@ -537,6 +543,10 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
       <ModelSelect
         value={plan.model || ""}
         onChange={(value) => onChange(plan.id, "model", value || "")}
+        requestSettings={plan.modelRequestSettings}
+        onRequestSettingsChange={(requestSettings) =>
+          onChange(plan.id, "modelRequestSettings", requestSettings)
+        }
         label="Plan Model"
         withDescription={false}
       />
@@ -712,9 +722,7 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
             label="Preset name"
             placeholder="e.g. Mystery thriller plan"
             value={savePresetName}
-            onChange={(e) =>
-              handleSavePresetNameChange(e.currentTarget.value)
-            }
+            onChange={(e) => handleSavePresetNameChange(e.currentTarget.value)}
             autoFocus
           />
 

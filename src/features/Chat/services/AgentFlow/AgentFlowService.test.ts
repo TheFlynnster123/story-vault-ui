@@ -41,6 +41,9 @@ describe("AgentFlowService", () => {
     vi.mocked(d.SystemPromptsService).mockReturnValue({
       Get: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReturnType<typeof d.SystemPromptsService>);
+    vi.mocked(d.ChatSettingsService).mockReturnValue({
+      Get: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof d.ChatSettingsService>);
   });
 
   it("uses the default Grok 4.3 intent model", async () => {
@@ -60,6 +63,7 @@ describe("AgentFlowService", () => {
       "x-ai/grok-4.3",
       "Agent Intent",
       true,
+      undefined,
     );
   });
 
@@ -98,6 +102,27 @@ describe("AgentFlowService", () => {
           role: "user",
           content: expect.stringContaining(
             'The user manually selected intent "generate_image"',
+          ),
+        }),
+      ]),
+    );
+  });
+
+  it("passes configured sensitivity into the request prompt", async () => {
+    vi.mocked(d.ChatSettingsService).mockReturnValue({
+      Get: vi.fn().mockResolvedValue({ agentFlowSensitivity: 85 }),
+    } as unknown as ReturnType<typeof d.ChatSettingsService>);
+
+    const service = new AgentFlowService(chatId);
+    await service.generateIntentSuggestion();
+
+    const sentMessages = postStructuredChat.mock.calls[0][0];
+    expect(sentMessages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: "user",
+          content: expect.stringContaining(
+            "Agent flow sensitivity: 85/100 (Proactive)",
           ),
         }),
       ]),

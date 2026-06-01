@@ -15,6 +15,7 @@ import { MessageOverlay } from "./ChatEntryButtons/MessageOverlay.tsx";
 import { RegenerateFeedbackModal } from "./ChatEntryButtons/RegenerateFeedbackModal.tsx";
 import { ViewPromptModal } from "./ChatEntryButtons/ViewPromptModal.tsx";
 import { DeleteConfirmModal } from "./ChatEntryButtons/DeleteConfirmModal.tsx";
+import { InspectMessageButton } from "./ChatEntryButtons/InspectMessageButton.tsx";
 import { Theme } from "../../../../../components/Theme";
 import type {
   CivitJobChatMessage,
@@ -252,6 +253,7 @@ export const CivitJobMessage = ({
 
         <MessageOverlay show={showButtons} onBackdropClick={toggle}>
           <Stack gap="xs" justify="center">
+            <InspectMessageButton chatId={chatId} messageId={message.id} />
             {canViewPrompt && (
               <Button
                 size="xs"

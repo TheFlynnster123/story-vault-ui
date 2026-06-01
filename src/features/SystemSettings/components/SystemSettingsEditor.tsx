@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useSystemSettings } from "../hooks/useSystemSettings";
-import { Group, Loader, NumberInput, Paper, Stack, Switch, Text } from "@mantine/core";
+import {
+  Group,
+  Loader,
+  NumberInput,
+  Paper,
+  Stack,
+  Switch,
+  Text,
+} from "@mantine/core";
 import type { ChatGenerationSettings } from "../services/SystemSettings";
+import { DEFAULT_TRAILING_CHAPTER_MESSAGES } from "../services/SystemSettings";
 import { d } from "../../../services/Dependencies";
 import { ModelSelect } from "../../../features/AI/components/ModelSelect";
 import {
@@ -18,6 +27,9 @@ export const SystemSettingsEditor: React.FC = () => {
   const [trackedRequestLimit, setTrackedRequestLimit] = useState(20);
   const [hideMessageBodiesByDefault, setHideMessageBodiesByDefault] =
     useState(false);
+  const [trailingChapterMessages, setTrailingChapterMessages] = useState(
+    DEFAULT_TRAILING_CHAPTER_MESSAGES,
+  );
 
   useEffect(() => {
     if (systemSettings?.chatGenerationSettings) {
@@ -33,6 +45,10 @@ export const SystemSettingsEditor: React.FC = () => {
     setHideMessageBodiesByDefault(
       systemSettings?.openRouterMonitoringSettings?.hideMessageBodiesByDefault ??
         false,
+    );
+    setTrailingChapterMessages(
+      systemSettings?.chapterCompressionSettings?.trailingChapterMessages ??
+        DEFAULT_TRAILING_CHAPTER_MESSAGES,
     );
   }, [systemSettings]);
 
@@ -71,6 +87,22 @@ export const SystemSettingsEditor: React.FC = () => {
     d.SystemSettingsService().SaveDebounced({
       ...systemSettings,
       openRouterMonitoringSettings: updatedMonitoringSettings,
+    });
+  };
+
+  const handleChapterCompressionChange = (value: number | string) => {
+    const numeric = typeof value === "number" ? value : Number(value);
+    const nextValue = Number.isFinite(numeric)
+      ? Math.max(0, Math.round(numeric))
+      : DEFAULT_TRAILING_CHAPTER_MESSAGES;
+
+    setTrailingChapterMessages(nextValue);
+    d.SystemSettingsService().SaveDebounced({
+      ...systemSettings,
+      chapterCompressionSettings: {
+        ...systemSettings?.chapterCompressionSettings,
+        trailingChapterMessages: nextValue,
+      },
     });
   };
 
@@ -132,6 +164,22 @@ export const SystemSettingsEditor: React.FC = () => {
               }
             />
           </Group>
+        </Stack>
+      </Paper>
+
+      <Paper p="md" withBorder>
+        <Stack gap="sm">
+          <Text fw={600}>Chapter Compression</Text>
+          <NumberInput
+            label="Trailing chapter messages in LLM context"
+            description="Covered messages from the latest chapter to keep in context until this many new visible messages have been added after the chapter. Use 0 to disable the trailing buffer."
+            value={trailingChapterMessages}
+            min={0}
+            max={100}
+            step={1}
+            onChange={handleChapterCompressionChange}
+            style={{ width: 360 }}
+          />
         </Stack>
       </Paper>
     </Stack>

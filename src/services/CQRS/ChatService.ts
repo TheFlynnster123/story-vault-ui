@@ -36,6 +36,7 @@ import {
   NoteCreatedEventUtil,
   NoteEditedEventUtil,
 } from "./events/NoteEventUtils";
+import { ReasoningCreatedEventUtil } from "./events/ReasoningEventUtils";
 import { AgentClarificationCreatedEventUtil } from "./events/AgentClarificationEventUtils";
 import { d } from "../Dependencies";
 
@@ -70,6 +71,11 @@ export class ChatService {
 
   public async AddAssistantMessage(message: string): Promise<void> {
     const event = MessageCreatedEventUtil.Create("assistant", message);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  public async AddReasoningMessage(message: string): Promise<void> {
+    const event = ReasoningCreatedEventUtil.Create(message);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 

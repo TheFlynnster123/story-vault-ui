@@ -246,6 +246,42 @@ export const NoteExpirationBadge = styled.span<{ $expired?: boolean }>`
   `}
 `;
 
+export const ReasoningMessageText = styled.div<{ $disabled?: boolean }>`
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: inline-block;
+  width: 100%;
+  box-shadow: 4px 4px 5px rgba(0, 0, 0, 0.38);
+  cursor: default;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  background-color: ${({ $disabled }) =>
+    $disabled
+      ? transparencyColor("rgba(70, 70, 82, 0.85)")
+      : transparencyColor("rgba(18, 25, 108, 1)")};
+  color: ${Theme.messages.assistant.text};
+  border-left: 3px solid
+    ${({ $disabled }) =>
+      $disabled ? "rgba(140, 140, 150, 0.8)" : "rgba(98, 108, 205, 0.9)"};
+  opacity: ${({ $disabled }) => ($disabled ? 0.62 : 1)};
+
+  pre,
+  code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+`;
+
+export const ReasoningMessageHeader = styled.div`
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  padding: 1px 0;
+  opacity: 0.9;
+`;
+
 export const DeleteButton = styled.button`
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #ddd;

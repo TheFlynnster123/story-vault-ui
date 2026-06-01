@@ -136,6 +136,42 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
   // ---- Prior Messages Display Tests ----
   describe("Prior Messages Display", () => {
+    it("uses configurable prior message count", () => {
+      projection.SetPreviousChapterMessageBuffer(3);
+      const messageIds = createMessagesSequence(projection, 10);
+
+      createChapter(
+        projection,
+        "chapter-1",
+        "Chapter One",
+        "Summary",
+        messageIds,
+      );
+
+      const messages = projection.GetMessages();
+      expect(messages).toHaveLength(4);
+      expect(messages.slice(0, 3).map((m) => m.id)).toEqual(
+        messageIds.slice(-3),
+      );
+    });
+
+    it("can disable prior message buffering", () => {
+      projection.SetPreviousChapterMessageBuffer(0);
+      const messageIds = createMessagesSequence(projection, 10);
+
+      createChapter(
+        projection,
+        "chapter-1",
+        "Chapter One",
+        "Summary",
+        messageIds,
+      );
+
+      const messages = projection.GetMessages();
+      expect(messages).toHaveLength(1);
+      expect(messages[0].id).toBe("chapter-1");
+    });
+
     it("displays up to 6 prior messages", () => {
       const messageIds = createMessagesSequence(projection, 10);
 

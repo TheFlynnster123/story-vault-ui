@@ -1,3 +1,5 @@
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+
 import { DEFAULT_PLAN_PROMPT, DEFAULT_REFRESH_INTERVAL } from "./Plan";
 
 export interface PlanPreset {
@@ -5,6 +7,7 @@ export interface PlanPreset {
   name: string;
   prompt: string;
   model?: string;
+  modelRequestSettings?: OpenRouterRequestSettings;
   refreshInterval: number;
   consolidateMessageHistory: boolean;
   hideOtherPlans: boolean;

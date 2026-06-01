@@ -8,6 +8,7 @@ import { StoryMessage } from "./StoryMessage";
 import { PlanMessage } from "./PlanMessage";
 import { NoteMessage } from "./NoteMessage";
 import { AgentClarificationMessage } from "./AgentClarificationMessage";
+import { ReasoningMessage } from "./ReasoningMessage";
 import type {
   AgentClarificationChatMessage,
   BookChatMessage,
@@ -18,18 +19,21 @@ import type {
   StoryChatMessage,
   UserChatMessage,
   CivitWorkflowChatMessage,
+  ReasoningChatMessage,
 } from "../../../../../services/CQRS/UserChatProjection";
 
 interface ChatEntryProps {
   chatId: string;
   message: UserChatMessage;
   isLastMessage?: boolean;
+  trailingChapterMessageCount?: number;
 }
 
 export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
   chatId,
   message,
   isLastMessage = false,
+  trailingChapterMessageCount,
 }) => {
   if (message.type === "story") {
     return (
@@ -49,7 +53,11 @@ export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
 
   if (message.type === "chapter") {
     return (
-      <ChapterMessage chatId={chatId} chapter={message as ChapterChatMessage} />
+      <ChapterMessage
+        chatId={chatId}
+        chapter={message as ChapterChatMessage}
+        trailingMessageCount={trailingChapterMessageCount}
+      />
     );
   }
 
@@ -70,6 +78,16 @@ export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
       <AgentClarificationMessage
         chatId={chatId}
         message={message as AgentClarificationChatMessage}
+      />
+    );
+  }
+
+  if (message.type === "reasoning") {
+    return (
+      <ReasoningMessage
+        chatId={chatId}
+        message={message as ReasoningChatMessage}
+        isLastMessage={isLastMessage}
       />
     );
   }
@@ -95,5 +113,6 @@ export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
 }, (prev, next) =>
   prev.chatId === next.chatId &&
   prev.message === next.message &&
-  prev.isLastMessage === next.isLastMessage
+  prev.isLastMessage === next.isLastMessage &&
+  prev.trailingChapterMessageCount === next.trailingChapterMessageCount
 );

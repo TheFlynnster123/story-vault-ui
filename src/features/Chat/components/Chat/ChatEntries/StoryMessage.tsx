@@ -28,7 +28,7 @@ export const StoryMessage: React.FC<StoryMessageProps> = ({
       <StoryDivider />
       <StoryContent>{message.content}</StoryContent>
       <StoryButtonContainer>
-        <StoryMessageButtons chatId={chatId} />
+        <StoryMessageButtons chatId={chatId} messageId={message.id} />
       </StoryButtonContainer>
     </StoryMessageContainer>
   );

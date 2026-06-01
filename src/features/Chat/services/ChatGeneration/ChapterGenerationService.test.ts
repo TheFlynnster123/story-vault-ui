@@ -65,6 +65,9 @@ describe("ChapterGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -80,6 +83,28 @@ describe("ChapterGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "anthropic/claude-opus-4",
+        "chat",
+        "LLM",
+        undefined,
+      );
+    });
+
+    it("should pass request settings when chapterSummaryRequestSettings is configured", async () => {
+      mockSystemPromptsService.Get.mockResolvedValue({
+        ...DEFAULT_SYSTEM_PROMPTS,
+        chapterSummaryModel: "anthropic/claude-opus-4",
+        chapterSummaryRequestSettings: { temperature: 0.4 },
+      });
+      const service = new ChapterGenerationService(testChatId);
+
+      await service.generateChapterSummary();
+
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.any(Array),
+        "anthropic/claude-opus-4",
+        "chat",
+        "LLM",
+        { temperature: 0.4 },
       );
     });
 
@@ -95,6 +120,9 @@ describe("ChapterGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -106,6 +134,9 @@ describe("ChapterGenerationService", () => {
 
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
+        undefined,
+        "chat",
+        "LLM",
         undefined,
       );
     });
@@ -122,6 +153,9 @@ describe("ChapterGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         undefined,
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -137,6 +171,9 @@ describe("ChapterGenerationService", () => {
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
         "openai/gpt-5",
+        "chat",
+        "LLM",
+        undefined,
       );
     });
 
@@ -151,6 +188,9 @@ describe("ChapterGenerationService", () => {
 
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.any(Array),
+        undefined,
+        "chat",
+        "LLM",
         undefined,
       );
     });

@@ -1,5 +1,5 @@
 import { d } from "../../../services/Dependencies";
-import type { Plan } from "./Plan";
+import type { Plan, PlanFieldValue } from "./Plan";
 import { applyPlanDefaults } from "./Plan";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 
@@ -61,7 +61,7 @@ export class PlanService {
   public updatePlanDefinition(
     planId: string,
     field: keyof Plan,
-    value: string | number | boolean,
+    value: PlanFieldValue,
   ): void {
     const plan = this.Plans.find((p) => p.id === planId);
     if (plan) {
@@ -71,7 +71,7 @@ export class PlanService {
           plan.messagesSinceLastUpdate = 0;
         }
       } else {
-        (plan[field] as string | number | boolean) = value;
+        plan[field] = value as never;
       }
       this.notifySubscribers();
       this.savePlansDebounced();

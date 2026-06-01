@@ -1,6 +1,9 @@
 import type { LLMMessage } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
-import { toSystemMessage, toUserMessage } from "../../../../services/Utils/MessageUtils";
+import {
+  toSystemMessage,
+  toUserMessage,
+} from "../../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
@@ -141,6 +144,9 @@ export class AgentFlowService {
     const model =
       systemPrompts?.agentIntentModel ||
       DEFAULT_SYSTEM_PROMPTS.agentIntentModel;
+    const requestSettings = systemPrompts?.agentIntentRequestSettings;
+    const chatSettings = await d.ChatSettingsService(this.chatId).Get();
+    const sensitivity = chatSettings?.agentFlowSensitivity ?? 50;
 
     const contextMessages = await d
       .LLMMessageContextService(this.chatId)
@@ -150,14 +156,18 @@ export class AgentFlowService {
       contextMessages,
       prompt,
       selectedIntent,
+      sensitivity,
     );
-    const response = await d.OpenRouterChatAPI().postStructuredChat<unknown>(
-      messages,
-      AGENT_INTENT_RESPONSE_FORMAT,
-      model,
-      "Agent Intent",
-      true,
-    );
+    const response = await d
+      .OpenRouterChatAPI()
+      .postStructuredChat<unknown>(
+        messages,
+        AGENT_INTENT_RESPONSE_FORMAT,
+        model,
+        "Agent Intent",
+        true,
+        requestSettings,
+      );
 
     return normalizeSuggestion(response, selectedIntent);
   }
@@ -176,12 +186,14 @@ const buildIntentMessages = (
   contextMessages: LLMMessage[],
   prompt: string,
   selectedIntent?: AgentIntent,
+  sensitivity: number = 50,
 ): LLMMessage[] => [
   ...contextMessages,
   toSystemMessage(prompt),
   toUserMessage(
     [
       "Analyze the current chat state and return exactly one JSON object.",
+      formatSensitivityInstruction(sensitivity),
       selectedIntent
         ? `The user manually selected intent "${selectedIntent}". Prefer that intent and generate useful proposedActions for it when the chat context supports it. If required details are missing, use ask_user.`
         : "Select the most useful intent yourself.",
@@ -192,41 +204,64 @@ const buildIntentMessages = (
   ),
 ];
 
+const formatSensitivityInstruction = (sensitivity: number): string => {
+  const normalized = Math.min(100, Math.max(0, Math.round(sensitivity)));
+
+  if (normalized <= 33) {
+    return `Agent flow sensitivity: ${normalized}/100 (Conservative). Only suggest workflow actions when the benefit is strong and obvious. Prefer continue_chat when uncertain.`;
+  }
+
+  if (normalized <= 66) {
+    return `Agent flow sensitivity: ${normalized}/100 (Balanced). Suggest workflow actions when they are likely useful, but avoid noisy or speculative actions.`;
+  }
+
+  return `Agent flow sensitivity: ${normalized}/100 (Proactive). Prefer a useful workflow action when there is plausible benefit. Use ask_user when details are missing instead of defaulting to continue_chat.`;
+};
+
 const normalizeSuggestion = (
   suggestion: unknown,
   selectedIntent?: AgentIntent,
 ): AgentFlowSuggestion => {
   if (typeof suggestion === "string") {
     const intent = suggestion.trim();
-    return ensureExecutableSuggestion({
-      intent: isAgentIntent(intent) ? intent : "continue_chat",
-      confidence: isAgentIntent(intent) ? 0.35 : 0,
-      rationale: isAgentIntent(intent)
-        ? "The model returned only an intent. Run analysis again for detailed actions."
-        : "The model did not return a usable agent flow suggestion.",
-      proposedActions: [],
-    }, selectedIntent);
+    return ensureExecutableSuggestion(
+      {
+        intent: isAgentIntent(intent) ? intent : "continue_chat",
+        confidence: isAgentIntent(intent) ? 0.35 : 0,
+        rationale: isAgentIntent(intent)
+          ? "The model returned only an intent. Run analysis again for detailed actions."
+          : "The model did not return a usable agent flow suggestion.",
+        proposedActions: [],
+      },
+      selectedIntent,
+    );
   }
 
   if (!suggestion || typeof suggestion !== "object") {
-    return ensureExecutableSuggestion({
-      intent: "continue_chat",
-      confidence: 0,
-      rationale: "The model did not return a usable agent flow suggestion.",
-      proposedActions: [],
-    }, selectedIntent);
+    return ensureExecutableSuggestion(
+      {
+        intent: "continue_chat",
+        confidence: 0,
+        rationale: "The model did not return a usable agent flow suggestion.",
+        proposedActions: [],
+      },
+      selectedIntent,
+    );
   }
 
   const parsed = suggestion as Partial<AgentFlowSuggestion>;
 
-  return ensureExecutableSuggestion({
-    intent: isAgentIntent(parsed.intent) ? parsed.intent : "continue_chat",
-    confidence: clampConfidence(parsed.confidence),
-    rationale: String(parsed.rationale ?? ""),
-    proposedActions: Array.isArray(parsed.proposedActions)
-      ? parsed.proposedActions.filter(isAgentFlowAction).slice(0, 3)
-      : [],
-  }, selectedIntent);
+  return ensureExecutableSuggestion(
+    {
+      intent: isAgentIntent(parsed.intent) ? parsed.intent : "continue_chat",
+      confidence: clampConfidence(parsed.confidence),
+      rationale: String(parsed.rationale ?? ""),
+      proposedActions: Array.isArray(parsed.proposedActions)
+        ? parsed.proposedActions.filter(isAgentFlowAction).slice(0, 3)
+        : [],
+    },
+    selectedIntent,
+  );
 };
 
 const ensureExecutableSuggestion = (

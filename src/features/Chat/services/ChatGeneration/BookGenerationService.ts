@@ -1,6 +1,7 @@
 import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
+import type { OpenRouterRequestSettings } from "../../../OpenRouter/services/OpenRouterRequestSettings";
 
 export const getBookGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new BookGenerationService(chatId),
@@ -22,10 +23,12 @@ export class BookGenerationService extends GenerationOrchestrator {
         .LLMMessageContextService(this.chatId)
         .buildBookSummaryRequestMessages(chapterSummaries);
 
-      const model = await this.resolveBookSummaryModel();
+      const { model, requestSettings } = await this.resolveBookSummaryModel();
 
       this.setStatus("Generating book summary...");
-      return await d.OpenRouterChatAPI().postChat(requestMessages, model);
+      return await d
+        .OpenRouterChatAPI()
+        .postChat(requestMessages, model, "chat", "LLM", requestSettings);
     });
   }
 
@@ -37,20 +40,34 @@ export class BookGenerationService extends GenerationOrchestrator {
         .LLMMessageContextService(this.chatId)
         .buildBookTitleRequestMessages(chapterSummaries);
 
-      const model = await this.resolveBookTitleModel();
+      const { model, requestSettings } = await this.resolveBookTitleModel();
 
       this.setStatus("Generating book title...");
-      return await d.OpenRouterChatAPI().postChat(requestMessages, model);
+      return await d
+        .OpenRouterChatAPI()
+        .postChat(requestMessages, model, "chat", "LLM", requestSettings);
     });
   }
 
-  private async resolveBookSummaryModel(): Promise<string | undefined> {
+  private async resolveBookSummaryModel(): Promise<{
+    model: string | undefined;
+    requestSettings: OpenRouterRequestSettings | undefined;
+  }> {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return systemPrompts?.bookSummaryModel || undefined;
+    return {
+      model: systemPrompts?.bookSummaryModel || undefined,
+      requestSettings: systemPrompts?.bookSummaryRequestSettings,
+    };
   }
 
-  private async resolveBookTitleModel(): Promise<string | undefined> {
+  private async resolveBookTitleModel(): Promise<{
+    model: string | undefined;
+    requestSettings: OpenRouterRequestSettings | undefined;
+  }> {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return systemPrompts?.bookTitleModel || undefined;
+    return {
+      model: systemPrompts?.bookTitleModel || undefined,
+      requestSettings: systemPrompts?.bookTitleRequestSettings,
+    };
   }
 }

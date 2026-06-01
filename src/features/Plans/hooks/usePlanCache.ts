@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { d } from "../../../services/Dependencies";
-import type { Plan } from "../services/Plan";
+import type { Plan, PlanFieldValue } from "../services/Plan";
 
 export const usePlanCache = (chatId: string) => {
   const [, forceUpdate] = useState({});
@@ -15,7 +15,7 @@ export const usePlanCache = (chatId: string) => {
     updatePlanDefinition: (
       planId: string,
       field: keyof Plan,
-      value: string | number | boolean,
+      value: PlanFieldValue,
     ) => cache.updatePlanDefinition(planId, field, value),
     addPlan: (plan: Plan) => cache.addPlan(plan),
     deletePlan: (planId: string) => cache.removePlan(planId),

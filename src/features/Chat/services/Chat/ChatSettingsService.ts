@@ -103,4 +103,24 @@ export class ChatSettingsService {
       messageTransparency: value,
     });
   }
+
+  async setReasoningEnabled(enabled: boolean): Promise<void> {
+    await this.update({
+      reasoningEnabled: enabled,
+    });
+  }
+
+  async setReasoningPromptOverride(prompt: string | undefined): Promise<void> {
+    await this.updateDebounced({
+      reasoningPromptOverride: prompt,
+    });
+  }
+
+  async setReasoningExpiresAfterMessages(
+    expiresAfterMessages: number | null,
+  ): Promise<void> {
+    await this.update({
+      reasoningExpiresAfterMessages: expiresAfterMessages,
+    });
+  }
 }

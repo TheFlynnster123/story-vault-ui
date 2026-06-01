@@ -3,6 +3,7 @@ import { Stack, Button } from "@mantine/core";
 import { RiEdit2Line, RiDeleteBinLine } from "react-icons/ri";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { EditNoteModal } from "./EditNoteModal";
+import { InspectMessageButton } from "./InspectMessageButton";
 import { d } from "../../../../../../services/Dependencies";
 import type { NoteChatMessage } from "../../../../../../services/CQRS/UserChatProjection";
 
@@ -24,6 +25,7 @@ export const NoteMessageButtonsContainer: React.FC<
 
   return (
     <Stack gap="xs" justify="center">
+      <InspectMessageButton chatId={chatId} messageId={message.id} />
       <Button
         size="xs"
         variant="light"
