@@ -31,9 +31,10 @@ export const DiscussNewBookPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const [searchParams] = useSearchParams();
   const bookTitle = searchParams.get("title") || "Untitled Book";
-  const chapterIds = useMemo(() => searchParams.getAll("chapterId"), [
-    searchParams,
-  ]);
+  const chapterIds = useMemo(
+    () => searchParams.getAll("chapterId"),
+    [searchParams],
+  );
 
   const { systemPrompts, isLoading } = useSystemPrompts();
 

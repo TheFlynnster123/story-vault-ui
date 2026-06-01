@@ -99,13 +99,7 @@ export const createChapterDiscussionConfig = (
     const model = chapterSummaryModel || undefined;
     const response = await d
       .OpenRouterChatAPI()
-      .postChat(
-        messages,
-        model,
-        "chat",
-        "LLM",
-        chapterSummaryRequestSettings,
-      );
+      .postChat(messages, model, "chat", "LLM", chapterSummaryRequestSettings);
 
     await d.ChatService(chatId).EditChapter(chapterId, title, response);
   };

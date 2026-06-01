@@ -25,7 +25,9 @@ describe("BookGenerationService", () => {
     mockLLMMessageContextService = {
       buildBookSummaryRequestMessages: vi
         .fn()
-        .mockResolvedValue([{ role: "system", content: "book summary prompt" }]),
+        .mockResolvedValue([
+          { role: "system", content: "book summary prompt" },
+        ]),
       buildBookTitleRequestMessages: vi
         .fn()
         .mockResolvedValue([{ role: "system", content: "book title prompt" }]),

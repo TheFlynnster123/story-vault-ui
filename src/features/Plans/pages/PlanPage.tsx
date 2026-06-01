@@ -136,9 +136,17 @@ export const PlanPage: React.FC = () => {
       preset.modelRequestSettings,
     );
     updatePlanDefinition?.(planId, "refreshInterval", preset.refreshInterval);
-    updatePlanDefinition?.(planId, "consolidateMessageHistory", preset.consolidateMessageHistory);
+    updatePlanDefinition?.(
+      planId,
+      "consolidateMessageHistory",
+      preset.consolidateMessageHistory,
+    );
     updatePlanDefinition?.(planId, "hideOtherPlans", preset.hideOtherPlans);
-    updatePlanDefinition?.(planId, "excludeOwnPlanFromHistory", preset.excludeOwnPlanFromHistory);
+    updatePlanDefinition?.(
+      planId,
+      "excludeOwnPlanFromHistory",
+      preset.excludeOwnPlanFromHistory,
+    );
   };
 
   const handleGenerateNow = (id: string) => {
@@ -234,11 +242,7 @@ interface PlanListProps {
   chatId: string;
   plans: Plan[];
   onAdd: () => void;
-  onChange: (
-    id: string,
-    field: keyof Plan,
-    value: PlanFieldValue,
-  ) => void;
+  onChange: (id: string, field: keyof Plan, value: PlanFieldValue) => void;
   onApplyPreset: (planId: string, preset: PlanPreset) => void;
   onGenerateNow: (planId: string) => void;
   onClearPlan: (planId: string) => void;
@@ -290,11 +294,7 @@ const PlanList: React.FC<PlanListProps> = ({
 interface PlanEditorProps {
   chatId: string;
   plan: Plan;
-  onChange: (
-    id: string,
-    field: keyof Plan,
-    value: PlanFieldValue,
-  ) => void;
+  onChange: (id: string, field: keyof Plan, value: PlanFieldValue) => void;
   onApplyPreset: (planId: string, preset: PlanPreset) => void;
   onGenerateNow: (planId: string) => void;
   onClearPlan: (planId: string) => void;
@@ -361,10 +361,7 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
 
     if (userPresetData.length === 0) return builtInData;
 
-    return [
-      ...builtInData,
-      { group: "Saved Presets", items: userPresetData },
-    ];
+    return [...builtInData, { group: "Saved Presets", items: userPresetData }];
   }, [presets]);
 
   const handlePresetSelect = (presetId: string | null) => {
@@ -725,9 +722,7 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
             label="Preset name"
             placeholder="e.g. Mystery thriller plan"
             value={savePresetName}
-            onChange={(e) =>
-              handleSavePresetNameChange(e.currentTarget.value)
-            }
+            onChange={(e) => handleSavePresetNameChange(e.currentTarget.value)}
             autoFocus
           />
 

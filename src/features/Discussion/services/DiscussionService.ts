@@ -40,8 +40,9 @@ export class DiscussionService {
   public getDefaultModel = (): string | undefined =>
     this.config.getDefaultModel();
 
-  public getDefaultRequestSettings = (): OpenRouterRequestSettings | undefined =>
-    this.config.getDefaultRequestSettings?.();
+  public getDefaultRequestSettings = ():
+    | OpenRouterRequestSettings
+    | undefined => this.config.getDefaultRequestSettings?.();
 
   /** Returns the full prompt that will be sent to the LLM on the next call. */
   public getLLMContext = (): LLMMessage[] => this.buildConversationPrompt();

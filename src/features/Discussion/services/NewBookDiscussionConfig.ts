@@ -105,13 +105,7 @@ export const createNewBookDiscussionConfig = (
     const model = bookSummaryModel || undefined;
     const summary = await d
       .OpenRouterChatAPI()
-      .postChat(
-        messages,
-        model,
-        "chat",
-        "LLM",
-        bookSummaryRequestSettings,
-      );
+      .postChat(messages, model, "chat", "LLM", bookSummaryRequestSettings);
 
     await d.ChatService(chatId).AddBook(bookTitle, summary, chapterIds);
   };

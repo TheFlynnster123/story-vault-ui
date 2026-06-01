@@ -142,5 +142,4 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
 export const getPlanPresetByName = (
   presets: PlanPreset[],
   name: string,
-): PlanPreset | undefined =>
-  presets.find((p) => isSameName(p.name, name));
+): PlanPreset | undefined => presets.find((p) => isSameName(p.name, name));

@@ -210,7 +210,8 @@ export class ImageGenerator {
         const parent = await d
           .ChatImageVariantService(this.chatId)
           .findParentModel(variant.parentModelId);
-        if (isWorkflowImageModel(parent)) return resolveVariant(variant, parent);
+        if (isWorkflowImageModel(parent))
+          return resolveVariant(variant, parent);
       }
     } else {
       const allModels = await d.ImageModelService().GetAllImageModels();
@@ -329,8 +330,7 @@ const buildFeedbackMessage = (
   `The previous image prompt was: \n\n"${originalPrompt}" \n\nPlease regenerate with this feedback: \n\n${feedback}. \n\nRespond ONLY with the new image prompt separated by commas.`;
 
 const appendToPrompt = (input: any, prompt: string) => {
-  input.prompt =
-    (input.prompt ? `${input.prompt}, ` : "") + prompt;
+  input.prompt = (input.prompt ? `${input.prompt}, ` : "") + prompt;
 };
 
 const appendPromptSection = (basePrompt: string, prompt: string): string => {

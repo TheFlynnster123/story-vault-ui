@@ -160,9 +160,7 @@ const StoryDiscussionModalContent: React.FC<
             {messages.map((msg, index) => {
               const isLastAssistant =
                 msg.role === "assistant" &&
-                messages
-                  .slice(index + 1)
-                  .every((m) => m.role !== "assistant");
+                messages.slice(index + 1).every((m) => m.role !== "assistant");
               return (
                 <React.Fragment key={index}>
                   <StoryMessageBubble message={msg} />
@@ -195,7 +193,10 @@ const StoryDiscussionModalContent: React.FC<
         </ScrollArea>
       </StoryDiscussionChatSurface>
 
-      <Stack gap={STORY_DISCUSSION_COMPOSER_BUTTON_GAP} style={{ marginBottom: 0 }}>
+      <Stack
+        gap={STORY_DISCUSSION_COMPOSER_BUTTON_GAP}
+        style={{ marginBottom: 0 }}
+      >
         <Group
           gap={STORY_DISCUSSION_COMPOSER_BUTTON_GAP}
           align="stretch"

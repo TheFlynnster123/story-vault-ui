@@ -74,13 +74,7 @@ export const createNewChapterDiscussionConfig = (
     const model = chapterSummaryModel || undefined;
     const summary = await d
       .OpenRouterChatAPI()
-      .postChat(
-        messages,
-        model,
-        "chat",
-        "LLM",
-        chapterSummaryRequestSettings,
-      );
+      .postChat(messages, model, "chat", "LLM", chapterSummaryRequestSettings);
 
     await d.ChatService(chatId).AddChapter(chapterTitle, summary);
   };

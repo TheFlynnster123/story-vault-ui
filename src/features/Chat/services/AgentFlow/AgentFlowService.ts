@@ -1,6 +1,9 @@
 import type { LLMMessage } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
-import { toSystemMessage, toUserMessage } from "../../../../services/Utils/MessageUtils";
+import {
+  toSystemMessage,
+  toUserMessage,
+} from "../../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 
@@ -155,14 +158,16 @@ export class AgentFlowService {
       selectedIntent,
       sensitivity,
     );
-    const response = await d.OpenRouterChatAPI().postStructuredChat<unknown>(
-      messages,
-      AGENT_INTENT_RESPONSE_FORMAT,
-      model,
-      "Agent Intent",
-      true,
-      requestSettings,
-    );
+    const response = await d
+      .OpenRouterChatAPI()
+      .postStructuredChat<unknown>(
+        messages,
+        AGENT_INTENT_RESPONSE_FORMAT,
+        model,
+        "Agent Intent",
+        true,
+        requestSettings,
+      );
 
     return normalizeSuggestion(response, selectedIntent);
   }
@@ -219,35 +224,44 @@ const normalizeSuggestion = (
 ): AgentFlowSuggestion => {
   if (typeof suggestion === "string") {
     const intent = suggestion.trim();
-    return ensureExecutableSuggestion({
-      intent: isAgentIntent(intent) ? intent : "continue_chat",
-      confidence: isAgentIntent(intent) ? 0.35 : 0,
-      rationale: isAgentIntent(intent)
-        ? "The model returned only an intent. Run analysis again for detailed actions."
-        : "The model did not return a usable agent flow suggestion.",
-      proposedActions: [],
-    }, selectedIntent);
+    return ensureExecutableSuggestion(
+      {
+        intent: isAgentIntent(intent) ? intent : "continue_chat",
+        confidence: isAgentIntent(intent) ? 0.35 : 0,
+        rationale: isAgentIntent(intent)
+          ? "The model returned only an intent. Run analysis again for detailed actions."
+          : "The model did not return a usable agent flow suggestion.",
+        proposedActions: [],
+      },
+      selectedIntent,
+    );
   }
 
   if (!suggestion || typeof suggestion !== "object") {
-    return ensureExecutableSuggestion({
-      intent: "continue_chat",
-      confidence: 0,
-      rationale: "The model did not return a usable agent flow suggestion.",
-      proposedActions: [],
-    }, selectedIntent);
+    return ensureExecutableSuggestion(
+      {
+        intent: "continue_chat",
+        confidence: 0,
+        rationale: "The model did not return a usable agent flow suggestion.",
+        proposedActions: [],
+      },
+      selectedIntent,
+    );
   }
 
   const parsed = suggestion as Partial<AgentFlowSuggestion>;
 
-  return ensureExecutableSuggestion({
-    intent: isAgentIntent(parsed.intent) ? parsed.intent : "continue_chat",
-    confidence: clampConfidence(parsed.confidence),
-    rationale: String(parsed.rationale ?? ""),
-    proposedActions: Array.isArray(parsed.proposedActions)
-      ? parsed.proposedActions.filter(isAgentFlowAction).slice(0, 3)
-      : [],
-  }, selectedIntent);
+  return ensureExecutableSuggestion(
+    {
+      intent: isAgentIntent(parsed.intent) ? parsed.intent : "continue_chat",
+      confidence: clampConfidence(parsed.confidence),
+      rationale: String(parsed.rationale ?? ""),
+      proposedActions: Array.isArray(parsed.proposedActions)
+        ? parsed.proposedActions.filter(isAgentFlowAction).slice(0, 3)
+        : [],
+    },
+    selectedIntent,
+  );
 };
 
 const ensureExecutableSuggestion = (
