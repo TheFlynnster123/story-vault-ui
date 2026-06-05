@@ -25,7 +25,6 @@ export const NoteMessageButtonsContainer: React.FC<
 
   return (
     <Stack gap="xs" justify="center">
-      <InspectMessageButton chatId={chatId} messageId={message.id} />
       <Button
         size="xs"
         variant="light"
@@ -43,6 +42,7 @@ export const NoteMessageButtonsContainer: React.FC<
       >
         Edit Note
       </Button>
+      <InspectMessageButton chatId={chatId} messageId={message.id} />
 
       <Button
         size="xs"

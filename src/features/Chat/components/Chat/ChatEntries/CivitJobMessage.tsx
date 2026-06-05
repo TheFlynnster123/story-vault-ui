@@ -83,6 +83,16 @@ const CostLine = styled.div`
   text-align: center;
 `;
 
+const ModelLine = styled.div`
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  max-width: 240px;
+  overflow-wrap: anywhere;
+  text-align: center;
+`;
+
 const LoadingImageIndicator = ({
   modelName,
   characterName,
@@ -185,6 +195,7 @@ export const CivitJobMessage = ({
   const canViewPrompt = !!(
     message.data?.prompt || message.data?.sceneDescription
   );
+  const generatedModelName = message.data?.modelName ?? message.data?.modelId;
 
   const getErrorMessage = () => {
     if (isPendingGeneration) return null;
@@ -253,7 +264,6 @@ export const CivitJobMessage = ({
 
         <MessageOverlay show={showButtons} onBackdropClick={toggle}>
           <Stack gap="xs" justify="center">
-            <InspectMessageButton chatId={chatId} messageId={message.id} />
             {canViewPrompt && (
               <Button
                 size="xs"
@@ -298,8 +308,15 @@ export const CivitJobMessage = ({
                 >
                   Set as Chat Background
                 </Button>
+                <InspectMessageButton chatId={chatId} messageId={message.id} />
+                {generatedModelName && (
+                  <ModelLine>Model: {generatedModelName}</ModelLine>
+                )}
                 <Divider my="xs" />
               </>
+            )}
+            {!isImageGenerated() && (
+              <InspectMessageButton chatId={chatId} messageId={message.id} />
             )}
             <Button
               size="xs"

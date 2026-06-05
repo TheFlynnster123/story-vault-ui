@@ -21,7 +21,6 @@ export const StoryMessageButtons: React.FC<StoryMessageButtonsProps> = ({
 
   return (
     <Group>
-      <InspectMessageButton chatId={chatId} messageId={messageId} />
       <Button
         leftSection={<RiEditLine size={16} />}
         variant="light"
@@ -29,6 +28,7 @@ export const StoryMessageButtons: React.FC<StoryMessageButtonsProps> = ({
       >
         Edit Story
       </Button>
+      <InspectMessageButton chatId={chatId} messageId={messageId} />
       <DiscussStoryButton chatId={chatId} />
     </Group>
   );

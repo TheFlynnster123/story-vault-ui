@@ -15,8 +15,8 @@ export const BookMessageButtons: React.FC<BookMessageButtonsProps> = ({
 }) => {
   return (
     <Stack gap="xs" justify="center" mt="md">
-      <InspectMessageButton chatId={chatId} messageId={bookId} />
       <EditBookButton chatId={chatId} bookId={bookId} />
+      <InspectMessageButton chatId={chatId} messageId={bookId} />
       <DiscussBookButton chatId={chatId} bookId={bookId} />
       <DeleteBookButton chatId={chatId} bookId={bookId} />
     </Stack>
