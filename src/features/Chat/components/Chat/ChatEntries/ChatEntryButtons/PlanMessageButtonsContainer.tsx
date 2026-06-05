@@ -20,7 +20,6 @@ export const PlanMessageButtonsContainer: React.FC<
 > = ({ chatId, messageId, planDefinitionId, planName, priorContent }) => {
   return (
     <Stack gap="xs" justify="center">
-      <InspectMessageButton chatId={chatId} messageId={messageId} />
       <RegeneratePlanButton
         chatId={chatId}
         planDefinitionId={planDefinitionId}
@@ -39,6 +38,7 @@ export const PlanMessageButtonsContainer: React.FC<
       />
       <DiscussPlanButton chatId={chatId} planDefinitionId={planDefinitionId} />
       <EditButton chatId={chatId} messageId={messageId} />
+      <InspectMessageButton chatId={chatId} messageId={messageId} />
       <DeleteButton chatId={chatId} messageId={messageId} />
     </Stack>
   );

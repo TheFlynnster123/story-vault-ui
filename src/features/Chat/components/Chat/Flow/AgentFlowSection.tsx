@@ -212,24 +212,16 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     }
   };
 
-  const generateChapterTitle = async () => {
-    setChapterDraft((draft) => ({ ...draft, isGeneratingTitle: true }));
+  const generateChapterDraft = async () => {
+    setChapterDraft((draft) => ({ ...draft, isCreating: true }));
     try {
-      const title = await d.ChapterGenerationService(chatId).generateChapterTitle();
+      const title = await d
+        .ChapterGenerationService(chatId)
+        .generateChapterTitle();
       if (title) {
         setChapterDraft((draft) => ({ ...draft, title }));
       }
-    } finally {
-      setChapterDraft((draft) => ({ ...draft, isGeneratingTitle: false }));
-    }
-  };
 
-  const generateChapterSummary = async () => {
-    const title = chapterDraft.title.trim();
-    if (!title) return;
-
-    setChapterDraft((draft) => ({ ...draft, isCreating: true }));
-    try {
       const summary = await d
         .ChapterGenerationService(chatId)
         .generateChapterSummary();
@@ -339,8 +331,7 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
         onSummaryChange={(summary) =>
           setChapterDraft((draft) => ({ ...draft, summary }))
         }
-        onGenerateTitle={generateChapterTitle}
-        onGenerate={generateChapterSummary}
+        onGenerate={generateChapterDraft}
         onSubmit={submitChapterDraft}
         onCancel={closeChapterDraft}
       />

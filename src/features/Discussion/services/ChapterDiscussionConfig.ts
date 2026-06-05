@@ -65,7 +65,11 @@ export const createChapterDiscussionConfig = (
   const getDefaultRequestSettings = (): OpenRouterRequestSettings | undefined =>
     chapterSummaryRequestSettings;
 
-  const generateFromFeedback = async (feedback: string): Promise<void> => {
+  const generateFromFeedback = async (
+    feedback: string,
+    modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
+  ): Promise<void> => {
     const chapter = findChapter();
     if (!chapter) return;
 
@@ -99,7 +103,13 @@ export const createChapterDiscussionConfig = (
     const model = chapterSummaryModel || undefined;
     const response = await d
       .OpenRouterChatAPI()
-      .postChat(messages, model, "chat", "LLM", chapterSummaryRequestSettings);
+      .postChat(
+        messages,
+        modelOverride || model,
+        "chat",
+        "LLM",
+        requestSettingsOverride ?? chapterSummaryRequestSettings,
+      );
 
     await d.ChatService(chatId).EditChapter(chapterId, title, response);
   };

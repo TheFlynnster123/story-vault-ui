@@ -27,15 +27,22 @@ const consolidateMessagesToString = (messages: LLMMessage[]): string =>
     })
     .join("\n\n");
 
-const buildPlanPrompt = (plan: Plan): string =>
-  [
+const buildPlanPrompt = (plan: Plan, feedback?: string): string => {
+  const lines = [
     `# ${plan.name}`,
     ``,
     `Consider the full chat history above.`,
     `Generate a plan in Markdown. No preamble or additional commentary.`,
     ``,
     plan.prompt,
-  ].join("\n");
+  ];
+
+  if (feedback?.trim()) {
+    lines.push(``, `User feedback on what to include or change:`, feedback);
+  }
+
+  return lines.join("\n");
+};
 
 const buildUpdatePlanPrompt = (
   plan: Plan,
@@ -65,16 +72,17 @@ const buildUpdatePlanPrompt = (
 const buildPromptMessages = (
   chatMessages: LLMMessage[],
   plan: Plan,
+  feedback?: string,
 ): LLMMessage[] => {
   if (plan.consolidateMessageHistory) {
     const consolidatedHistory = consolidateMessagesToString(chatMessages);
     return [
       toSystemMessage(
-        `Chat History:\n\n${consolidatedHistory}\n\n---\n\n${buildPlanPrompt(plan)}`,
+        `Chat History:\n\n${consolidatedHistory}\n\n---\n\n${buildPlanPrompt(plan, feedback)}`,
       ),
     ];
   }
-  return [...chatMessages, toSystemMessage(buildPlanPrompt(plan))];
+  return [...chatMessages, toSystemMessage(buildPlanPrompt(plan, feedback))];
 };
 
 const buildUpdatePromptMessages = (
@@ -210,7 +218,7 @@ export class PlanGenerationService {
 
       const promptMessages = priorContent
         ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
-        : buildPromptMessages(chatMessages, plan);
+        : buildPromptMessages(chatMessages, plan, feedback);
 
       const response = await d
         .OpenRouterChatAPI()

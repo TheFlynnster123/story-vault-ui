@@ -8,6 +8,7 @@ import styled from "styled-components";
 import { useChats } from "../components/ChatMenuList/useChats";
 import { useEffect, useState } from "react";
 import { d } from "../../../services/Dependencies";
+import { Loader } from "@mantine/core";
 
 const ChatMenuPage = () => {
   const navigate = useNavigate();
@@ -53,7 +54,9 @@ const ChatMenuPage = () => {
         </ChatMenuHeader>
         <CreateChatButton />
         {isLoading ? (
-          <LoadingText>Loading chats...</LoadingText>
+          <LoadingState>
+            <Loader color="white" size="sm" />
+          </LoadingState>
         ) : (
           <ChatList
             chatIds={sortedChatIds}
@@ -101,9 +104,10 @@ const SystemSettingsContainer = styled.div`
   gap: 8px;
 `;
 
-const LoadingText = styled.p`
-  color: white;
-  font-size: 1em;
+const LoadingState = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 20px;
 `;
 

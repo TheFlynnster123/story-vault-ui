@@ -15,6 +15,7 @@ export const ChatList = ({ chatIds, handleSelectChat }: IChatListProps) => {
             chatId={chatId}
             onClick={() => handleSelectChat(chatId)}
             key={"ChatPreview-" + chatId}
+            gradientIndex={getGradientIndex(chatId)}
           />
         );
       })}
@@ -22,10 +23,15 @@ export const ChatList = ({ chatIds, handleSelectChat }: IChatListProps) => {
   );
 };
 
+const getGradientIndex = (chatId: string): number =>
+  [...chatId].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+
 const StyledChatList = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 40vh));
+  gap: 16px;
+  justify-content: center;
+  align-items: start;
   width: 100%;
   padding-bottom: 20px;
 `;

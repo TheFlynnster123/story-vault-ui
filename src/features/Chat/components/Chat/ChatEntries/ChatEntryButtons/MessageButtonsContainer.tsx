@@ -19,7 +19,6 @@ export const MessageButtonsContainer: React.FC<
 > = ({ chatId, messageId, showRegenerate = false, onRegenerate }) => {
   return (
     <Stack gap="xs" justify="center">
-      <InspectMessageButton chatId={chatId} messageId={messageId} />
       {showRegenerate && (
         <>
           <RegenerateButton
@@ -35,6 +34,7 @@ export const MessageButtonsContainer: React.FC<
         </>
       )}
       <EditButton chatId={chatId} messageId={messageId} />
+      <InspectMessageButton chatId={chatId} messageId={messageId} />
       <DeleteButton chatId={chatId} messageId={messageId} />
       <DeleteAllBelowButton chatId={chatId} messageId={messageId} />
     </Stack>

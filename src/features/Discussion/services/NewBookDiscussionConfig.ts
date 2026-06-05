@@ -76,7 +76,11 @@ export const createNewBookDiscussionConfig = (
   const getDefaultRequestSettings = (): OpenRouterRequestSettings | undefined =>
     bookSummaryRequestSettings;
 
-  const generateFromFeedback = async (feedback: string): Promise<void> => {
+  const generateFromFeedback = async (
+    feedback: string,
+    modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
+  ): Promise<void> => {
     const chapterSummariesContent = buildChapterSummariesContent();
     if (!chapterSummariesContent) return;
 
@@ -105,7 +109,13 @@ export const createNewBookDiscussionConfig = (
     const model = bookSummaryModel || undefined;
     const summary = await d
       .OpenRouterChatAPI()
-      .postChat(messages, model, "chat", "LLM", bookSummaryRequestSettings);
+      .postChat(
+        messages,
+        modelOverride || model,
+        "chat",
+        "LLM",
+        requestSettingsOverride ?? bookSummaryRequestSettings,
+      );
 
     await d.ChatService(chatId).AddBook(bookTitle, summary, chapterIds);
   };
