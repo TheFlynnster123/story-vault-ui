@@ -18,11 +18,22 @@ export const CompressSection: React.FC<CompressSectionProps> = ({ chatId }) => {
   const chapter = useAddChapter({ chatId });
   const book = useAddBook({ chatId });
 
-  const onGenerateChapter = async () => {
-    if (!chapter.title.trim()) return;
-    const encodedTitle = encodeURIComponent(chapter.title);
+  const onDiscussChapter = async () => {
+    const params = new URLSearchParams();
+    if (chapter.title.trim()) {
+      params.set("title", chapter.title);
+    }
+    if (chapter.summary.trim()) {
+      params.set("summary", chapter.summary);
+    }
+
     chapter.handleCloseModal();
-    navigate(`/chat/${chatId}/chapter/discuss?title=${encodedTitle}`);
+    const query = params.toString();
+    navigate(
+      query
+        ? `/chat/${chatId}/chapter/discuss?${query}`
+        : `/chat/${chatId}/chapter/discuss`,
+    );
   };
 
   const onGenerateBook = async () => {
@@ -55,8 +66,8 @@ export const CompressSection: React.FC<CompressSectionProps> = ({ chatId }) => {
         isCreating={chapter.isCreating}
         onTitleChange={chapter.setTitle}
         onSummaryChange={chapter.setSummary}
-        onGenerateTitle={chapter.handleGenerateTitle}
-        onGenerate={onGenerateChapter}
+        onGenerate={chapter.handleGenerate}
+        onDiscuss={onDiscussChapter}
         onSubmit={chapter.handleSubmit}
         onCancel={chapter.handleCloseModal}
       />

@@ -20,16 +20,26 @@ export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
     setSummary,
     handleOpenModal,
     handleCloseModal,
-    handleGenerateTitle,
     handleSubmit,
     handleGenerate,
   } = useAddChapter({ chatId });
 
-  const onGenerate = async () => {
-    const chapterId = await handleGenerate();
-    if (chapterId) {
-      navigate(`/chat/${chatId}/chapter/${chapterId}/discuss`);
+  const onDiscuss = async () => {
+    const params = new URLSearchParams();
+    if (title.trim()) {
+      params.set("title", title);
     }
+    if (summary.trim()) {
+      params.set("summary", summary);
+    }
+
+    handleCloseModal();
+    const query = params.toString();
+    navigate(
+      query
+        ? `/chat/${chatId}/chapter/discuss?${query}`
+        : `/chat/${chatId}/chapter/discuss`,
+    );
   };
 
   return (
@@ -43,8 +53,8 @@ export const ChapterSection: React.FC<ChapterSectionProps> = ({ chatId }) => {
         isCreating={isCreating}
         onTitleChange={setTitle}
         onSummaryChange={setSummary}
-        onGenerateTitle={handleGenerateTitle}
-        onGenerate={onGenerate}
+        onGenerate={handleGenerate}
+        onDiscuss={onDiscuss}
         onSubmit={handleSubmit}
         onCancel={handleCloseModal}
       />

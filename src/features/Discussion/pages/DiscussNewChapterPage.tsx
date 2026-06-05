@@ -31,6 +31,7 @@ export const DiscussNewChapterPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const [searchParams] = useSearchParams();
   const chapterTitle = searchParams.get("title") || "Untitled Chapter";
+  const draftSummary = searchParams.get("summary") || undefined;
 
   const { systemPrompts, isLoading } = useSystemPrompts();
 
@@ -44,11 +45,13 @@ export const DiscussNewChapterPage: React.FC = () => {
           systemPrompts.chapterSummaryRequestSettings,
           systemPrompts.chapterSummaryPrompt,
           systemPrompts.discussChapterPrompt,
+          draftSummary,
         ),
       ),
     [
       chatId,
       chapterTitle,
+      draftSummary,
       systemPrompts.chapterSummaryModel,
       systemPrompts.chapterSummaryRequestSettings,
       systemPrompts.chapterSummaryPrompt,

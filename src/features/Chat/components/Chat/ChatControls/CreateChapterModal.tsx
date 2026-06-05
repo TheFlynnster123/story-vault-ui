@@ -6,11 +6,9 @@ import {
   TextInput,
   Button,
   Group,
-  ActionIcon,
-  Tooltip,
 } from "@mantine/core";
-import { RiSparklingLine } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
+import { RiChat3Line } from "react-icons/ri";
 
 interface CreateChapterModalProps {
   opened: boolean;
@@ -20,8 +18,8 @@ interface CreateChapterModalProps {
   isCreating: boolean;
   onTitleChange: (title: string) => void;
   onSummaryChange: (summary: string) => void;
-  onGenerateTitle: () => void;
   onGenerate: () => void;
+  onDiscuss?: () => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -34,14 +32,15 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
   isCreating,
   onTitleChange,
   onSummaryChange,
-  onGenerateTitle,
   onGenerate,
+  onDiscuss,
   onSubmit,
   onCancel,
 }) => {
-  const canGenerate = !!title.trim() && !isGeneratingTitle && !isCreating;
+  const isBusy = isGeneratingTitle || isCreating;
+  const canGenerate = !isBusy;
   const canCreate =
-    !!title.trim() && !!summary.trim() && !isGeneratingTitle && !isCreating;
+    !!title.trim() && !!summary.trim() && !isBusy;
 
   return (
     <Modal
@@ -53,37 +52,22 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
     >
       <Stack>
         <Text size="sm" c="dimmed">
-          Create a new chapter to summarize the story so far. Click "Generate"
-          to workshop the summary with the AI, or enter a summary manually and
-          click "Create Chapter".
+          Create a new chapter to summarize the story so far. Enter the title
+          and summary manually, generate a draft for both fields, or discuss the
+          chapter summary before creating it.
         </Text>
 
-        <Group align="flex-end" gap="xs">
-          <TextInput
-            label="Chapter Title"
-            placeholder="Enter a title for this chapter..."
-            value={title}
-            onChange={(e) => onTitleChange(e.currentTarget.value)}
-            required
-            style={{ flex: 1 }}
-          />
-          <Tooltip label="Generate title with AI">
-            <ActionIcon
-              variant="light"
-              color="yellow"
-              size="input-sm"
-              onClick={onGenerateTitle}
-              loading={isGeneratingTitle}
-              aria-label="Generate title with AI"
-            >
-              <RiSparklingLine size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
+        <TextInput
+          label="Chapter Title"
+          placeholder="Enter a title for this chapter..."
+          value={title}
+          onChange={(e) => onTitleChange(e.currentTarget.value)}
+          required
+        />
 
         <Textarea
-          label="Chapter Summary (optional for Generate)"
-          placeholder="Enter a summary or click Generate to workshop one with the AI..."
+          label="Chapter Summary"
+          placeholder="Enter a summary or click Generate to draft one with the AI..."
           value={summary}
           onChange={(e) => onSummaryChange(e.currentTarget.value)}
           minRows={8}
@@ -91,19 +75,30 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
         />
 
         <Stack gap={4} align="flex-end" mt="md">
-          {!title.trim() && (
+          {(!title.trim() || !summary.trim()) && (
             <Text size="xs" c="red">
-              Enter a chapter title before generating
+              Enter a chapter title and summary before creating
             </Text>
           )}
           <Group justify="flex-end">
             <Button
               variant="default"
               onClick={onCancel}
-              disabled={isCreating || isGeneratingTitle}
+              disabled={isBusy}
             >
               Cancel
             </Button>
+            {onDiscuss && (
+              <Button
+                variant="light"
+                color="yellow"
+                onClick={onDiscuss}
+                disabled={isBusy}
+                leftSection={<RiChat3Line size={16} />}
+              >
+                Discuss
+              </Button>
+            )}
             <Button
               color="blue"
               onClick={onSubmit}
@@ -116,7 +111,7 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
               color="yellow"
               onClick={onGenerate}
               disabled={!canGenerate}
-              loading={isCreating}
+              loading={isBusy}
               leftSection={<VscRefresh size={16} />}
             >
               Generate

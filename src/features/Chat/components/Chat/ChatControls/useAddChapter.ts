@@ -54,19 +54,21 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     }
   };
 
-  const handleGenerate = async (): Promise<string | undefined> => {
-    if (!title.trim()) return undefined;
-
+  const handleGenerate = async (): Promise<void> => {
     setIsCreating(true);
     try {
-      const chapterId = await d
-        .ChatService(chatId)
-        .AddChapter(title, summary.trim() || "");
-      handleCloseModal();
-      return chapterId;
+      const generationService = d.ChapterGenerationService(chatId);
+      const generatedTitle = await generationService.generateChapterTitle();
+      if (generatedTitle) {
+        setTitle(generatedTitle);
+      }
+
+      const generatedSummary = await generationService.generateChapterSummary();
+      if (generatedSummary) {
+        setSummary(generatedSummary);
+      }
     } catch (error) {
-      d.ErrorService().log("Failed to create chapter for discussion", error);
-      return undefined;
+      d.ErrorService().log("Failed to generate chapter draft", error);
     } finally {
       setIsCreating(false);
     }

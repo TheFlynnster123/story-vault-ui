@@ -22,7 +22,11 @@ export interface DiscussionConfig {
    * Execute the "generate" action using the conversation as feedback.
    * e.g. regenerate plan, update chapter summary, update book summary, regenerate story.
    */
-  generateFromFeedback: (feedback: string) => Promise<void>;
+  generateFromFeedback: (
+    feedback: string,
+    modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
+  ) => Promise<void>;
 
   /**
    * Optional prompt used to auto-generate the first assistant message

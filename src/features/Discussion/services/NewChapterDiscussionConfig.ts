@@ -20,6 +20,7 @@ export const createNewChapterDiscussionConfig = (
   chapterSummaryRequestSettings?: OpenRouterRequestSettings,
   chapterSummaryPrompt?: string,
   discussChapterPrompt?: string,
+  draftSummary?: string,
 ): DiscussionConfig => {
   const getChatMessages = (): LLMMessage[] =>
     d.LLMChatProjection(chatId).GetMessages();
@@ -39,6 +40,10 @@ export const createNewChapterDiscussionConfig = (
       resolvedDiscussionPrompt(),
     ];
 
+    if (draftSummary?.trim()) {
+      lines.push(``, `Draft chapter summary:`, `---`, draftSummary, `---`);
+    }
+
     return lines.join("\n");
   };
 
@@ -50,13 +55,26 @@ export const createNewChapterDiscussionConfig = (
   const getDefaultRequestSettings = (): OpenRouterRequestSettings | undefined =>
     chapterSummaryRequestSettings;
 
-  const generateFromFeedback = async (feedback: string): Promise<void> => {
+  const generateFromFeedback = async (
+    feedback: string,
+    modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
+  ): Promise<void> => {
     const chatMessages = getChatMessages();
     const systemPrompt = [
       resolvedPrompt(),
       ``,
       `Chapter title: ${chapterTitle}`,
       ``,
+      draftSummary?.trim()
+        ? [
+            `Current draft summary:`,
+            `---`,
+            draftSummary,
+            `---`,
+            ``,
+          ].join("\n")
+        : "",
       `The user discussed the following about what the summary should contain:`,
       `---`,
       feedback,
@@ -74,7 +92,13 @@ export const createNewChapterDiscussionConfig = (
     const model = chapterSummaryModel || undefined;
     const summary = await d
       .OpenRouterChatAPI()
-      .postChat(messages, model, "chat", "LLM", chapterSummaryRequestSettings);
+      .postChat(
+        messages,
+        modelOverride || model,
+        "chat",
+        "LLM",
+        requestSettingsOverride ?? chapterSummaryRequestSettings,
+      );
 
     await d.ChatService(chatId).AddChapter(chapterTitle, summary);
   };

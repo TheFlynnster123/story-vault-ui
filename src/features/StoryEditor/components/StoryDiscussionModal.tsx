@@ -32,7 +32,6 @@ import { createStoryCreationDiscussionConfig } from "../../Discussion/services/S
 import { useDiscussionChat } from "../../Discussion/hooks/useDiscussionChat";
 import type { DiscussionMessage } from "../../Discussion/services/DiscussionMessage";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
-import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 interface StoryDiscussionModalProps {
   onStoryGenerated: (story: string) => void;
@@ -103,15 +102,12 @@ const StoryDiscussionModalContent: React.FC<
 
   const [inputValue, setInputValue] = useState("");
   const [chatModel, setChatModel] = useState<string | null>(null);
-  const [chatRequestSettings, setChatRequestSettings] = useState<
-    OpenRouterRequestSettings | undefined
-  >();
 
   const handleSend = async () => {
     if (!inputValue.trim() || isGenerating) return;
     const message = inputValue;
     setInputValue("");
-    await sendMessage(message, chatModel || undefined, chatRequestSettings);
+    await sendMessage(message, chatModel || undefined);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -139,8 +135,6 @@ const StoryDiscussionModalContent: React.FC<
       <ModelSelect
         value={chatModel}
         onChange={setChatModel}
-        requestSettings={chatRequestSettings}
-        onRequestSettingsChange={setChatRequestSettings}
         ariaLabel="Chat Model"
         emptyValueLabel="Default Chat Model"
         hideLabel

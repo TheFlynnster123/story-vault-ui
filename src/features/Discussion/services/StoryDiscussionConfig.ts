@@ -3,6 +3,7 @@ import type { StoryChatMessage } from "../../../services/CQRS/UserChatProjection
 import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
+import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 /**
  * Creates a DiscussionConfig for discussing the story.
@@ -44,7 +45,11 @@ export const createStoryDiscussionConfig = (
   const buildInitialPrompt = (): string =>
     DEFAULT_SYSTEM_PROMPTS.newStoryPrompt;
 
-  const generateFromFeedback = async (feedback: string): Promise<void> => {
+  const generateFromFeedback = async (
+    feedback: string,
+    modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
+  ): Promise<void> => {
     const story = findStory();
     if (!story) return;
 
@@ -74,7 +79,9 @@ export const createStoryDiscussionConfig = (
       { role: "system", content: systemPrompt },
     ];
 
-    const response = await d.OpenRouterChatAPI().postChat(messages);
+    const response = await d
+      .OpenRouterChatAPI()
+      .postChat(messages, modelOverride, "chat", "LLM", requestSettingsOverride);
 
     await d.ChatService(chatId).EditStory(story.id, response);
   };

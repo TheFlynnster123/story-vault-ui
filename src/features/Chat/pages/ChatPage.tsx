@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { ChatInput } from "../components/Chat/ChatInput";
 import { ChatEntriesList } from "../components/Chat/ChatEntriesList";
 import { ChatControls } from "../components/Chat/ChatControls/ChatControls";
+import { QuickChatControls } from "../components/Chat/QuickChatControls";
 import { FlowAccordion } from "../components/Chat/Flow/FlowAccordion";
 import { useEnsureChatInitialization } from "../hooks/useEnsureChatInitialization";
 import { useChatSettings } from "../hooks/useChatSettings";
@@ -34,6 +35,7 @@ const ChatPage: React.FC = () => {
       }
     >
       <ChatControls />
+      <QuickChatControls chatId={chatId} />
 
       <ChatEntriesList chatId={chatId} />
 

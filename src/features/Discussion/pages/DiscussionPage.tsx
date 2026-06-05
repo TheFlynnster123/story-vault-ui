@@ -7,6 +7,7 @@ import {
   RiCheckDoubleLine,
   RiArrowDownSLine,
   RiArrowUpSLine,
+  RiInformationLine,
 } from "react-icons/ri";
 import {
   Title,
@@ -24,6 +25,7 @@ import {
   Collapse,
   UnstyledButton,
   Badge,
+  Popover,
 } from "@mantine/core";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { Theme } from "../../../components/Theme";
@@ -42,12 +44,14 @@ interface DiscussionPageProps {
   chatId: string;
   service: DiscussionService;
   config: DiscussionPageConfig;
+  autoGenerateInitialMessage?: boolean;
 }
 
 export const DiscussionPage: React.FC<DiscussionPageProps> = ({
   chatId,
   service,
   config,
+  autoGenerateInitialMessage = false,
 }) => {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
@@ -81,8 +85,9 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
   }, [defaultModel, defaultRequestSettings, modelInitialized]);
 
   useEffect(() => {
+    if (!autoGenerateInitialMessage) return;
     generateInitialMessage();
-  }, [generateInitialMessage]);
+  }, [autoGenerateInitialMessage, generateInitialMessage]);
 
   const handleGoBack = () => {
     navigate(`/chat/${chatId}`);
@@ -115,18 +120,22 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
   const handleGenerate = async () => {
     const finalFeedback = inputValue.trim() ? inputValue : undefined;
     setInputValue("");
-    await sendFinalFeedbackAndGenerate(finalFeedback);
+    await sendFinalFeedbackAndGenerate(
+      finalFeedback,
+      chatModel || undefined,
+      chatRequestSettings,
+    );
     navigate(`/chat/${chatId}`);
   };
 
   return (
-    <Page padding="xs" width="98vw" minWidth="98vw">
+    <Page padding="xs" width="100vw" minWidth="100vw" height="100dvh">
       <Paper
-        mt={8}
         style={{
           display: "flex",
           flexDirection: "column",
-          height: "calc(100vh - 80px)",
+          height: "100%",
+          minHeight: 0,
         }}
       >
         <DiscussionHeader
@@ -266,14 +275,34 @@ const DiscussionHeader: React.FC<DiscussionHeaderProps> = ({
         <Title order={2} fw={400} style={{ color: config.primaryColor }}>
           {config.title}
         </Title>
+        <Popover width={280} position="bottom-start" withArrow shadow="md">
+          <Popover.Target>
+            <ActionIcon
+              variant="subtle"
+              color={config.accentColor}
+              aria-label="Discussion information"
+              title="Discussion information"
+            >
+              <RiInformationLine />
+            </ActionIcon>
+          </Popover.Target>
+          <Popover.Dropdown
+            style={{
+              backgroundColor: Theme.page.paperBackground,
+              borderColor: config.borderColor,
+              color: Theme.page.text,
+            }}
+          >
+            <Text size="sm" c="dimmed">
+              {config.description}
+            </Text>
+          </Popover.Dropdown>
+        </Popover>
       </Group>
       {onEditPrompt && (
         <EditPromptButton onClick={onEditPrompt}>Edit Prompt</EditPromptButton>
       )}
     </Group>
-    <Text size="sm" c="dimmed" mb="xs">
-      {config.description}
-    </Text>
     <Divider mb="xs" style={{ borderColor: config.borderColor }} />
   </>
 );
@@ -438,13 +467,14 @@ const DiscussionInput: React.FC<DiscussionInputProps> = ({
         onKeyDown={onKeyDown}
         placeholder={config.inputPlaceholder}
         disabled={isGenerating}
-        minRows={2}
+        minRows={3}
         autosize
         maxRows={6}
         style={{ flex: 1 }}
         styles={{
           wrapper: {
             minHeight: DISCUSSION_COMPOSER_MIN_HEIGHT,
+            height: "100%",
           },
           input: {
             padding: "12px",

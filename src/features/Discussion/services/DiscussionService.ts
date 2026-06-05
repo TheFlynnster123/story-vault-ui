@@ -94,7 +94,10 @@ export class DiscussionService {
    * Triggers the variant-specific generate action using the conversation
    * formatted as feedback text.
    */
-  public generateFromFeedback = async (): Promise<void> => {
+  public generateFromFeedback = async (
+    modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
+  ): Promise<void> => {
     if (this.messages.length === 0) return;
 
     this.generating = true;
@@ -102,7 +105,18 @@ export class DiscussionService {
 
     try {
       const feedback = this.formatConversationAsFeedback();
-      await this.config.generateFromFeedback(feedback);
+      if (
+        modelOverride !== undefined ||
+        requestSettingsOverride !== undefined
+      ) {
+        await this.config.generateFromFeedback(
+          feedback,
+          modelOverride,
+          requestSettingsOverride,
+        );
+      } else {
+        await this.config.generateFromFeedback(feedback);
+      }
     } finally {
       this.generating = false;
       this.notifySubscribers();
@@ -180,6 +194,8 @@ export class DiscussionService {
    */
   public sendFinalFeedbackAndGenerate = async (
     userMessage?: string,
+    modelOverride?: string,
+    requestSettingsOverride?: OpenRouterRequestSettings,
   ): Promise<void> => {
     if (this.generating) return;
 
@@ -191,7 +207,7 @@ export class DiscussionService {
       this.notifySubscribers();
     }
 
-    return this.generateFromFeedback();
+    return this.generateFromFeedback(modelOverride, requestSettingsOverride);
   };
 
   private buildConversationPrompt = (): LLMMessage[] => {

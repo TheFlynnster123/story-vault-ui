@@ -5,6 +5,8 @@ interface PageProps {
   padding?: string | number;
   width?: string | number;
   minWidth?: string | number;
+  height?: string | number;
+  minHeight?: string | number;
 }
 
 export const Page: React.FC<PageProps> = ({
@@ -12,9 +14,11 @@ export const Page: React.FC<PageProps> = ({
   padding = "md",
   width = "95vw",
   minWidth = "95vw",
+  height,
+  minHeight,
 }) => {
   return (
-    <Container miw={minWidth} w={width} p={padding}>
+    <Container miw={minWidth} mih={minHeight} h={height} w={width} p={padding}>
       {children}
     </Container>
   );
