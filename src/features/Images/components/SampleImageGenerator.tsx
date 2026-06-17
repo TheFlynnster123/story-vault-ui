@@ -42,7 +42,9 @@ export const SampleImageGenerator: React.FC<SampleImageGeneratorProps> = ({
     try {
       const workflow = await d
         .CivitOrchestrationAPI()
-        .submitWorkflow([{ $type: "imageGen", input: model.input }]);
+        .submitWorkflow([{ $type: "imageGen", input: model.input }], {
+          priority: model.priority,
+        });
       const newJobId = workflow.id;
       setJobId(newJobId);
       onSampleImageCreated?.(newJobId);

@@ -36,6 +36,13 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
     });
   };
 
+  const handlePriorityChange = (value: number) => {
+    onChange({
+      ...imageModel,
+      priority: value,
+    });
+  };
+
   const handleModelChange = (value: string) => {
     onChange({
       ...imageModel,
@@ -117,6 +124,27 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
             { value: 10, label: "10" },
           ]}
         />
+      </Stack>
+      <Stack gap="xs">
+        <Text size="sm" fw={500}>
+          Workflow Priority
+        </Text>
+        <Slider
+          value={imageModel.priority ?? 5}
+          onChange={handlePriorityChange}
+          min={1}
+          max={10}
+          step={1}
+          label={(value) => value.toString()}
+          marks={[
+            { value: 1, label: "1" },
+            { value: 5, label: "5" },
+            { value: 10, label: "10" },
+          ]}
+        />
+        <Text size="xs" c="dimmed">
+          Higher priority jobs are processed sooner.
+        </Text>
       </Stack>
       <Group grow>
         <NumberInput
