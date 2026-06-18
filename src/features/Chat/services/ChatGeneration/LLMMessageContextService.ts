@@ -153,18 +153,30 @@ export class LLMMessageContextService {
   }
 
   private getChatMessages(chatSettings: ChatSettings): LLMMessage[] {
-    return this.excludeDisabledReasoningMessages(
-      d.LLMChatProjection(this.chatId).GetMessages(),
-      chatSettings.reasoningExpiresAfterMessages ??
-        DEFAULT_REASONING_RETENTION_MESSAGES,
-    );
+    return d.LLMChatProjection(this.chatId).GetMessages();
   }
 
   private async applySystemContextSettings(): Promise<void> {
     const settings = await this.fetchSystemSettings();
-    d.LLMChatProjection(this.chatId).SetPreviousChapterMessageBuffer(
+    const chatSettings = await this.fetchChatSettings();
+    const projection = d.LLMChatProjection(this.chatId);
+
+    projection.SetPreviousChapterMessageBuffer(
       settings?.chapterCompressionSettings?.trailingChapterMessages ??
         DEFAULT_TRAILING_CHAPTER_MESSAGES,
+    );
+
+    projection.SetReasoningRetention(
+      this.getReasoningRetention(chatSettings),
+    );
+  }
+
+  private getReasoningRetention(chatSettings: ChatSettings): number | null {
+    if (chatSettings.reasoningEnabled === false) return 0;
+    if (chatSettings.reasoningExpiresAfterMessages === null) return null;
+    return (
+      chatSettings.reasoningExpiresAfterMessages ??
+      DEFAULT_REASONING_RETENTION_MESSAGES
     );
   }
 
@@ -360,26 +372,4 @@ export class LLMMessageContextService {
 
   private formatGuidanceMessage = (guidance: string): string =>
     `User guidance for the next response: ${guidance}`;
-
-  private excludeDisabledReasoningMessages(
-    messages: LLMMessage[],
-    expiresAfterMessages: number | null,
-  ): LLMMessage[] {
-    if (expiresAfterMessages === null) return messages;
-
-    return messages.filter(
-      (message, index) =>
-        message.type !== "reasoning" ||
-        this.countRegularMessagesAfter(messages, index) < expiresAfterMessages,
-    );
-  }
-
-  private countRegularMessagesAfter(
-    messages: LLMMessage[],
-    index: number,
-  ): number {
-    return messages
-      .slice(index + 1)
-      .filter((message) => message.type === "message").length;
-  }
 }
