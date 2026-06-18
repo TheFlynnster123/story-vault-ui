@@ -297,6 +297,36 @@ describe("LLMMessageContextService", () => {
   });
 
   describe("disabled reasoning context filtering", () => {
+    it("excludes all reasoning messages when reasoningEnabled is false", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        reasoningEnabled: false,
+      });
+      LLMChatProjection.GetMessages.mockReturnValue([
+        {
+          id: "reasoning-1",
+          type: "reasoning",
+          role: "assistant",
+          content: "[Reasoning]\nSome reasoning\n[End of Reasoning]",
+        },
+        { id: "msg-1", type: "message", role: "user", content: "First" },
+        {
+          id: "reasoning-2",
+          type: "reasoning",
+          role: "assistant",
+          content: "[Reasoning]\nMore reasoning\n[End of Reasoning]",
+        },
+        { id: "msg-2", type: "message", role: "assistant", content: "Second" },
+      ]);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildGenerationRequestMessages(false);
+
+      expect(result.some((m) => m.type === "reasoning")).toBe(false);
+      expect(result.map((m) => m.id)).toContain("msg-1");
+      expect(result.map((m) => m.id)).toContain("msg-2");
+    });
+
     it("excludes reasoning after the configured number of newer regular messages", async () => {
       ChatSettingsService.Get.mockResolvedValue({
         ...createDefaultChatSettings(),

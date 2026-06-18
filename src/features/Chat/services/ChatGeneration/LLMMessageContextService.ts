@@ -153,8 +153,14 @@ export class LLMMessageContextService {
   }
 
   private getChatMessages(chatSettings: ChatSettings): LLMMessage[] {
+    const messages = d.LLMChatProjection(this.chatId).GetMessages();
+
+    if (chatSettings.reasoningEnabled === false) {
+      return this.excludeAllReasoningMessages(messages);
+    }
+
     return this.excludeDisabledReasoningMessages(
-      d.LLMChatProjection(this.chatId).GetMessages(),
+      messages,
       chatSettings.reasoningExpiresAfterMessages ??
         DEFAULT_REASONING_RETENTION_MESSAGES,
     );
@@ -360,6 +366,10 @@ export class LLMMessageContextService {
 
   private formatGuidanceMessage = (guidance: string): string =>
     `User guidance for the next response: ${guidance}`;
+
+  private excludeAllReasoningMessages(messages: LLMMessage[]): LLMMessage[] {
+    return messages.filter((message) => message.type !== "reasoning");
+  }
 
   private excludeDisabledReasoningMessages(
     messages: LLMMessage[],
