@@ -8,7 +8,6 @@ export type ImageModelVariantOverrides = {
   imageGenerationPrompt?: string;
   appendImageGenerationPromptToBase?: boolean;
   trainedWords?: string[];
-  priority?: number;
 };
 
 export type ImageModelVariant = {
@@ -47,7 +46,6 @@ export const resolveVariant = (
         ? o.appendImageGenerationPromptToBase
         : parent.appendImageGenerationPromptToBase,
     trainedWords: "trainedWords" in o ? o.trainedWords : parent.trainedWords,
-    priority: "priority" in o ? o.priority : parent.priority,
   };
 };
 
@@ -56,7 +54,6 @@ export type OverriddenFields = {
   imageGenerationPrompt: boolean;
   appendImageGenerationPromptToBase: boolean;
   trainedWords: boolean;
-  priority: boolean;
   inputModel: boolean;
   inputParams: Partial<Record<keyof ImageGenInput, boolean>>;
   inputLoras: boolean;
@@ -70,7 +67,6 @@ export const computeOverriddenFields = (
   appendImageGenerationPromptToBase:
     "appendImageGenerationPromptToBase" in overrides,
   trainedWords: "trainedWords" in overrides,
-  priority: "priority" in overrides,
   inputModel: overrides.input !== undefined && "model" in overrides.input,
   inputParams: Object.fromEntries(
     Object.keys(overrides.input ?? {})

@@ -90,9 +90,6 @@ const computeNewOverrides = (
   if (!arraysShallowEqual(resolved.trainedWords, parent.trainedWords)) {
     overrides.trainedWords = resolved.trainedWords;
   }
-  if (resolved.priority !== parent.priority) {
-    overrides.priority = resolved.priority;
-  }
 
   const inputOverrides: Partial<ImageGenInput> = {};
   let hasInput = false;
@@ -295,7 +292,6 @@ const ChatImageVariantEditPage: React.FC = () => {
     await handleResolvedModelChange({
       ...resolved,
       input: { ...workflowParent.input },
-      priority: workflowParent.priority,
     });
   };
 
@@ -410,8 +406,7 @@ const ChatImageVariantEditPage: React.FC = () => {
                   (overridden.inputParams.width ? 1 : 0) +
                   (overridden.inputParams.height ? 1 : 0) +
                   (overridden.inputParams.clipSkip ? 1 : 0) +
-                  (overridden.inputLoras ? 1 : 0) +
-                  (overridden.priority ? 1 : 0)
+                  (overridden.inputLoras ? 1 : 0)
                 }
                 onReset={resetParametersSection}
               >

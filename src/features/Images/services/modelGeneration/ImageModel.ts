@@ -34,13 +34,6 @@ export type ImageModel = {
    * These can be toggled on/off by the user in the prompt editor.
    */
   trainedWords?: string[];
-
-  /**
-   * Workflow priority for the CivitAI Orchestration API.
-   * Higher values are processed sooner. Range: 1 (lowest) to 10 (highest).
-   * If not set, the API uses its default priority.
-   */
-  priority?: number;
 };
 
 export type LegacyJobImageModel = Omit<ImageModel, "format" | "input"> & {

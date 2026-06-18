@@ -86,9 +86,7 @@ export const ChatSettingsStep: React.FC<ChatSettingsStepProps> = ({
 
       const workflow = await d
         .CivitOrchestrationAPI()
-        .submitWorkflow([{ $type: "imageGen", input: modelInput }], {
-          priority: selectedModel.priority,
-        });
+        .submitWorkflow([{ $type: "imageGen", input: modelInput }]);
       const workflowId = workflow.id;
       updateState({
         backgroundPhotoWorkflowId: workflowId,

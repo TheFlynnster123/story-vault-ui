@@ -15,18 +15,10 @@ export class CivitOrchestrationAPI {
     this.url = Config.storyVaultAPIURL;
   }
 
-  public async submitWorkflow(
-    steps: ImageGenStep[],
-    options?: { priority?: number },
-  ): Promise<Workflow> {
+  public async submitWorkflow(steps: ImageGenStep[]): Promise<Workflow> {
     const accessToken = await d.AuthAPI().getAccessToken();
     const encryptionKey = await d.EncryptionManager().getCivitaiEncryptionKey();
     const normalizedSteps = steps.map(normalizeImageGenStepForSubmission);
-
-    const body: Record<string, unknown> = { steps: normalizedSteps };
-    if (options?.priority !== undefined) {
-      body.priority = options.priority;
-    }
 
     const response = await fetch(`${this.url}/api/SubmitWorkflow?wait=60`, {
       method: "POST",
@@ -35,7 +27,7 @@ export class CivitOrchestrationAPI {
         Authorization: `Bearer ${accessToken}`,
         EncryptionKey: encryptionKey,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ steps: normalizedSteps }),
     });
 
     if (!response.ok) {
