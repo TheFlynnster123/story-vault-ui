@@ -7,6 +7,9 @@ export interface Plan {
   prompt: string;
   model?: string;
   modelRequestSettings?: OpenRouterRequestSettings;
+  suggestionPrompt?: string;
+  suggestionModel?: string;
+  suggestionRequestSettings?: OpenRouterRequestSettings;
   refreshInterval: number;
   messagesSinceLastUpdate: number;
   consolidateMessageHistory: boolean;
@@ -37,6 +40,12 @@ Keep it concise and actionable. Update sections rather than rewriting from scrat
 
 export const DEFAULT_PLAN_NAME = "Story Plan";
 
+export const DEFAULT_PLAN_SUGGESTION_PROMPT = `Review the full chat history above and suggest three distinct possible directions for the next story plan.
+
+Each suggestion must be a single sentence that is specific enough to guide a full plan, grounded in the current story context, and meaningfully different from the others.
+
+Return exactly one JSON object matching the configured schema.`;
+
 export const isAutoRefreshDisabled = (plan: Plan): boolean =>
   plan.refreshInterval === 0;
 
@@ -54,6 +63,9 @@ export const applyPlanDefaults = (
   prompt: plan.prompt,
   model: plan.model,
   modelRequestSettings: plan.modelRequestSettings,
+  suggestionPrompt: plan.suggestionPrompt,
+  suggestionModel: plan.suggestionModel,
+  suggestionRequestSettings: plan.suggestionRequestSettings,
   refreshInterval: plan.refreshInterval ?? DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: plan.messagesSinceLastUpdate ?? 0,
   consolidateMessageHistory: plan.consolidateMessageHistory ?? false,

@@ -8,6 +8,9 @@ export interface PlanPreset {
   prompt: string;
   model?: string;
   modelRequestSettings?: OpenRouterRequestSettings;
+  suggestionPrompt?: string;
+  suggestionModel?: string;
+  suggestionRequestSettings?: OpenRouterRequestSettings;
   refreshInterval: number;
   consolidateMessageHistory: boolean;
   hideOtherPlans: boolean;

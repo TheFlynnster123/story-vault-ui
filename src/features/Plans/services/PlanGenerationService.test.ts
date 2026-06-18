@@ -21,6 +21,7 @@ describe("PlanGenerationService", () => {
 
   let mockOpenRouterChatAPI: {
     postChat: ReturnType<typeof vi.fn>;
+    postStructuredChat: ReturnType<typeof vi.fn>;
   };
 
   let mockChatService: {
@@ -37,6 +38,10 @@ describe("PlanGenerationService", () => {
     log: ReturnType<typeof vi.fn>;
   };
 
+  let mockSystemPromptsService: {
+    Get: ReturnType<typeof vi.fn>;
+  };
+
   beforeEach(() => {
     mockPlanService = {
       getPlans: vi.fn().mockReturnValue([]),
@@ -46,6 +51,13 @@ describe("PlanGenerationService", () => {
 
     mockOpenRouterChatAPI = {
       postChat: vi.fn().mockResolvedValue("Generated content"),
+      postStructuredChat: vi.fn().mockResolvedValue({
+        suggestions: [
+          "Follow the hidden map to a dangerous ally.",
+          "Let the rivalry force a public choice.",
+          "Reveal the old promise behind the conflict.",
+        ],
+      }),
     };
 
     mockChatService = {
@@ -66,6 +78,13 @@ describe("PlanGenerationService", () => {
       log: vi.fn(),
     };
 
+    mockSystemPromptsService = {
+      Get: vi.fn().mockResolvedValue({
+        planSuggestionPrompt: "Suggest three story plan directions.",
+        planSuggestionModel: "x-ai/grok-4.3",
+      }),
+    };
+
     vi.mocked(d.PlanService).mockReturnValue(mockPlanService as any);
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue(
       mockOpenRouterChatAPI as any,
@@ -75,6 +94,9 @@ describe("PlanGenerationService", () => {
       mockLLMChatProjection as any,
     );
     vi.mocked(d.ErrorService).mockReturnValue(mockErrorService as any);
+    vi.mocked(d.SystemPromptsService).mockReturnValue(
+      mockSystemPromptsService as any,
+    );
   });
 
   afterEach(() => {
@@ -1114,6 +1136,122 @@ describe("PlanGenerationService", () => {
         "LLM",
         undefined,
       );
+    });
+  });
+
+  // ---- Plan Suggestion Tests ----
+  describe("suggestPlanDirections", () => {
+    it("should return three structured suggestions", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      const suggestions = await service.suggestPlanDirections("plan-1");
+
+      expect(suggestions).toEqual([
+        "Follow the hidden map to a dangerous ally.",
+        "Let the rivalry force a public choice.",
+        "Reveal the old promise behind the conflict.",
+      ]);
+    });
+
+    it("should do nothing when plan definition is not found", async () => {
+      const service = new PlanGenerationService(testChatId);
+      mockPlanService.getPlans.mockReturnValue([]);
+
+      const suggestions = await service.suggestPlanDirections("missing");
+
+      expect(suggestions).toEqual([]);
+      expect(mockOpenRouterChatAPI.postStructuredChat).not.toHaveBeenCalled();
+    });
+
+    it("should use the system suggestion prompt and model by default", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.suggestPlanDirections("plan-1");
+
+      const [messages, responseFormat, model, label, fallback, settings, type] =
+        mockOpenRouterChatAPI.postStructuredChat.mock.calls[0];
+      const lastMessage = messages[messages.length - 1];
+      expect(lastMessage.content).toContain(
+        "Suggest three story plan directions.",
+      );
+      expect(responseFormat.json_schema.name).toBe("plan_suggestions");
+      expect(model).toBe("x-ai/grok-4.3");
+      expect(label).toBe("Plan Suggestions");
+      expect(fallback).toBe(false);
+      expect(settings).toBeUndefined();
+      expect(type).toBe("plan-suggestion");
+    });
+
+    it("should use per-plan suggestion prompt and model overrides", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({
+        id: "plan-1",
+        suggestionPrompt: "Offer three noir mystery turns.",
+        suggestionModel: "openai/gpt-5-mini",
+        suggestionRequestSettings: { temperature: 0.2 },
+      });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.suggestPlanDirections("plan-1");
+
+      const [messages, , model, , , settings] =
+        mockOpenRouterChatAPI.postStructuredChat.mock.calls[0];
+      const lastMessage = messages[messages.length - 1];
+      expect(lastMessage.content).toContain("Offer three noir mystery turns.");
+      expect(model).toBe("openai/gpt-5-mini");
+      expect(settings).toEqual({ temperature: 0.2 });
+    });
+
+    it("should include prior plan content when provided", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.suggestPlanDirections("plan-1", "Existing plan content");
+
+      const [messages] = mockOpenRouterChatAPI.postStructuredChat.mock.calls[0];
+      const lastMessage = messages[messages.length - 1];
+      expect(lastMessage.content).toContain("current version of this plan");
+      expect(lastMessage.content).toContain("Existing plan content");
+    });
+
+    it("should get chat messages excluding the plan being suggested", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+
+      await service.suggestPlanDirections("plan-1");
+
+      expect(
+        mockLLMChatProjection.GetMessagesExcludingPlan,
+      ).toHaveBeenCalledWith("plan-1");
+    });
+
+    it("should normalize blank and duplicate suggestions", async () => {
+      const service = new PlanGenerationService(testChatId);
+      const plan = createPlan({ id: "plan-1" });
+      mockPlanService.getPlans.mockReturnValue([plan]);
+      mockOpenRouterChatAPI.postStructuredChat.mockResolvedValueOnce({
+        suggestions: [
+          "  First direction.  ",
+          "First direction.",
+          "",
+          "Second   direction.",
+          "Third direction.",
+        ],
+      });
+
+      const suggestions = await service.suggestPlanDirections("plan-1");
+
+      expect(suggestions).toEqual([
+        "First direction.",
+        "Second direction.",
+        "Third direction.",
+      ]);
     });
   });
 

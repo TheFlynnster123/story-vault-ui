@@ -13,6 +13,7 @@ import {
   RiSave3Line,
   RiTreasureMapFill,
   RiPlayLine,
+  RiTreasureMapLine,
 } from "react-icons/ri";
 import { VscRefresh } from "react-icons/vsc";
 import {
@@ -58,6 +59,7 @@ import { Page } from "../../../components/Page";
 import { ConfirmModal } from "../../../components/ConfirmModal";
 import { d } from "../../../services/Dependencies";
 import { ModelSelect } from "../../AI/components/ModelSelect";
+import { PlanSuggestionModal } from "../components/PlanSuggestionModal";
 
 const createNewPlan = (): Plan => ({
   id: uuidv4(),
@@ -134,6 +136,21 @@ export const PlanPage: React.FC = () => {
       planId,
       "modelRequestSettings",
       preset.modelRequestSettings,
+    );
+    updatePlanDefinition?.(
+      planId,
+      "suggestionPrompt",
+      preset.suggestionPrompt || "",
+    );
+    updatePlanDefinition?.(
+      planId,
+      "suggestionModel",
+      preset.suggestionModel || "",
+    );
+    updatePlanDefinition?.(
+      planId,
+      "suggestionRequestSettings",
+      preset.suggestionRequestSettings,
     );
     updatePlanDefinition?.(planId, "refreshInterval", preset.refreshInterval);
     updatePlanDefinition?.(
@@ -325,26 +342,44 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
   const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
   const [deletePresetConfirmOpen, setDeletePresetConfirmOpen] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
-  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
-  const [feedbackText, setFeedbackText] = useState("");
+  const [generationModalOpen, setGenerationModalOpen] = useState(false);
+  const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
+  const [directionText, setDirectionText] = useState("");
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
   const latestContent = getLatestPlanContent(plan.id);
 
-  const handleRegenerateWithFeedback = () => {
-    if (!latestContent) return;
-    d.PlanGenerationService(chatId).regeneratePlanFromMessage(
-      plan.id,
-      latestContent,
-      feedbackText.trim() || undefined,
-    );
-    setFeedbackModalOpen(false);
-    setFeedbackText("");
+  const closeGenerationModal = () => {
+    setGenerationModalOpen(false);
+    setDirectionText("");
   };
 
-  const closeFeedbackModal = () => {
-    setFeedbackModalOpen(false);
-    setFeedbackText("");
+  const handleGenerateFromScratch = () => {
+    onGenerateNow(plan.id);
+    closeGenerationModal();
+  };
+
+  const handleGenerateWithDirection = () => {
+    d.PlanGenerationService(chatId).regeneratePlanFromMessage(
+      plan.id,
+      latestContent || undefined,
+      directionText.trim() || undefined,
+    );
+    closeGenerationModal();
+  };
+
+  const handleSuggestPlan = () => {
+    setGenerationModalOpen(false);
+    setSuggestionModalOpen(true);
+  };
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    d.PlanGenerationService(chatId).regeneratePlanFromMessage(
+      plan.id,
+      latestContent || undefined,
+      suggestion,
+    );
+    setSuggestionModalOpen(false);
   };
 
   const isUserPresetSelected =
@@ -418,6 +453,9 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
     prompt: plan.prompt,
     model: plan.model,
     modelRequestSettings: plan.modelRequestSettings,
+    suggestionPrompt: plan.suggestionPrompt,
+    suggestionModel: plan.suggestionModel,
+    suggestionRequestSettings: plan.suggestionRequestSettings,
     refreshInterval: plan.refreshInterval,
     consolidateMessageHistory: plan.consolidateMessageHistory,
     hideOtherPlans: plan.hideOtherPlans,
@@ -550,6 +588,43 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
         label="Plan Model"
         withDescription={false}
       />
+      <Stack gap={4}>
+        <Group justify="space-between" align="center">
+          <Text size="sm" fw={500} style={{ color: Theme.page.text }}>
+            Plan Suggestion Prompt
+          </Text>
+          <Tooltip label="Use system default suggestion prompt">
+            <ActionIcon
+              variant="light"
+              size="sm"
+              onClick={() => onChange(plan.id, "suggestionPrompt", "")}
+              color="teal"
+            >
+              <VscRefresh size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+        <Textarea
+          value={plan.suggestionPrompt || ""}
+          placeholder="Leave blank to use the system default plan suggestion prompt."
+          onChange={(e) =>
+            onChange(plan.id, "suggestionPrompt", e.currentTarget.value)
+          }
+          minRows={3}
+          autosize
+          styles={inputStyles}
+        />
+      </Stack>
+      <ModelSelect
+        value={plan.suggestionModel || ""}
+        onChange={(value) => onChange(plan.id, "suggestionModel", value || "")}
+        requestSettings={plan.suggestionRequestSettings}
+        onRequestSettingsChange={(requestSettings) =>
+          onChange(plan.id, "suggestionRequestSettings", requestSettings)
+        }
+        label="Plan Suggestion Model"
+        withDescription={false}
+      />
       <Checkbox
         label="Consolidate Message History"
         checked={plan.consolidateMessageHistory}
@@ -621,7 +696,7 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
             <Button
               variant="light"
               color="teal"
-              onClick={() => onGenerateNow(plan.id)}
+              onClick={() => setGenerationModalOpen(true)}
               loading={isGenerating}
               leftSection={<RiRefreshLine />}
             >
@@ -629,12 +704,12 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
             </Button>
             <Button
               variant="light"
-              color="violet"
-              onClick={() => setFeedbackModalOpen(true)}
+              color="cyan"
+              onClick={() => setSuggestionModalOpen(true)}
               disabled={isGenerating}
-              leftSection={<RiRefreshLine />}
+              leftSection={<RiTreasureMapLine />}
             >
-              Regenerate with Feedback
+              Suggest Plan
             </Button>
             <Button
               variant="light"
@@ -650,13 +725,24 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
           <Button
             variant="light"
             color="teal"
-            onClick={() => onGenerateNow(plan.id)}
+            onClick={() => setGenerationModalOpen(true)}
             loading={isGenerating}
             leftSection={<RiPlayLine />}
           >
             Generate Now
           </Button>
         )}
+        {!latestContent ? (
+          <Button
+            variant="light"
+            color="cyan"
+            onClick={() => setSuggestionModalOpen(true)}
+            disabled={isGenerating}
+            leftSection={<RiTreasureMapLine />}
+          >
+            Suggest Plan
+          </Button>
+        ) : null}
         <Button
           variant="outline"
           color="red"
@@ -890,22 +976,23 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
         </Stack>
       </Modal>
 
-      {/* Regenerate with Feedback modal */}
+      {/* Generate or regenerate modal */}
       <Modal
-        opened={feedbackModalOpen}
-        onClose={closeFeedbackModal}
-        title="Regenerate with Feedback"
+        opened={generationModalOpen}
+        onClose={closeGenerationModal}
+        title={latestContent ? "Regenerate plan" : "Generate plan"}
       >
         <Stack>
           <Text size="sm">
-            Describe what you'd like to change, or leave blank to regenerate
-            using updated chat history.
+            {latestContent
+              ? "Regenerate this plan from the latest chat context, or add direction for what should change."
+              : "Generate this plan from scratch, or add direction for what to include."}
           </Text>
           <Textarea
-            label="Feedback"
+            label="Direction"
             placeholder="e.g. Focus more on character motivation, add a timeline section..."
-            value={feedbackText}
-            onChange={(e) => setFeedbackText(e.currentTarget.value)}
+            value={directionText}
+            onChange={(e) => setDirectionText(e.currentTarget.value)}
             minRows={3}
             autosize
             autoFocus
@@ -916,20 +1003,51 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
               variant="light"
               color="gray"
               leftSection={<RiCloseLine size={16} />}
-              onClick={closeFeedbackModal}
+              onClick={closeGenerationModal}
             >
               Cancel
             </Button>
             <Button
+              variant="light"
+              color="teal"
+              leftSection={
+                latestContent ? (
+                  <RiRefreshLine size={16} />
+                ) : (
+                  <RiPlayLine size={16} />
+                )
+              }
+              onClick={handleGenerateFromScratch}
+            >
+              {latestContent ? "Regenerate" : "From Scratch"}
+            </Button>
+            <Button
+              variant="light"
+              color="cyan"
+              leftSection={<RiTreasureMapLine size={16} />}
+              onClick={handleSuggestPlan}
+            >
+              Suggest Plan
+            </Button>
+            <Button
               color="violet"
               leftSection={<RiRefreshLine size={16} />}
-              onClick={handleRegenerateWithFeedback}
+              onClick={handleGenerateWithDirection}
             >
-              Regenerate
+              With Direction
             </Button>
           </Group>
         </Stack>
       </Modal>
+
+      <PlanSuggestionModal
+        opened={suggestionModalOpen}
+        onClose={() => setSuggestionModalOpen(false)}
+        chatId={chatId}
+        planDefinitionId={plan.id}
+        priorContent={latestContent || undefined}
+        onSelect={handleSelectSuggestion}
+      />
     </Stack>
   );
 };

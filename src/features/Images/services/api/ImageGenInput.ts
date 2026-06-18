@@ -7,6 +7,7 @@
 export type ImageGenEngine = "sdcpp" | "comfy";
 export type ImageGenEcosystem = "sdxl" | "sd1" | "anima";
 export type ImageGenOperation = "createImage" | "createVariant";
+export type WorkflowPriority = "low" | "normal" | "high";
 
 export type ImageGenInput = {
   engine: ImageGenEngine;
@@ -71,5 +72,6 @@ export type ImageGenInput = {
 /** A single step in an orchestration workflow submission */
 export type ImageGenStep = {
   $type: "imageGen";
+  priority?: WorkflowPriority;
   input: ImageGenInput;
 };

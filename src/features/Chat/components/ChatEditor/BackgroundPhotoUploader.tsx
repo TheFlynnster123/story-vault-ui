@@ -69,7 +69,13 @@ export const BackgroundPhotoUploader: React.FC<
 
       const workflow = await d
         .CivitOrchestrationAPI()
-        .submitWorkflow([{ $type: "imageGen", input: modelInput }]);
+        .submitWorkflow([
+          {
+            $type: "imageGen",
+            priority: selectedModel.priority,
+            input: modelInput,
+          },
+        ]);
       const newJobId = workflow.id;
       onCivitJobIdChange(newJobId);
       setPrompt("");

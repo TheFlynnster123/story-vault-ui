@@ -22,6 +22,7 @@ import {
   LuMessageCircle,
   LuWorkflow,
   LuBrain,
+  LuSparkles,
 } from "react-icons/lu";
 
 const PromptSection: React.FC<{ children: React.ReactNode }> = ({
@@ -517,6 +518,50 @@ export const SystemPromptsEditor: React.FC = () => {
             )
           }
           label="Agent Intent Model"
+          withDescription={false}
+        />
+      </PromptSection>
+
+      <PromptSection>
+        <PromptInput
+          id="planSuggestionPrompt"
+          label="Plan Suggestion Prompt"
+          helpText="This prompt instructs the AI how to suggest three short plan directions before generating a full story plan."
+          value={localPrompts.planSuggestionPrompt || ""}
+          isHighlighted={highlightedPrompt === "planSuggestionPrompt"}
+          onChange={(value) =>
+            handlePromptChange({ planSuggestionPrompt: value })
+          }
+          onReset={() =>
+            handleResetClick("planSuggestionPrompt", "Plan Suggestion Prompt")
+          }
+          minRows={5}
+          icon={<LuSparkles size={18} color="orange" />}
+        />
+        <ModelSelect
+          value={localPrompts.planSuggestionModel || ""}
+          onChange={(value) =>
+            handlePromptChange(
+              buildModelPromptPatch(
+                "planSuggestionModel",
+                "planSuggestionRequestSettings",
+                value,
+                localPrompts.planSuggestionRequestSettings,
+              ),
+            )
+          }
+          requestSettings={localPrompts.planSuggestionRequestSettings}
+          onRequestSettingsChange={(requestSettings) =>
+            handlePromptChange(
+              buildModelPromptPatch(
+                "planSuggestionModel",
+                "planSuggestionRequestSettings",
+                localPrompts.planSuggestionModel || null,
+                requestSettings,
+              ),
+            )
+          }
+          label="Plan Suggestion Model"
           withDescription={false}
         />
       </PromptSection>

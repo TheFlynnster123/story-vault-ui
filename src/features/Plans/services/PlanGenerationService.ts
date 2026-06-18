@@ -3,6 +3,7 @@ import { d } from "../../../services/Dependencies";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import type { Plan } from "./Plan";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import {
   incrementMessageCounter,
   isAutoRefreshDisabled,
@@ -103,6 +104,95 @@ const buildUpdatePromptMessages = (
     ...chatMessages,
     toSystemMessage(buildUpdatePlanPrompt(plan, priorContent, feedback)),
   ];
+};
+
+const buildPlanSuggestionPrompt = (
+  plan: Plan,
+  suggestionPrompt: string,
+  priorContent?: string,
+): string => {
+  const lines = [
+    `# ${plan.name}`,
+    ``,
+    `Consider the full chat history above.`,
+    `Suggest three candidate directions that could be used to generate this plan.`,
+  ];
+
+  if (priorContent?.trim()) {
+    lines.push(
+      ``,
+      `Here is the current version of this plan:`,
+      `---`,
+      priorContent,
+      `---`,
+    );
+  }
+
+  lines.push(``, suggestionPrompt);
+
+  return lines.join("\n");
+};
+
+const buildPlanSuggestionPromptMessages = (
+  chatMessages: LLMMessage[],
+  plan: Plan,
+  suggestionPrompt: string,
+  priorContent?: string,
+): LLMMessage[] => {
+  const prompt = buildPlanSuggestionPrompt(plan, suggestionPrompt, priorContent);
+
+  if (plan.consolidateMessageHistory) {
+    const consolidatedHistory = consolidateMessagesToString(chatMessages);
+    return [
+      toSystemMessage(`Chat History:\n\n${consolidatedHistory}\n\n---\n\n${prompt}`),
+    ];
+  }
+
+  return [...chatMessages, toSystemMessage(prompt)];
+};
+
+interface PlanSuggestionResponse {
+  suggestions: string[];
+}
+
+const PLAN_SUGGESTION_RESPONSE_FORMAT = {
+  type: "json_schema" as const,
+  json_schema: {
+    name: "plan_suggestions",
+    strict: true,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["suggestions"],
+      properties: {
+        suggestions: {
+          type: "array",
+          minItems: 3,
+          maxItems: 3,
+          items: {
+            type: "string",
+            minLength: 1,
+          },
+        },
+      },
+    },
+  },
+};
+
+const normalizePlanSuggestions = (
+  response: PlanSuggestionResponse,
+): string[] => {
+  const uniqueSuggestions: string[] = [];
+
+  for (const suggestion of response.suggestions ?? []) {
+    const normalized = suggestion.replace(/\s+/g, " ").trim();
+    if (!normalized) continue;
+    if (uniqueSuggestions.includes(normalized)) continue;
+    uniqueSuggestions.push(normalized);
+    if (uniqueSuggestions.length === 3) break;
+  }
+
+  return uniqueSuggestions;
 };
 
 export class PlanGenerationService {
@@ -237,6 +327,48 @@ export class PlanGenerationService {
     });
   };
 
+  public suggestPlanDirections = async (
+    planDefinitionId: string,
+    priorContent?: string,
+  ): Promise<string[]> => {
+    const plan = this.findPlanDefinition(planDefinitionId);
+    if (!plan) return [];
+
+    const systemPrompts =
+      (await d.SystemPromptsService().Get()) ?? DEFAULT_SYSTEM_PROMPTS;
+    const suggestionPrompt =
+      plan.suggestionPrompt?.trim() ||
+      systemPrompts.planSuggestionPrompt ||
+      DEFAULT_SYSTEM_PROMPTS.planSuggestionPrompt;
+    const suggestionModel =
+      plan.suggestionModel || systemPrompts.planSuggestionModel || undefined;
+    const suggestionRequestSettings =
+      plan.suggestionRequestSettings ??
+      systemPrompts.planSuggestionRequestSettings;
+
+    const chatMessages = this.getChatMessagesForSuggestion(plan);
+    const promptMessages = buildPlanSuggestionPromptMessages(
+      chatMessages,
+      plan,
+      suggestionPrompt,
+      priorContent,
+    );
+
+    const response = await d
+      .OpenRouterChatAPI()
+      .postStructuredChat<PlanSuggestionResponse>(
+        promptMessages,
+        PLAN_SUGGESTION_RESPONSE_FORMAT,
+        suggestionModel,
+        "Plan Suggestions",
+        false,
+        suggestionRequestSettings,
+        "plan-suggestion",
+      );
+
+    return normalizePlanSuggestions(response);
+  };
+
   // ---- Private Helpers ----
 
   private regenerateDuePlans = async (duePlans: Plan[]): Promise<void> => {
@@ -268,6 +400,13 @@ export class PlanGenerationService {
       return d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(plan.id);
     }
     return d.LLMChatProjection(this.chatId).GetMessages();
+  };
+
+  private getChatMessagesForSuggestion = (plan: Plan): LLMMessage[] => {
+    if (plan.hideOtherPlans) {
+      return d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans();
+    }
+    return d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(plan.id);
   };
 
   private findPlanDefinition = (planDefinitionId: string): Plan | undefined =>

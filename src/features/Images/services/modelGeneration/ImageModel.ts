@@ -1,4 +1,4 @@
-import type { ImageGenInput } from "../api/ImageGenInput";
+import type { ImageGenInput, WorkflowPriority } from "../api/ImageGenInput";
 
 export type ImageModel = {
   format?: "workflow";
@@ -34,6 +34,12 @@ export type ImageModel = {
    * These can be toggled on/off by the user in the prompt editor.
    */
   trainedWords?: string[];
+
+  /**
+   * Optional CivitAI Orchestration workflow step priority.
+   * If unset, the API uses its default scheduling priority.
+   */
+  priority?: WorkflowPriority;
 };
 
 export type LegacyJobImageModel = Omit<ImageModel, "format" | "input"> & {
