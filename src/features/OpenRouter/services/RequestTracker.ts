@@ -1,6 +1,10 @@
 import { createGlobalInstanceCache } from "../../../services/Utils/getOrCreateInstance";
 
-export type RequestType = "chat" | "image-prompt" | "agent-intent";
+export type RequestType =
+  | "chat"
+  | "image-prompt"
+  | "agent-intent"
+  | "plan-suggestion";
 
 export interface TrackedMessage {
   role: string;

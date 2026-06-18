@@ -1,4 +1,5 @@
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import { DEFAULT_PLAN_SUGGESTION_PROMPT } from "../../Plans/services/Plan";
 
 /**
  * System Prompts Configuration
@@ -83,6 +84,13 @@ export interface SystemPrompts {
   /** System prompt used during plan discussion conversations */
   discussPlanPrompt: string;
 
+  /** Prompt used to suggest short directions before generating a full plan */
+  planSuggestionPrompt: string;
+  /** Model override for plan suggestion generation (empty = use default) */
+  planSuggestionModel?: string;
+  /** OpenRouter request settings paired with the plan suggestion model override */
+  planSuggestionRequestSettings?: OpenRouterRequestSettings;
+
   /** Prompt used to analyze a chat turn and suggest agentic flow actions */
   agentIntentPrompt: string;
   /** Model override for agent intent generation (empty = use default) */
@@ -161,6 +169,9 @@ Example:
 
   discussPlanPrompt:
     "You are helping the user discuss and refine their story plan.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the story plan should contain.\nEngage in a helpful, creative conversation about story possibilities.\nSuggest ideas, ask clarifying questions, and help them refine their vision.\nKeep responses concise and focused on actionable plan improvements.",
+
+  planSuggestionPrompt: DEFAULT_PLAN_SUGGESTION_PROMPT,
+  planSuggestionModel: "x-ai/grok-4.3",
 
   agentIntentPrompt: `Analyze the chat history and suggest low-risk agentic workflow actions that would help the user maintain continuity, organize context, or trigger relevant creative workflows.
 

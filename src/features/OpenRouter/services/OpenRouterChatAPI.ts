@@ -123,6 +123,7 @@ export class OpenRouterChatAPI {
     requestLabel: string = "Agent Intent",
     allowPlainTextFallback: boolean = false,
     requestSettingsOverride?: OpenRouterRequestSettings,
+    requestType: RequestType = "agent-intent",
   ): Promise<T> {
     const startedAt = nowMs();
     const openRouterEncryptionKey = await d
@@ -167,7 +168,7 @@ export class OpenRouterChatAPI {
           messages,
           requestBody,
           requestLabel,
-          "agent-intent",
+          requestType,
           startedAt,
         ),
         status: "success",
@@ -186,7 +187,7 @@ export class OpenRouterChatAPI {
           messages,
           requestBody,
           requestLabel,
-          "agent-intent",
+          requestType,
           startedAt,
         ),
         ...buildTrackedFailure(error),

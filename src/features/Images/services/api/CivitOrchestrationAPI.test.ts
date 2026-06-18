@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeImageGenInputForSubmission } from "./CivitOrchestrationAPI";
+import {
+  normalizeImageGenInputForSubmission,
+  normalizeImageGenStepForSubmission,
+} from "./CivitOrchestrationAPI";
 import type { ImageGenInput } from "./ImageGenInput";
 
 describe("normalizeImageGenInputForSubmission", () => {
@@ -61,5 +64,32 @@ describe("normalizeImageGenInputForSubmission", () => {
 
     expect(result.sampleMethod).toBe("euler");
     expect(result.schedule).toBe("simple");
+  });
+});
+
+describe("normalizeImageGenStepForSubmission", () => {
+  it("preserves workflow step priority on the step", () => {
+    const input: ImageGenInput = {
+      engine: "sdcpp",
+      ecosystem: "sdxl",
+      operation: "createImage",
+      model: "urn:air:sdxl:checkpoint:civitai:257749@290640",
+      prompt: "masterpiece",
+      width: 1024,
+      height: 1024,
+      loras: {},
+    };
+
+    expect(
+      normalizeImageGenStepForSubmission({
+        $type: "imageGen",
+        priority: "high",
+        input,
+      }),
+    ).toEqual({
+      $type: "imageGen",
+      priority: "high",
+      input,
+    });
   });
 });

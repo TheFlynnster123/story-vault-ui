@@ -183,7 +183,13 @@ export class ImageGenerator {
 
     const workflow = await d
       .CivitOrchestrationAPI()
-      .submitWorkflow([{ $type: "imageGen", input: inputCopy }]);
+      .submitWorkflow([
+        {
+          $type: "imageGen",
+          priority: selectedModel.priority,
+          input: inputCopy,
+        },
+      ]);
 
     return {
       workflowId: workflow.id,

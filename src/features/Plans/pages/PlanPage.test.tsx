@@ -12,7 +12,10 @@ const mockUsePlanCache = vi.fn();
 const mockUsePlanGenerationStatus = vi.fn();
 const mockSavePendingChanges = vi.fn();
 const mockGeneratePlanNow = vi.fn();
+const mockRegeneratePlanFromMessage = vi.fn();
+const mockSuggestPlanDirections = vi.fn();
 const mockErrorLog = vi.fn();
+let mockLatestPlanContent: string | undefined;
 
 const mockPlanService: Partial<PlanService> = {
   savePendingChanges: mockSavePendingChanges,
@@ -20,6 +23,8 @@ const mockPlanService: Partial<PlanService> = {
 
 const mockPlanGenerationService: Partial<PlanGenerationService> = {
   generatePlanNow: mockGeneratePlanNow,
+  regeneratePlanFromMessage: mockRegeneratePlanFromMessage,
+  suggestPlanDirections: mockSuggestPlanDirections,
 };
 
 vi.mock("react-router-dom", () => ({
@@ -49,7 +54,7 @@ vi.mock("../hooks/usePlanPresets", () => ({
 
 vi.mock("../hooks/usePlanContent", () => ({
   usePlanContent: () => ({
-    getLatestPlanContent: () => undefined,
+    getLatestPlanContent: () => mockLatestPlanContent,
   }),
 }));
 
@@ -83,6 +88,7 @@ const createPlan = (overrides: Partial<Plan> = {}): Plan => ({
 describe("PlanPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLatestPlanContent = undefined;
 
     mockUsePlanCache.mockReturnValue({
       plans: [createPlan()],
@@ -93,13 +99,18 @@ describe("PlanPage", () => {
     mockUsePlanGenerationStatus.mockReturnValue({
       isGenerating: () => false,
     });
+    mockSuggestPlanDirections.mockResolvedValue([
+      "Escalate the secret alliance into a public betrayal.",
+      "Send the protagonists after the missing witness.",
+      "Force a choice between victory and loyalty.",
+    ]);
     vi.mocked(d.PlanService).mockReturnValue(mockPlanService as PlanService);
     vi.mocked(d.PlanGenerationService).mockReturnValue(
       mockPlanGenerationService as PlanGenerationService,
     );
     vi.mocked(d.ErrorService).mockReturnValue({
       log: mockErrorLog,
-    } as any);
+    } as unknown as ReturnType<typeof d.ErrorService>);
   });
 
   it("should show manual-only status for plans with refresh interval 0", () => {
@@ -139,5 +150,93 @@ describe("PlanPage", () => {
         expect.any(Error),
       );
     });
+  });
+
+  it("should choose from scratch from the generate modal", async () => {
+    const user = userEvent.setup();
+    render(<PlanPage />);
+
+    await user.click(screen.getByRole("button", { name: "Generate Now" }));
+    await user.click(
+      await screen.findByRole("button", { name: "From Scratch" }),
+    );
+
+    expect(mockGeneratePlanNow).toHaveBeenCalledWith("plan-1");
+  });
+
+  it("should generate with direction from the generate modal", async () => {
+    const user = userEvent.setup();
+    render(<PlanPage />);
+
+    await user.click(screen.getByRole("button", { name: "Generate Now" }));
+    await user.type(
+      await screen.findByRole("textbox", { name: "Direction" }),
+      "Add a timeline.",
+    );
+    await user.click(screen.getByRole("button", { name: "With Direction" }));
+
+    expect(mockRegeneratePlanFromMessage).toHaveBeenCalledWith(
+      "plan-1",
+      undefined,
+      "Add a timeline.",
+    );
+  });
+
+  it("should suggest plans from the full plan page", async () => {
+    const user = userEvent.setup();
+    render(<PlanPage />);
+
+    await user.click(screen.getByRole("button", { name: "Suggest Plan" }));
+
+    expect(mockSuggestPlanDirections).toHaveBeenCalledWith(
+      "plan-1",
+      undefined,
+    );
+    expect(
+      await screen.findByRole("button", {
+        name: "Escalate the secret alliance into a public betrayal.",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("should generate a full plan from the selected suggestion", async () => {
+    const user = userEvent.setup();
+    render(<PlanPage />);
+
+    await user.click(screen.getByRole("button", { name: "Suggest Plan" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Send the protagonists after the missing witness.",
+      }),
+    );
+
+    expect(mockRegeneratePlanFromMessage).toHaveBeenCalledWith(
+      "plan-1",
+      undefined,
+      "Send the protagonists after the missing witness.",
+    );
+  });
+
+  it("should consolidate regenerate actions into one modal", async () => {
+    const user = userEvent.setup();
+    mockLatestPlanContent = "Existing plan";
+    render(<PlanPage />);
+
+    expect(
+      screen.queryByRole("button", { name: "Regenerate with Feedback" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Regenerate" }));
+    await user.type(
+      await screen.findByRole("textbox", { name: "Direction" }),
+      "More character motivation.",
+    );
+    await user.click(screen.getByRole("button", { name: "With Direction" }));
+
+    expect(mockRegeneratePlanFromMessage).toHaveBeenCalledWith(
+      "plan-1",
+      "Existing plan",
+      "More character motivation.",
+    );
   });
 });

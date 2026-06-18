@@ -7,6 +7,7 @@ import {
   TextInput,
   Slider,
   Text,
+  Select,
 } from "@mantine/core";
 import { SchedulerCombobox } from "../SchedulerCombobox";
 import { ModelPreviewImage } from "../ModelPreviewImage";
@@ -18,6 +19,8 @@ interface ParametersComponentProps {
   imageModel: ImageModel;
   onChange: (updatedModel: ImageModel) => void;
 }
+
+const DEFAULT_PRIORITY_VALUE = "default";
 
 export const ParametersComponent: React.FC<ParametersComponentProps> = ({
   imageModel,
@@ -33,6 +36,16 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
         ...imageModel.input,
         [field]: value,
       },
+    });
+  };
+
+  const handlePriorityChange = (value: string | null) => {
+    onChange({
+      ...imageModel,
+      priority:
+        value && value !== DEFAULT_PRIORITY_VALUE
+          ? (value as ImageModel["priority"])
+          : undefined,
     });
   };
 
@@ -77,6 +90,18 @@ export const ParametersComponent: React.FC<ParametersComponentProps> = ({
         air={modelAir}
         maxHeight="400px"
         maxWidth="100%"
+      />
+      <Select
+        label="Workflow Priority"
+        value={imageModel.priority ?? DEFAULT_PRIORITY_VALUE}
+        onChange={handlePriorityChange}
+        data={[
+          { value: DEFAULT_PRIORITY_VALUE, label: "Default" },
+          { value: "low", label: "Low" },
+          { value: "normal", label: "Normal" },
+          { value: "high", label: "High" },
+        ]}
+        clearable={false}
       />
       <SchedulerCombobox
         value={schedulerDisplayName}
