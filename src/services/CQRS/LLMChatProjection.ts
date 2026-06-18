@@ -30,6 +30,7 @@ export const getLLMChatProjectionInstance = createInstanceCache(
 export class LLMChatProjection {
   private messages: MessageState[] = [];
   private numberOfPreviousChapterMessages: number = 6;
+  private reasoningRetentionMessages: number | null = null;
 
   private subscribers = new Set<() => void>();
 
@@ -131,6 +132,14 @@ export class LLMChatProjection {
     this.numberOfPreviousChapterMessages = Math.max(0, Math.round(count));
   }
 
+  /**
+   * Sets how many regular messages after a reasoning message before it expires.
+   * Pass `null` to keep all reasoning messages. Pass `0` to exclude all reasoning.
+   */
+  public SetReasoningRetention(messagesUntilExpiry: number | null): void {
+    this.reasoningRetentionMessages = messagesUntilExpiry;
+  }
+
   public GetMessages(): LLMMessage[] {
     const lastChapter = this.getLastChapter();
     let messages: MessageState[];
@@ -146,7 +155,7 @@ export class LLMChatProjection {
       }
     }
 
-    return this.excludeExpiredNotes(messages);
+    return this.excludeExpiredReasoning(this.excludeExpiredNotes(messages));
   }
 
   /**
@@ -508,6 +517,20 @@ export class LLMChatProjection {
         return true;
 
       return this.countMessagesAfterNote(msg.id) < msg.data.expiresAfterMessages;
+    });
+  }
+
+  private excludeExpiredReasoning(messages: MessageState[]): MessageState[] {
+    if (this.reasoningRetentionMessages === null) return messages;
+
+    return messages.filter((msg, index) => {
+      if (msg.type !== "reasoning") return true;
+      if (this.reasoningRetentionMessages === 0) return false;
+
+      const regularMessagesAfter = messages
+        .slice(index + 1)
+        .filter((m) => m.type === "message").length;
+      return regularMessagesAfter < this.reasoningRetentionMessages!;
     });
   }
 
