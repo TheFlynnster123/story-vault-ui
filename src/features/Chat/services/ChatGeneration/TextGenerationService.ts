@@ -52,11 +52,14 @@ export class TextGenerationService extends GenerationOrchestrator {
     return this.getChatModelOverride();
   }
 
-  async generateResponse(guidance?: string): Promise<string | undefined> {
+  async generateResponse(
+    guidance?: string,
+    skipReasoning = false,
+  ): Promise<string | undefined> {
     return this.orchestrate(async () => {
       d.PlanGenerationService(this.chatId).onMessageSent();
 
-      if (await this.shouldGenerateReasoning()) {
+      if (!skipReasoning && (await this.shouldGenerateReasoning())) {
         await this.generateReasoning(guidance);
       }
 

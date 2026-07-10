@@ -57,6 +57,11 @@ describe("useChatGeneration", () => {
         typeof d.ChatService
       >,
     );
+    vi.mocked(d.UserChatProjection).mockReturnValue(
+      { GetMessages: vi.fn().mockReturnValue([]) } as unknown as ReturnType<
+        typeof d.UserChatProjection
+      >,
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -82,6 +87,35 @@ describe("useChatGeneration", () => {
     // Flush the .then() microtask so React state is updated
     await act(async () => {});
   };
+
+  // ---------------------------------------------------------------------------
+  // generateResponse
+  // ---------------------------------------------------------------------------
+
+  describe("generateResponse", () => {
+    it("skips new reasoning when the message before the user input is reasoning", async () => {
+      vi.mocked(d.UserChatProjection).mockReturnValue(
+        {
+          GetMessages: vi.fn().mockReturnValue([
+            { id: "reasoning-1", type: "reasoning" },
+          ]),
+        } as unknown as ReturnType<typeof d.UserChatProjection>,
+      );
+      const { result } = await renderChatGeneration();
+
+      await act(async () => {
+        await result.current.generateResponse("Follow-up message");
+      });
+
+      expect(d.ChatService(CHAT_ID).AddUserMessage).toHaveBeenCalledWith(
+        "Follow-up message",
+      );
+      expect(mockTextGeneration.generateResponse).toHaveBeenCalledWith(
+        undefined,
+        true,
+      );
+    });
+  });
 
   // ---------------------------------------------------------------------------
   // generateImage

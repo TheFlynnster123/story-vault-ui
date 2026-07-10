@@ -114,4 +114,17 @@ describe("TextGenerationService reasoning", () => {
     expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
     expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
   });
+
+  it("skips the reasoning request when the previous visible message is reasoning", async () => {
+    const service = new TextGenerationService(CHAT_ID);
+
+    await service.generateResponse(undefined, true);
+
+    expect(
+      d.LLMMessageContextService(CHAT_ID).buildReasoningRequestMessages,
+    ).not.toHaveBeenCalled();
+    expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
+    expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
+    expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
+  });
 });
