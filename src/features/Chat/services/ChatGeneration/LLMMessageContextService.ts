@@ -48,7 +48,7 @@ export class LLMMessageContextService {
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
+    const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
     const characters = await this.fetchCharacterDescriptions();
 
@@ -66,7 +66,7 @@ export class LLMMessageContextService {
   async buildReasoningRequestMessages(guidance?: string): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
+    const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
     const characters = await this.fetchCharacterDescriptions();
     const reasoningPrompt = await this.fetchReasoningPrompt();
@@ -107,7 +107,7 @@ export class LLMMessageContextService {
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
+    const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
     const characters = await this.fetchCharacterDescriptions();
     const truncatedChatMessages = this.truncateMessagesBeforeId(
@@ -131,7 +131,7 @@ export class LLMMessageContextService {
   async buildChapterSummaryRequestMessages(): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
+    const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
     const characters = await this.fetchCharacterDescriptions();
     const chapterSummaryPrompt = await this.fetchChapterSummaryPrompt();
@@ -149,7 +149,7 @@ export class LLMMessageContextService {
   async buildChapterTitleRequestMessages(): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
+    const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
     const characters = await this.fetchCharacterDescriptions();
     const chapterTitlePrompt = await this.fetchChapterTitlePrompt();
@@ -216,7 +216,7 @@ export class LLMMessageContextService {
     return d.ChatSettingsService(this.chatId).Get() as Promise<ChatSettings>;
   }
 
-  private getChatMessages(chatSettings: ChatSettings): LLMMessage[] {
+  private getChatMessages(): LLMMessage[] {
     return d.LLMChatProjection(this.chatId).GetMessages();
   }
 
