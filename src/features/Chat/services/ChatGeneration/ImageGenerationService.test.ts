@@ -444,7 +444,7 @@ describe("ImageGenerationService", () => {
     expect(
       mockCharacterDescriptionsService.updateCharacter,
     ).toHaveBeenCalledWith("char-1", {
-      description: "Dark hair, green eyes, narrow jawline",
+      appearance: "Dark hair, green eyes, narrow jawline",
     });
     expect(
       mockImageGenerator.generatePromptWithCharacterContext,

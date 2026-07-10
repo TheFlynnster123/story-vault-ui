@@ -73,17 +73,27 @@ export const CharacterDescriptionsPage: React.FC = () => {
     d.CharacterDescriptionsService(chatId!).saveDebounced(updatedCharacters);
   };
 
-  const handleCharacterDescriptionChange = (
+  const handleCharacterAppearanceChange = (
     id: string,
-    description: string,
+    appearance: string,
   ) => {
     const updatedCharacters = formCharacters.map((character) =>
       character.id === id
-        ? updateCharacterDescription(character, { description })
+        ? updateCharacterDescription(character, { appearance })
         : character,
     );
     setFormCharacters(updatedCharacters);
 
+    d.CharacterDescriptionsService(chatId!).saveDebounced(updatedCharacters);
+  };
+
+  const handleCharacterSheetChange = (id: string, sheet: string) => {
+    const updatedCharacters = formCharacters.map((character) =>
+      character.id === id
+        ? updateCharacterDescription(character, { sheet, sheetSource: "manual" })
+        : character,
+    );
+    setFormCharacters(updatedCharacters);
     d.CharacterDescriptionsService(chatId!).saveDebounced(updatedCharacters);
   };
 
@@ -136,10 +146,9 @@ export const CharacterDescriptionsPage: React.FC = () => {
 
         <Stack>
           <Text size="sm" style={{ color: Theme.page.textMuted }}>
-            Character descriptions help maintain visual consistency across image
-            generations. Describe permanent physical features like face shape,
-            eye color, hair, age, and build. Clothing and contextual details
-            will be added automatically based on each scene.
+            Character Sheets are durable story context used in every chat
+            response. Character Appearance is used separately to keep image
+            generations visually consistent.
           </Text>
           <Divider style={{ borderColor: Theme.character.border }} />
           <Group justify="space-between">
@@ -179,15 +188,40 @@ export const CharacterDescriptionsPage: React.FC = () => {
                 }}
               />
               <Textarea
-                label="Physical Description"
+                label="Character Sheet"
+                description="Narrative facts such as role, personality, motivations, relationships, voice, and constraints."
+                placeholder="No character sheet yet. Add durable facts the story should remember..."
+                value={character.sheet ?? ""}
+                onChange={(e) =>
+                  handleCharacterSheetChange(
+                    character.id,
+                    e.currentTarget.value,
+                  )
+                }
+                minRows={5}
+                autosize
+                styles={{
+                  input: {
+                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                    borderColor: Theme.character.border,
+                    color: Theme.page.text,
+                  },
+                  label: {
+                    color: Theme.page.text,
+                  },
+                }}
+              />
+              <Textarea
+                label="Character Appearance"
+                description="Stable physical traits used for image generation. Exclude actions, poses, scenes, and temporary clothing."
                 placeholder={
-                  character.description.trim() === ""
-                    ? "No character description was generated. Add physical features: face shape, eye color, hair, age, build, distinctive features..."
+                  character.appearance.trim() === ""
+                    ? "No character appearance was generated. Add face shape, eye color, hair, age, build, distinctive features..."
                     : "Describe physical features: face shape, eye color, hair, age, build, distinctive features..."
                 }
-                value={character.description}
+                value={character.appearance}
                 onChange={(e) =>
-                  handleCharacterDescriptionChange(
+                  handleCharacterAppearanceChange(
                     character.id,
                     e.currentTarget.value,
                   )

@@ -21,6 +21,7 @@ import type { SystemPromptsService } from "../../../Prompts/services/SystemPromp
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
 import type { SystemSettingsService } from "../../../SystemSettings/services/SystemSettingsService";
 import { DEFAULT_TRAILING_CHAPTER_MESSAGES } from "../../../SystemSettings/services/SystemSettings";
+import type { CharacterDescriptionsService } from "../../../Characters/services/CharacterDescriptionsService";
 
 vi.mock("../../../../services/Dependencies");
 
@@ -32,6 +33,7 @@ describe("LLMMessageContextService", () => {
   let MemoriesService: Mocked<MemoriesService>;
   let SystemPromptsService: Mocked<SystemPromptsService>;
   let SystemSettingsService: Mocked<SystemSettingsService>;
+  let CharacterDescriptionsService: Mocked<CharacterDescriptionsService>;
 
   beforeEach(() => {
     ChatSettingsService = {
@@ -56,11 +58,18 @@ describe("LLMMessageContextService", () => {
       Get: vi.fn().mockResolvedValue(undefined),
     } as unknown as Mocked<SystemSettingsService>;
 
+    CharacterDescriptionsService = {
+      get: vi.fn().mockResolvedValue([]),
+    } as unknown as Mocked<CharacterDescriptionsService>;
+
     vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
     vi.mocked(d.LLMChatProjection).mockReturnValue(LLMChatProjection);
     vi.mocked(d.MemoriesService).mockReturnValue(MemoriesService);
     vi.mocked(d.SystemPromptsService).mockReturnValue(SystemPromptsService);
     vi.mocked(d.SystemSettingsService).mockReturnValue(SystemSettingsService);
+    vi.mocked(d.CharacterDescriptionsService).mockReturnValue(
+      CharacterDescriptionsService,
+    );
   });
 
   afterEach(() => {
@@ -112,6 +121,40 @@ describe("LLMMessageContextService", () => {
 
   // ---- buildGenerationRequestMessages Tests ----
   describe("buildGenerationRequestMessages", () => {
+    it("floats character sheets before the configured trailing chat messages", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        characterSheetsTrailingMessageCount: 2,
+      });
+      LLMChatProjection.GetMessages.mockReturnValue([
+        { id: "msg-1", type: "message", role: "user", content: "One" },
+        { id: "msg-2", type: "message", role: "assistant", content: "Two" },
+        { id: "msg-3", type: "message", role: "user", content: "Three" },
+        { id: "msg-4", type: "message", role: "assistant", content: "Four" },
+      ]);
+      CharacterDescriptionsService.get.mockResolvedValue([
+        {
+          id: "character-1",
+          name: "Mara",
+          appearance: "dark curls",
+          sheet: "A determined navigator.",
+          createdAt: "2026-01-01",
+          updatedAt: "2026-01-01",
+        },
+      ]);
+
+      const result = await new LLMMessageContextService(
+        testChatId,
+      ).buildGenerationRequestMessages();
+
+      expect(result[0].id).toBe("msg-1");
+      expect(result[1].id).toBe("msg-2");
+      expect(result[2].content).toContain("# Character Sheets");
+      expect(result[3].id).toBe("msg-3");
+      expect(result[4].id).toBe("msg-4");
+      expect(result[5].content).toBe("Test prompt");
+    });
+
     it("should fetch chat settings for the correct chatId", async () => {
       const service = new LLMMessageContextService(testChatId);
 
@@ -417,6 +460,26 @@ describe("LLMMessageContextService", () => {
 
   // ---- buildChapterSummaryRequestMessages Tests ----
   describe("buildChapterSummaryRequestMessages", () => {
+    it("includes character sheets in chapter summary context", async () => {
+      CharacterDescriptionsService.get.mockResolvedValue([
+        {
+          id: "character-1",
+          name: "Mara",
+          appearance: "dark curls",
+          sheet: "A determined navigator.",
+          createdAt: "2026-01-01",
+          updatedAt: "2026-01-01",
+        },
+      ]);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildChapterSummaryRequestMessages();
+
+      expect(result.some((message) => message.content.includes("# Character Sheets"))).toBe(
+        true,
+      );
+    });
+
     it("should include chat messages", async () => {
       const service = new LLMMessageContextService(testChatId);
       const chatMessages = createMockChatMessages();
@@ -517,6 +580,25 @@ describe("LLMMessageContextService", () => {
 
   // ---- buildBookSummaryRequestMessages Tests ----
   describe("buildBookSummaryRequestMessages", () => {
+    it("includes character sheets before book summaries", async () => {
+      CharacterDescriptionsService.get.mockResolvedValue([
+        {
+          id: "character-1",
+          name: "Mara",
+          appearance: "dark curls",
+          sheet: "A determined navigator.",
+          createdAt: "2026-01-01",
+          updatedAt: "2026-01-01",
+        },
+      ]);
+      const service = new LLMMessageContextService(testChatId);
+
+      const result = await service.buildBookSummaryRequestMessages(["Summary 1"]);
+
+      expect(result[0].content).toContain("# Character Sheets");
+      expect(result[1].content).toContain("Chapter 1:");
+    });
+
     it("should include chapter summaries as system message", async () => {
       const service = new LLMMessageContextService(testChatId);
       const summaries = ["Chapter 1 summary", "Chapter 2 summary"];

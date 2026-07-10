@@ -5,6 +5,7 @@ import {
   toUserMessage,
 } from "../../../../services/Utils/MessageUtils";
 import type { Memory } from "../../../Memories/services/Memory";
+import type { CharacterDescription } from "../../../Characters/services/CharacterDescription";
 import type { ChatSettings } from "../Chat/ChatSettings";
 import { DEFAULT_REASONING_RETENTION_MESSAGES } from "../Chat/ChatSettings";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
@@ -16,6 +17,8 @@ import { createInstanceCache } from "../../../../services/Utils/getOrCreateInsta
 export const getLLMMessageContextServiceInstance = createInstanceCache(
   (chatId: string) => new LLMMessageContextService(chatId),
 );
+
+export const DEFAULT_CHARACTER_SHEETS_TRAILING_MESSAGE_COUNT = 5;
 
 const consolidateMessagesToString = (messages: LLMMessage[]): string =>
   messages
@@ -47,11 +50,13 @@ export class LLMMessageContextService {
     await this.applySystemContextSettings();
     const chatMessages = this.getChatMessages(chatSettings);
     const memories = await this.fetchMemories();
+    const characters = await this.fetchCharacterDescriptions();
 
     const messages = this.assembleGenerationMessages(
       chatSettings,
       chatMessages,
       memories,
+      characters,
       includeResponsePrompt,
     );
 
@@ -63,6 +68,7 @@ export class LLMMessageContextService {
     await this.applySystemContextSettings();
     const chatMessages = this.getChatMessages(chatSettings);
     const memories = await this.fetchMemories();
+    const characters = await this.fetchCharacterDescriptions();
     const reasoningPrompt = await this.fetchReasoningPrompt();
     const shouldConsolidateHistory =
       chatSettings.reasoningConsolidateMessageHistory ?? true;
@@ -71,6 +77,8 @@ export class LLMMessageContextService {
       const consolidatedReasoningContext = this.buildConsolidatedReasoningContext(
         chatMessages,
         memories,
+        characters,
+        chatSettings,
         reasoningPrompt,
       );
       return this.appendGuidanceMessage(
@@ -79,9 +87,13 @@ export class LLMMessageContextService {
       );
     }
 
-    const messages: LLMMessage[] = [
-      ...chatMessages,
-      ...this.buildMemoryMessages(memories),
+    const messages = [
+      ...this.assembleDurableContextMessages(
+        chatMessages,
+        memories,
+        characters,
+        chatSettings,
+      ),
       toSystemMessage(reasoningPrompt),
     ];
 
@@ -93,10 +105,21 @@ export class LLMMessageContextService {
     originalContent: string,
     feedback?: string,
   ): Promise<LLMMessage[]> {
-    const baseMessages = await this.buildGenerationRequestMessages(false);
-    const truncatedMessages = this.truncateMessagesBeforeId(
-      baseMessages,
+    const chatSettings = await this.fetchChatSettings();
+    await this.applySystemContextSettings();
+    const chatMessages = this.getChatMessages(chatSettings);
+    const memories = await this.fetchMemories();
+    const characters = await this.fetchCharacterDescriptions();
+    const truncatedChatMessages = this.truncateMessagesBeforeId(
+      chatMessages,
       messageId,
+    );
+    const truncatedMessages = this.assembleGenerationMessages(
+      chatSettings,
+      truncatedChatMessages,
+      memories,
+      characters,
+      false,
     );
     return this.appendFeedbackMessage(
       truncatedMessages,
@@ -106,29 +129,50 @@ export class LLMMessageContextService {
   }
 
   async buildChapterSummaryRequestMessages(): Promise<LLMMessage[]> {
+    const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(await this.fetchChatSettings());
+    const chatMessages = this.getChatMessages(chatSettings);
+    const memories = await this.fetchMemories();
+    const characters = await this.fetchCharacterDescriptions();
     const chapterSummaryPrompt = await this.fetchChapterSummaryPrompt();
     return this.assembleChapterSummaryMessages(
-      chatMessages,
+      this.assembleDurableContextMessages(
+        chatMessages,
+        memories,
+        characters,
+        chatSettings,
+      ),
       chapterSummaryPrompt,
     );
   }
 
   async buildChapterTitleRequestMessages(): Promise<LLMMessage[]> {
+    const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(await this.fetchChatSettings());
+    const chatMessages = this.getChatMessages(chatSettings);
+    const memories = await this.fetchMemories();
+    const characters = await this.fetchCharacterDescriptions();
     const chapterTitlePrompt = await this.fetchChapterTitlePrompt();
-    return this.assembleChapterTitleMessages(chatMessages, chapterTitlePrompt);
+    return this.assembleChapterTitleMessages(
+      this.assembleDurableContextMessages(
+        chatMessages,
+        memories,
+        characters,
+        chatSettings,
+      ),
+      chapterTitlePrompt,
+    );
   }
 
   async buildBookSummaryRequestMessages(
     chapterSummaries: string[],
   ): Promise<LLMMessage[]> {
     const bookSummaryPrompt = await this.fetchBookSummaryPrompt();
+    const characters = await this.fetchCharacterDescriptions();
     return this.assembleBookSummaryMessages(
       chapterSummaries,
       bookSummaryPrompt,
+      characters,
     );
   }
 
@@ -136,7 +180,12 @@ export class LLMMessageContextService {
     chapterSummaries: string[],
   ): Promise<LLMMessage[]> {
     const bookTitlePrompt = await this.fetchBookTitlePrompt();
-    return this.assembleBookTitleMessages(chapterSummaries, bookTitlePrompt);
+    const characters = await this.fetchCharacterDescriptions();
+    return this.assembleBookTitleMessages(
+      chapterSummaries,
+      bookTitlePrompt,
+      characters,
+    );
   }
 
   buildMemoryMessages(memories: Memory[]): LLMMessage[] {
@@ -144,6 +193,21 @@ export class LLMMessageContextService {
     if (!content) return [];
 
     return [toSystemMessage(`# Memories\r\n${content}`)];
+  }
+
+  buildCharacterSheetMessages(
+    characters: CharacterDescription[],
+  ): LLMMessage[] {
+    const content = characters
+      .filter((character) => this.isNonEmptyContent(character.sheet ?? ""))
+      .map(
+        (character) =>
+          `## ${character.name.trim() || "Unnamed character"}\r\n${character.sheet!.trim()}`,
+      )
+      .join("\r\n\r\n");
+    if (!content) return [];
+
+    return [toSystemMessage(`# Character Sheets\r\n${content}`)];
   }
 
   // ---- Private: Data Fetching ----
@@ -186,6 +250,10 @@ export class LLMMessageContextService {
 
   private async fetchMemories(): Promise<Memory[]> {
     return d.MemoriesService(this.chatId).get();
+  }
+
+  private async fetchCharacterDescriptions(): Promise<CharacterDescription[]> {
+    return d.CharacterDescriptionsService(this.chatId).get();
   }
 
   private async fetchChapterSummaryPrompt(): Promise<string> {
@@ -237,12 +305,15 @@ export class LLMMessageContextService {
     chatSettings: ChatSettings,
     chatMessages: LLMMessage[],
     memories: Memory[],
+    characters: CharacterDescription[],
     includeStoryPrompt: boolean,
   ): LLMMessage[] {
-    const messages: LLMMessage[] = [
-      ...chatMessages,
-      ...this.buildMemoryMessages(memories),
-    ];
+    const messages = this.assembleDurableContextMessages(
+      chatMessages,
+      memories,
+      characters,
+      chatSettings,
+    );
 
     if (includeStoryPrompt)
       messages.push(this.createStoryPromptMessage(chatSettings));
@@ -267,11 +338,13 @@ export class LLMMessageContextService {
   private assembleBookSummaryMessages(
     chapterSummaries: string[],
     bookSummaryPrompt: string,
+    characters: CharacterDescription[],
   ): LLMMessage[] {
     const summariesContent = chapterSummaries
       .map((s, i) => `Chapter ${i + 1}:\n${s}`)
       .join("\n\n");
     return [
+      ...this.buildCharacterSheetMessages(characters),
       toSystemMessage(summariesContent),
       toUserMessage(bookSummaryPrompt),
     ];
@@ -280,26 +353,46 @@ export class LLMMessageContextService {
   private assembleBookTitleMessages(
     chapterSummaries: string[],
     bookTitlePrompt: string,
+    characters: CharacterDescription[],
   ): LLMMessage[] {
     const summariesContent = chapterSummaries
       .map((s, i) => `Chapter ${i + 1}:\n${s}`)
       .join("\n\n");
-    return [toSystemMessage(summariesContent), toUserMessage(bookTitlePrompt)];
+    return [
+      ...this.buildCharacterSheetMessages(characters),
+      toSystemMessage(summariesContent),
+      toUserMessage(bookTitlePrompt),
+    ];
   }
 
   private buildConsolidatedReasoningContext(
     chatMessages: LLMMessage[],
     memories: Memory[],
+    characters: CharacterDescription[],
+    chatSettings: ChatSettings,
     reasoningPrompt: string,
   ): string {
+    const { earlierMessages, trailingMessages } = this.splitMessagesForDurableContext(
+      chatMessages,
+      chatSettings,
+    );
     const sections = [
-      `Chat History:\n\n${consolidateMessagesToString(chatMessages)}`,
-      `Reasoning Instructions:\n\n${reasoningPrompt}`,
+      `Chat History:\n\n${consolidateMessagesToString(earlierMessages)}`,
     ];
     const memoryContent = this.combineMemoryContent(memories);
     if (memoryContent) {
-      sections.splice(1, 0, `Memories:\n\n${memoryContent}`);
+      sections.push(`Memories:\n\n${memoryContent}`);
     }
+    const characterSheetContent = this.combineCharacterSheetContent(characters);
+    if (characterSheetContent) {
+      sections.push(`Character Sheets:\n\n${characterSheetContent}`);
+    }
+    if (trailingMessages.length) {
+      sections.push(
+        `Recent Chat History:\n\n${consolidateMessagesToString(trailingMessages)}`,
+      );
+    }
+    sections.push(`Reasoning Instructions:\n\n${reasoningPrompt}`);
     return sections.join("\n\n---\n\n");
   }
 
@@ -329,6 +422,60 @@ export class LLMMessageContextService {
       .map((memory) => memory.content)
       .filter((content) => this.isNonEmptyContent(content))
       .join("\r\n");
+  }
+
+  private combineCharacterSheetContent(
+    characters: CharacterDescription[],
+  ): string {
+    return characters
+      .filter((character) => this.isNonEmptyContent(character.sheet ?? ""))
+      .map(
+        (character) =>
+          `## ${character.name.trim() || "Unnamed character"}\n${character.sheet!.trim()}`,
+      )
+      .join("\n\n");
+  }
+
+  private assembleDurableContextMessages(
+    chatMessages: LLMMessage[],
+    memories: Memory[],
+    characters: CharacterDescription[],
+    chatSettings: ChatSettings,
+  ): LLMMessage[] {
+    const { earlierMessages, trailingMessages } = this.splitMessagesForDurableContext(
+      chatMessages,
+      chatSettings,
+    );
+    return [
+      ...earlierMessages,
+      ...this.buildMemoryMessages(memories),
+      ...this.buildCharacterSheetMessages(characters),
+      ...trailingMessages,
+    ];
+  }
+
+  private splitMessagesForDurableContext(
+    chatMessages: LLMMessage[],
+    chatSettings: ChatSettings,
+  ): { earlierMessages: LLMMessage[]; trailingMessages: LLMMessage[] } {
+    const trailingCount = this.getCharacterSheetsTrailingMessageCount(
+      chatSettings,
+    );
+    const splitIndex = Math.max(0, chatMessages.length - trailingCount);
+    return {
+      earlierMessages: chatMessages.slice(0, splitIndex),
+      trailingMessages: chatMessages.slice(splitIndex),
+    };
+  }
+
+  private getCharacterSheetsTrailingMessageCount(
+    chatSettings: ChatSettings,
+  ): number {
+    const configured = chatSettings.characterSheetsTrailingMessageCount;
+    if (!Number.isFinite(configured)) {
+      return DEFAULT_CHARACTER_SHEETS_TRAILING_MESSAGE_COUNT;
+    }
+    return Math.max(0, Math.min(50, Math.round(configured!)));
   }
 
   private isNonEmptyContent(content: string): boolean {

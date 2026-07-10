@@ -26,12 +26,22 @@ export const useChatGeneration = (chatId: string) => {
   const generateResponse = useCallback(
     async (userInput: string, guidance?: string): Promise<string> => {
       try {
-        if (userInput.trim()) {
+        const hasUserInput = userInput.trim().length > 0;
+        const visibleMessages = hasUserInput
+          ? d.UserChatProjection(chatId).GetMessages()
+          : [];
+        const previousMessage = visibleMessages[visibleMessages.length - 1];
+        const skipReasoning =
+          hasUserInput && previousMessage?.type === "reasoning";
+
+        if (hasUserInput) {
           await d.ChatService(chatId).AddUserMessage(userInput);
           void maybeAutoRunAgentFlow(chatId);
         }
 
-        return (await textGeneration.generateResponse(guidance)) ?? "";
+        return (
+          (await textGeneration.generateResponse(guidance, skipReasoning)) ?? ""
+        );
       } catch (e) {
         if (!isAlreadyHandled(e)) {
           d.ErrorService().log("Failed to generate response", e);

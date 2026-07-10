@@ -1,7 +1,12 @@
 import { d } from "../../../services/Dependencies";
-import type { CharacterDescription } from "./CharacterDescription";
+import type {
+  CharacterDescription,
+  PersistedCharacterDescription,
+} from "./CharacterDescription";
 import {
+  CHARACTER_SCHEMA_VERSION,
   createCharacterDescription,
+  migrateCharacterDescriptions,
   updateCharacterDescription,
 } from "./CharacterDescription";
 
@@ -13,10 +18,12 @@ export class CharacterDescriptionsService {
   }
 
   get = async (): Promise<CharacterDescription[]> => {
-    const descriptions = await d
+    const persistedDescriptions =
+      (await d
       .CharacterDescriptionsManagedBlob(this.chatId)
-      .get();
-    return descriptions ?? [];
+      .get()) ?? [];
+
+    return this.migrateIfNeeded(persistedDescriptions);
   };
 
   save = async (descriptions: CharacterDescription[]): Promise<void> =>
@@ -69,7 +76,10 @@ export class CharacterDescriptionsService {
   updateCharacter = async (
     id: string,
     updates: Partial<
-      Pick<CharacterDescription, "name" | "description" | "preferredImage">
+      Pick<
+        CharacterDescription,
+        "name" | "appearance" | "sheet" | "sheetSource" | "preferredImage"
+      >
     >,
   ): Promise<void> => {
     const descriptions = await this.get();
@@ -81,8 +91,74 @@ export class CharacterDescriptionsService {
     await this.upsertDescription(updatedCharacter);
   };
 
+  /** Adds a newly detected primary character without replacing user-authored work. */
+  upsertGeneratedSheet = async (
+    name: string,
+    sheet: string,
+  ): Promise<CharacterDescription | undefined> => {
+    const normalizedName = name.trim();
+    const normalizedSheet = sheet.trim();
+    if (!normalizedName || !normalizedSheet) return undefined;
+
+    const descriptions = await this.get();
+    const existing = findCharacterByName(descriptions, normalizedName);
+
+    if (existing) {
+      if (existing.sheetSource === "manual" || existing.sheet?.trim()) {
+        return undefined;
+      }
+
+      const updated = updateCharacterDescription(existing, {
+        sheet: normalizedSheet,
+        sheetSource: "auto",
+      });
+      await this.save(
+        upsertCharacterInList(
+          descriptions,
+          updated,
+          findCharacterIndexById(descriptions, updated.id),
+        ),
+      );
+      return updated;
+    }
+
+    const character = updateCharacterDescription(
+      createCharacterDescription(normalizedName, ""),
+      { sheet: normalizedSheet, sheetSource: "auto" },
+    );
+    await this.save([...descriptions, character]);
+    return character;
+  };
+
   subscribe = (callback: () => void): (() => void) =>
     d.CharacterDescriptionsManagedBlob(this.chatId).subscribe(callback);
+
+  private migrateIfNeeded = async (
+    persistedDescriptions: PersistedCharacterDescription[],
+  ): Promise<CharacterDescription[]> => {
+    const descriptions = migrateCharacterDescriptions(persistedDescriptions);
+    const needsDataMigration = persistedDescriptions.some((character) =>
+      "description" in character,
+    );
+    const settings = await d.ChatSettingsService(this.chatId).Get();
+    const currentVersion = settings?.charactersSchemaVersion ?? 1;
+
+    if (currentVersion >= CHARACTER_SCHEMA_VERSION && !needsDataMigration) {
+      return descriptions;
+    }
+
+    if (needsDataMigration) {
+      await this.save(descriptions);
+    }
+
+    if (settings) {
+      await d.ChatSettingsService(this.chatId).update({
+        charactersSchemaVersion: CHARACTER_SCHEMA_VERSION,
+      });
+    }
+
+    return descriptions;
+  };
 }
 
 const findCharacterByName = (

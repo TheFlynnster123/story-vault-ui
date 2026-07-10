@@ -72,6 +72,13 @@ export interface SystemPrompts {
   /** OpenRouter request settings paired with the character description model override */
   characterDescriptionRequestSettings?: OpenRouterRequestSettings;
 
+  /** Prompt for finding newly introduced primary characters and generating their narrative sheets. */
+  characterSheetPrompt: string;
+  /** Model override for character sheet generation (empty = use default) */
+  characterSheetModel?: string;
+  /** OpenRouter request settings paired with the character sheet model override */
+  characterSheetRequestSettings?: OpenRouterRequestSettings;
+
   /** System prompt used during chapter discussion conversations */
   discussChapterPrompt: string;
 
@@ -157,6 +164,13 @@ Do NOT include setting, actions, poses, or temporary clothing.
 
 Example:
 "young woman, oval face, green eyes, long dark wavy hair, olive skin, medium height, slim build, faint scar on left eyebrow"`,
+
+  characterSheetPrompt: `Review the conversation and identify only newly introduced PRIMARY characters who need a durable narrative character sheet. Ignore incidental names, background figures, and characters already known to the user.
+
+For each qualifying character, write a concise factual sheet using only details supported by the conversation. Cover role, personality, motivations, relationships, voice or habits, and stable constraints when known. Do not invent missing facts. Do not include scene-by-scene actions or temporary details.
+
+Return an empty list if no new primary character qualifies.`,
+  characterSheetModel: "x-ai/grok-4.3",
 
   discussChapterPrompt:
     "You are helping the user create and refine the summary for this chapter.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the chapter summary should contain.\nEngage in a helpful conversation about what happened in this chapter.\nSuggest improvements, ask clarifying questions, and help them refine the summary.\nKeep responses concise and focused on accurately capturing the chapter's events.",

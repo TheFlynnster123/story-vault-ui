@@ -26,7 +26,7 @@ export const MissingCharacterDescriptionModal: React.FC<
   <Modal
     opened={isOpen}
     onClose={isWorking ? () => undefined : onCancel}
-    title="Character description needed"
+    title="Character appearance needed"
     size="md"
     centered
     closeOnClickOutside={!isWorking}
@@ -35,7 +35,7 @@ export const MissingCharacterDescriptionModal: React.FC<
     <Stack gap="sm">
       <Text size="sm">
         The scene focuses on <b>{characterName}</b>, but this character does not
-        have a saved physical description yet.
+        have a saved character appearance yet.
       </Text>
       <Text size="sm" c="dimmed">
         Choose how to continue image generation.
@@ -49,7 +49,7 @@ export const MissingCharacterDescriptionModal: React.FC<
           loading={isWorking}
           disabled={isWorking}
         >
-          Generate Description
+          Generate Appearance
         </Button>
         <Button
           leftSection={<RiEdit2Line size={16} />}

@@ -1,126 +1,74 @@
-# Character Descriptions Feature
+# Characters
 
 ## Overview
 
-The Character Descriptions feature improves image consistency by persisting per-chat character physical traits and injecting them into image prompt generation.
+Characters are chat-scoped, encrypted records with two distinct forms of continuity:
 
-Each image generation request now follows this flow:
+- **Character Appearance** is a concise, stable physical description used only for image generation.
+- **Character Sheet** is concise narrative context—role, motivations, relationships, voice, and constraints—used by text chat, reasoning, regeneration, and Agent Flow.
 
-1. Select the primary character for the current narrative moment using an LLM call over full chat context.
-2. Look up that character in the chat-scoped Character Descriptions blob with high-confidence fuzzy matching.
-3. If a description exists, include it in image prompt generation.
-4. If missing, present a 3-option modal:
-   - Generate Description
-   - Create Manually
-   - Skip for now
-5. Generate the image prompt and trigger image job creation.
+The Characters Flow section exposes sheet generation, its check cadence, and the context-placement setting. The Characters page is the editor for names, sheets, appearances, and preferred image models.
 
-## Core Behavior
+## Character schema
 
-### Character Selection
-
-`CharacterSelectionService` selects one primary character (or returns `UNCLEAR`) using:
-- `SystemPrompts.characterSelectionPrompt`
-- `SystemPrompts.characterSelectionModel` (optional override)
-
-### Character Description Lookup
-
-`CharacterDescriptionsService.findByName` supports:
-- Case-insensitive exact matching
-- High-confidence fuzzy matching for name variants (for example, `Sarah` => `Sarah Chen`)
-- Ambiguity rejection when top fuzzy matches are too close
-
-### Missing Description Decision Modal
-
-When a selected character has no saved description:
-
-- **Generate Description**
-  - Uses `CharacterDescriptionGenerationService`
-  - Saves generated image-style character descriptor to the character record
-  - Continues image generation with the new description
-
-- **Create Manually**
-  - Creates/ensures blank character record
-  - Navigates user to Character Descriptions editor (`/chat/:chatId/characters`)
-  - Does not auto-generate image in this step
-
-- **Skip for now**
-  - Creates/ensures blank character record (remembers decision)
-  - Continues image generation without character description context
-
-Blank descriptions are represented in UI with placeholder text:
-`No character description was generated.`
-
-## Prompt Integration
-
-When a non-empty description is available, image prompt generation receives:
-
-1. Character context as a system message (`# Character: {name}` + physical description)
-2. Base image prompt (model-specific prompt or `SystemPrompts.defaultImagePrompt`)
-3. Conversation context messages
-
-The default generation style is a comma-separated list (not paragraph prose) that mirrors image prompt structure while remaining appearance-only (no actions/poses/scene context).
-
-## UI Surfaces
-
-### Flow Accordion
-
-`CharacterDescriptionsSection` appears in Flow with:
-- Character count
-- Expandable preview list
-- Navigation to full editor page
-
-### Character Descriptions Page
-
-`CharacterDescriptionsPage` supports:
-- Add character
-- Edit name/description
-- Delete with confirmation
-- Debounced autosave
-
-## Data and Storage
-
-- Storage type: managed encrypted blob (`character-descriptions`)
-- Scope: per chat
-- Schema:
+Character data is stored in the existing `character-descriptions` managed blob. New records use schema version 2:
 
 ```ts
 interface CharacterDescription {
   id: string;
   name: string;
-  description: string;
+  appearance: string;
+  sheet?: string;
+  sheetSource?: "auto" | "manual";
+  preferredImage?: { id: string; source: "system" | "variant" };
   createdAt: string;
   updatedAt: string;
 }
 ```
 
-## System Prompt Configuration
+Existing version 1 records used `description` instead of `appearance`. On first character access, the client migrates the field and then writes `charactersSchemaVersion: 2` to the chat settings. The blob is saved before the version flag, so a failed settings update is safe to retry. See [Character Appearance Migration Retirement.md](../../../Character%20Appearance%20Migration%20Retirement.md) for the compatibility-removal process.
 
-The System Prompts editor includes:
+## Automatic Character Sheets
+
+`CharacterSheetGenerationService` checks the current chat before an eligible text response. It uses the configurable Character Sheet prompt/model, receives the already-compressed chat context plus known character names, and requires strict structured output.
+
+Only new primary characters are saved. Blank output, malformed output, incidental names, and existing manually edited sheets are ignored. Failures are logged and never block a normal text response.
+
+Per-chat settings in `ChatSettings`:
+
+```ts
+characterSheetsAutoGenerateEnabled?: boolean; // default true
+characterSheetsCheckInterval?: number; // default 3 user messages
+characterSheetsMessagesSinceLastCheck?: number;
+characterSheetsTrailingMessageCount?: number; // default 5
+```
+
+The Flow section also provides a manual **Check now** action.
+
+## LLM context placement
+
+`LLMMessageContextService` splits the projected chat history before the final configured number of messages. It places Memories and Character Sheets between the earlier and trailing slices:
+
+```text
+earlier chat history
+Memories
+Character Sheets
+last N projected chat messages
+story/reasoning instruction
+```
+
+This keeps durable facts available without pushing the most recent conversation away from the final instruction. The same placement applies to normal generation, chapter title/summary generation, both reasoning modes, regeneration, and Agent Flow. Book title/summary generation also receives Character Sheets before its chapter-summary context.
+
+## Image generation
+
+Image generation continues to select a single character and use only `appearance`. When it is missing, the image workflow offers Generate Appearance, Create Manually, or Skip for now. Narrative Character Sheets are intentionally not sent to image prompt generation.
+
+## Prompt configuration
+
+System Prompts includes independent controls for:
+
 - Character Selection Prompt + Model
-- Character Description Prompt + Model
+- Character Appearance Prompt + Model
+- Character Sheet Prompt + Model
 
-Default model behavior:
-- Character selection defaults to `x-ai/grok-4.1-fast`
-
-Defaults are merged with persisted prompt settings to support backward-compatible schema additions.
-
-## Questions and Assumptions (Resolved)
-
-### Decisions
-
-- Name matching uses fuzzy, high-confidence lookup with ambiguity guardrails.
-- Only one primary character is selected per image generation.
-- Character selection is recomputed each image request using full chat history.
-- Missing-description "skip" is remembered by creating a blank character record.
-- Character descriptions use image-style comma-separated descriptors focused on appearance only (not paragraphs, not actions).
-- Character context is merged with base image prompt and scene context.
-- Character selection and description generation use separate configurable models.
-- Unit tests are the required test scope for this phase.
-
-### Assumptions
-
-- Character descriptions are per-chat, not global.
-- No migration is required; feature is additive.
-- Existing chats remain fully compatible.
-- Past images are not retroactively regenerated when descriptions change.
+Persisted system prompts are merged with defaults, so the new Character Sheet fields are backward compatible.

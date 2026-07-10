@@ -19,6 +19,10 @@ describe("TextGenerationService reasoning", () => {
       onMessageSent: vi.fn(),
     } as unknown as ReturnType<typeof d.PlanGenerationService>);
 
+    vi.mocked(d.CharacterSheetGenerationService).mockReturnValue({
+      maybeGenerateForNewPrimaryCharacters: vi.fn().mockResolvedValue(0),
+    } as unknown as ReturnType<typeof d.CharacterSheetGenerationService>);
+
     vi.mocked(d.ChatSettingsService).mockReturnValue({
       Get: vi.fn().mockResolvedValue({ reasoningEnabled: true }),
     } as unknown as ReturnType<typeof d.ChatSettingsService>);
@@ -52,6 +56,10 @@ describe("TextGenerationService reasoning", () => {
 
     await service.generateResponse();
 
+    expect(
+      d.CharacterSheetGenerationService(CHAT_ID)
+        .maybeGenerateForNewPrimaryCharacters,
+    ).toHaveBeenCalled();
     expect(
       d.LLMMessageContextService(CHAT_ID).buildReasoningRequestMessages,
     ).toHaveBeenCalled();
@@ -106,6 +114,19 @@ describe("TextGenerationService reasoning", () => {
     const service = new TextGenerationService(CHAT_ID);
 
     await service.generateResponse();
+
+    expect(
+      d.LLMMessageContextService(CHAT_ID).buildReasoningRequestMessages,
+    ).not.toHaveBeenCalled();
+    expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
+    expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
+    expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
+  });
+
+  it("skips the reasoning request when the previous visible message is reasoning", async () => {
+    const service = new TextGenerationService(CHAT_ID);
+
+    await service.generateResponse(undefined, true);
 
     expect(
       d.LLMMessageContextService(CHAT_ID).buildReasoningRequestMessages,
