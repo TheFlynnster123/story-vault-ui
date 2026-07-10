@@ -59,6 +59,7 @@ import { getCharacterDescriptionsManagedBlobInstance } from "../features/Charact
 import { CharacterDescriptionsService } from "../features/Characters/services/CharacterDescriptionsService";
 import { CharacterSelectionService } from "../features/Characters/services/CharacterSelectionService";
 import { CharacterDescriptionGenerationService } from "../features/Characters/services/CharacterDescriptionGenerationService";
+import { getCharacterSheetGenerationServiceInstance } from "../features/Characters/services/CharacterSheetGenerationService";
 import { getRequestTrackerInstance } from "../features/OpenRouter/services/RequestTracker";
 import { ModelPricingEstimator } from "../features/OpenRouter/services/ModelPricingEstimator";
 import { getOpenRouterModelsQueryKey } from "../features/OpenRouter/hooks/useOpenRouterModels";
@@ -132,6 +133,9 @@ export class Dependencies {
   }
   CharacterDescriptionGenerationService(chatId: string) {
     return new CharacterDescriptionGenerationService(chatId);
+  }
+  CharacterSheetGenerationService(chatId: string) {
+    return getCharacterSheetGenerationServiceInstance(chatId);
   }
   ImageGenerator(chatId: string) {
     return new ImageGenerator(chatId);

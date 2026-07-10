@@ -2,13 +2,17 @@ import { d } from "../../../services/Dependencies";
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { ImageModel } from "./modelGeneration/ImageModel";
 import { isWorkflowImageModel } from "./modelGeneration/ImageModel";
-import type { CharacterDescription } from "../../Characters/services/CharacterDescription";
+import {
+  getCharacterAppearance,
+  type CharacterDescription,
+} from "../../Characters/services/CharacterDescription";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import { resolveVariant } from "./ImageModelVariant";
 import type { WorkflowCost } from "./CivitJob";
 import { getWorkflowCost } from "./CivitJobOrchestrator";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import type { ImageGenInput } from "./api/ImageGenInput";
 
 export type CharacterContext =
   | { type: "none" }
@@ -138,14 +142,15 @@ export class ImageGenerator {
       };
     }
 
-    if (!hasDescription(character.description)) {
+    const appearance = getCharacterAppearance(character);
+    if (!hasDescription(appearance)) {
       return noCharacterContext();
     }
 
     return {
       type: "existing-description",
       characterName,
-      description: character.description,
+      description: appearance,
     };
   }
 
@@ -335,7 +340,7 @@ const buildFeedbackMessage = (
 ): string =>
   `The previous image prompt was: \n\n"${originalPrompt}" \n\nPlease regenerate with this feedback: \n\n${feedback}. \n\nRespond ONLY with the new image prompt separated by commas.`;
 
-const appendToPrompt = (input: any, prompt: string) => {
+const appendToPrompt = (input: ImageGenInput, prompt: string) => {
   input.prompt = (input.prompt ? `${input.prompt}, ` : "") + prompt;
 };
 
@@ -354,8 +359,8 @@ const appendPromptSection = (basePrompt: string, prompt: string): string => {
   return `${trimmedBasePrompt}\n\n${trimmedPrompt}`;
 };
 
-const copyInput = (selectedModel: ImageModel) =>
-  JSON.parse(JSON.stringify(selectedModel.input));
+const copyInput = (selectedModel: ImageModel): ImageGenInput =>
+  JSON.parse(JSON.stringify(selectedModel.input)) as ImageGenInput;
 
 const buildPromptMessagesWithCharacter = (
   messages: LLMMessage[],

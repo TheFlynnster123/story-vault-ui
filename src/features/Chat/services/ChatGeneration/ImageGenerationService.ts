@@ -1,4 +1,5 @@
 import { d } from "../../../../services/Dependencies";
+import { getCharacterAppearance } from "../../../Characters/services/CharacterDescription";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { CharacterContext } from "../../../Images/services/ImageGenerator";
@@ -644,7 +645,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
     const characterService = d.CharacterDescriptionsService(this.chatId);
     const character =
       await characterService.createBlankCharacter(characterName);
-    await characterService.updateCharacter(character.id, { description });
+    await characterService.updateCharacter(character.id, { appearance: description });
   };
 }
 
@@ -773,14 +774,15 @@ const resolveCharacterContextByName = async (
     .CharacterDescriptionsService(chatId)
     .findByName(characterName);
 
-  if (!character || !character.description?.trim()) {
+  const appearance = character ? getCharacterAppearance(character) : "";
+  if (!appearance.trim()) {
     return noCharacterContext();
   }
 
   return {
     type: "existing-description",
     characterName,
-    description: character.description,
+    description: appearance,
   };
 };
 

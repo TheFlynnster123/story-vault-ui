@@ -42,4 +42,14 @@ export interface ChatSettings {
   agentFlowMessagesSinceLastRun?: number;
   /** 0-100 value controlling how proactive Agent Flow should be. */
   agentFlowSensitivity?: number;
+  /** Character record schema version. Missing values are legacy version 1. */
+  charactersSchemaVersion?: number;
+  /** Whether automatic primary-character sheet generation is enabled. */
+  characterSheetsAutoGenerateEnabled?: boolean;
+  /** Number of user messages between automatic character-sheet checks. */
+  characterSheetsCheckInterval?: number;
+  /** Saved user-message count since the prior automatic character-sheet check. */
+  characterSheetsMessagesSinceLastCheck?: number;
+  /** Number of recent projected messages kept after durable character context. */
+  characterSheetsTrailingMessageCount?: number;
 }

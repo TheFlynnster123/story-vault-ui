@@ -57,6 +57,10 @@ export class TextGenerationService extends GenerationOrchestrator {
     skipReasoning = false,
   ): Promise<string | undefined> {
     return this.orchestrate(async () => {
+      await d
+        .CharacterSheetGenerationService(this.chatId)
+        .maybeGenerateForNewPrimaryCharacters();
+
       d.PlanGenerationService(this.chatId).onMessageSent();
 
       if (!skipReasoning && (await this.shouldGenerateReasoning())) {

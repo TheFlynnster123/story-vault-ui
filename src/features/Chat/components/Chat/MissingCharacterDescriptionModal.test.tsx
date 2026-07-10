@@ -27,7 +27,7 @@ describe("MissingCharacterDescriptionModal", () => {
     renderModal(false);
 
     expect(
-      screen.queryByText("Character description needed"),
+      screen.queryByText("Character appearance needed"),
     ).not.toBeInTheDocument();
   });
 
@@ -35,10 +35,10 @@ describe("MissingCharacterDescriptionModal", () => {
     renderModal(true);
 
     expect(
-      screen.getByText("Character description needed"),
+      screen.getByText("Character appearance needed"),
     ).toBeInTheDocument();
     expect(screen.getByText(/Sarah Chen/)).toBeInTheDocument();
-    expect(screen.getByText("Generate Description")).toBeInTheDocument();
+    expect(screen.getByText("Generate Appearance")).toBeInTheDocument();
     expect(screen.getByText("Create Manually")).toBeInTheDocument();
     expect(screen.getByText("Skip for now")).toBeInTheDocument();
   });
@@ -47,7 +47,7 @@ describe("MissingCharacterDescriptionModal", () => {
     const user = userEvent.setup();
     const { onGenerate } = renderModal(true);
 
-    await user.click(screen.getByText("Generate Description"));
+    await user.click(screen.getByText("Generate Appearance"));
 
     expect(onGenerate).toHaveBeenCalledTimes(1);
   });

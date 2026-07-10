@@ -269,8 +269,8 @@ export const SystemPromptsEditor: React.FC = () => {
       <PromptSection>
         <PromptInput
           id="characterDescriptionPrompt"
-          label="Character Description Prompt"
-          helpText="This prompt instructs the AI to generate comma-separated, appearance-only character descriptors for consistent image generation."
+          label="Character Appearance Prompt"
+          helpText="This prompt instructs the AI to generate comma-separated, appearance-only character traits for consistent image generation."
           value={localPrompts.characterDescriptionPrompt || ""}
           isHighlighted={highlightedPrompt === "characterDescriptionPrompt"}
           onChange={(value) =>
@@ -279,7 +279,7 @@ export const SystemPromptsEditor: React.FC = () => {
           onReset={() =>
             handleResetClick(
               "characterDescriptionPrompt",
-              "Character Description Prompt",
+              "Character Appearance Prompt",
             )
           }
           icon={<LuUser size={18} color="orange" />}
@@ -307,7 +307,49 @@ export const SystemPromptsEditor: React.FC = () => {
               ),
             )
           }
-          label="Character Description Model"
+          label="Character Appearance Model"
+          withDescription={false}
+        />
+      </PromptSection>
+
+      <PromptSection>
+        <PromptInput
+          id="characterSheetPrompt"
+          label="Character Sheet Prompt"
+          helpText="This prompt identifies newly introduced primary characters and generates concise narrative continuity sheets. The result is injected into text-chat context, not image prompts."
+          value={localPrompts.characterSheetPrompt || ""}
+          isHighlighted={highlightedPrompt === "characterSheetPrompt"}
+          onChange={(value) => handlePromptChange({ characterSheetPrompt: value })}
+          onReset={() =>
+            handleResetClick("characterSheetPrompt", "Character Sheet Prompt")
+          }
+          minRows={8}
+          icon={<LuUser size={18} color="orange" />}
+        />
+        <ModelSelect
+          value={localPrompts.characterSheetModel || ""}
+          onChange={(value) =>
+            handlePromptChange(
+              buildModelPromptPatch(
+                "characterSheetModel",
+                "characterSheetRequestSettings",
+                value,
+                localPrompts.characterSheetRequestSettings,
+              ),
+            )
+          }
+          requestSettings={localPrompts.characterSheetRequestSettings}
+          onRequestSettingsChange={(requestSettings) =>
+            handlePromptChange(
+              buildModelPromptPatch(
+                "characterSheetModel",
+                "characterSheetRequestSettings",
+                localPrompts.characterSheetModel || null,
+                requestSettings,
+              ),
+            )
+          }
+          label="Character Sheet Model"
           withDescription={false}
         />
       </PromptSection>
