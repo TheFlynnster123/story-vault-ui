@@ -10,6 +10,9 @@ import { GlobalStyles } from "./index.styled";
 import { Auth0Provider } from "@auth0/auth0-react";
 import Config from "./services/Config";
 import { Notifications } from "@mantine/notifications";
+import { getErrorDiagnosticsInstance } from "./services/ErrorDiagnostics";
+
+getErrorDiagnosticsInstance().installConsoleCapture();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

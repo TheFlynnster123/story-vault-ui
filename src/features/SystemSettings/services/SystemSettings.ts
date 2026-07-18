@@ -12,7 +12,6 @@ export interface ChatGenerationSettings extends OpenRouterRequestSettings {
 
 export interface OpenRouterMonitoringSettings {
   trackedRequestLimit?: number;
-  hideMessageBodiesByDefault?: boolean;
 }
 
 export interface ChapterCompressionSettings {

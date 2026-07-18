@@ -382,6 +382,8 @@ export class OpenRouterChatAPI {
     return new OpenRouterError(
       httpStatus,
       body || `Request failed with status ${httpStatus}`,
+      undefined,
+      body,
     );
   }
 
@@ -450,7 +452,8 @@ const buildTrackedFailure = (
 > => ({
   status: "error",
   responseCharCount: 0,
-  responseContent: "",
+  responseContent:
+    error instanceof OpenRouterError ? error.responseBody ?? error.apiMessage : "",
   httpStatus: error instanceof OpenRouterError ? error.code : undefined,
   errorMessage: error instanceof Error ? error.message : String(error),
 });

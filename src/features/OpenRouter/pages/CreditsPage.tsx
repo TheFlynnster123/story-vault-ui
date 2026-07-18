@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Title,
@@ -12,18 +12,14 @@ import {
   Divider,
   Tooltip,
   Box,
-  Button,
   NumberInput,
   Select,
   SimpleGrid,
-  Switch,
 } from "@mantine/core";
 import {
   RiArrowLeftLine,
   RiRefreshLine,
-  RiArrowDownSLine,
-  RiArrowUpSLine,
-  RiFileCopyLine,
+  RiArrowRightSLine,
   RiSettings3Line,
 } from "react-icons/ri";
 import {
@@ -38,15 +34,13 @@ import { useOpenRouterCredits } from "../hooks/useOpenRouterCredits";
 import { useRequestTracker } from "../hooks/useRequestTracker";
 import { useSystemSettings } from "../../SystemSettings/hooks/useSystemSettings";
 import { d } from "../../../services/Dependencies";
-import type {
-  TrackedRequest,
-  TrackedMessage,
-} from "../services/RequestTracker";
+import type { TrackedRequest } from "../services/RequestTracker";
 import {
   MAX_TRACKED_REQUEST_LIMIT,
   MIN_TRACKED_REQUEST_LIMIT,
   normalizeTrackedRequestLimit,
 } from "../services/RequestTracker";
+import { getRequestInspectorInstance } from "../services/RequestInspector";
 
 const formatCurrencyShort = (amount: number): string => `$${amount.toFixed(2)}`;
 
@@ -172,8 +166,6 @@ export const CreditsPage: React.FC = () => {
   const trackedRequestLimit = normalizeTrackedRequestLimit(
     monitoringSettings?.trackedRequestLimit,
   );
-  const hideMessageBodiesByDefault =
-    monitoringSettings?.hideMessageBodiesByDefault ?? false;
 
   const visibleRequests = useMemo(
     () => sortRequests(filterRequests(requests, statusFilter, typeFilter), sortBy),
@@ -259,15 +251,11 @@ export const CreditsPage: React.FC = () => {
             typeFilter={typeFilter}
             sortBy={sortBy}
             trackedRequestLimit={trackedRequestLimit}
-            hideMessageBodiesByDefault={hideMessageBodiesByDefault}
             onStatusFilterChange={setStatusFilter}
             onTypeFilterChange={setTypeFilter}
             onSortChange={setSortBy}
             onTrackedRequestLimitChange={(limit) =>
               handleMonitoringChange({ trackedRequestLimit: limit })
-            }
-            onHideMessageBodiesByDefaultChange={(hide) =>
-              handleMonitoringChange({ hideMessageBodiesByDefault: hide })
             }
           />
 
@@ -281,10 +269,7 @@ export const CreditsPage: React.FC = () => {
             style={{ borderColor: "rgba(255,255,255,0.1)" }}
           />
 
-          <RecentRequestsList
-            requests={visibleRequests}
-            hideMessageBodiesByDefault={hideMessageBodiesByDefault}
-          />
+          <RecentRequestsList requests={visibleRequests} />
         </Stack>
       </Paper>
     </Page>
@@ -487,12 +472,10 @@ interface MonitoringControlsProps {
   typeFilter: RequestTypeFilter;
   sortBy: RequestSort;
   trackedRequestLimit: number;
-  hideMessageBodiesByDefault: boolean;
   onStatusFilterChange: (value: RequestStatusFilter) => void;
   onTypeFilterChange: (value: RequestTypeFilter) => void;
   onSortChange: (value: RequestSort) => void;
   onTrackedRequestLimitChange: (value: number) => void;
-  onHideMessageBodiesByDefaultChange: (value: boolean) => void;
 }
 
 const MonitoringControls: React.FC<MonitoringControlsProps> = ({
@@ -500,12 +483,10 @@ const MonitoringControls: React.FC<MonitoringControlsProps> = ({
   typeFilter,
   sortBy,
   trackedRequestLimit,
-  hideMessageBodiesByDefault,
   onStatusFilterChange,
   onTypeFilterChange,
   onSortChange,
   onTrackedRequestLimitChange,
-  onHideMessageBodiesByDefaultChange,
 }) => (
   <Paper p="sm" style={pageStyles.controlsCard}>
     <Group align="end" gap="sm" wrap="wrap">
@@ -560,14 +541,6 @@ const MonitoringControls: React.FC<MonitoringControlsProps> = ({
           )
         }
         style={{ width: 140 }}
-      />
-      <Switch
-        label="Hide bodies by default"
-        size="sm"
-        checked={hideMessageBodiesByDefault}
-        onChange={(event) =>
-          onHideMessageBodiesByDefaultChange(event.currentTarget.checked)
-        }
       />
     </Group>
   </Paper>
@@ -772,12 +745,10 @@ const MetricBlock: React.FC<MetricBlockProps> = ({
 
 interface RecentRequestsListProps {
   requests: TrackedRequest[];
-  hideMessageBodiesByDefault: boolean;
 }
 
 const RecentRequestsList: React.FC<RecentRequestsListProps> = ({
   requests,
-  hideMessageBodiesByDefault,
 }) => {
   if (requests.length === 0)
     return (
@@ -789,28 +760,14 @@ const RecentRequestsList: React.FC<RecentRequestsListProps> = ({
 
   return (
     <Stack gap="xs">
-      {requests.map((req) => (
-        <RequestRow
-          key={req.id}
-          request={req}
-          hideMessageBodiesByDefault={hideMessageBodiesByDefault}
-        />
-      ))}
+      {requests.map((req) => <RequestRow key={req.id} request={req} />)}
     </Stack>
   );
 };
 
 const RequestRow: React.FC<{
   request: TrackedRequest;
-  hideMessageBodiesByDefault: boolean;
-}> = ({ request, hideMessageBodiesByDefault }) => {
-  const [expanded, setExpanded] = useState(false);
-  const [showBodies, setShowBodies] = useState(!hideMessageBodiesByDefault);
-
-  useEffect(() => {
-    setShowBodies(!hideMessageBodiesByDefault);
-  }, [hideMessageBodiesByDefault]);
-
+}> = ({ request }) => {
   // Prefer real token/cost data from the API; fall back to char-based estimates.
   const hasActualTokens =
     request.promptTokens !== undefined &&
@@ -863,7 +820,16 @@ const RequestRow: React.FC<{
         gap="md"
         p="sm"
         style={{ cursor: "pointer" }}
-        onClick={() => setExpanded((v) => !v)}
+        role="button"
+        tabIndex={0}
+        aria-label={`Inspect ${request.label} request`}
+        onClick={() => getRequestInspectorInstance().open(request.id)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            getRequestInspectorInstance().open(request.id);
+          }
+        }}
       >
         <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
           <Box style={{ flexShrink: 0 }}>{getRequestIcon(request)}</Box>
@@ -946,225 +912,12 @@ const RequestRow: React.FC<{
           <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
             {formatTimeAgo(request.timestamp)}
           </Text>
-          {expanded ? (
-            <RiArrowUpSLine size={16} color="rgba(255,255,255,0.4)" />
-          ) : (
-            <RiArrowDownSLine size={16} color="rgba(255,255,255,0.4)" />
-          )}
+          <RiArrowRightSLine size={16} color="rgba(255,255,255,0.4)" />
         </Group>
       </Group>
-
-      {expanded && (
-        <Box
-          px="sm"
-          pb="sm"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-        >
-          <Stack gap="sm" pt="sm">
-            <Group gap="xs" justify="space-between">
-              <Group gap="xs">
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  leftSection={<RiFileCopyLine size={13} />}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    copyDebugBundle(request);
-                  }}
-                >
-                  Copy debug
-                </Button>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowBodies((current) => !current);
-                  }}
-                >
-                  {showBodies ? "Hide bodies" : "Show bodies"}
-                </Button>
-              </Group>
-            </Group>
-            <RequestSettingsBlock request={request} />
-            {isError && request.errorMessage && (
-              <ErrorBlock message={request.errorMessage} />
-            )}
-            {showBodies ? (
-              <>
-                <MessageList messages={request.inputMessages} />
-                <ResponseBlock content={request.responseContent} />
-              </>
-            ) : (
-              <Text size="xs" c="dimmed">
-                Message bodies hidden.
-              </Text>
-            )}
-          </Stack>
-        </Box>
-      )}
     </Paper>
   );
 };
-
-const roleLabelColor = (role: string): string => {
-  if (role === "user") return Theme.messages.user.background;
-  if (role === "assistant") return Theme.messages.assistant.background;
-  return "rgba(180,180,180,0.8)";
-};
-
-const copyDebugBundle = (request: TrackedRequest): void => {
-  const bundle = {
-    id: request.id,
-    status: request.status,
-    label: request.label,
-    type: request.type,
-    model: request.model,
-    timestamp: request.timestamp.toISOString(),
-    durationMs: request.durationMs,
-    timeToFirstTokenMs: request.timeToFirstTokenMs,
-    httpStatus: request.httpStatus,
-    errorMessage: request.errorMessage,
-    usage: {
-      cost: request.actualCost,
-      promptTokens: request.promptTokens,
-      completionTokens: request.completionTokens,
-      reasoningTokens: request.reasoningTokens,
-    },
-    requestSettings: request.requestSettings,
-    inputMessages: request.inputMessages,
-    responseContent: request.responseContent,
-  };
-
-  navigator.clipboard?.writeText(JSON.stringify(bundle, null, 2));
-};
-
-const RequestSettingsBlock: React.FC<{ request: TrackedRequest }> = ({
-  request,
-}) => {
-  if (!request.requestSettings || Object.keys(request.requestSettings).length === 0)
-    return null;
-
-  return (
-    <Stack gap={4}>
-      <Text
-        size="xs"
-        c="dimmed"
-        tt="uppercase"
-        fw={700}
-        style={{ letterSpacing: "0.07em" }}
-      >
-        Effective Settings
-      </Text>
-      <Box p="xs" style={pageStyles.debugBlock}>
-        <Text
-          component="pre"
-          size="xs"
-          c="dimmed"
-          style={{
-            margin: 0,
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            fontFamily: "monospace",
-          }}
-        >
-          {JSON.stringify(request.requestSettings, null, 2)}
-        </Text>
-      </Box>
-    </Stack>
-  );
-};
-
-const ErrorBlock: React.FC<{ message: string }> = ({ message }) => (
-  <Stack gap={4}>
-    <Text
-      size="xs"
-      c="red"
-      tt="uppercase"
-      fw={700}
-      style={{ letterSpacing: "0.07em" }}
-    >
-      Error
-    </Text>
-    <Box p="xs" style={{ ...pageStyles.debugBlock, borderLeft: "3px solid rgba(244, 67, 54, 0.8)" }}>
-      <Text size="xs" c="red" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-        {message}
-      </Text>
-    </Box>
-  </Stack>
-);
-
-const MessageList: React.FC<{ messages: TrackedMessage[] }> = ({
-  messages,
-}) => (
-  <Stack gap={4}>
-    <Text
-      size="xs"
-      c="dimmed"
-      tt="uppercase"
-      fw={700}
-      style={{ letterSpacing: "0.07em" }}
-    >
-      Input Messages
-    </Text>
-    {messages.map((msg, i) => (
-      <Box
-        key={i}
-        p="xs"
-        style={{
-          backgroundColor: "rgba(0,0,0,0.3)",
-          borderRadius: 4,
-          borderLeft: `3px solid ${roleLabelColor(msg.role)}`,
-        }}
-      >
-        <Text
-          size="xs"
-          fw={700}
-          style={{ color: roleLabelColor(msg.role), marginBottom: 2 }}
-        >
-          {msg.role}
-        </Text>
-        <Text
-          size="xs"
-          c="dimmed"
-          style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-        >
-          {msg.content}
-        </Text>
-      </Box>
-    ))}
-  </Stack>
-);
-
-const ResponseBlock: React.FC<{ content: string }> = ({ content }) => (
-  <Stack gap={4}>
-    <Text
-      size="xs"
-      c="dimmed"
-      tt="uppercase"
-      fw={700}
-      style={{ letterSpacing: "0.07em" }}
-    >
-      Response
-    </Text>
-    <Box
-      p="xs"
-      style={{
-        backgroundColor: "rgba(0,0,0,0.3)",
-        borderRadius: 4,
-        borderLeft: `3px solid ${Theme.credits.primary}`,
-      }}
-    >
-      <Text
-        size="xs"
-        c="dimmed"
-        style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-      >
-        {content}
-      </Text>
-    </Box>
-  </Stack>
-);
 
 const pageStyles = {
   paper: {
@@ -1194,10 +947,5 @@ const pageStyles = {
   requestRow: {
     backgroundColor: "rgba(40, 40, 40, 0.5)",
     border: "1px solid rgba(255, 255, 255, 0.06)",
-  },
-  debugBlock: {
-    backgroundColor: "rgba(0,0,0,0.3)",
-    borderRadius: 4,
-    borderLeft: "3px solid rgba(180,180,180,0.45)",
   },
 } as const;
