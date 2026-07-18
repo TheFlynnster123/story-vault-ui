@@ -13,7 +13,6 @@ import type {
   AgentClarificationChatMessage,
   BookChatMessage,
   ChapterChatMessage,
-  CivitJobChatMessage,
   NoteChatMessage,
   PlanChatMessage,
   StoryChatMessage,
@@ -41,11 +40,11 @@ export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
     );
   }
 
-  if (message.type === "civit-job" || message.type === "civit-workflow") {
+  if (message.type === "civit-workflow") {
     return (
       <CivitJobMessage
         chatId={chatId}
-        message={message as CivitJobChatMessage | CivitWorkflowChatMessage}
+        message={message as CivitWorkflowChatMessage}
         isLastMessage={isLastMessage}
       />
     );

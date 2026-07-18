@@ -5,6 +5,8 @@ import type { ImageModelVariant } from "./ImageModelVariant";
 import type { ImageModel } from "./modelGeneration/ImageModel";
 
 const mockGet = vi.fn();
+const mockLegacyGet = vi.fn();
+const mockLegacyDelete = vi.fn();
 const mockSave = vi.fn();
 const mockSaveDebounced = vi.fn();
 const mockSavePendingChanges = vi.fn();
@@ -23,6 +25,10 @@ vi.mock("../../../services/Dependencies", () => ({
       savePendingChanges: mockSavePendingChanges,
       subscribe: mockSubscribe,
       isLoading: mockIsLoading,
+    })),
+    ChatImageModelsManagedBlob: vi.fn(() => ({
+      get: mockLegacyGet,
+      delete: mockLegacyDelete,
     })),
     ErrorService: vi.fn(() => ({
       log: mockLog,
@@ -75,6 +81,13 @@ describe("ChatImageVariantService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGet.mockResolvedValue(undefined);
+    mockLegacyGet.mockResolvedValue(undefined);
+    mockLegacyDelete.mockResolvedValue(undefined);
+    mockGetAllImageModels.mockResolvedValue({
+      selectedModelId: "parent-1",
+      models: [makeModel("parent-1")],
+    });
+    mockSave.mockResolvedValue(undefined);
     mockSaveDebounced.mockResolvedValue(undefined);
     service = new ChatImageVariantService("chat-1");
   });
@@ -95,12 +108,69 @@ describe("ChatImageVariantService", () => {
       expect(result).toEqual(data);
     });
 
-    it("returns empty defaults when blob is null", async () => {
+    it("persists empty defaults when no older settings exist", async () => {
       mockGet.mockResolvedValue(null);
 
       const result = await service.GetAll();
 
       expect(result).toEqual(makeEmpty());
+      expect(mockSave).toHaveBeenCalledWith(makeEmpty());
+    });
+
+    it("migrates older chat models into variants and preserves selection", async () => {
+      const parent = makeModel("parent-1");
+      const legacyModel = {
+        ...makeModel("legacy-1"),
+        name: "Older Portrait Model",
+      };
+      mockLegacyGet.mockResolvedValue({
+        selectedModelId: "legacy-1",
+        models: [legacyModel],
+      });
+      mockGetAllImageModels.mockResolvedValue({
+        selectedModelId: "parent-1",
+        models: [parent],
+      });
+
+      const result = await service.GetAll();
+
+      expect(result.selectedVariantId).toBe("migrated-legacy-1");
+      expect(result.variants).toEqual([
+        expect.objectContaining({
+          id: "migrated-legacy-1",
+          name: "Older Portrait Model",
+          parentModelId: "parent-1",
+          overrides: expect.objectContaining({
+            input: legacyModel.input,
+          }),
+        }),
+      ]);
+      expect(result.legacyMigration).toEqual(
+        expect.objectContaining({ status: "migrated" }),
+      );
+      expect(mockSave).toHaveBeenCalledWith(result);
+      expect(mockLegacyDelete).toHaveBeenCalled();
+    });
+
+    it("returns a user-facing fallback when migration has no usable parent", async () => {
+      mockLegacyGet.mockResolvedValue({
+        selectedModelId: "legacy-1",
+        models: [makeModel("legacy-1")],
+      });
+      mockGetAllImageModels.mockResolvedValue({
+        selectedModelId: "",
+        models: [],
+      });
+
+      const result = await service.GetAll();
+
+      expect(result.variants).toEqual([]);
+      expect(result.legacyMigration).toEqual(
+        expect.objectContaining({
+          status: "partial",
+          message: expect.stringContaining("system default"),
+        }),
+      );
     });
   });
 

@@ -14,7 +14,6 @@ import {
 } from "@mantine/core";
 import { RiSettings3Line } from "react-icons/ri";
 import { LuSparkles } from "react-icons/lu";
-import { v4 as uuidv4 } from "uuid";
 import { d } from "../../../../../services/Dependencies";
 import { Theme } from "../../../../../components/Theme";
 import type {
@@ -26,7 +25,8 @@ import { FlowButton } from "./FlowButton";
 import { FlowStyles } from "./FlowStyles";
 import { useLongPress } from "../../../hooks/useLongPress";
 import { CreateNoteModal } from "../ChatControls/CreateNoteModal";
-import { CreateChapterModal } from "../ChatControls/CreateChapterModal";
+import { useChapterCreation } from "../ChatControls/ChapterCreationContext";
+import { executeAgentFlowAction } from "../../../services/AgentFlow/AgentFlowActionExecutor";
 
 interface AgentFlowSectionProps {
   chatId: string;
@@ -42,6 +42,7 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
   onNavigateToSettings,
 }) => {
   const agentFlowService = d.AgentFlowService(chatId);
+  const chapterCreation = useChapterCreation();
   const [suggestion, setSuggestion] = useState<AgentFlowSuggestion | null>(
     agentFlowService.CurrentSuggestion,
   );
@@ -57,13 +58,6 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     hasExpiration: false,
     expiresAfterMessages: 10,
   });
-  const [chapterDraft, setChapterDraft] = useState({
-    opened: false,
-    title: "",
-    summary: "",
-    isGeneratingTitle: false,
-    isCreating: false,
-  });
   const [clarificationDraft, setClarificationDraft] = useState({
     opened: false,
     question: "",
@@ -77,7 +71,14 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
       setSuggestion(agentFlowService.CurrentSuggestion);
       setIsLoading(agentFlowService.IsLoading);
     };
-    return agentFlowService.subscribe(updateState);
+    const unsubscribe = agentFlowService.subscribe(updateState);
+
+    void agentFlowService.initialize().catch((error) => {
+      d.ErrorService().log("Failed to load Agent Flow suggestions", error);
+      setStatus("Could not load pending suggestions.");
+    });
+
+    return unsubscribe;
   }, [agentFlowService]);
 
   const analyzeFlow = async (selectedIntent?: AgentIntent) => {
@@ -113,21 +114,30 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     setRunningActionIndex(index);
     setStatus(null);
     try {
-      const result = await executeAction(
-        chatId,
-        action,
-        onNavigateToMemories,
-        onNavigateToPlans,
+      const result = await executeAgentFlowAction(chatId, action, {
+        openMemories: onNavigateToMemories,
+        openPlans: onNavigateToPlans,
         openNoteDraft,
-        openChapterDraft,
+        openChapterDraft: chapterCreation.openEditor,
         openClarificationDraft,
-      );
+      });
+      await agentFlowService.resolveAction(index);
       setStatus(result);
     } catch (error) {
       d.ErrorService().log("Failed to run agent action", error);
       setStatus("Action failed.");
     } finally {
       setRunningActionIndex(null);
+    }
+  };
+
+  const dismissSuggestion = async () => {
+    try {
+      await agentFlowService.dismissSuggestion();
+      setStatus("Suggestions dismissed.");
+    } catch (error) {
+      d.ErrorService().log("Failed to dismiss agent suggestions", error);
+      setStatus("Could not dismiss suggestions.");
     }
   };
 
@@ -183,58 +193,8 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     setStatus("Note added.");
   };
 
-  const openChapterDraft = (title: string = "", summary: string = "") => {
-    setChapterDraft({
-      opened: true,
-      title,
-      summary,
-      isGeneratingTitle: false,
-      isCreating: false,
-    });
-  };
-
-  const closeChapterDraft = () => {
-    setChapterDraft((draft) => ({ ...draft, opened: false }));
-  };
-
-  const submitChapterDraft = async () => {
-    const title = chapterDraft.title.trim();
-    const summary = chapterDraft.summary.trim();
-    if (!title || !summary) return;
-
-    setChapterDraft((draft) => ({ ...draft, isCreating: true }));
-    try {
-      await d.ChatService(chatId).AddChapter(title, summary);
-      closeChapterDraft();
-      setStatus("Chapter created.");
-    } finally {
-      setChapterDraft((draft) => ({ ...draft, isCreating: false }));
-    }
-  };
-
-  const generateChapterDraft = async () => {
-    setChapterDraft((draft) => ({ ...draft, isCreating: true }));
-    try {
-      const title = await d
-        .ChapterGenerationService(chatId)
-        .generateChapterTitle();
-      if (title) {
-        setChapterDraft((draft) => ({ ...draft, title }));
-      }
-
-      const summary = await d
-        .ChapterGenerationService(chatId)
-        .generateChapterSummary();
-      if (summary) {
-        setChapterDraft((draft) => ({ ...draft, summary }));
-      }
-    } finally {
-      setChapterDraft((draft) => ({ ...draft, isCreating: false }));
-    }
-  };
-
   return (
-    <Box>
+    <Box id={`agent-flow-${chatId}`}>
       <Box
         style={{
           display: "flex",
@@ -319,23 +279,6 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
         onCancel={closeNoteDraft}
       />
 
-      <CreateChapterModal
-        opened={chapterDraft.opened}
-        title={chapterDraft.title}
-        summary={chapterDraft.summary}
-        isGeneratingTitle={chapterDraft.isGeneratingTitle}
-        isCreating={chapterDraft.isCreating}
-        onTitleChange={(title) =>
-          setChapterDraft((draft) => ({ ...draft, title }))
-        }
-        onSummaryChange={(summary) =>
-          setChapterDraft((draft) => ({ ...draft, summary }))
-        }
-        onGenerate={generateChapterDraft}
-        onSubmit={submitChapterDraft}
-        onCancel={closeChapterDraft}
-      />
-
       <AgentClarificationModal
         opened={clarificationDraft.opened}
         question={clarificationDraft.question}
@@ -368,29 +311,40 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
                   No workflow action recommended.
                 </Text>
               ) : (
-                suggestion.proposedActions.map((action, index) => (
-                  <Box key={`${action.tool}-${index}`}>
-                    <Group justify="space-between" gap="xs" wrap="nowrap">
-                      <Box style={{ minWidth: 0, flex: 1 }}>
-                        <Text size="xs" fw={600}>
-                          {action.title || labelTool(action.tool)}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {action.reason}
-                        </Text>
-                      </Box>
-                      <Button
-                        size="compact-xs"
-                        variant="light"
-                        color="gray"
-                        loading={runningActionIndex === index}
-                        onClick={() => runAction(action, index)}
-                      >
-                        {getActionButtonLabel(action)}
-                      </Button>
-                    </Group>
-                  </Box>
-                ))
+                <>
+                  {suggestion.proposedActions.map((action, index) => (
+                    <Box key={`${action.tool}-${index}`}>
+                      <Group justify="space-between" gap="xs" wrap="nowrap">
+                        <Box style={{ minWidth: 0, flex: 1 }}>
+                          <Text size="xs" fw={600}>
+                            {action.title || labelTool(action.tool)}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {action.reason}
+                          </Text>
+                        </Box>
+                        <Button
+                          size="compact-xs"
+                          variant="light"
+                          color="gray"
+                          loading={runningActionIndex === index}
+                          onClick={() => runAction(action, index)}
+                        >
+                          {getActionButtonLabel(action)}
+                        </Button>
+                      </Group>
+                    </Box>
+                  ))}
+                  <Button
+                    size="compact-xs"
+                    variant="subtle"
+                    color="gray"
+                    onClick={dismissSuggestion}
+                    style={{ alignSelf: "flex-start" }}
+                  >
+                    Dismiss suggestions
+                  </Button>
+                </>
               )}
             </Stack>
           )}
@@ -560,108 +514,6 @@ const AgentClarificationModal: React.FC<AgentClarificationModalProps> = ({
     </Stack>
   </Modal>
 );
-
-const executeAction = async (
-  chatId: string,
-  action: AgentFlowAction,
-  onNavigateToMemories: () => void,
-  onNavigateToPlans: () => void,
-  openNoteDraft: (content?: string) => void,
-  openChapterDraft: (title?: string, summary?: string) => void,
-  openClarificationDraft: (question: string, options?: string[]) => void,
-): Promise<string> => {
-  switch (action.tool) {
-    case "save_memory": {
-      const content = getStringArg(action, "content");
-      if (!content) {
-        onNavigateToMemories();
-        return "Opened memories.";
-      }
-      await d.MemoriesService(chatId).saveMemory({
-        id: uuidv4(),
-        content,
-      });
-      return "Memory saved.";
-    }
-    case "add_note": {
-      const content = getStringArg(action, "content");
-      if (!content) {
-        openNoteDraft();
-        return "Opened note editor.";
-      }
-      await d
-        .ChatService(chatId)
-        .AddNote(content, getNumberArg(action, "expiresAfterMessages"));
-      return "Note added.";
-    }
-    case "generate_image":
-      await d.ImageGenerationService(chatId).generateImage();
-      return "Image generation started.";
-    case "refresh_plan": {
-      const planId =
-        getStringArg(action, "planId") ||
-        getStringArg(action, "planDefinitionId");
-      if (!planId) {
-        onNavigateToPlans();
-        return "Opened plans.";
-      }
-      await d.PlanGenerationService(chatId).generatePlanNow(planId);
-      return "Plan refresh started.";
-    }
-    case "create_chapter": {
-      const title = getStringArg(action, "title");
-      const summary = getStringArg(action, "summary");
-      if (!title || !summary) {
-        openChapterDraft(title, summary);
-        return "Opened chapter editor.";
-      }
-      await d.ChatService(chatId).AddChapter(title, summary ?? "");
-      return "Chapter created.";
-    }
-    case "ask_user":
-      openClarificationDraft(
-        getStringArg(action, "question") || action.reason,
-        getStringArrayArg(action, "options") ||
-          getStringArrayArg(action, "answers") ||
-          getStringArrayArg(action, "choices") ||
-          [],
-      );
-      return "Opened clarification prompt.";
-  }
-};
-
-const getStringArg = (
-  action: AgentFlowAction,
-  key: string,
-): string | undefined => {
-  const value = action.args[key];
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-};
-
-const getNumberArg = (
-  action: AgentFlowAction,
-  key: string,
-): number | null => {
-  const value = action.args[key];
-  if (value === null || value === undefined) return null;
-  const numeric = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-};
-
-const getStringArrayArg = (
-  action: AgentFlowAction,
-  key: string,
-): string[] | undefined => {
-  const value = action.args[key];
-  if (!Array.isArray(value)) return undefined;
-
-  const options = value.filter(
-    (option): option is string =>
-      typeof option === "string" && option.trim().length > 0,
-  );
-
-  return options.length > 0 ? options : undefined;
-};
 
 const labelIntent = (intent: AgentFlowSuggestion["intent"]): string =>
   intent

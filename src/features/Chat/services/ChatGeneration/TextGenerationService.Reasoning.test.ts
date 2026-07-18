@@ -19,10 +19,6 @@ describe("TextGenerationService reasoning", () => {
       onMessageSent: vi.fn(),
     } as unknown as ReturnType<typeof d.PlanGenerationService>);
 
-    vi.mocked(d.CharacterSheetGenerationService).mockReturnValue({
-      maybeGenerateForNewPrimaryCharacters: vi.fn().mockResolvedValue(0),
-    } as unknown as ReturnType<typeof d.CharacterSheetGenerationService>);
-
     vi.mocked(d.ChatSettingsService).mockReturnValue({
       Get: vi.fn().mockResolvedValue({ reasoningEnabled: true }),
     } as unknown as ReturnType<typeof d.ChatSettingsService>);
@@ -31,7 +27,9 @@ describe("TextGenerationService reasoning", () => {
       buildReasoningRequestMessages: vi
         .fn()
         .mockResolvedValue(mockReasoningMessages),
-      buildGenerationRequestMessages: vi.fn().mockResolvedValue(mockRequestMessages),
+      buildGenerationRequestMessages: vi
+        .fn()
+        .mockResolvedValue(mockRequestMessages),
     } as unknown as ReturnType<typeof d.LLMMessageContextService>);
 
     vi.mocked(d.UserChatProjection).mockReturnValue({
@@ -56,10 +54,6 @@ describe("TextGenerationService reasoning", () => {
 
     await service.generateResponse();
 
-    expect(
-      d.CharacterSheetGenerationService(CHAT_ID)
-        .maybeGenerateForNewPrimaryCharacters,
-    ).toHaveBeenCalled();
     expect(
       d.LLMMessageContextService(CHAT_ID).buildReasoningRequestMessages,
     ).toHaveBeenCalled();

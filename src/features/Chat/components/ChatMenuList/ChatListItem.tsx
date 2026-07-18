@@ -4,7 +4,7 @@ import { useChatSettings } from "../../hooks/useChatSettings";
 
 interface IChatListItemProps {
   chatId: string;
-  onClick: () => any;
+  onClick: () => void;
   gradientIndex: number;
 }
 
@@ -22,7 +22,7 @@ export const ChatListItem = ({
 
   const hasBackgroundImage = !!backgroundPhotoBase64;
   const isCardLoading = isLoading || isBackgroundPhotoLoading;
-  const title = chatSettings?.chatTitle ?? chatId;
+  const title = chatSettings?.chatTitle?.trim() || "Untitled chat";
 
   if (isCardLoading) {
     return (

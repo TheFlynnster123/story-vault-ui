@@ -106,8 +106,7 @@ Each call site resolves the LLM model in this order:
 
 | Caller | File | Method | Model Source |
 |--------|------|--------|-------------|
-| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterSummary()` | `SystemPrompts.chapterSummaryModel` |
-| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterTitle()` | `SystemPrompts.chapterTitleModel` |
+| `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterDraft()` | `SystemPrompts.chapterSummaryModel` |
 
 ### Image Prompt Generation
 

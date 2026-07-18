@@ -14,7 +14,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireOpenRouterKey = true,
 }) => {
   const { isLoading, isAuthenticated } = useAuth0();
-  const { hasValidOpenRouterKey } = useOpenRouterKey();
+  const { hasValidOpenRouterKey } = useOpenRouterKey(
+    !isLoading && isAuthenticated,
+  );
   const location = useLocation();
 
   useAuth0Setup();

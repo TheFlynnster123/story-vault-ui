@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commit and Push"
+  short_description: "Build, test, commit, and push changes to dev"
+  default_prompt: "Use $commit-and-push to validate the current work, commit it, and push it to dev."

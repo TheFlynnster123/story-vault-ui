@@ -12,19 +12,11 @@ import {
   BookDeletedEventUtil,
 } from "./events/BookEventUtils";
 import {
-  CivitJobCreatedEventUtil,
-  CivitJobUpdatedEventUtil,
-  type CivitJobExtras,
-} from "./events/CivitJobCreatedEventUtil";
-import {
   CivitWorkflowCreatedEventUtil,
   CivitWorkflowUpdatedEventUtil,
   type CivitWorkflowExtras,
 } from "./events/CivitWorkflowEventUtils";
-import type {
-  CivitJobUpdatedEvent,
-  CivitWorkflowUpdatedEvent,
-} from "./events/ChatEvent";
+import type { CivitWorkflowUpdatedEvent } from "./events/ChatEvent";
 import { MessagesDeletedEventUtil } from "./events/MessagesDeletedEventUtil";
 import { StoryCreatedEventUtil } from "./events/StoryCreatedEventUtil";
 import { StoryEditedEventUtil } from "./events/StoryEditedEventUtil";
@@ -79,15 +71,6 @@ export class ChatService {
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 
-  public async CreateCivitJob(
-    jobId: string,
-    prompt: string,
-    extras?: CivitJobExtras,
-  ): Promise<void> {
-    const event = CivitJobCreatedEventUtil.Create(jobId, prompt, extras);
-    await d.ChatEventService(this.chatId).AddChatEvent(event);
-  }
-
   public async CreateCivitWorkflow(
     messageId: string,
     prompt: string,
@@ -98,14 +81,6 @@ export class ChatService {
       prompt,
       extras,
     );
-    await d.ChatEventService(this.chatId).AddChatEvent(event);
-  }
-
-  public async UpdateCivitJob(
-    messageId: string,
-    patch: CivitJobUpdatedEvent["patch"],
-  ): Promise<void> {
-    const event = CivitJobUpdatedEventUtil.Create(messageId, patch);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 
@@ -140,22 +115,32 @@ export class ChatService {
   }
 
   // ---- Chapter Operations ----
-  public async AddChapter(title: string, summary: string): Promise<string> {
-    const allMessages = d.UserChatProjection(this.chatId).GetMessages();
-    const coveredMessageIds = allMessages
-      .filter(
-        (m) =>
-          m.type !== "chapter" &&
-          m.type !== "story" &&
-          m.type !== "note" &&
-          !m.deleted,
-      )
-      .map((m) => m.id);
+  public async AddChapter(
+    title: string,
+    summary: string,
+    coveredMessageIds?: readonly string[],
+  ): Promise<string> {
+    const resolvedMessageIds = [
+      ...new Set(
+        coveredMessageIds ??
+          d
+            .UserChatProjection(this.chatId)
+            .GetMessages()
+            .filter(
+              (m) =>
+                m.type !== "chapter" &&
+                m.type !== "story" &&
+                m.type !== "note" &&
+                !m.deleted,
+            )
+            .map((m) => m.id),
+      ),
+    ];
 
     const event = ChapterCreatedEventUtil.Create(
       title,
       summary,
-      coveredMessageIds,
+      resolvedMessageIds,
     );
 
     await d.ChatEventService(this.chatId).AddChatEvent(event);

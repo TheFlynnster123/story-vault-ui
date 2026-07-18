@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   ActionIcon,
   Badge,
@@ -15,8 +15,10 @@ import {
   Title,
 } from "@mantine/core";
 import {
+  RiArrowDownLine,
   RiArrowLeftLine,
   RiFileCopyLine,
+  RiHistoryLine,
   RiMessage2Line,
 } from "react-icons/ri";
 import { Page } from "../../../components/Page";
@@ -31,6 +33,13 @@ import type {
 import type {
   UserChatMessage,
 } from "../../../services/CQRS/UserChatProjection";
+import {
+  DEFAULT_INSPECTION_CONTEXT_COUNT,
+  EXPANDED_INSPECTION_CONTEXT_COUNT,
+  getMessageAgeLabel,
+  getRecentContext,
+} from "./messageInspectionContext";
+import { MessageTypeBadge } from "../components/MessageTypeBadge";
 
 interface InspectionState {
   selectedMessage?: UserChatMessage;
@@ -47,6 +56,7 @@ export const ChatMessageInspectionPage: React.FC = () => {
     messageId: string;
   }>();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery("(max-width: 48em)");
   const [isLoading, setIsLoading] = useState(true);
   const [state, setState] = useState<InspectionState>({
     visibleMessages: [],
@@ -98,10 +108,10 @@ export const ChatMessageInspectionPage: React.FC = () => {
   const selectedMessage = state.selectedMessage;
 
   return (
-    <Page>
-      <Paper mt={20} p="xl" style={styles.pageShell}>
-        <Stack gap="lg">
-          <Group justify="space-between" align="center">
+    <Page padding={isMobile ? 4 : "md"}>
+      <Paper mt={isMobile ? 4 : 20} p={isMobile ? "xs" : "xl"} style={styles.pageShell}>
+        <Stack gap={isMobile ? "sm" : "lg"}>
+          <Group justify="space-between" align="center" wrap="wrap">
             <Group gap="sm">
               <ActionIcon
                 variant="subtle"
@@ -147,27 +157,10 @@ export const ChatMessageInspectionPage: React.FC = () => {
                 eventCount={state.events.length}
               />
 
-              <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
-                <ContentPanel title="UI Message">
-                  <MessageContent message={selectedMessage} />
-                </ContentPanel>
-
-                <ContentPanel title="LLM Projection">
-                  {state.llmMessage ? (
-                    <LlmMessageBlock message={state.llmMessage} />
-                  ) : (
-                    <Text size="sm" c="dimmed">
-                      This message does not currently have an LLM projection.
-                    </Text>
-                  )}
-                </ContentPanel>
-              </SimpleGrid>
-
-              <ContentPanel title="Current LLM Context">
-                <ContextList messages={state.llmMessages} selectedId={messageId} />
-              </ContentPanel>
-
-              <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
+              <SimpleGrid
+                cols={{ base: 1, lg: 2 }}
+                spacing={isMobile ? "xs" : "md"}
+              >
                 <ContentPanel title="Message Data">
                   <JsonBlock value={selectedMessage} />
                 </ContentPanel>
@@ -190,6 +183,15 @@ export const ChatMessageInspectionPage: React.FC = () => {
                   )}
                 </ContentPanel>
               </SimpleGrid>
+
+              <ContentPanel title="Current LLM Context">
+                <ContextList
+                  key={messageId}
+                  messages={state.llmMessages}
+                  selectedId={messageId}
+                  isMobile={isMobile}
+                />
+              </ContentPanel>
             </>
           )}
         </Stack>
@@ -231,66 +233,65 @@ const SummaryGrid: React.FC<{
   const visibleIndex = visibleMessages.findIndex((item) => item.id === message.id);
   const words = (message.content ?? "").trim().split(/\s+/).filter(Boolean).length;
   const characters = (message.content ?? "").length;
+  const hiddenReason = getHiddenReason(message);
 
   return (
-    <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="sm">
-      <Metric label="Type" value={message.type} />
-      <Metric
-        label="Timeline"
-        value={timelineIndex === -1 ? "n/a" : `${timelineIndex + 1}/${allMessages.length}`}
-        detail={visibleIndex === -1 ? "not visible" : `visible #${visibleIndex + 1}`}
-      />
-      <Metric
-        label="LLM Context"
-        value={contextIndex === -1 ? "Excluded" : `#${contextIndex + 1}`}
-        valueColor={contextIndex === -1 ? Theme.credits.warning : Theme.credits.primary}
-      />
-      <Metric label="Events" value={String(eventCount)} />
-      <Metric label="Words" value={String(words)} />
-      <Metric label="Characters" value={String(characters)} />
-      <Metric
-        label="Hidden"
-        value={message.hidden || message.hiddenByChapterId || message.hiddenByBookId ? "Yes" : "No"}
-        detail={getHiddenReason(message)}
-      />
-      <Metric
-        label="Deleted"
-        value={message.deleted ? "Yes" : "No"}
-        valueColor={message.deleted ? Theme.credits.error : Theme.credits.primary}
-      />
-    </SimpleGrid>
+    <Paper p={{ base: "xs", sm: "sm" }} style={styles.summaryBar}>
+      <Group gap="xs">
+        <MessageTypeBadge type={message.type} />
+        <Badge color="gray" variant="light">
+          Timeline{" "}
+          {timelineIndex === -1
+            ? "n/a"
+            : `${timelineIndex + 1}/${allMessages.length}`}
+          {" · "}
+          {visibleIndex === -1 ? "not visible" : `visible #${visibleIndex + 1}`}
+        </Badge>
+        <Badge
+          variant="light"
+          style={{
+            color:
+              contextIndex === -1
+                ? Theme.credits.warning
+                : Theme.credits.primary,
+          }}
+        >
+          LLM context{" "}
+          {contextIndex === -1 ? "excluded" : `#${contextIndex + 1}`}
+        </Badge>
+        <Badge color="gray" variant="light">
+          {eventCount} {eventCount === 1 ? "event" : "events"}
+        </Badge>
+        <Badge color="gray" variant="light">
+          {words} {words === 1 ? "word" : "words"}
+        </Badge>
+        <Badge color="gray" variant="light">
+          {characters} {characters === 1 ? "character" : "characters"}
+        </Badge>
+        {hiddenReason && (
+          <Badge
+            variant="light"
+            style={{ color: Theme.credits.warning }}
+          >
+            Hidden · {hiddenReason}
+          </Badge>
+        )}
+        {message.deleted && (
+          <Badge variant="light" style={{ color: Theme.credits.error }}>
+            Deleted
+          </Badge>
+        )}
+      </Group>
+    </Paper>
   );
 };
-
-const Metric: React.FC<{
-  label: string;
-  value: React.ReactNode;
-  valueColor?: string;
-  detail?: React.ReactNode;
-}> = ({ label, value, valueColor = Theme.page.text, detail }) => (
-  <Paper p="sm" style={styles.metricCard}>
-    <Stack gap={2}>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-        {label}
-      </Text>
-      <Text fw={700} style={{ color: valueColor }}>
-        {value}
-      </Text>
-      {detail && (
-        <Text size="xs" c="dimmed">
-          {detail}
-        </Text>
-      )}
-    </Stack>
-  </Paper>
-);
 
 const ContentPanel: React.FC<{
   title: string;
   children: React.ReactNode;
 }> = ({ title, children }) => (
-  <Paper p="md" style={styles.panel}>
-    <Stack gap="sm">
+  <Paper p={{ base: "xs", sm: "md" }} style={styles.panel}>
+    <Stack gap="xs">
       <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
         {title}
       </Text>
@@ -299,44 +300,15 @@ const ContentPanel: React.FC<{
   </Paper>
 );
 
-const MessageContent: React.FC<{ message: UserChatMessage }> = ({ message }) => (
-  <Stack gap="sm">
-    <Group gap="xs">
-      <Badge variant="light">{message.type}</Badge>
-      <Text size="xs" c="dimmed">
-        {message.id}
-      </Text>
-    </Group>
-    {message.content ? (
-      <Box style={styles.markdownBlock}>
-        <ReactMarkdown>{message.content}</ReactMarkdown>
-      </Box>
-    ) : (
-      <Text size="sm" c="dimmed">
-        This message has no text content.
-      </Text>
-    )}
-  </Stack>
-);
-
-const LlmMessageBlock: React.FC<{ message: LLMMessage }> = ({ message }) => (
-  <Stack gap="sm">
-    <Group gap="xs">
-      <Badge color={getRoleColor(message.role)} variant="light">
-        {message.role}
-      </Badge>
-      <Text size="xs" c="dimmed">
-        {message.id ?? "temporary message"}
-      </Text>
-    </Group>
-    <PreBlock>{message.content}</PreBlock>
-  </Stack>
-);
-
 const ContextList: React.FC<{
   messages: LLMMessage[];
   selectedId: string;
-}> = ({ messages, selectedId }) => {
+  isMobile: boolean;
+}> = ({ messages, selectedId, isMobile }) => {
+  const [visibleCount, setVisibleCount] = useState(
+    DEFAULT_INSPECTION_CONTEXT_COUNT,
+  );
+
   if (messages.length === 0) {
     return (
       <Text size="sm" c="dimmed">
@@ -345,45 +317,188 @@ const ContextList: React.FC<{
     );
   }
 
+  const visibleMessages = getRecentContext(messages, visibleCount);
+  const hiddenCount = messages.length - visibleMessages.length;
+
   return (
-    <Stack gap="xs">
-      {messages.map((message, index) => {
-        const isSelected = message.id === selectedId;
-        return (
-          <Paper
-            key={`${message.id ?? "context"}-${index}`}
-            p="sm"
-            style={{
-              ...styles.contextRow,
-              borderColor: isSelected
-                ? "rgba(255, 215, 0, 0.65)"
-                : styles.contextRow.border,
-            }}
-          >
-            <Stack gap="xs">
-              <Group justify="space-between" gap="sm">
-                <Group gap="xs">
-                  <Badge color={getRoleColor(message.role)} variant="light">
-                    {message.role}
-                  </Badge>
-                  {isSelected && (
-                    <Badge color="yellow" variant="light">
-                      selected
-                    </Badge>
-                  )}
-                </Group>
+    <Stack gap={0}>
+      <Paper p={isMobile ? "xs" : "sm"} style={styles.contextToolbar}>
+        <Group justify="space-between" align="flex-start" gap="sm">
+          <Group gap="sm" wrap="nowrap">
+            <Box style={styles.contextToolbarIcon}>
+              <RiHistoryLine size={16} color="var(--mantine-color-gray-3)" />
+            </Box>
+            <Stack gap={1}>
+              <Text size="sm" fw={700}>
+                {visibleMessages.length} of {messages.length} messages
+              </Text>
+              <Group gap={5}>
                 <Text size="xs" c="dimmed">
-                  #{index + 1}
+                  Older
+                </Text>
+                <RiArrowDownLine size={12} color="rgba(255,255,255,0.45)" />
+                <Text size="xs" c="dimmed">
+                  Newer
                 </Text>
               </Group>
-              <Text size="xs" c="dimmed">
-                {message.id ?? "No id"}
-              </Text>
-              <PreBlock compact>{message.content}</PreBlock>
             </Stack>
-          </Paper>
-        );
-      })}
+          </Group>
+          {messages.length > DEFAULT_INSPECTION_CONTEXT_COUNT && (
+            <Group gap="xs" justify="flex-end">
+              {visibleCount <
+                Math.min(EXPANDED_INSPECTION_CONTEXT_COUNT, messages.length) && (
+                <Button
+                  size="compact-xs"
+                  variant="light"
+                  onClick={() =>
+                    setVisibleCount(EXPANDED_INSPECTION_CONTEXT_COUNT)
+                  }
+                >
+                  Show {Math.min(EXPANDED_INSPECTION_CONTEXT_COUNT, messages.length)}
+                </Button>
+              )}
+              {visibleCount < messages.length && (
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  onClick={() => setVisibleCount(messages.length)}
+                >
+                  Show all
+                </Button>
+              )}
+              {visibleCount > DEFAULT_INSPECTION_CONTEXT_COUNT && (
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  onClick={() =>
+                    setVisibleCount(DEFAULT_INSPECTION_CONTEXT_COUNT)
+                  }
+                >
+                  Show latest 3
+                </Button>
+              )}
+            </Group>
+          )}
+        </Group>
+        {hiddenCount > 0 && (
+          <Text size="xs" c="dimmed" mt="xs">
+            {hiddenCount} older messages hidden. Expand from here without
+            losing your place.
+          </Text>
+        )}
+        <Box
+          aria-hidden
+          style={
+            isMobile
+              ? styles.contextToolbarConnectorMobile
+              : styles.contextToolbarConnector
+          }
+        />
+      </Paper>
+
+      <Box
+        style={
+          isMobile ? styles.contextTimelineMobile : styles.contextTimeline
+        }
+      >
+        <Box
+          aria-hidden
+          style={
+            isMobile
+              ? styles.contextTimelineLineMobile
+              : styles.contextTimelineLine
+          }
+        />
+        <Stack gap="sm">
+          {visibleMessages.map((message, index) => {
+            const isSelected = message.id === selectedId;
+            const isGeneratedResponse =
+              isSelected && message.role === "assistant";
+            const contextIndex = hiddenCount + index;
+            const isNewest = contextIndex === messages.length - 1;
+            return (
+              <Box
+                key={`${message.id ?? "context"}-${contextIndex}`}
+                style={
+                  isMobile
+                    ? styles.contextTimelineItemMobile
+                    : styles.contextTimelineItem
+                }
+              >
+                <Text
+                  size="xs"
+                  c="dimmed"
+                  style={isMobile ? styles.contextAgeMobile : styles.contextAge}
+                >
+                  {getMessageAgeLabel(message)}
+                </Text>
+                <Box
+                  aria-hidden
+                  style={{
+                    ...(isMobile
+                      ? styles.contextTimelineDotMobile
+                      : styles.contextTimelineDot),
+                    backgroundColor: isSelected
+                      ? Theme.credits.primary
+                      : roleTimelineColor(message.role),
+                  }}
+                />
+                <Paper
+                  p={isMobile ? "xs" : "sm"}
+                  style={{
+                    ...styles.contextRow,
+                    borderColor: isSelected
+                      ? "rgba(255, 215, 0, 0.65)"
+                      : styles.contextRow.border,
+                  }}
+                >
+                  <Stack gap="xs">
+                    <Group justify="space-between" gap="sm">
+                      <Group gap="xs">
+                        <MessageTypeBadge
+                          type={message.type}
+                          role={message.role}
+                        />
+                        {isGeneratedResponse ? (
+                          <Badge color="green" variant="filled">
+                            generated response
+                          </Badge>
+                        ) : isSelected ? (
+                          <Badge color="yellow" variant="light">
+                            inspected
+                          </Badge>
+                        ) : null}
+                        {isNewest && (
+                          <Badge color="gray" variant="outline">
+                            newest
+                          </Badge>
+                        )}
+                      </Group>
+                      <Text size="xs" c="dimmed">
+                        {contextIndex + 1} / {messages.length}
+                      </Text>
+                    </Group>
+                    <Text size="xs" c="dimmed">
+                      <Text span fw={700}>
+                        Message ID:
+                      </Text>{" "}
+                      {message.id ?? "Temporary message"}
+                    </Text>
+                    <Box
+                      style={{
+                        ...styles.contextContent,
+                        padding: isMobile ? 8 : styles.contextContent.padding,
+                      }}
+                    >
+                      {message.content}
+                    </Box>
+                  </Stack>
+                </Paper>
+              </Box>
+            );
+          })}
+        </Stack>
+      </Box>
     </Stack>
   );
 };
@@ -392,7 +507,7 @@ const EventBlock: React.FC<{ event: ChatEvent; index: number }> = ({
   event,
   index,
 }) => (
-  <Paper p="sm" style={styles.contextRow}>
+  <Paper p={{ base: "xs", sm: "sm" }} style={styles.contextRow}>
     <Stack gap="xs">
       <Group justify="space-between">
         <Badge variant="light">{event.type}</Badge>
@@ -486,10 +601,10 @@ const getHiddenReason = (message: UserChatMessage): string | undefined => {
   return undefined;
 };
 
-const getRoleColor = (role: LLMMessage["role"]): string => {
-  if (role === "user") return "blue";
-  if (role === "assistant") return "green";
-  return "gray";
+const roleTimelineColor = (role: LLMMessage["role"]): string => {
+  if (role === "user") return "var(--mantine-color-blue-5)";
+  if (role === "assistant") return "var(--mantine-color-green-5)";
+  return "var(--mantine-color-gray-5)";
 };
 
 const copyInspectionState = (
@@ -518,24 +633,136 @@ const styles = {
     backgroundColor: "rgba(32, 32, 32, 0.74)",
     border: "1px solid rgba(255, 255, 255, 0.08)",
   },
-  metricCard: {
+  summaryBar: {
     backgroundColor: "rgba(38, 38, 38, 0.78)",
     border: "1px solid rgba(255, 255, 255, 0.07)",
   },
   contextRow: {
-    backgroundColor: "rgba(12, 12, 12, 0.28)",
+    backgroundColor: "rgba(12, 12, 12, 0.42)",
     border: "1px solid rgba(255, 255, 255, 0.06)",
   },
-  markdownBlock: {
-    padding: 12,
-    borderRadius: 6,
-    backgroundColor: "rgba(0, 0, 0, 0.28)",
-    color: Theme.page.text,
+  contextToolbar: {
+    position: "relative",
+    backgroundColor: "rgba(255, 255, 255, 0.025)",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
+    borderBottomColor: "rgba(255, 255, 255, 0.05)",
+    borderBottomLeftRadius: 0,
+  },
+  contextToolbarIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 22,
+    height: 22,
+    flex: "0 0 22px",
+    borderRadius: "50%",
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    border: "1px solid rgba(255, 255, 255, 0.12)",
+  },
+  contextToolbarConnector: {
+    position: "absolute",
+    zIndex: 1,
+    left: 22,
+    bottom: -17,
+    width: 82,
+    height: 17,
+    borderLeft: "2px solid rgba(255, 255, 255, 0.18)",
+    borderBottom: "2px solid rgba(255, 255, 255, 0.18)",
+    borderBottomLeftRadius: 8,
+  },
+  contextToolbarConnectorMobile: {
+    position: "absolute",
+    zIndex: 1,
+    left: 18,
+    bottom: -10,
+    width: 2,
+    height: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+  },
+  contextTimeline: {
+    position: "relative",
+    paddingTop: 16,
+  },
+  contextTimelineMobile: {
+    position: "relative",
+    paddingTop: 10,
+  },
+  contextTimelineLine: {
+    position: "absolute",
+    left: 103,
+    top: 0,
+    bottom: 14,
+    width: 2,
+    borderRadius: 2,
+    background: "rgba(255, 255, 255, 0.18)",
+  },
+  contextTimelineLineMobile: {
+    position: "absolute",
+    left: 18,
+    top: 0,
+    bottom: 14,
+    width: 2,
+    borderRadius: 2,
+    background: "rgba(255, 255, 255, 0.18)",
+  },
+  contextTimelineItem: {
+    position: "relative",
+    paddingLeft: 122,
+  },
+  contextTimelineItemMobile: {
+    position: "relative",
+    paddingLeft: 34,
+  },
+  contextAge: {
+    position: "absolute",
+    left: 0,
+    top: 14,
+    width: 86,
+    textAlign: "right",
+    lineHeight: 1.25,
+  },
+  contextAgeMobile: {
+    display: "block",
+    marginBottom: 4,
+    lineHeight: 1.25,
+  },
+  contextTimelineDot: {
+    position: "absolute",
+    zIndex: 1,
+    left: 97,
+    top: 17,
+    width: 13,
+    height: 13,
+    borderRadius: "50%",
+    border: "3px solid rgba(25, 25, 25, 1)",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.18)",
+  },
+  contextTimelineDotMobile: {
+    position: "absolute",
+    zIndex: 1,
+    left: 12,
+    top: 28,
+    width: 13,
+    height: 13,
+    borderRadius: "50%",
+    border: "3px solid rgba(25, 25, 25, 1)",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.18)",
+  },
+  contextContent: {
+    maxHeight: 220,
+    overflowY: "auto",
+    padding: "10px 12px",
+    whiteSpace: "pre-wrap",
     overflowWrap: "anywhere",
+    borderRadius: 6,
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    color: "var(--mantine-color-gray-2)",
+    fontSize: "0.875rem",
+    lineHeight: 1.55,
   },
   preBlock: {
     margin: 0,
-    padding: 12,
+    padding: 8,
     whiteSpace: "pre-wrap",
     overflowWrap: "anywhere",
     overflowY: "auto",

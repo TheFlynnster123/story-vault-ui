@@ -1,198 +1,108 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { ChapterGenerationService } from "./ChapterGenerationService";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { d } from "../../../../services/Dependencies";
-import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
+import {
+  ChapterGenerationService,
+  parseChapterDraft,
+} from "./ChapterGenerationService";
 
 vi.mock("../../../../services/Dependencies");
 
+const CHAT_ID = "chat-1";
+const SNAPSHOT = [{ role: "user" as const, content: "Story context" }];
+const REQUEST_MESSAGES = [{ role: "user" as const, content: "Draft prompt" }];
+
 describe("ChapterGenerationService", () => {
-  const testChatId = "test-chat-123";
-
-  let mockLLMMessageContextService: {
-    buildChapterSummaryRequestMessages: ReturnType<typeof vi.fn>;
-    buildChapterTitleRequestMessages: ReturnType<typeof vi.fn>;
-  };
-
-  let mockOpenRouterChatAPI: {
-    postChat: ReturnType<typeof vi.fn>;
-  };
-
-  let mockSystemPromptsService: {
-    Get: ReturnType<typeof vi.fn>;
-  };
+  const buildChapterDraftRequestMessages = vi.fn();
+  const postChat = vi.fn();
+  const getPrompts = vi.fn();
 
   beforeEach(() => {
-    mockLLMMessageContextService = {
-      buildChapterSummaryRequestMessages: vi
-        .fn()
-        .mockResolvedValue([{ role: "system", content: "summary prompt" }]),
-      buildChapterTitleRequestMessages: vi
-        .fn()
-        .mockResolvedValue([{ role: "system", content: "title prompt" }]),
-    };
-
-    mockOpenRouterChatAPI = {
-      postChat: vi.fn().mockResolvedValue("Generated content"),
-    };
-
-    mockSystemPromptsService = {
-      Get: vi.fn().mockResolvedValue(DEFAULT_SYSTEM_PROMPTS),
-    };
-
-    vi.mocked(d.LLMMessageContextService).mockReturnValue(
-      mockLLMMessageContextService as any,
-    );
-    vi.mocked(d.OpenRouterChatAPI).mockReturnValue(
-      mockOpenRouterChatAPI as any,
-    );
-    vi.mocked(d.SystemPromptsService).mockReturnValue(
-      mockSystemPromptsService as any,
-    );
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
+    buildChapterDraftRequestMessages.mockResolvedValue(REQUEST_MESSAGES);
+    postChat.mockResolvedValue(
+      JSON.stringify({ title: "Chapter One", summary: "A concise summary." }),
+    );
+    getPrompts.mockResolvedValue({});
+    vi.mocked(d.LLMMessageContextService).mockReturnValue({
+      buildChapterDraftRequestMessages,
+    } as never);
+    vi.mocked(d.OpenRouterChatAPI).mockReturnValue({ postChat } as never);
+    vi.mocked(d.SystemPromptsService).mockReturnValue({
+      Get: getPrompts,
+    } as never);
   });
 
-  // ---- generateChapterSummary Model Override Tests ----
-  describe("generateChapterSummary", () => {
-    it("should not pass model override when no model is configured", async () => {
-      mockSystemPromptsService.Get.mockResolvedValue(DEFAULT_SYSTEM_PROMPTS);
-      const service = new ChapterGenerationService(testChatId);
+  it("generates both fields with one model request", async () => {
+    const service = new ChapterGenerationService(CHAT_ID);
 
-      await service.generateChapterSummary();
+    const result = await service.generateChapterDraft(SNAPSHOT);
 
-      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
-        expect.any(Array),
-        undefined,
-        "chat",
-        "LLM",
-        undefined,
-      );
-    });
-
-    it("should pass model override when chapterSummaryModel is configured", async () => {
-      mockSystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        chapterSummaryModel: "anthropic/claude-opus-4",
-      });
-      const service = new ChapterGenerationService(testChatId);
-
-      await service.generateChapterSummary();
-
-      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
-        expect.any(Array),
-        "anthropic/claude-opus-4",
-        "chat",
-        "LLM",
-        undefined,
-      );
-    });
-
-    it("should pass request settings when chapterSummaryRequestSettings is configured", async () => {
-      mockSystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        chapterSummaryModel: "anthropic/claude-opus-4",
-        chapterSummaryRequestSettings: { temperature: 0.4 },
-      });
-      const service = new ChapterGenerationService(testChatId);
-
-      await service.generateChapterSummary();
-
-      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
-        expect.any(Array),
-        "anthropic/claude-opus-4",
-        "chat",
-        "LLM",
-        { temperature: 0.4 },
-      );
-    });
-
-    it("should not pass model override when chapterSummaryModel is empty string", async () => {
-      mockSystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        chapterSummaryModel: "",
-      });
-      const service = new ChapterGenerationService(testChatId);
-
-      await service.generateChapterSummary();
-
-      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
-        expect.any(Array),
-        undefined,
-        "chat",
-        "LLM",
-        undefined,
-      );
-    });
-
-    it("should fall back to undefined when system prompts return undefined", async () => {
-      mockSystemPromptsService.Get.mockResolvedValue(undefined);
-      const service = new ChapterGenerationService(testChatId);
-
-      await service.generateChapterSummary();
-
-      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
-        expect.any(Array),
-        undefined,
-        "chat",
-        "LLM",
-        undefined,
-      );
+    expect(buildChapterDraftRequestMessages).toHaveBeenCalledWith(SNAPSHOT);
+    expect(postChat).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      title: "Chapter One",
+      summary: "A concise summary.",
     });
   });
 
-  // ---- generateChapterTitle Model Override Tests ----
-  describe("generateChapterTitle", () => {
-    it("should not pass model override when no model is configured", async () => {
-      mockSystemPromptsService.Get.mockResolvedValue(DEFAULT_SYSTEM_PROMPTS);
-      const service = new ChapterGenerationService(testChatId);
-
-      await service.generateChapterTitle();
-
-      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
-        expect.any(Array),
-        undefined,
-        "chat",
-        "LLM",
-        undefined,
-      );
+  it("uses the configured chapter summary model and settings", async () => {
+    getPrompts.mockResolvedValue({
+      chapterSummaryModel: "openai/gpt-5",
+      chapterSummaryRequestSettings: { temperature: 0.3 },
     });
+    const service = new ChapterGenerationService(CHAT_ID);
 
-    it("should pass model override when chapterTitleModel is configured", async () => {
-      mockSystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        chapterTitleModel: "openai/gpt-5",
-      });
-      const service = new ChapterGenerationService(testChatId);
+    await service.generateChapterDraft(SNAPSHOT);
 
-      await service.generateChapterTitle();
+    expect(postChat).toHaveBeenCalledWith(
+      REQUEST_MESSAGES,
+      "openai/gpt-5",
+      "chat",
+      "LLM",
+      { temperature: 0.3 },
+    );
+  });
 
-      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
-        expect.any(Array),
-        "openai/gpt-5",
-        "chat",
-        "LLM",
-        undefined,
-      );
-    });
+  it("clears loading state after a request failure", async () => {
+    postChat.mockRejectedValue(new Error("failed"));
+    const service = new ChapterGenerationService(CHAT_ID);
 
-    it("should not pass model override when chapterTitleModel is empty string", async () => {
-      mockSystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        chapterTitleModel: "",
-      });
-      const service = new ChapterGenerationService(testChatId);
+    await expect(service.generateChapterDraft(SNAPSHOT)).rejects.toThrow(
+      "failed",
+    );
 
-      await service.generateChapterTitle();
+    expect(service.IsLoading).toBe(false);
+    expect(service.Status).toBeUndefined();
+  });
+});
 
-      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
-        expect.any(Array),
-        undefined,
-        "chat",
-        "LLM",
-        undefined,
-      );
-    });
+describe("parseChapterDraft", () => {
+  it("parses and trims a structured response", () => {
+    const result = parseChapterDraft(
+      '{"title":"  Chapter One ","summary":" Summary.  "}',
+    );
+
+    expect(result.title).toBe("Chapter One");
+    expect(result.summary).toBe("Summary.");
+  });
+
+  it("accepts a JSON markdown fence", () => {
+    const result = parseChapterDraft(
+      '```json\n{"title":"Chapter","summary":"Summary"}\n```',
+    );
+
+    expect(result).toEqual({ title: "Chapter", summary: "Summary" });
+  });
+
+  it("rejects invalid JSON", () => {
+    expect(() => parseChapterDraft("not json")).toThrow(
+      "response was not valid JSON",
+    );
+  });
+
+  it("rejects an incomplete draft", () => {
+    expect(() => parseChapterDraft('{"title":"Chapter"}')).toThrow(
+      "response was incomplete",
+    );
   });
 });

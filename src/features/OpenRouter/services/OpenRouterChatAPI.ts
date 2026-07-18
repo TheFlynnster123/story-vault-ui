@@ -6,7 +6,10 @@ import { OpenRouterError, parseOpenRouterError } from "./OpenRouterError";
 import { getOpenRouterCreditsQueryKey } from "./OpenRouterCreditsAPI";
 import type { RequestType, TrackedRequest } from "./RequestTracker";
 import { normalizeTrackedRequestLimit } from "./RequestTracker";
-import type { OpenRouterRequestSettings } from "./OpenRouterRequestSettings";
+import type {
+  OpenRouterRequestSettings,
+  RequestRetrySettings,
+} from "./OpenRouterRequestSettings";
 import { OPENROUTER_ADVANCED_PARAMETER_KEYS } from "./OpenRouterRequestSettings";
 
 interface CleanMessage {
@@ -64,10 +67,15 @@ export class OpenRouterChatAPI {
     };
 
     const systemSettings = await d.SystemSettingsService().Get();
+    const retrySettings = getEffectiveRetrySettings(
+      systemSettings,
+      modelOverride,
+      requestSettingsOverride,
+    );
 
     const requestBody: PostChatRequest = {
       messages: cleanMessages(messages),
-      ...systemSettings?.chatGenerationSettings,
+      ...getProviderRequestSettings(systemSettings?.chatGenerationSettings),
     };
 
     applyModelOverride(requestBody, modelOverride, requestSettingsOverride);
@@ -81,7 +89,7 @@ export class OpenRouterChatAPI {
         method: "POST",
         body: JSON.stringify(requestBody),
         headers,
-      });
+      }, retrySettings, assertNonEmptyReply);
 
       d.RequestTracker().record({
         ...buildTrackedBase(
@@ -135,10 +143,15 @@ export class OpenRouterChatAPI {
     };
 
     const systemSettings = await d.SystemSettingsService().Get();
+    const retrySettings = getEffectiveRetrySettings(
+      systemSettings,
+      modelOverride,
+      requestSettingsOverride,
+    );
 
     const requestBody: PostChatRequest = {
       messages: cleanMessages(messages),
-      ...systemSettings?.chatGenerationSettings,
+      ...getProviderRequestSettings(systemSettings?.chatGenerationSettings),
       response_format: responseFormat,
       provider: {
         require_parameters: true,
@@ -157,7 +170,7 @@ export class OpenRouterChatAPI {
         method: "POST",
         body: JSON.stringify(requestBody),
         headers,
-      });
+      }, retrySettings, assertNonEmptyReply);
       const parsedReply = parseStructuredReply<T>(
         response.reply,
         allowPlainTextFallback,
@@ -202,28 +215,66 @@ export class OpenRouterChatAPI {
     modelOverride?: string,
     requestSettingsOverride?: OpenRouterRequestSettings,
   ): Promise<string> {
-    const startedAt = nowMs();
-    let timeToFirstTokenMs: number | undefined;
     const openRouterEncryptionKey = await d
       .EncryptionManager()
       .getOpenRouterEncryptionKey();
-
     const systemSettings = await d.SystemSettingsService().Get();
+    const retrySettings = getEffectiveRetrySettings(
+      systemSettings,
+      modelOverride,
+      requestSettingsOverride,
+    );
 
     const requestBody: PostChatRequest = {
       messages: cleanMessages(messages),
-      ...systemSettings?.chatGenerationSettings,
+      ...getProviderRequestSettings(systemSettings?.chatGenerationSettings),
     };
 
     applyModelOverride(requestBody, modelOverride, requestSettingsOverride);
     this.applyMonitoringSettings(systemSettings);
 
-    const url = `${this.API_URL}/api/PostChatStream`;
     const accessToken = await d.AuthAPI().getAccessToken();
 
-    let response: Response;
     try {
-      response = await fetch(url, {
+      return await executeWithRetry(
+        () =>
+          this.postChatStreamAttempt(
+            messages,
+            onToken,
+            requestBody,
+            accessToken,
+            openRouterEncryptionKey,
+          ),
+        retrySettings,
+      );
+    } catch (error) {
+      if (error instanceof OpenRouterError) {
+        logRequestError(error);
+        throw error;
+      }
+      d.ErrorService().log(
+        "Network error — please check your connection",
+        error,
+      );
+      throw new OpenRouterError(
+        0,
+        error instanceof Error ? error.message : "Unknown network error",
+      );
+    }
+  }
+
+  private async postChatStreamAttempt(
+    messages: LLMMessage[],
+    onToken: (token: string) => void,
+    requestBody: PostChatRequest,
+    accessToken: string,
+    openRouterEncryptionKey: string,
+  ): Promise<string> {
+    const startedAt = nowMs();
+    let timeToFirstTokenMs: number | undefined;
+
+    try {
+      const response = await fetch(`${this.API_URL}/api/PostChatStream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -234,70 +285,71 @@ export class OpenRouterChatAPI {
       });
 
       if (!response.ok) {
-        const errorBody = await response.text();
-        const error = this.buildApiError(response.status, errorBody);
-        d.ErrorService().log(error.message, error);
-        throw error;
+        throw this.buildApiError(response.status, await response.text());
       }
-    } catch (error) {
-      d.RequestTracker().record({
-        ...buildTrackedBase(messages, requestBody, "Chat", "chat", startedAt),
-        ...buildTrackedFailure(error),
-      });
-      throw error;
-    }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      const error = new OpenRouterError(0, "Response body is not readable");
-      d.RequestTracker().record({
-        ...buildTrackedBase(messages, requestBody, "Chat", "chat", startedAt),
-        ...buildTrackedFailure(error),
-      });
-      throw error;
-    }
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new OpenRouterError(0, "Response body is not readable");
+      }
 
-    const decoder = new TextDecoder();
-    let fullContent = "";
-    let buffer = "";
-    let capturedUsage: UsageResponse | null = null;
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      let buffer = "";
+      let capturedUsage: UsageResponse | null = null;
 
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        // Keep the last potentially incomplete line in the buffer
-        buffer = lines.pop() || "";
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
 
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
 
-          const data = line.slice(6);
-          if (data === "[DONE]") continue;
+            const data = line.slice(6);
+            if (data === "[DONE]") continue;
 
-          try {
-            const parsed = JSON.parse(data);
-            if (typeof parsed === "string") {
-              timeToFirstTokenMs ??= elapsedMs(startedAt);
-              fullContent += parsed;
-              onToken(fullContent);
-            } else if (parsed.type === "usage") {
-              capturedUsage = parsed.data as UsageResponse;
-            } else if (parsed.error) {
-              const code = typeof parsed.code === "number" ? parsed.code : 0;
-              const error = new OpenRouterError(code, parsed.error);
-              d.ErrorService().log(error.message, error);
-              throw error;
+            try {
+              const parsed = JSON.parse(data);
+              if (typeof parsed === "string") {
+                timeToFirstTokenMs ??= elapsedMs(startedAt);
+                fullContent += parsed;
+                onToken(fullContent);
+              } else if (parsed.type === "usage") {
+                capturedUsage = parsed.data as UsageResponse;
+              } else if (parsed.error) {
+                const code = typeof parsed.code === "number" ? parsed.code : 0;
+                throw new OpenRouterError(code, parsed.error);
+              }
+            } catch (error) {
+              if (error instanceof OpenRouterError) throw error;
             }
-          } catch (e) {
-            if (e instanceof OpenRouterError) throw e;
-            // Skip malformed SSE lines
           }
         }
+      } finally {
+        reader.releaseLock();
       }
+
+      assertNonEmptyReply({ reply: fullContent });
+      await this.refreshCredits();
+
+      d.RequestTracker().record({
+        ...buildTrackedBase(messages, requestBody, "Chat", "chat", startedAt),
+        status: "success",
+        timeToFirstTokenMs,
+        responseCharCount: fullContent.length,
+        responseContent: fullContent,
+        actualCost: capturedUsage?.cost ?? undefined,
+        promptTokens: capturedUsage?.promptTokens ?? undefined,
+        completionTokens: capturedUsage?.completionTokens ?? undefined,
+        reasoningTokens: capturedUsage?.reasoningTokens ?? undefined,
+      });
+
+      return fullContent;
     } catch (error) {
       d.RequestTracker().record({
         ...buildTrackedBase(messages, requestBody, "Chat", "chat", startedAt),
@@ -305,25 +357,7 @@ export class OpenRouterChatAPI {
         ...buildTrackedFailure(error),
       });
       throw error;
-    } finally {
-      reader.releaseLock();
     }
-
-    await this.refreshCredits();
-
-    d.RequestTracker().record({
-      ...buildTrackedBase(messages, requestBody, "Chat", "chat", startedAt),
-      status: "success",
-      timeToFirstTokenMs,
-      responseCharCount: fullContent.length,
-      responseContent: fullContent,
-      actualCost: capturedUsage?.cost ?? undefined,
-      promptTokens: capturedUsage?.promptTokens ?? undefined,
-      completionTokens: capturedUsage?.completionTokens ?? undefined,
-      reasoningTokens: capturedUsage?.reasoningTokens ?? undefined,
-    });
-
-    return fullContent;
   }
 
   buildHeaders(accessToken: string): HeadersInit {
@@ -336,6 +370,8 @@ export class OpenRouterChatAPI {
   async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {},
+    retrySettings?: RequestRetrySettings,
+    validateResponse?: (response: T) => void,
   ): Promise<T> {
     const url = `${this.API_URL}${endpoint}`;
     const accessToken = await d.AuthAPI().getAccessToken();
@@ -343,25 +379,28 @@ export class OpenRouterChatAPI {
     const headers = this.buildHeaders(accessToken);
 
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...headers,
-          ...options.headers,
-        },
-      });
+      return await executeWithRetry(async () => {
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...headers,
+            ...options.headers,
+          },
+        });
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw this.buildApiError(response.status, errorBody);
-      }
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw this.buildApiError(response.status, errorBody);
+        }
 
-      const json = await response.json();
-      await this.refreshCredits();
-      return json;
+        const json = await response.json();
+        validateResponse?.(json);
+        await this.refreshCredits();
+        return json;
+      }, retrySettings);
     } catch (e: unknown) {
       if (e instanceof OpenRouterError) {
-        d.ErrorService().log(e.message, e);
+        logRequestError(e);
         throw e;
       }
 
@@ -382,6 +421,8 @@ export class OpenRouterChatAPI {
     return new OpenRouterError(
       httpStatus,
       body || `Request failed with status ${httpStatus}`,
+      undefined,
+      body,
     );
   }
 
@@ -450,7 +491,8 @@ const buildTrackedFailure = (
 > => ({
   status: "error",
   responseCharCount: 0,
-  responseContent: "",
+  responseContent:
+    error instanceof OpenRouterError ? error.responseBody ?? error.apiMessage : "",
   httpStatus: error instanceof OpenRouterError ? error.code : undefined,
   errorMessage: error instanceof Error ? error.message : String(error),
 });
@@ -478,7 +520,99 @@ const applyModelOverride = (
     delete requestBody[key];
   }
 
-  Object.assign(requestBody, requestSettingsOverride);
+  Object.assign(
+    requestBody,
+    getProviderRequestSettings(requestSettingsOverride),
+  );
+};
+
+const getProviderRequestSettings = (
+  settings:
+    | (OpenRouterRequestSettings & {
+        model?: string;
+      })
+    | undefined,
+): Omit<OpenRouterRequestSettings, "retry"> & { model?: string } => {
+  if (!settings) return {};
+  const providerSettings: Omit<OpenRouterRequestSettings, "retry"> & {
+    model?: string;
+  } = {};
+  if (settings.model) {
+    providerSettings.model = settings.model;
+  }
+  for (const key of OPENROUTER_ADVANCED_PARAMETER_KEYS) {
+    const value = settings[key];
+    if (value !== undefined) {
+      (providerSettings as Record<string, unknown>)[key] = value;
+    }
+  }
+  return providerSettings;
+};
+
+const getEffectiveRetrySettings = (
+  systemSettings: SystemSettings | undefined,
+  modelOverride: string | undefined,
+  requestSettingsOverride: OpenRouterRequestSettings | undefined,
+): RequestRetrySettings | undefined =>
+  modelOverride
+    ? requestSettingsOverride?.retry
+    : (requestSettingsOverride?.retry ??
+      systemSettings?.chatGenerationSettings?.retry);
+
+const executeWithRetry = async <T>(
+  operation: () => Promise<T>,
+  retrySettings: RequestRetrySettings | undefined,
+): Promise<T> => {
+  const numberOfRetries = Math.max(
+    0,
+    Math.floor(
+      retrySettings ? (retrySettings.numberOfRetries ?? 1) : 0,
+    ),
+  );
+  const retryDelayMs =
+    Math.max(0, retrySettings?.retryDelaySeconds ?? 0) * 1_000;
+
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= numberOfRetries || !isRetryableError(error)) {
+        throw error;
+      }
+      if (retryDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      }
+    }
+  }
+};
+
+const isRetryableError = (error: unknown): boolean => {
+  if (!(error instanceof OpenRouterError)) return true;
+  return (
+    error.code === 0 ||
+    error.code === 408 ||
+    error.code === 409 ||
+    error.code === 425 ||
+    error.code === 429 ||
+    error.code >= 500
+  );
+};
+
+const assertNonEmptyReply = (response: { reply: string }): void => {
+  if (!response.reply.trim()) {
+    throw new OpenRouterError(0, "The model returned an empty response");
+  }
+};
+
+const logRequestError = (error: unknown): void => {
+  if (error instanceof OpenRouterError) {
+    d.ErrorService().log(error.message, error);
+    return;
+  }
+  d.ErrorService().log(
+    "Network error — please check your connection",
+    error,
+  );
 };
 
 const parseStructuredReply = <T>(

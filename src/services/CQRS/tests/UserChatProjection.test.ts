@@ -469,7 +469,7 @@ describe("UserChatProjection - Core Operations", () => {
 
   // ---- CivitJobCreated Event Tests ----
   describe("CivitJobCreated Event Processing", () => {
-    it("should add civit-job message with correct type", () => {
+    it("should normalize a legacy job into a workflow message", () => {
       const event: CivitJobCreatedEvent = {
         type: "CivitJobCreated",
         jobId: "job-123",
@@ -479,7 +479,7 @@ describe("UserChatProjection - Core Operations", () => {
       projection.process(event);
 
       expect(projection.Messages).toHaveLength(1);
-      expect(projection.Messages[0].type).toBe("civit-job");
+      expect(projection.Messages[0].type).toBe("civit-workflow");
       expect(projection.Messages[0].id).toBe("job-123");
     });
 
@@ -492,8 +492,8 @@ describe("UserChatProjection - Core Operations", () => {
 
       projection.process(event);
 
-      expect(projection.Messages[0].data).toEqual({
-        jobId: "job-123",
+      expect(projection.Messages[0].data).toMatchObject({
+        workflowId: "job-123",
         prompt: "Generate a cat",
       });
     });
@@ -522,7 +522,7 @@ describe("UserChatProjection - Core Operations", () => {
       expect(projection.Messages[0].hiddenByChapterId).toBeUndefined();
     });
 
-    it("should patch civit-job data with CivitJobUpdated", () => {
+    it("should normalize a legacy job update into a workflow patch", () => {
       projection.process({
         type: "CivitJobCreated",
         jobId: "image-gen-1",
@@ -540,8 +540,8 @@ describe("UserChatProjection - Core Operations", () => {
         },
       });
 
-      expect(projection.Messages[0].data).toEqual({
-        jobId: "workflow-1",
+      expect(projection.Messages[0].data).toMatchObject({
+        workflowId: "workflow-1",
         prompt: "final prompt",
         generationStatus: "submitted",
       });

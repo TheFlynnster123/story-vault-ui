@@ -8,6 +8,7 @@ import { QuickChatControls } from "../components/Chat/QuickChatControls";
 import { FlowAccordion } from "../components/Chat/Flow/FlowAccordion";
 import { useEnsureChatInitialization } from "../hooks/useEnsureChatInitialization";
 import { useChatSettings } from "../hooks/useChatSettings";
+import { ChapterCreationProvider } from "../components/Chat/ChatControls/ChapterCreationProvider";
 
 const ChatPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -25,24 +26,26 @@ const ChatPage: React.FC = () => {
   }
 
   return (
-    <ChatContainer
-      $chatId={chatId}
-      $backgroundPhotoBase64={backgroundPhotoBase64}
-      style={
-        {
-          "--message-transparency": messageTransparency,
-        } as React.CSSProperties
-      }
-    >
-      <ChatControls />
-      <QuickChatControls chatId={chatId} />
+    <ChapterCreationProvider chatId={chatId}>
+      <ChatContainer
+        $chatId={chatId}
+        $backgroundPhotoBase64={backgroundPhotoBase64}
+        style={
+          {
+            "--message-transparency": messageTransparency,
+          } as React.CSSProperties
+        }
+      >
+        <ChatControls />
+        <QuickChatControls chatId={chatId} />
 
-      <ChatEntriesList chatId={chatId} />
+        <ChatEntriesList chatId={chatId} />
 
-      <FlowAccordion chatId={chatId} />
+        <FlowAccordion chatId={chatId} />
 
-      <ChatInput chatId={chatId} />
-    </ChatContainer>
+        <ChatInput chatId={chatId} />
+      </ChatContainer>
+    </ChapterCreationProvider>
   );
 };
 

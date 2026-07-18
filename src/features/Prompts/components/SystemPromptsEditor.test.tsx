@@ -69,6 +69,14 @@ describe("SystemPromptsEditor", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
+    vi.spyOn(d, "ModelPresetsService").mockReturnValue({
+      getPresets: vi.fn().mockResolvedValue([]),
+      subscribe: vi.fn().mockReturnValue(() => {}),
+      savePreset: vi.fn(),
+      deletePreset: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify(

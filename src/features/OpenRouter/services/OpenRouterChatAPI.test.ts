@@ -226,6 +226,145 @@ describe("OpenRouterChatAPI", () => {
         queryKey: getOpenRouterCreditsQueryKey(),
       });
     });
+
+    it("should retry a transient request once immediately by default when enabled", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            model: "openai/gpt-4",
+            retry: {
+              retryDelaySeconds: 0,
+              numberOfRetries: 1,
+            },
+          },
+        }),
+      } as any);
+      const fetchSpy = vi
+        .spyOn(global, "fetch")
+        .mockResolvedValueOnce(
+          new Response("Service unavailable", { status: 503 }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ reply: "recovered" }), {
+            status: 200,
+          }),
+        );
+
+      const result = await api.postChat([
+        { role: "user", content: "Retry this" },
+      ]);
+
+      expect(result).toBe("recovered");
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(d.ErrorService().log).not.toHaveBeenCalled();
+      const sentBody = JSON.parse(
+        fetchSpy.mock.calls[0][1]?.body as string,
+      );
+      expect(sentBody.retry).toBeUndefined();
+    });
+
+    it("should retry a transient streaming request", async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: "recovered"\n'));
+          controller.close();
+        },
+      });
+      const fetchSpy = vi
+        .spyOn(global, "fetch")
+        .mockResolvedValueOnce(
+          new Response("Service unavailable", { status: 503 }),
+        )
+        .mockResolvedValueOnce(new Response(stream, { status: 200 }));
+
+      const result = await api.postChatStream(
+        [{ role: "user", content: "Retry this" }],
+        vi.fn(),
+        "openai/gpt-4",
+        {
+          retry: {
+            retryDelaySeconds: 0,
+            numberOfRetries: 1,
+          },
+        },
+      );
+
+      expect(result).toBe("recovered");
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(d.ErrorService().log).not.toHaveBeenCalled();
+    });
+
+    it("should retry when a successful response contains no content", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            retry: {
+              retryDelaySeconds: 0,
+              numberOfRetries: 1,
+            },
+          },
+        }),
+      } as any);
+      const fetchSpy = vi
+        .spyOn(global, "fetch")
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ reply: "   ", usage: null }), {
+            status: 200,
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ reply: "recovered", usage: null }), {
+            status: 200,
+          }),
+        );
+
+      const result = await api.postChat([
+        { role: "user", content: "Retry empty content" },
+      ]);
+
+      expect(result).toBe("recovered");
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(d.ErrorService().log).not.toHaveBeenCalled();
+    });
+
+    it("should retry when a successful stream contains no content", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            retry: {
+              retryDelaySeconds: 0,
+              numberOfRetries: 1,
+            },
+          },
+        }),
+      } as any);
+      const encoder = new TextEncoder();
+      const emptyStream = new ReadableStream({
+        start(controller) {
+          controller.close();
+        },
+      });
+      const recoveredStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: "recovered"\n'));
+          controller.close();
+        },
+      });
+      const fetchSpy = vi
+        .spyOn(global, "fetch")
+        .mockResolvedValueOnce(new Response(emptyStream, { status: 200 }))
+        .mockResolvedValueOnce(new Response(recoveredStream, { status: 200 }));
+
+      const result = await api.postChatStream(
+        [{ role: "user", content: "Retry empty stream" }],
+        vi.fn(),
+      );
+
+      expect(result).toBe("recovered");
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(d.ErrorService().log).not.toHaveBeenCalled();
+    });
   });
 
   // ---- postChatStream Errors ----
@@ -495,6 +634,58 @@ describe("OpenRouterChatAPI", () => {
         expect.stringContaining("Network error"),
         expect.any(TypeError),
       );
+    });
+
+    it("should log only after all retry attempts fail", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            retry: {
+              retryDelaySeconds: 0,
+              numberOfRetries: 1,
+            },
+          },
+        }),
+      } as any);
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response("Service unavailable", { status: 503 }),
+      );
+      const mockLog = vi.fn();
+      vi.mocked(d.ErrorService).mockReturnValue({ log: mockLog } as any);
+
+      await expect(
+        api.postChat([{ role: "user", content: "Hi" }]),
+      ).rejects.toBeInstanceOf(OpenRouterError);
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(mockLog).toHaveBeenCalledTimes(1);
+    });
+
+    it("should report an empty response after all retry attempts fail", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            retry: {
+              retryDelaySeconds: 0,
+              numberOfRetries: 1,
+            },
+          },
+        }),
+      } as any);
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(JSON.stringify({ reply: "", usage: null }), {
+          status: 200,
+        }),
+      );
+      const mockLog = vi.fn();
+      vi.mocked(d.ErrorService).mockReturnValue({ log: mockLog } as any);
+
+      await expect(
+        api.postChat([{ role: "user", content: "Hi" }]),
+      ).rejects.toThrow("empty response");
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(mockLog).toHaveBeenCalledTimes(1);
     });
   });
 

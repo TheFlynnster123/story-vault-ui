@@ -250,7 +250,6 @@ getOrPollPhoto(chatId, jobId) → CivitJobResult
 |---|---|
 | `useImageModels` | Global system model CRUD + selection state |
 | `useChatImageVariants` | Per-chat variant CRUD + selection state; subscribes to blob changes |
-| `useChatImageModels` | _(Legacy)_ Per-chat model CRUD; superseded by variants |
 | `useCivitJob` | Polls `CivitJobOrchestrator` until a job resolves |
 | `useCivitaiKey` | CivitAI API key validation state |
 | `useModelPreview` | Fetches preview image for a given model / variant |
@@ -288,24 +287,20 @@ Images/
     SampleImageGenerator.tsx
     SchedulerCombobox.tsx
   hooks/
-    useChatImageModels.ts       # legacy
     useChatImageVariants.ts
     useCivitJob.ts
     useCivitaiKey.ts
     useImageModels.ts
     useModelPreview.ts
   pages/
-    ChatImageModelEditPage.tsx   # legacy
-    ChatImageModelTemplatePage.tsx  # legacy
-    ChatImageModelsPage.tsx      # legacy
     ChatImageVariantEditPage.tsx
     ChatImageVariantsPage.tsx
     DefaultImageModelsPage.tsx
     ImageModelEditPage.tsx
     ImageSettingsPage.tsx
   services/
-    ChatImageModelService.ts     # legacy
-    ChatImageModelsManagedBlob.ts  # legacy
+    ChatImageModelsManagedBlob.ts  # read-only migration boundary
+    LegacyChatImageModelsMigration.ts
     ChatImageVariantService.ts
     ChatImageVariantsManagedBlob.ts
     CivitJob.ts

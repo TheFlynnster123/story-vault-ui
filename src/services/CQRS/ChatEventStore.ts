@@ -1,6 +1,10 @@
 import Config from "../Config";
 import { d } from "../Dependencies";
 import type { ChatEvent } from "./events/ChatEvent";
+import {
+  normalizeChatEvent,
+  type PersistedChatEvent,
+} from "./events/normalizeChatEvent";
 
 interface ChatEventDTO {
   id: string;
@@ -97,8 +101,8 @@ export class ChatEventStore {
         const decryptedContent = await d
           .EncryptionManager()
           .decryptString("chat", dto.content);
-        const event = JSON.parse(decryptedContent) as ChatEvent;
-        events.push(event);
+        const event = JSON.parse(decryptedContent) as PersistedChatEvent;
+        events.push(normalizeChatEvent(event));
       } catch (error) {
         console.error("Failed to decrypt event:", error);
       }

@@ -9,12 +9,23 @@ export const OPENROUTER_ADVANCED_PARAMETER_KEYS = [
   "reasoning",
   "temperature",
   "top_p",
+  "top_k",
   "max_tokens",
   "frequency_penalty",
   "presence_penalty",
   "repetition_penalty",
   "seed",
 ] as const;
+
+export const DEFAULT_RETRY_SETTINGS = {
+  numberOfRetries: 1,
+  retryDelaySeconds: 0,
+} as const;
+
+export interface RequestRetrySettings {
+  numberOfRetries?: number;
+  retryDelaySeconds?: number;
+}
 
 export type OpenRouterAdvancedParameterKey =
   (typeof OPENROUTER_ADVANCED_PARAMETER_KEYS)[number];
@@ -23,11 +34,13 @@ export interface OpenRouterRequestSettings {
   reasoning?: OpenRouterReasoningConfig;
   temperature?: number;
   top_p?: number;
+  top_k?: number;
   max_tokens?: number;
   frequency_penalty?: number;
   presence_penalty?: number;
   repetition_penalty?: number;
   seed?: number;
+  retry?: RequestRetrySettings;
 }
 
 export const supportsParameter = (
@@ -53,6 +66,10 @@ export const filterSettingsForModel = (
     }
   }
 
+  if (settings.retry) {
+    filtered.retry = settings.retry;
+  }
+
   return Object.keys(filtered).length > 0 ? filtered : undefined;
 };
 
@@ -60,6 +77,9 @@ export const hasOpenRouterRequestSettings = (
   settings: OpenRouterRequestSettings | undefined,
 ): boolean =>
   !!settings &&
-  OPENROUTER_ADVANCED_PARAMETER_KEYS.some((key) => settings[key] !== undefined);
+  (settings.retry !== undefined ||
+    OPENROUTER_ADVANCED_PARAMETER_KEYS.some(
+      (key) => settings[key] !== undefined,
+    ));
 
 export type { OpenRouterReasoningEffort };

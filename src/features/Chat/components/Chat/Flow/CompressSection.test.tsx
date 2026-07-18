@@ -12,9 +12,9 @@ vi.mock("react-router-dom", () => ({
 }));
 
 // Mock hooks to avoid real service dependencies
-const mockUseAddChapter = vi.fn();
-vi.mock("../ChatControls/useAddChapter", () => ({
-  useAddChapter: (...args: unknown[]) => mockUseAddChapter(...args),
+const mockUseChapterCreation = vi.fn();
+vi.mock("../ChatControls/ChapterCreationContext", () => ({
+  useChapterCreation: () => mockUseChapterCreation(),
 }));
 
 const mockUseAddBook = vi.fn();
@@ -28,7 +28,7 @@ const defaultChapterHook = {
   showModal: false,
   title: "",
   summary: "",
-  isGeneratingTitle: false,
+  isGenerating: false,
   isCreating: false,
   setTitle: vi.fn(),
   setSummary: vi.fn(),
@@ -58,7 +58,7 @@ const defaultBookHook = {
 describe("CompressSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAddChapter.mockReturnValue(defaultChapterHook);
+    mockUseChapterCreation.mockReturnValue(defaultChapterHook);
     mockUseAddBook.mockReturnValue(defaultBookHook);
   });
 

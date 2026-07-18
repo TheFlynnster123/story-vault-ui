@@ -57,10 +57,6 @@ export class TextGenerationService extends GenerationOrchestrator {
     skipReasoning = false,
   ): Promise<string | undefined> {
     return this.orchestrate(async () => {
-      await d
-        .CharacterSheetGenerationService(this.chatId)
-        .maybeGenerateForNewPrimaryCharacters();
-
       d.PlanGenerationService(this.chatId).onMessageSent();
 
       if (!skipReasoning && (await this.shouldGenerateReasoning())) {
@@ -113,13 +109,15 @@ export class TextGenerationService extends GenerationOrchestrator {
     this.setStatus("Reasoning...");
 
     const modelOverride = await this.getReasoningModelOverride();
-    const reasoning = await d.OpenRouterChatAPI().postChat(
-      requestMessages,
-      modelOverride?.model,
-      "chat",
-      "Reasoning",
-      modelOverride?.requestSettings,
-    );
+    const reasoning = await d
+      .OpenRouterChatAPI()
+      .postChat(
+        requestMessages,
+        modelOverride?.model,
+        "chat",
+        "Reasoning",
+        modelOverride?.requestSettings,
+      );
 
     if (reasoning.trim()) {
       await d.ChatService(this.chatId).AddReasoningMessage(reasoning);

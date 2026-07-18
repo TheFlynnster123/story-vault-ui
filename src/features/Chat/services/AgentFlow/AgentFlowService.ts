@@ -107,6 +107,8 @@ const AGENT_INTENT_RESPONSE_FORMAT = {
 export class AgentFlowService {
   private readonly chatId: string;
   private subscribers = new Set<() => void>();
+  private initializationPromise: Promise<void> | null = null;
+  private isInitialized = false;
 
   public CurrentSuggestion: AgentFlowSuggestion | null = null;
   public IsLoading: boolean = false;
@@ -120,18 +122,62 @@ export class AgentFlowService {
     return () => this.subscribers.delete(callback);
   }
 
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+    if (this.initializationPromise) return this.initializationPromise;
+
+    this.initializationPromise = this.loadPendingSuggestion().finally(() => {
+      this.initializationPromise = null;
+    });
+
+    return this.initializationPromise;
+  }
+
   async analyzeIntentSuggestion(
     selectedIntent?: AgentIntent,
   ): Promise<AgentFlowSuggestion> {
+    await this.initialize();
+
+    if (this.hasPendingActions()) {
+      return this.CurrentSuggestion!;
+    }
+
     this.setIsLoading(true);
     try {
       const suggestion = await this.generateIntentSuggestion(selectedIntent);
-      this.CurrentSuggestion = suggestion;
-      this.notifySubscribers();
+      await this.setCurrentSuggestion(suggestion);
       return suggestion;
     } finally {
       this.setIsLoading(false);
     }
+  }
+
+  async analyzeAutomaticSuggestion(): Promise<AgentFlowSuggestion> {
+    return this.analyzeIntentSuggestion();
+  }
+
+  async resolveAction(actionIndex: number): Promise<void> {
+    await this.initialize();
+
+    if (!this.CurrentSuggestion?.proposedActions[actionIndex]) return;
+
+    const remainingActions = this.CurrentSuggestion.proposedActions.filter(
+      (_, index) => index !== actionIndex,
+    );
+
+    await this.setCurrentSuggestion(
+      remainingActions.length > 0
+        ? {
+            ...this.CurrentSuggestion,
+            proposedActions: remainingActions,
+          }
+        : null,
+    );
+  }
+
+  async dismissSuggestion(): Promise<void> {
+    await this.initialize();
+    await this.setCurrentSuggestion(null);
   }
 
   async generateIntentSuggestion(
@@ -170,6 +216,27 @@ export class AgentFlowService {
       );
 
     return normalizeSuggestion(response, selectedIntent);
+  }
+
+  private async loadPendingSuggestion(): Promise<void> {
+    const state = await d.AgentFlowStateManagedBlob(this.chatId).get();
+    this.CurrentSuggestion = state?.pendingSuggestion ?? null;
+    this.isInitialized = true;
+    this.notifySubscribers();
+  }
+
+  private async setCurrentSuggestion(
+    suggestion: AgentFlowSuggestion | null,
+  ): Promise<void> {
+    await d.AgentFlowStateManagedBlob(this.chatId).save({
+      pendingSuggestion: suggestion ?? undefined,
+    });
+    this.CurrentSuggestion = suggestion;
+    this.notifySubscribers();
+  }
+
+  private hasPendingActions(): boolean {
+    return (this.CurrentSuggestion?.proposedActions.length ?? 0) > 0;
   }
 
   private setIsLoading(isLoading: boolean): void {

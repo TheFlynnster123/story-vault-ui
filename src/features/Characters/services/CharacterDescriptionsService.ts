@@ -1,397 +1,227 @@
 import { d } from "../../../services/Dependencies";
 import type {
   CharacterDescription,
+  CharacterDescriptionUpdate,
   PersistedCharacterDescription,
 } from "./CharacterDescription";
 import {
   CHARACTER_SCHEMA_VERSION,
   createCharacterDescription,
   migrateCharacterDescriptions,
+  needsCharacterDataMigration,
+  normalizeSheetItems,
   updateCharacterDescription,
 } from "./CharacterDescription";
+import { findCharacterByName } from "./CharacterNameMatcher";
+import {
+  DEFAULT_CHARACTER_SHEET_SYNC_INTERVAL,
+  getCharacterSheetSettings,
+} from "./CharacterSheetSettings";
+import type { CharacterUpdateProposal } from "./CharacterUpdateProposal";
+import type { CharacterProposalApprovalResult } from "./CharacterUpdateProposalService";
 
 export class CharacterDescriptionsService {
-  private chatId: string;
+  private readonly chatId: string;
 
   constructor(chatId: string) {
     this.chatId = chatId;
   }
 
   get = async (): Promise<CharacterDescription[]> => {
-    const persistedDescriptions =
-      (await d
-      .CharacterDescriptionsManagedBlob(this.chatId)
-      .get()) ?? [];
-
-    return this.migrateIfNeeded(persistedDescriptions);
+    const persistedCharacters =
+      (await d.CharacterDescriptionsManagedBlob(this.chatId).get()) ?? [];
+    return this.migrateIfNeeded(persistedCharacters);
   };
 
-  save = async (descriptions: CharacterDescription[]): Promise<void> =>
-    await d.CharacterDescriptionsManagedBlob(this.chatId).save(descriptions);
+  save = async (characters: CharacterDescription[]): Promise<void> =>
+    d.CharacterDescriptionsManagedBlob(this.chatId).save(characters);
 
-  saveDebounced = (descriptions: CharacterDescription[]): void =>
-    d.CharacterDescriptionsManagedBlob(this.chatId).saveDebounced(descriptions);
+  saveDebounced = (characters: CharacterDescription[]): void =>
+    d.CharacterDescriptionsManagedBlob(this.chatId).saveDebounced(characters);
+
+  savePendingChanges = (): Promise<void> =>
+    d.CharacterDescriptionsManagedBlob(this.chatId).savePendingChanges();
 
   findByName = async (
     name: string,
-  ): Promise<CharacterDescription | undefined> => {
-    const descriptions = await this.get();
-    return findCharacterByName(descriptions, name);
-  };
+  ): Promise<CharacterDescription | undefined> =>
+    findCharacterByName(await this.get(), name);
 
   upsertDescription = async (
-    description: CharacterDescription,
+    character: CharacterDescription,
   ): Promise<void> => {
-    const descriptions = await this.get();
-    const existingIndex = findCharacterIndexById(descriptions, description.id);
-
-    const updatedDescriptions = upsertCharacterInList(
-      descriptions,
-      description,
-      existingIndex,
-    );
-
-    await this.save(updatedDescriptions);
+    const characters = await this.get();
+    await this.save(upsertCharacter(characters, character));
   };
 
   removeDescription = async (id: string): Promise<void> => {
-    const descriptions = await this.get();
-    const filteredDescriptions = removeCharacterFromList(descriptions, id);
-    await this.save(filteredDescriptions);
+    const characters = await this.get();
+    await this.save(characters.filter((character) => character.id !== id));
   };
 
   createBlankCharacter = async (
     name: string,
   ): Promise<CharacterDescription> => {
-    const descriptions = await this.get();
-    const existing = findCharacterByName(descriptions, name);
-
+    const characters = await this.get();
+    const existing = findCharacterByName(characters, name);
     if (existing) return existing;
 
-    const newCharacter = createCharacterDescription(name, "");
-    await this.upsertDescription(newCharacter);
-    return newCharacter;
+    const character = createCharacterDescription(name, "");
+    await this.save([...characters, character]);
+    return character;
   };
 
   updateCharacter = async (
     id: string,
-    updates: Partial<
-      Pick<
-        CharacterDescription,
-        "name" | "appearance" | "sheet" | "sheetSource" | "preferredImage"
-      >
-    >,
+    updates: CharacterDescriptionUpdate,
   ): Promise<void> => {
-    const descriptions = await this.get();
-    const character = findCharacterById(descriptions, id);
-
+    const characters = await this.get();
+    const character = characters.find((candidate) => candidate.id === id);
     if (!character) return;
 
-    const updatedCharacter = updateCharacterDescription(character, updates);
-    await this.upsertDescription(updatedCharacter);
+    const normalizedUpdates =
+      updates.sheetItems === undefined
+        ? updates
+        : { ...updates, sheetItems: normalizeSheetItems(updates.sheetItems) };
+
+    await this.save(
+      upsertCharacter(
+        characters,
+        updateCharacterDescription(character, normalizedUpdates),
+      ),
+    );
   };
 
-  /** Adds a newly detected primary character without replacing user-authored work. */
-  upsertGeneratedSheet = async (
-    name: string,
-    sheet: string,
-  ): Promise<CharacterDescription | undefined> => {
-    const normalizedName = name.trim();
-    const normalizedSheet = sheet.trim();
-    if (!normalizedName || !normalizedSheet) return undefined;
+  setActivityOverride = (
+    id: string,
+    activeOverride: boolean | undefined,
+  ): Promise<void> => this.updateCharacter(id, { activeOverride });
 
-    const descriptions = await this.get();
-    const existing = findCharacterByName(descriptions, normalizedName);
-
-    if (existing) {
-      if (existing.sheetSource === "manual" || existing.sheet?.trim()) {
-        return undefined;
-      }
-
-      const updated = updateCharacterDescription(existing, {
-        sheet: normalizedSheet,
-        sheetSource: "auto",
-      });
-      await this.save(
-        upsertCharacterInList(
-          descriptions,
-          updated,
-          findCharacterIndexById(descriptions, updated.id),
-        ),
-      );
-      return updated;
+  applyUpdateProposal = async (
+    proposal: CharacterUpdateProposal,
+  ): Promise<CharacterProposalApprovalResult> => {
+    const characters = await this.get();
+    const conflictingNames = findProposalConflicts(characters, proposal);
+    if (conflictingNames.length > 0) {
+      return { status: "conflict", characterNames: conflictingNames };
     }
 
-    const character = updateCharacterDescription(
-      createCharacterDescription(normalizedName, ""),
-      { sheet: normalizedSheet, sheetSource: "auto" },
-    );
-    await this.save([...descriptions, character]);
-    return character;
+    await this.save(applyProposalChanges(characters, proposal));
+    return { status: "applied" };
   };
 
   subscribe = (callback: () => void): (() => void) =>
     d.CharacterDescriptionsManagedBlob(this.chatId).subscribe(callback);
 
   private migrateIfNeeded = async (
-    persistedDescriptions: PersistedCharacterDescription[],
+    persistedCharacters: PersistedCharacterDescription[],
   ): Promise<CharacterDescription[]> => {
-    const descriptions = migrateCharacterDescriptions(persistedDescriptions);
-    const needsDataMigration = persistedDescriptions.some((character) =>
-      "description" in character,
-    );
+    const characters = migrateCharacterDescriptions(persistedCharacters);
     const settings = await d.ChatSettingsService(this.chatId).Get();
     const currentVersion = settings?.charactersSchemaVersion ?? 1;
+    const needsDataMigration = needsCharacterDataMigration(persistedCharacters);
 
     if (currentVersion >= CHARACTER_SCHEMA_VERSION && !needsDataMigration) {
-      return descriptions;
+      return characters;
     }
 
     if (needsDataMigration) {
-      await this.save(descriptions);
+      await this.save(characters);
     }
 
     if (settings) {
+      const legacySettings = getCharacterSheetSettings(settings);
       await d.ChatSettingsService(this.chatId).update({
         charactersSchemaVersion: CHARACTER_SCHEMA_VERSION,
+        characterSheetsAutoSyncEnabled:
+          settings.characterSheetsAutoSyncEnabled ?? false,
+        characterSheetsSyncInterval:
+          settings.characterSheetsSyncInterval ??
+          legacySettings.syncInterval ??
+          DEFAULT_CHARACTER_SHEET_SYNC_INTERVAL,
+        characterSheetsMessagesSinceLastSync: 0,
+        characterSheetsAutoGenerateEnabled: undefined,
+        characterSheetsCheckInterval: undefined,
+        characterSheetsMessagesSinceLastCheck: undefined,
       });
     }
 
-    return descriptions;
+    return characters;
   };
 }
 
-const findCharacterByName = (
-  descriptions: CharacterDescription[],
-  name: string,
-): CharacterDescription | undefined => {
-  const exactMatch = descriptions.find((d) => isExactNameMatch(d.name, name));
-  if (exactMatch) {
-    return exactMatch;
-  }
-
-  const fuzzyMatches = findHighConfidenceFuzzyMatches(descriptions, name);
-
-  if (fuzzyMatches.length === 0) {
-    return undefined;
-  }
-
-  if (isAmbiguousTopMatch(fuzzyMatches)) {
-    return undefined;
-  }
-
-  return fuzzyMatches[0].character;
-};
-
-const findCharacterById = (
-  descriptions: CharacterDescription[],
-  id: string,
-): CharacterDescription | undefined => descriptions.find((d) => d.id === id);
-
-const findCharacterIndexById = (
-  descriptions: CharacterDescription[],
-  id: string,
-): number => descriptions.findIndex((d) => d.id === id);
-
-const isExactNameMatch = (name1: string, name2: string): boolean =>
-  normalizeForMatching(name1) === normalizeForMatching(name2);
-
-const normalizeForMatching = (name: string): string =>
-  name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ");
-
-const tokenizeName = (name: string): string[] =>
-  normalizeForMatching(name)
-    .split(" ")
-    .filter((token) => token.length > 0);
-
-const findHighConfidenceFuzzyMatches = (
-  descriptions: CharacterDescription[],
-  name: string,
-): ScoredCharacterMatch[] =>
-  descriptions
-    .map((character) => ({
-      character,
-      confidence: getNameMatchConfidence(name, character.name),
-    }))
-    .filter((match) => match.confidence >= HIGH_CONFIDENCE_THRESHOLD)
-    .sort((a, b) => b.confidence - a.confidence);
-
-const getNameMatchConfidence = (
-  inputName: string,
-  candidateName: string,
-): number => {
-  const normalizedInput = normalizeForMatching(inputName);
-  const normalizedCandidate = normalizeForMatching(candidateName);
-
-  if (!normalizedInput || !normalizedCandidate) {
-    return 0;
-  }
-
-  if (normalizedInput === normalizedCandidate) {
-    return 1;
-  }
-
-  const tokenConfidence = getTokenMatchConfidence(
-    normalizedInput,
-    normalizedCandidate,
-  );
-  const stringConfidence = getLevenshteinSimilarity(
-    normalizedInput,
-    normalizedCandidate,
-  );
-
-  return Math.max(tokenConfidence, stringConfidence);
-};
-
-const getTokenMatchConfidence = (
-  inputName: string,
-  candidateName: string,
-): number => {
-  const inputTokens = tokenizeName(inputName);
-  const candidateTokens = tokenizeName(candidateName);
-
-  if (inputTokens.length === 0 || candidateTokens.length === 0) {
-    return 0;
-  }
-
-  const inputCoverage =
-    countMatchingTokens(inputTokens, candidateTokens) / inputTokens.length;
-  const candidateCoverage =
-    countMatchingTokens(candidateTokens, inputTokens) / candidateTokens.length;
-
-  if (inputCoverage === 1 && candidateCoverage === 1) {
-    return 1;
-  }
-
-  if (inputCoverage === 1 && candidateCoverage >= 0.5) {
-    return 0.94;
-  }
-
-  if (candidateCoverage === 1 && inputCoverage >= 0.5) {
-    return 0.9;
-  }
-
-  if (inputCoverage >= 0.75 && candidateCoverage >= 0.75) {
-    return 0.88;
-  }
-
-  return Math.min(inputCoverage, candidateCoverage) * 0.8;
-};
-
-const countMatchingTokens = (
-  sourceTokens: string[],
-  targetTokens: string[],
-): number =>
-  sourceTokens.filter((sourceToken) =>
-    targetTokens.some((targetToken) =>
-      areTokensHighConfidenceMatch(sourceToken, targetToken),
-    ),
-  ).length;
-
-const areTokensHighConfidenceMatch = (
-  tokenA: string,
-  tokenB: string,
-): boolean => {
-  if (tokenA === tokenB) {
-    return true;
-  }
-
-  if (
-    tokenA.length < MIN_TOKEN_LENGTH_FOR_PREFIX_MATCH ||
-    tokenB.length < MIN_TOKEN_LENGTH_FOR_PREFIX_MATCH
-  ) {
-    return false;
-  }
-
-  return tokenA.startsWith(tokenB) || tokenB.startsWith(tokenA);
-};
-
-const getLevenshteinSimilarity = (left: string, right: string): number => {
-  const maxLength = Math.max(left.length, right.length);
-  if (maxLength === 0) {
-    return 1;
-  }
-
-  const distance = getLevenshteinDistance(left, right);
-  return 1 - distance / maxLength;
-};
-
-const getLevenshteinDistance = (left: string, right: string): number => {
-  const matrix = Array.from({ length: left.length + 1 }, () =>
-    new Array<number>(right.length + 1).fill(0),
-  );
-
-  for (let i = 0; i <= left.length; i += 1) {
-    matrix[i][0] = i;
-  }
-
-  for (let j = 0; j <= right.length; j += 1) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= left.length; i += 1) {
-    for (let j = 1; j <= right.length; j += 1) {
-      const substitutionCost = left[i - 1] === right[j - 1] ? 0 : 1;
-
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + substitutionCost,
-      );
-    }
-  }
-
-  return matrix[left.length][right.length];
-};
-
-const isAmbiguousTopMatch = (matches: ScoredCharacterMatch[]): boolean => {
-  if (matches.length < 2) {
-    return false;
-  }
-
-  return matches[0].confidence - matches[1].confidence < AMBIGUITY_GAP;
-};
-
-interface ScoredCharacterMatch {
-  character: CharacterDescription;
-  confidence: number;
-}
-
-const HIGH_CONFIDENCE_THRESHOLD = 0.88;
-const AMBIGUITY_GAP = 0.05;
-const MIN_TOKEN_LENGTH_FOR_PREFIX_MATCH = 3;
-
-const upsertCharacterInList = (
-  descriptions: CharacterDescription[],
+const upsertCharacter = (
+  characters: CharacterDescription[],
   character: CharacterDescription,
-  existingIndex: number,
 ): CharacterDescription[] => {
-  if (existingIndex >= 0) {
-    return replaceCharacterAtIndex(descriptions, character, existingIndex);
-  }
-  return addCharacterToList(descriptions, character);
+  const existingIndex = characters.findIndex(
+    (candidate) => candidate.id === character.id,
+  );
+  if (existingIndex < 0) return [...characters, character];
+
+  return [
+    ...characters.slice(0, existingIndex),
+    character,
+    ...characters.slice(existingIndex + 1),
+  ];
 };
 
-const replaceCharacterAtIndex = (
-  descriptions: CharacterDescription[],
-  character: CharacterDescription,
-  index: number,
-): CharacterDescription[] => [
-  ...descriptions.slice(0, index),
-  character,
-  ...descriptions.slice(index + 1),
-];
+const findProposalConflicts = (
+  characters: CharacterDescription[],
+  proposal: CharacterUpdateProposal,
+): string[] =>
+  proposal.changes.flatMap((change) => {
+    const current = characters.find(
+      (character) => character.id === change.characterId,
+    );
 
-const addCharacterToList = (
-  descriptions: CharacterDescription[],
-  character: CharacterDescription,
-): CharacterDescription[] => [...descriptions, character];
+    if (change.isNew) {
+      return current || findCharacterByName(characters, change.characterName)
+        ? [change.characterName]
+        : [];
+    }
 
-const removeCharacterFromList = (
-  descriptions: CharacterDescription[],
-  id: string,
-): CharacterDescription[] => descriptions.filter((d) => d.id !== id);
+    return !current || current.updatedAt !== change.baseUpdatedAt
+      ? [change.characterName]
+      : [];
+  });
+
+const applyProposalChanges = (
+  characters: CharacterDescription[],
+  proposal: CharacterUpdateProposal,
+): CharacterDescription[] =>
+  proposal.changes.reduce((currentCharacters, change) => {
+    if (change.isNew) {
+      return [
+        ...currentCharacters,
+        createProposedCharacter(change, proposal.createdAt),
+      ];
+    }
+
+    const current = currentCharacters.find(
+      (character) => character.id === change.characterId,
+    );
+    if (!current) return currentCharacters;
+
+    const updated = updateCharacterDescription(current, {
+      sheetItems: change.proposedSheetItems,
+      sheetSource:
+        change.proposedSheetItems === undefined ? current.sheetSource : "auto",
+      detectedActive: change.proposedDetectedActive ?? current.detectedActive,
+    });
+    return upsertCharacter(currentCharacters, updated);
+  }, characters);
+
+const createProposedCharacter = (
+  change: CharacterUpdateProposal["changes"][number],
+  createdAt: string,
+): CharacterDescription => ({
+  id: change.characterId,
+  name: change.characterName,
+  appearance: "",
+  sheetItems: change.proposedSheetItems ?? [],
+  sheetSource: change.proposedSheetItems === undefined ? undefined : "auto",
+  detectedActive: change.proposedDetectedActive ?? true,
+  createdAt,
+  updatedAt: createdAt,
+});

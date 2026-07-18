@@ -276,23 +276,62 @@ export const SystemPromptsEditor: React.FC = () => {
 
       <PromptSection>
         <PromptInput
-          id="characterSheetPrompt"
-          label="Character Sheet Prompt"
-          helpText="This prompt identifies newly introduced primary characters and generates concise narrative continuity sheets. The result is injected into text-chat context, not image prompts."
-          value={localPrompts.characterSheetPrompt || ""}
-          isHighlighted={highlightedPrompt === "characterSheetPrompt"}
-          onChange={(value) => handlePromptChange({ characterSheetPrompt: value })}
+          id="activeCharactersPrompt"
+          label="Active Characters Prompt"
+          helpText="This prompt selects only the characters active in the current scene. Its proposed activity changes require approval before they are applied."
+          value={localPrompts.activeCharactersPrompt || ""}
+          isHighlighted={highlightedPrompt === "activeCharactersPrompt"}
+          onChange={(value) =>
+            handlePromptChange({ activeCharactersPrompt: value })
+          }
           onReset={() =>
-            handleResetClick("characterSheetPrompt", "Character Sheet Prompt")
+            handleResetClick(
+              "activeCharactersPrompt",
+              "Active Characters Prompt",
+            )
           }
           minRows={8}
+          icon={<LuUserSearch size={18} color="orange" />}
+        />
+        <ModelSelect
+          value={localPrompts.activeCharactersModel || ""}
+          requestSettings={localPrompts.activeCharactersRequestSettings}
+          {...createModelHandlers(
+            "activeCharactersModel",
+            "activeCharactersRequestSettings",
+          )}
+          label="Active Characters Model"
+          withDescription={false}
+        />
+      </PromptSection>
+
+      <PromptSection>
+        <PromptInput
+          id="characterSheetUpdatePrompt"
+          label="Character Sheet Update Prompt"
+          helpText="This prompt replaces complete identity-focused bullet lists for selected characters. Proposed changes require approval before they are applied."
+          value={localPrompts.characterSheetUpdatePrompt || ""}
+          isHighlighted={highlightedPrompt === "characterSheetUpdatePrompt"}
+          onChange={(value) =>
+            handlePromptChange({ characterSheetUpdatePrompt: value })
+          }
+          onReset={() =>
+            handleResetClick(
+              "characterSheetUpdatePrompt",
+              "Character Sheet Update Prompt",
+            )
+          }
+          minRows={10}
           icon={<LuUser size={18} color="orange" />}
         />
         <ModelSelect
-          value={localPrompts.characterSheetModel || ""}
-          requestSettings={localPrompts.characterSheetRequestSettings}
-          {...createModelHandlers("characterSheetModel", "characterSheetRequestSettings")}
-          label="Character Sheet Model"
+          value={localPrompts.characterSheetUpdateModel || ""}
+          requestSettings={localPrompts.characterSheetUpdateRequestSettings}
+          {...createModelHandlers(
+            "characterSheetUpdateModel",
+            "characterSheetUpdateRequestSettings",
+          )}
+          label="Character Sheet Update Model"
           withDescription={false}
         />
       </PromptSection>
@@ -315,8 +354,11 @@ export const SystemPromptsEditor: React.FC = () => {
         <ModelSelect
           value={localPrompts.chapterSummaryModel || ""}
           requestSettings={localPrompts.chapterSummaryRequestSettings}
-          {...createModelHandlers("chapterSummaryModel", "chapterSummaryRequestSettings")}
-          label="Chapter Summary Model"
+          {...createModelHandlers(
+            "chapterSummaryModel",
+            "chapterSummaryRequestSettings",
+          )}
+          label="Chapter Draft Model"
           withDescription={false}
         />
       </PromptSection>
@@ -335,13 +377,6 @@ export const SystemPromptsEditor: React.FC = () => {
             handleResetClick("chapterTitlePrompt", "Chapter Title Prompt")
           }
           icon={<LuHeading size={18} color="orange" />}
-        />
-        <ModelSelect
-          value={localPrompts.chapterTitleModel || ""}
-          requestSettings={localPrompts.chapterTitleRequestSettings}
-          {...createModelHandlers("chapterTitleModel", "chapterTitleRequestSettings")}
-          label="Chapter Title Model"
-          withDescription={false}
         />
       </PromptSection>
 

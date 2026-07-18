@@ -14,6 +14,7 @@ export const useChatDeletion = () => {
       d.ChatSettingsService(chatId).delete();
       d.MemoriesManagedBlob(chatId).delete();
       d.PlansManagedBlob(chatId).delete();
+      d.AgentFlowStateManagedBlob(chatId).delete();
 
       // Refresh chat list
       queryClient.refetchQueries({

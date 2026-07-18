@@ -19,7 +19,10 @@ const createMockImageGenerationService = () => ({
   subscribe: vi.fn().mockReturnValue(vi.fn()),
   generateImage: vi
     .fn()
-    .mockResolvedValue({ type: "missing-character-description", characterName: "Sarah Chen" }),
+    .mockResolvedValue({
+      type: "missing-character-description",
+      characterName: "Sarah Chen",
+    }),
   resolveMissingCharacterDescription: vi
     .fn()
     .mockResolvedValue({ type: "started" }),
@@ -44,24 +47,35 @@ describe("useChatGeneration", () => {
     mockErrorLog = vi.fn();
 
     vi.mocked(d.TextGenerationService).mockReturnValue(
-      mockTextGeneration as unknown as ReturnType<typeof d.TextGenerationService>,
+      mockTextGeneration as unknown as ReturnType<
+        typeof d.TextGenerationService
+      >,
     );
     vi.mocked(d.ImageGenerationService).mockReturnValue(
-      mockImageGeneration as unknown as ReturnType<typeof d.ImageGenerationService>,
-    );
-    vi.mocked(d.ErrorService).mockReturnValue(
-      { log: mockErrorLog } as unknown as ReturnType<typeof d.ErrorService>,
-    );
-    vi.mocked(d.ChatService).mockReturnValue(
-      { AddUserMessage: vi.fn().mockResolvedValue(undefined) } as unknown as ReturnType<
-        typeof d.ChatService
+      mockImageGeneration as unknown as ReturnType<
+        typeof d.ImageGenerationService
       >,
     );
-    vi.mocked(d.UserChatProjection).mockReturnValue(
-      { GetMessages: vi.fn().mockReturnValue([]) } as unknown as ReturnType<
-        typeof d.UserChatProjection
-      >,
-    );
+    vi.mocked(d.ErrorService).mockReturnValue({
+      log: mockErrorLog,
+    } as unknown as ReturnType<typeof d.ErrorService>);
+    vi.mocked(d.ChatService).mockReturnValue({
+      AddUserMessage: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof d.ChatService>);
+    vi.mocked(d.LLMChatProjection).mockReturnValue({
+      GetMessages: vi.fn().mockReturnValue([]),
+    } as unknown as ReturnType<typeof d.LLMChatProjection>);
+    vi.mocked(d.ChatSettingsService).mockReturnValue({
+      Get: vi.fn().mockResolvedValue({ agentFlowAutoRunEnabled: false }),
+    } as unknown as ReturnType<typeof d.ChatSettingsService>);
+    vi.mocked(d.AgentFlowService).mockReturnValue({
+      analyzeAutomaticSuggestion: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof d.AgentFlowService>);
+    vi.mocked(d.CharacterMaintenanceService).mockReturnValue({
+      maybeCreateProposalAfterSavedUserTurn: vi.fn().mockResolvedValue({
+        status: "not-due",
+      }),
+    } as unknown as ReturnType<typeof d.CharacterMaintenanceService>);
   });
 
   // ---------------------------------------------------------------------------
@@ -93,14 +107,12 @@ describe("useChatGeneration", () => {
   // ---------------------------------------------------------------------------
 
   describe("generateResponse", () => {
-    it("skips new reasoning when the message before the user input is reasoning", async () => {
-      vi.mocked(d.UserChatProjection).mockReturnValue(
-        {
-          GetMessages: vi.fn().mockReturnValue([
-            { id: "reasoning-1", type: "reasoning" },
-          ]),
-        } as unknown as ReturnType<typeof d.UserChatProjection>,
-      );
+    it("skips new reasoning when the last message in context is reasoning", async () => {
+      vi.mocked(d.LLMChatProjection).mockReturnValue({
+        GetMessages: vi
+          .fn()
+          .mockReturnValue([{ id: "reasoning-1", type: "reasoning" }]),
+      } as unknown as ReturnType<typeof d.LLMChatProjection>);
       const { result } = await renderChatGeneration();
 
       await act(async () => {
@@ -110,10 +122,59 @@ describe("useChatGeneration", () => {
       expect(d.ChatService(CHAT_ID).AddUserMessage).toHaveBeenCalledWith(
         "Follow-up message",
       );
+      expect(
+        d.CharacterMaintenanceService(CHAT_ID)
+          .maybeCreateProposalAfterSavedUserTurn,
+      ).toHaveBeenCalledOnce();
       expect(mockTextGeneration.generateResponse).toHaveBeenCalledWith(
         undefined,
         true,
       );
+    });
+
+    it("generates reasoning when the last message in context is not reasoning", async () => {
+      vi.mocked(d.LLMChatProjection).mockReturnValue({
+        GetMessages: vi
+          .fn()
+          .mockReturnValue([{ id: "assistant-1", type: "message" }]),
+      } as unknown as ReturnType<typeof d.LLMChatProjection>);
+      const { result } = await renderChatGeneration();
+
+      await act(async () => {
+        await result.current.generateResponse("Follow-up message");
+      });
+
+      expect(mockTextGeneration.generateResponse).toHaveBeenCalledWith(
+        undefined,
+        false,
+      );
+    });
+
+    it("uses the protected automatic Agent Flow analysis at its configured interval", async () => {
+      const update = vi.fn().mockResolvedValue(undefined);
+      const analyzeAutomaticSuggestion = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(d.ChatSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          agentFlowAutoRunEnabled: true,
+          agentFlowAutoRunInterval: 1,
+          agentFlowMessagesSinceLastRun: 0,
+        }),
+        update,
+      } as unknown as ReturnType<typeof d.ChatSettingsService>);
+      vi.mocked(d.AgentFlowService).mockReturnValue({
+        analyzeAutomaticSuggestion,
+      } as unknown as ReturnType<typeof d.AgentFlowService>);
+      const { result } = await renderChatGeneration();
+
+      await act(async () => {
+        await result.current.generateResponse("Follow-up message");
+      });
+      await act(async () => {});
+
+      expect(update).toHaveBeenCalledWith({
+        agentFlowMessagesSinceLastRun: 0,
+      });
+      expect(analyzeAutomaticSuggestion).toHaveBeenCalledOnce();
     });
   });
 
@@ -152,7 +213,10 @@ describe("useChatGeneration", () => {
       });
       await act(async () => {});
 
-      expect(mockErrorLog).toHaveBeenCalledWith("Failed to generate image", err);
+      expect(mockErrorLog).toHaveBeenCalledWith(
+        "Failed to generate image",
+        err,
+      );
     });
   });
 
@@ -176,7 +240,8 @@ describe("useChatGeneration", () => {
 
       let returned!: string;
       await act(async () => {
-        returned = await result.current.resolveMissingCharacterDescription("generate");
+        returned =
+          await result.current.resolveMissingCharacterDescription("generate");
       });
 
       // Modal is already closed before the slow generation completes
@@ -184,10 +249,9 @@ describe("useChatGeneration", () => {
       expect(result.current.missingCharacterName).toBeNull();
 
       // Service was invoked with correct args
-      expect(mockImageGeneration.resolveMissingCharacterDescription).toHaveBeenCalledWith(
-        "Sarah Chen",
-        "generate",
-      );
+      expect(
+        mockImageGeneration.resolveMissingCharacterDescription,
+      ).toHaveBeenCalledWith("Sarah Chen", "generate");
 
       // Resolve the background work so the promise doesn't stay dangling
       resolveGeneration();
@@ -199,7 +263,8 @@ describe("useChatGeneration", () => {
 
       let returned!: string;
       await act(async () => {
-        returned = await result.current.resolveMissingCharacterDescription("generate");
+        returned =
+          await result.current.resolveMissingCharacterDescription("generate");
       });
 
       expect(returned).toBe("none");
@@ -207,7 +272,9 @@ describe("useChatGeneration", () => {
 
     it("logs errors from background generation via ErrorService", async () => {
       const err = new Error("LLM failed");
-      mockImageGeneration.resolveMissingCharacterDescription.mockRejectedValue(err);
+      mockImageGeneration.resolveMissingCharacterDescription.mockRejectedValue(
+        err,
+      );
 
       const { result } = await renderChatGeneration();
       await triggerMissingCharacterState(result);
@@ -229,11 +296,14 @@ describe("useChatGeneration", () => {
 
       let returned!: string;
       await act(async () => {
-        returned = await result.current.resolveMissingCharacterDescription("generate");
+        returned =
+          await result.current.resolveMissingCharacterDescription("generate");
       });
 
       expect(returned).toBe("none");
-      expect(mockImageGeneration.resolveMissingCharacterDescription).not.toHaveBeenCalled();
+      expect(
+        mockImageGeneration.resolveMissingCharacterDescription,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -253,7 +323,8 @@ describe("useChatGeneration", () => {
 
       let returned!: string;
       await act(async () => {
-        returned = await result.current.resolveMissingCharacterDescription("manual");
+        returned =
+          await result.current.resolveMissingCharacterDescription("manual");
       });
 
       expect(returned).toBe("navigate-to-characters");
@@ -270,7 +341,8 @@ describe("useChatGeneration", () => {
 
       let returned!: string;
       await act(async () => {
-        returned = await result.current.resolveMissingCharacterDescription("manual");
+        returned =
+          await result.current.resolveMissingCharacterDescription("manual");
       });
 
       expect(returned).toBe("none");
@@ -278,14 +350,17 @@ describe("useChatGeneration", () => {
 
     it("logs and returns 'none' on error", async () => {
       const err = new Error("manual failed");
-      mockImageGeneration.resolveMissingCharacterDescription.mockRejectedValue(err);
+      mockImageGeneration.resolveMissingCharacterDescription.mockRejectedValue(
+        err,
+      );
 
       const { result } = await renderChatGeneration();
       await triggerMissingCharacterState(result);
 
       let returned!: string;
       await act(async () => {
-        returned = await result.current.resolveMissingCharacterDescription("manual");
+        returned =
+          await result.current.resolveMissingCharacterDescription("manual");
       });
 
       expect(returned).toBe("none");

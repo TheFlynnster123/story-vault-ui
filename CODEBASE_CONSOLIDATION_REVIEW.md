@@ -1,17 +1,18 @@
 # Codebase Consolidation & Complexity Review
 
-Reviewed July 9, 2026 against the current `src/` tree. This is a planning
-document, not a request to rewrite working features. It prioritizes places
+Originally reviewed July 9, 2026; updated July 18, 2026 after completing the
+legacy image consolidation. This is a planning document, not a request to
+rewrite working features. It prioritizes places
 where the same product concept is represented in several live code paths or
 where adding one behavior requires editing too many files.
 
 ## Executive summary
 
-The application has solid feature boundaries and useful tests, but the image
-and AI-workflow areas are carrying two generations of architecture at once.
-The highest-value work is to finish those migrations, retaining read
-compatibility at the persistence boundary rather than keeping parallel UI,
-service, and event implementations indefinitely.
+The application has solid feature boundaries and useful tests. The two largest
+image-architecture duplications identified in the original review are now
+resolved: per-chat copied models have been replaced by variants, and legacy
+image job events are normalized at replay into the workflow event shape.
+Compatibility is retained only at persistence boundaries.
 
 The next most valuable consolidation is a small set of shared AI-context and
 action-definition primitives. Those reduce drift without turning every prompt
@@ -19,10 +20,10 @@ or workflow into a generic framework.
 
 | Priority | Recommendation | Why it matters | Suggested scope |
 | --- | --- | --- | --- |
-| P1 | Retire legacy per-chat image models | The documented replacement is live, but the legacy routes, hooks, pages, and storage still ship. | One migration/release train |
-| P1 | Collapse `CivitJob` and `CivitWorkflow` event shapes | New image generation writes workflow events, while projections, UI, services, and tests still support both. | One migration/release train |
+| Done | Retire legacy per-chat image models | Legacy settings now migrate at the storage boundary; the old UI and CRUD paths have been removed. | Completed July 18, 2026 |
+| Done | Collapse `CivitJob` and `CivitWorkflow` event shapes | Legacy payloads normalize at replay; active code consumes and writes workflow events only. | Completed July 18, 2026 |
 | P1 | Centralize LLM context serialization and prompt-envelope assembly | The same history formatting and message-append rules are repeated in generation features. | Small, well-tested library extraction |
-| P1 | Parameterize the duplicate image-model editor | The global and per-chat editors differ chiefly by repository and route details. | Small refactor |
+| Done | Remove the duplicate per-chat image-model editor | Deleting the superseded per-chat model feature removed the duplicate editor entirely. | Completed July 18, 2026 |
 | P2 | Make discussion routes/configuration data-driven | Six route wrappers and several config factories repeat the same lifecycle. | Incremental feature refactor |
 | P2 | Define Agent Flow actions once | A new agent tool currently requires synchronized enum/schema/fallback/UI-executor changes. | Incremental feature refactor |
 | P2 | Add an explicit chat-session lifecycle | Per-chat singleton caches retain state, timers, and subscribers without eviction. | Design + lifecycle change |
@@ -36,93 +37,41 @@ or workflow into a generic framework.
 
 **Priority: P1 — high duplication, meaningful deletion opportunity.**
 
-The image feature documentation explicitly identifies `useChatImageModels`,
-`ChatImageModel*Page`, `ChatImageModelService`, and
-`ChatImageModelsManagedBlob` as legacy and superseded by variants
-([`src/features/Images/Images.md`](src/features/Images/Images.md)). They are
-nevertheless still routed from [`src/App.tsx`](src/App.tsx), and the legacy
-service/hook remain a complete CRUD implementation:
+**Status: completed.** When a chat has no variant blob, its older
+`chat-image-models` blob is converted to variants. Successful migrations remove
+the obsolete blob; partial migrations retain it for recovery and expose a
+user-facing fallback notice. Old URLs redirect to the variant page, and the
+legacy pages, hook, and CRUD service have been removed.
 
-- [`ChatImageModelService.ts`](src/features/Images/services/ChatImageModelService.ts)
-  duplicates much of the global
-  [`ImageModelService.ts`](src/features/Images/services/modelGeneration/ImageModelService.ts)
-  contract: load, classify, save/upsert, delete, select, migrate, subscribe,
-  and default fallback.
-- [`useChatImageModels.ts`](src/features/Images/hooks/useChatImageModels.ts)
-  duplicates the load/error/subscription/optimistic-state shape in
-  [`useChatImageVariants.ts`](src/features/Images/hooks/useChatImageVariants.ts).
-- `ChatImageModelEditPage` and `ImageModelEditPage` are nearly the same editor
-  with a different storage service and navigation target.
+The retained compatibility surface is intentionally small:
 
-Keeping this feature family visible makes every image-model change answer two
-questions: “does this belong on a copied per-chat model or a variant?” and
-“which selection state wins?” The newer variant model is a better long-term
-representation because it stores only per-chat overrides over a system model.
+- `LegacyChatImageModelsMigration` reads the old blob only when no variant blob
+  exists, converts usable records, and persists the canonical representation.
+- `ChatImageModelsManagedBlob` remains as a read/delete accessor for that
+  migration boundary; active image generation does not use it.
+- Complete migrations delete the obsolete blob. Partial migrations retain it
+  for recovery, log the failed records, show a user-facing notice, and safely
+  fall back to a workflow-compatible system model.
+- Legacy `/image-models/*` chat URLs redirect to `/image-variants`.
 
-**Recommended end state**
-
-Keep system models plus per-chat variants; remove the legacy per-chat model
-routes, pages, hook, service, managed blob accessor, and their compatibility
-tests after data has migrated. The only legacy-aware code should be a
-one-time/read-time migration at the storage boundary, with a telemetry or
-explicit user-visible report for records that cannot be converted.
-
-**Safe migration sequence**
-
-1. Inventory legacy `chat-image-models` blobs and classify each model with the
-   existing `LegacyImageModelWorkflowConverter`.
-2. For each selected legacy model, create either a variant or a selected system
-   model record. Preserve the legacy model as a temporary fallback only when no
-   equivalent system model can be resolved.
-3. Read legacy data only when the new variant blob is absent; write only the
-   variant representation.
-4. Remove the legacy routes from `App`, then delete the legacy UI/service/hook
-   after a defined compatibility window.
-5. Add migration fixtures covering workflow models, unconvertible legacy
-   models, selection fallback, and idempotent re-runs.
-
-Do not replace the two implementations with a larger generic “model manager”
-while both concepts remain. The desired consolidation is deletion, not a third
-abstraction that preserves both concepts forever.
+Migration, fallback, selection validation, and cleanup behavior are covered by
+the image-variant service tests.
 
 ### 2. Collapse the duplicate image job/workflow event model
 
 **Priority: P1 — compatibility burden crosses the event-store boundary.**
 
-`ChatEvent` defines parallel `CivitJobCreated`/`CivitJobUpdated` and
-`CivitWorkflowCreated`/`CivitWorkflowUpdated` events with effectively the same
-metadata in [`ChatEvent.ts`](src/services/CQRS/events/ChatEvent.ts). The same
-parallelism appears in event utilities, `ChatService`, `UserChatProjection`,
-`ImageGenerationService`, `CivitJobMessage`, and their tests. The active image
-generation flow creates and updates workflow events; the job forms are retained
-to replay historical data.
+**Status: completed.** Legacy `CivitJob*` payloads are
+normalized to `CivitWorkflow*` events when replayed. Projections, image
+generation, and chat rendering now operate on the workflow shape; the legacy
+event interfaces remain only for persisted-history compatibility.
 
-This adds branching at exactly the most fragile point in the app: persisted,
-encrypted event replay. For example, the image generation service must accept
-both projected message types and choose the matching update method, while the
-LLM projection has four no-op cases for image events.
-
-**Recommended end state**
-
-Adopt one persisted image-generation event family, named for the current
-workflow API. Convert legacy events to that canonical in-memory form during
-event deserialization/replay; all projections and UI should receive only that
-canonical type.
-
-**Safe migration sequence**
-
-1. Add a pure `normalizeChatEvent(event)` compatibility adapter at the event
-   store boundary. It maps old job events/fields to canonical workflow events
-   without changing saved history.
-2. Change projections and UI to consume only the canonical projected image
-   message type. Keep replay fixtures for old event payloads.
-3. Stop exposing legacy `CreateCivitJob` and `UpdateCivitJob` methods to new
-   production callers.
-4. Once old event replay is covered and the compatibility period is complete,
-   remove legacy event writers, types, utilities, and branches.
-
-This is not a database rewrite: events are encrypted and append-only, so a
-read-time adapter is safer than attempting bulk mutation of stored history.
+`normalizeChatEvent` is the sole translation point for encrypted historical
+events. Legacy writer utilities, `ChatService` methods, projected
+`civit-job` messages, service branches, and UI unions have been removed.
+Replay fixtures verify both legacy creation and update payloads. This remains
+a read-time conversion rather than a destructive rewrite of append-only
+history.
 
 ### 3. Extract shared LLM context and prompt-envelope assembly
 
@@ -169,26 +118,11 @@ memories or character sheets.
 
 ### 4. Use one configurable image-model editor
 
-**Priority: P1 — low-risk, concrete deletion.**
-
-[`ImageModelEditPage.tsx`](src/features/Images/pages/ImageModelEditPage.tsx)
-and [`ChatImageModelEditPage.tsx`](src/features/Images/pages/ChatImageModelEditPage.tsx)
-contain the same loading, editing, migration, deletion-confirmation, and form
-sections. Their differences are mostly these injected concerns:
-
-- global versus chat-scoped model repository;
-- save/delete/select method names;
-- back route and page wording;
-- a small amount of theme styling.
-
-Extract the shared screen as `ImageModelEditor` with a narrow repository
-interface (`get`, `save`, `remove`, `migrate`, `flush`) and navigation/page
-configuration. Keep route-specific containers thin. If finding 1 removes
-legacy chat models, this extraction can be deferred until after that deletion;
-otherwise, do it first to prevent changes from landing twice.
-
-The editor should be protected by one shared interaction test suite plus two
-small container tests for repository binding and navigation.
+**Status: resolved by deletion.** The superseded
+`ChatImageModelEditPage` was removed with the per-chat copied-model feature.
+`ImageModelEditPage` remains the system-model editor, while
+`ChatImageVariantEditPage` edits the intentionally different override
+representation. A generic editor abstraction is no longer recommended.
 
 ### 5. Make discussion pages and repeated summary configurations declarative
 
@@ -339,17 +273,20 @@ manual chunks before observing what route-level splitting actually produces.
 
 ## Recommended delivery order
 
-1. Add outbound-message snapshot fixtures, legacy event-replay fixtures, and
-   model/blob migration fixtures before behavior-changing work.
-2. Extract the pure LLM context builder and migrate callers one by one.
-3. Normalize legacy image job events at replay, then remove legacy event paths
-   from active generation.
-4. Migrate per-chat legacy models to variants and remove legacy routes/code.
-   If the legacy UI must remain temporarily, first share the model editor.
-5. Convert discussion routes and Agent Flow actions to descriptors/catalogs.
-6. Establish chat-session disposal; use that boundary when narrowing the
+Completed July 18, 2026:
+
+- legacy image event replay fixtures and canonical normalization;
+- removal of active legacy image event paths;
+- automatic per-chat model-to-variant migration and migration fixtures;
+- deletion of legacy per-chat routes, pages, hook, and CRUD service.
+
+Remaining recommended order:
+
+1. Extract the pure LLM context builder and migrate callers one by one.
+2. Convert discussion routes and Agent Flow actions to descriptors/catalogs.
+3. Establish chat-session disposal; use that boundary when narrowing the
    dependency locator and splitting the image-generation state machine.
-7. Split large pages opportunistically alongside feature changes, with no
+4. Split large pages opportunistically alongside feature changes, with no
    behavior-only “big bang” rewrite; then lazy-load the resulting route-level
    boundaries.
 
@@ -370,10 +307,8 @@ manual chunks before observing what route-level splitting actually produces.
 
 ## Quality baseline to address separately
 
-`npm run lint` currently fails with 191 errors and 13 warnings, largely
-`no-explicit-any` violations in tests plus several production issues (including
-legacy image-model files). This is important, but it should be a separate
-baseline cleanup or deliberately scoped workstream; combining it with the
-consolidations above would obscure behavioral changes. New/modified code in the
-consolidation work should remain lint-clean, and each migration should run its
-focused tests plus the relevant build/type-check command.
+The July 9 lint counts are no longer a reliable baseline and should be
+remeasured as a separate cleanup workstream. The legacy image production files
+called out in the original baseline have been removed. The completed image
+consolidation passed 1,277 non-stress tests, the production build, focused
+linting of modified production files, and `git diff --check`.

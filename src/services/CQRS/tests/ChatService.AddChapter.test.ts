@@ -126,6 +126,31 @@ describe("ChatService - AddChapter", () => {
       expect(calledEvent.coveredMessageIds).toBeDefined();
     });
 
+    it("uses an explicit message snapshot without reading newer messages", async () => {
+      const service = new ChatService(testChatId);
+
+      await service.AddChapter("Snapshot", "Summary", ["msg-1", "msg-2"]);
+
+      expect(mockUserChatProjection.GetMessages).not.toHaveBeenCalled();
+      expect(
+        mockChatEventService.AddChatEvent.mock.calls[0][0].coveredMessageIds,
+      ).toEqual(["msg-1", "msg-2"]);
+    });
+
+    it("deduplicates explicit covered message IDs", async () => {
+      const service = new ChatService(testChatId);
+
+      await service.AddChapter("Snapshot", "Summary", [
+        "msg-1",
+        "msg-1",
+        "msg-2",
+      ]);
+
+      expect(
+        mockChatEventService.AddChatEvent.mock.calls[0][0].coveredMessageIds,
+      ).toEqual(["msg-1", "msg-2"]);
+    });
+
     it("should call ChatEventService.AddChatEvent with correct event", async () => {
       const messages = createMockMessages(2);
       mockUserChatProjection.GetMessages.mockReturnValue(messages);

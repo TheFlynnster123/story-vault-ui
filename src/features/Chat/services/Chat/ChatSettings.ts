@@ -52,4 +52,10 @@ export interface ChatSettings {
   characterSheetsMessagesSinceLastCheck?: number;
   /** Number of recent projected messages kept after durable character context. */
   characterSheetsTrailingMessageCount?: number;
+  /** Whether active-character detection and sheet synchronization are enabled. */
+  characterSheetsAutoSyncEnabled?: boolean;
+  /** Number of saved user turns between Character Sheet synchronization proposals. */
+  characterSheetsSyncInterval?: number;
+  /** Saved user-turn count since the previous synchronization proposal. */
+  characterSheetsMessagesSinceLastSync?: number;
 }

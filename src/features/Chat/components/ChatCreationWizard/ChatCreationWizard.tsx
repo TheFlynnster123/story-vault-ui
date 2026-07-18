@@ -57,7 +57,10 @@ export const ChatCreationWizard: React.FC = () => {
         backgroundPhotoWorkflowId:
           state.backgroundPhotoWorkflowId ?? state.backgroundPhotoCivitJobId,
         backgroundPhotoCivitJobId: undefined,
-        charactersSchemaVersion: 2,
+        charactersSchemaVersion: 3,
+        characterSheetsAutoSyncEnabled: true,
+        characterSheetsSyncInterval: 3,
+        characterSheetsMessagesSinceLastSync: 0,
       };
 
       await createChat({

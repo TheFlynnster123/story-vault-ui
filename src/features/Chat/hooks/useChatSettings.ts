@@ -16,12 +16,15 @@ interface UseChatSettingsResult {
 }
 
 export const useChatSettings = (chatId: string): UseChatSettingsResult => {
-  const [chatSettings, setChatSettings] = useState<ChatSettings | undefined>();
-  const [isLoading, setIsLoading] = useState(false);
+  const chatSettingsService = d.ChatSettingsService(chatId);
+  const [chatSettings, setChatSettings] = useState<ChatSettings | undefined>(
+    () => chatSettingsService.getCached(),
+  );
+  const [isLoading, setIsLoading] = useState(() =>
+    chatSettingsService.isLoading(),
+  );
 
   useEffect(() => {
-    const chatSettingsService = d.ChatSettingsService(chatId);
-
     const updateState = async () => {
       setIsLoading(chatSettingsService.isLoading());
       const data = await chatSettingsService.Get();
@@ -33,7 +36,7 @@ export const useChatSettings = (chatId: string): UseChatSettingsResult => {
     updateState();
 
     return unsubscribe;
-  }, [chatId]);
+  }, [chatSettingsService]);
 
   const backgroundPhotoWorkflowId =
     chatSettings?.backgroundPhotoWorkflowId ??

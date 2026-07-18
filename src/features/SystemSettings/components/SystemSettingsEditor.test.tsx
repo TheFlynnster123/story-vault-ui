@@ -3,10 +3,23 @@ import { render } from "../../../testing";
 import { screen, waitFor } from "@testing-library/react";
 import { SystemSettingsEditor } from "./SystemSettingsEditor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { d } from "../../../services/Dependencies";
 
 // Mock the useSystemSettings hook
 const mockSaveSystemSettings = vi.fn();
 const mockUseSystemSettings = vi.fn();
+const mockModelPresetsService = {
+  getPresets: vi.fn().mockResolvedValue([]),
+  subscribe: vi.fn().mockReturnValue(vi.fn()),
+  savePreset: vi.fn(),
+  deletePreset: vi.fn(),
+};
+
+vi.spyOn(d, "ModelPresetsService").mockReturnValue(
+  mockModelPresetsService as unknown as ReturnType<
+    typeof d.ModelPresetsService
+  >,
+);
 
 vi.mock("../hooks/useSystemSettings", () => ({
   useSystemSettings: () => mockUseSystemSettings(),
@@ -36,7 +49,15 @@ vi.mock("../../OpenRouter/hooks/useOpenRouterModels", () => ({
 
 // Mock react-virtuoso (GroupedVirtuoso doesn't render in JSDOM)
 vi.mock("react-virtuoso", () => ({
-  GroupedVirtuoso: ({ groupCounts, groupContent, itemContent }: any) => {
+  GroupedVirtuoso: ({
+    groupCounts,
+    groupContent,
+    itemContent,
+  }: {
+    groupCounts: number[];
+    groupContent: (groupIndex: number) => React.ReactNode;
+    itemContent: (itemIndex: number) => React.ReactNode;
+  }) => {
     const nodes: React.ReactNode[] = [];
     let itemIndex = 0;
     groupCounts.forEach((count: number, groupIndex: number) => {
@@ -126,6 +147,20 @@ describe("SystemSettingsEditor", () => {
       expect(screen.getByText("LongCat Flash Chat")).toBeInTheDocument();
       expect(screen.getByText("Qwen3 235B")).toBeInTheDocument();
       expect(screen.getByText("GLM 5 Turbo")).toBeInTheDocument();
+    });
+  });
+
+  it("keeps chapter compression controls within narrow settings cards", () => {
+    renderWithQueryClient(<SystemSettingsEditor />);
+
+    const input = screen.getByLabelText(
+      "Trailing chapter messages in LLM context",
+    );
+    const numberInput = input.closest(".mantine-NumberInput-root");
+
+    expect(numberInput).toHaveStyle({
+      width: "100%",
+      maxWidth: "360px",
     });
   });
 });

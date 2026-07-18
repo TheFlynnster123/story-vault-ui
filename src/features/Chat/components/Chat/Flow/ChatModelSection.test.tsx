@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../../../../testing";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import userEvent from "@testing-library/user-event";
+import { d } from "../../../../../services/Dependencies";
 import { ChatModelSection } from "./ChatModelSection";
 
 // Mock notifications
@@ -51,9 +53,14 @@ describe("ChatModelSection", () => {
     });
 
     mockUseChatModelOverride.mockReturnValue(defaultOverrideResult);
+    vi.spyOn(d, "ModelPresetsService").mockReturnValue({
+      getPresets: vi.fn().mockResolvedValue([]),
+      subscribe: vi.fn().mockReturnValue(vi.fn()),
+    } as unknown as ReturnType<typeof d.ModelPresetsService>);
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     queryClient.clear();
   });
 
@@ -172,9 +179,10 @@ describe("ChatModelSection", () => {
   // --- Modal interaction ---
 
   it("should open the model selector modal when button is clicked", async () => {
+    const user = userEvent.setup();
     renderSection();
 
-    screen.getByText("Chat Model").click();
+    await user.click(screen.getByText("Chat Model"));
 
     await waitFor(() => {
       expect(screen.getByText("Select Model")).toBeInTheDocument();

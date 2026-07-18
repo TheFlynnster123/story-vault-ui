@@ -21,6 +21,10 @@ export const useChatImageVariants = (chatId: string) => {
     try {
       setError(null);
       const result = await operation();
+      if (result === false || result === null) {
+        setError(errorMessage);
+        return result;
+      }
       onSuccess?.(result);
       return result;
     } catch (err) {

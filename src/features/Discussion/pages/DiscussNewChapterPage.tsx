@@ -17,13 +17,13 @@ const pageConfig: DiscussionPageConfig = {
   icon: <RiBookOpenLine size={24} color={Theme.chapter.primary} />,
   title: "Discuss New Chapter Summary",
   description:
-    'Discuss what the chapter summary should contain with the AI. When you\'re satisfied, click "Create Chapter" to generate the summary and create the chapter.',
+    'Discuss what the chapter summary should contain with the AI. When you\'re satisfied, generate a draft and review it before creating the chapter.',
   inputPlaceholder: "Discuss chapter summary…",
-  generateButtonLabel: "Create Chapter",
-  finalFeedbackButtonLabel: "Send & Create Chapter",
+  generateButtonLabel: "Review Chapter Draft",
+  finalFeedbackButtonLabel: "Send & Review Draft",
   emptyStateText:
     "Start a conversation about what this chapter's summary should contain. Discuss what happened, suggest key events, and refine the narrative.",
-  acceptMessageLabel: "Use This Summary",
+  acceptMessageLabel: "Review This Summary",
   promptLink: "/system-prompts#discussChapterPrompt",
 };
 

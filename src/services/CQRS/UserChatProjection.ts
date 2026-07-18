@@ -13,7 +13,6 @@ import type {
   BookDeletedEvent,
   CivitWorkflowCreatedEvent,
   CivitWorkflowUpdatedEvent,
-  CivitJobUpdatedEvent,
   StoryCreatedEvent,
   StoryEditedEvent,
   PlanCreatedEvent,
@@ -24,6 +23,7 @@ import type {
 } from "./events/ChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
+import { normalizeChatEvent } from "./events/normalizeChatEvent";
 
 export const getUserChatProjectionInstance = createInstanceCache(
   () => new UserChatProjection(),
@@ -102,13 +102,13 @@ export class UserChatProjection {
 
   // ---- Event Processing ----
   public process(event: ChatEvent) {
-    this.applyEvent(event);
+    this.applyEvent(normalizeChatEvent(event));
     this.notifySubscribers();
   }
 
   public processBatch(events: ChatEvent[]) {
     for (const event of events) {
-      this.applyEvent(event);
+      this.applyEvent(normalizeChatEvent(event));
     }
     this.notifySubscribers();
   }
@@ -159,12 +159,6 @@ export class UserChatProjection {
         break;
       case "CivitWorkflowUpdated":
         this.processCivitWorkflowUpdated(event);
-        break;
-      case "CivitJobCreated":
-        this.processCivitJobCreated(event);
-        break;
-      case "CivitJobUpdated":
-        this.processCivitJobUpdated(event);
         break;
       case "PlanCreated":
         this.processPlanCreated(event);
@@ -424,46 +418,6 @@ export class UserChatProjection {
     this.Messages[bookIndex] = { ...book, deleted: true };
   }
 
-  private processCivitJobCreated(event: {
-    jobId: string;
-    prompt: string;
-    modelName?: string;
-    modelId?: string;
-    modelSource?: "system" | "variant";
-    characterDescription?: string;
-    characterName?: string;
-    basePrompt?: string;
-    sceneDescription?: string;
-    generationStatus?: string;
-    generationError?: string;
-    costAmount?: number;
-    costCurrency?: string;
-  }) {
-    this.Messages.push({
-      id: event.jobId,
-      type: "civit-job",
-      data: {
-        jobId: event.jobId,
-        prompt: event.prompt,
-        modelName: event.modelName,
-        modelId: event.modelId,
-        modelSource: event.modelSource,
-        characterDescription: event.characterDescription,
-        characterName: event.characterName,
-        basePrompt: event.basePrompt,
-        sceneDescription: event.sceneDescription,
-        generationStatus: event.generationStatus,
-        generationError: event.generationError,
-        costAmount: event.costAmount,
-        costCurrency: event.costCurrency,
-      },
-
-      hiddenByChapterId: undefined,
-      deleted: false,
-      hidden: false,
-    });
-  }
-
   private processCivitWorkflowCreated(event: CivitWorkflowCreatedEvent) {
     this.Messages.push({
       id: event.messageId,
@@ -497,22 +451,6 @@ export class UserChatProjection {
     if (index === -1) return;
 
     const message = this.Messages[index] as CivitWorkflowChatMessage;
-    this.Messages[index] = {
-      ...message,
-      data: {
-        ...message.data,
-        ...definedFields(event.patch),
-      },
-    };
-  }
-
-  private processCivitJobUpdated(event: CivitJobUpdatedEvent) {
-    const index = this.Messages.findIndex(
-      (m) => m.id === event.messageId && m.type === "civit-job",
-    );
-    if (index === -1) return;
-
-    const message = this.Messages[index] as CivitJobChatMessage;
     this.Messages[index] = {
       ...message,
       data: {
@@ -618,7 +556,6 @@ export class UserChatProjection {
     "system-message",
     "assistant",
     "reasoning",
-    "civit-job",
     "civit-workflow",
     "story",
   ]);
@@ -700,7 +637,6 @@ export interface UserChatMessage {
     | "system-message"
     | "assistant"
     | "reasoning"
-    | "civit-job"
     | "civit-workflow"
     | "chapter"
     | "book"
@@ -728,25 +664,6 @@ export interface UserChatMessage {
    * (chapter-based covering of older messages).
    */
   hidden: boolean;
-}
-
-export interface CivitJobChatMessage extends UserChatMessage {
-  type: "civit-job";
-  data: {
-    jobId: string;
-    prompt: string;
-    modelName?: string;
-    modelId?: string;
-    modelSource?: "system" | "variant";
-    characterDescription?: string;
-    characterName?: string;
-    basePrompt?: string;
-    sceneDescription?: string;
-    generationStatus?: string;
-    generationError?: string;
-    costAmount?: number;
-    costCurrency?: string;
-  };
 }
 
 export interface CivitWorkflowChatMessage extends UserChatMessage {
@@ -838,7 +755,6 @@ function toType(
   | "assistant"
   | "user-message"
   | "system-message"
-  | "civit-job"
   | "civit-workflow" {
   switch (role) {
     case "assistant":

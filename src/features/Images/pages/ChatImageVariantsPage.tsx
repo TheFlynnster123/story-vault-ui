@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Title,
@@ -58,21 +58,6 @@ export const ChatImageVariantsPage: React.FC = () => {
 
   const { userImageModels, loading: loadingModels } = useImageModels();
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [hasLegacyModels, setHasLegacyModels] = useState(false);
-
-  useEffect(() => {
-    const checkLegacy = async () => {
-      try {
-        const legacy = await d.ChatImageModelService(chatId!).GetAll();
-        if (legacy.models.length > 0) {
-          setHasLegacyModels(true);
-        }
-      } catch {
-        // No legacy data — fine
-      }
-    };
-    checkLegacy();
-  }, [chatId]);
 
   const handleGoBack = async () => {
     await d.ChatImageVariantService(chatId!).SavePendingChanges();
@@ -110,16 +95,22 @@ export const ChatImageVariantsPage: React.FC = () => {
       <Paper mt={20}>
         <PageHeader onGoBack={handleGoBack} />
 
-        {hasLegacyModels && (
+        {chatImageVariants.legacyMigration && (
           <Alert
             icon={<RiErrorWarningLine />}
-            color="yellow"
+            color={
+              chatImageVariants.legacyMigration.status === "migrated"
+                ? "blue"
+                : "yellow"
+            }
             mb="md"
-            title="Previous chat models detected"
+            title={
+              chatImageVariants.legacyMigration.status === "migrated"
+                ? "Older image settings migrated"
+                : "Some older image settings need attention"
+            }
           >
-            This chat has image models from an older format. They are no longer
-            used — please add a new variant to configure image generation for
-            this chat.
+            {chatImageVariants.legacyMigration.message}
           </Alert>
         )}
 

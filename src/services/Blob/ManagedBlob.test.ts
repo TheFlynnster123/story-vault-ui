@@ -38,6 +38,17 @@ describe("ManagedBlob - Basic Functionality", () => {
   });
 
   describe("get", () => {
+    it("exposes cached data synchronously after loading", async () => {
+      blobApi.getBlob.mockResolvedValue(JSON.stringify({ value: "cached" }));
+      const blob = createTestBlob(testChatId);
+
+      expect(blob.getCached()).toBeUndefined();
+
+      await blob.get();
+
+      expect(blob.getCached()).toEqual({ value: "cached" });
+    });
+
     it("fetches from API and returns parsed data", async () => {
       blobApi.getBlob.mockResolvedValue(JSON.stringify({ value: "test" }));
       const blob = createTestBlob(testChatId);

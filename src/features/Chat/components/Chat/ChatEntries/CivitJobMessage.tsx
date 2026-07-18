@@ -18,7 +18,6 @@ import { DeleteConfirmModal } from "./ChatEntryButtons/DeleteConfirmModal.tsx";
 import { InspectMessageButton } from "./ChatEntryButtons/InspectMessageButton.tsx";
 import { Theme } from "../../../../../components/Theme";
 import type {
-  CivitJobChatMessage,
   CivitWorkflowChatMessage,
 } from "../../../../../services/CQRS/UserChatProjection.ts";
 import { useCivitJob } from "../../../../Images/hooks/useCivitJob.ts";
@@ -145,7 +144,7 @@ const LoadingImageIndicator = ({
 
 interface CivitJobMessageProps {
   chatId: string;
-  message: CivitJobChatMessage | CivitWorkflowChatMessage;
+  message: CivitWorkflowChatMessage;
   isLastMessage: boolean;
 }
 
@@ -163,10 +162,7 @@ export const CivitJobMessage = ({
 
   let workflowId: string;
   try {
-    workflowId =
-      message.type === "civit-workflow"
-        ? (message.data.workflowId ?? "")
-        : message.data.jobId;
+    workflowId = message.data.workflowId ?? "";
   } catch (e) {
     d.ErrorService().log("Failed to parse workflowId from message content", e);
     workflowId = "";

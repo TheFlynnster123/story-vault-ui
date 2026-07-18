@@ -1,312 +1,246 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
-  RiArrowLeftLine,
-  RiAddLine,
-  RiDeleteBinLine,
-  RiImageLine,
-} from "react-icons/ri";
-import { FaUser } from "react-icons/fa";
-import {
-  Title,
+  ActionIcon,
   Button,
+  Divider,
   Group,
   Paper,
-  ActionIcon,
   Stack,
-  Textarea,
-  TextInput,
   Text,
-  Divider,
-  Badge,
+  Title,
 } from "@mantine/core";
-import type { CharacterDescription } from "../services/CharacterDescription";
-import type { PreferredImage } from "../services/CharacterDescription";
+import { FaUser } from "react-icons/fa";
+import { RiAddLine, RiArrowLeftLine } from "react-icons/ri";
+import { useNavigate, useParams } from "react-router-dom";
+import { ConfirmModal } from "../../../components/ConfirmModal";
+import { Page } from "../../../components/Page";
+import { Theme } from "../../../components/Theme";
+import { d } from "../../../services/Dependencies";
+import { CharacterImageModelModal } from "../../Images/components/CharacterImageModelModal";
+import { CharacterCard } from "../components/CharacterCard";
+import { CharacterSettingsPanel } from "../components/CharacterSettingsPanel";
+import { useCharacterDescriptions } from "../hooks/useCharacterDescriptions";
+import { useCharacterUpdateProposal } from "../hooks/useCharacterUpdateProposal";
+import type {
+  CharacterDescription,
+  CharacterDescriptionUpdate,
+  PreferredImage,
+} from "../services/CharacterDescription";
 import {
   createCharacterDescription,
   updateCharacterDescription,
 } from "../services/CharacterDescription";
-import { useCharacterDescriptions } from "../hooks/useCharacterDescriptions";
-import { Page } from "../../../components/Page";
-import { Theme } from "../../../components/Theme";
-import { ConfirmModal } from "../../../components/ConfirmModal";
-import { d } from "../../../services/Dependencies";
-import { CharacterImageModelModal } from "../../Images/components/CharacterImageModelModal";
+import type { CharacterMaintenanceResult } from "../services/CharacterMaintenanceService";
 
 export const CharacterDescriptionsPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-
-  const { characters, isLoading } = useCharacterDescriptions(chatId!);
+  const { characters, isLoading } = useCharacterDescriptions(chatId ?? "");
+  const { proposal } = useCharacterUpdateProposal(chatId ?? "");
   const [formCharacters, setFormCharacters] = useState<CharacterDescription[]>(
     [],
   );
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [characterToDeleteId, setCharacterToDeleteId] = useState<string | null>(
-    null,
-  );
-  const [modelPickerCharacterId, setModelPickerCharacterId] = useState<
-    string | null
-  >(null);
+  const [characterToDeleteId, setCharacterToDeleteId] = useState<string>();
+  const [modelPickerCharacterId, setModelPickerCharacterId] =
+    useState<string>();
+  const [generatingCharacterIds, setGeneratingCharacterIds] = useState<
+    Set<string>
+  >(new Set());
+  const [generationStatuses, setGenerationStatuses] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
-    if (!isLoading) {
-      setFormCharacters([...characters]);
+    if (!isLoading) setFormCharacters([...characters]);
+  }, [characters, isLoading]);
+
+  if (!chatId) return null;
+
+  const saveDebounced = (updatedCharacters: CharacterDescription[]) => {
+    setFormCharacters(updatedCharacters);
+    d.CharacterDescriptionsService(chatId).saveDebounced(updatedCharacters);
+  };
+
+  const updateCharacter = (id: string, updates: CharacterDescriptionUpdate) => {
+    saveDebounced(
+      formCharacters.map((character) =>
+        character.id === id
+          ? updateCharacterDescription(character, updates)
+          : character,
+      ),
+    );
+  };
+
+  const addCharacter = () => {
+    saveDebounced([...formCharacters, createCharacterDescription("", "")]);
+  };
+
+  const addSheetItem = (id: string) => {
+    setFormCharacters((current) =>
+      current.map((character) =>
+        character.id === id
+          ? { ...character, sheetItems: [...character.sheetItems, ""] }
+          : character,
+      ),
+    );
+  };
+
+  const generateOrUpdate = async (characterId: string) => {
+    setGenerationStatuses((current) => ({
+      ...current,
+      [characterId]: "",
+    }));
+    setGeneratingCharacterIds((current) => new Set(current).add(characterId));
+    try {
+      await d.CharacterDescriptionsService(chatId).save(formCharacters);
+      const result = await d
+        .CharacterMaintenanceService(chatId)
+        .generateOrUpdateCharacter(characterId);
+      setGenerationStatuses((current) => ({
+        ...current,
+        [characterId]: toGenerationStatus(result),
+      }));
+    } catch (error) {
+      d.ErrorService().log("Failed to prepare Character Sheet update", error);
+      setGenerationStatuses((current) => ({
+        ...current,
+        [characterId]: "The Character Sheet update could not be prepared.",
+      }));
+    } finally {
+      setGeneratingCharacterIds((current) => {
+        const updated = new Set(current);
+        updated.delete(characterId);
+        return updated;
+      });
     }
-  }, [isLoading, characters]);
-
-  const handleAddCharacter = () => {
-    const newCharacter = createCharacterDescription("", "");
-    const updatedCharacters = [...formCharacters, newCharacter];
-    setFormCharacters(updatedCharacters);
-    d.CharacterDescriptionsService(chatId!).saveDebounced(updatedCharacters);
   };
 
-  const handleCharacterNameChange = (id: string, name: string) => {
-    const updatedCharacters = formCharacters.map((character) =>
-      character.id === id
-        ? updateCharacterDescription(character, { name })
-        : character,
-    );
-    setFormCharacters(updatedCharacters);
-
-    d.CharacterDescriptionsService(chatId!).saveDebounced(updatedCharacters);
+  const removeCharacter = async () => {
+    if (!characterToDeleteId) return;
+    await d
+      .CharacterDescriptionsService(chatId)
+      .removeDescription(characterToDeleteId);
+    setCharacterToDeleteId(undefined);
   };
 
-  const handleCharacterAppearanceChange = (
-    id: string,
-    appearance: string,
-  ) => {
-    const updatedCharacters = formCharacters.map((character) =>
-      character.id === id
-        ? updateCharacterDescription(character, { appearance })
-        : character,
-    );
-    setFormCharacters(updatedCharacters);
-
-    d.CharacterDescriptionsService(chatId!).saveDebounced(updatedCharacters);
-  };
-
-  const handleCharacterSheetChange = (id: string, sheet: string) => {
-    const updatedCharacters = formCharacters.map((character) =>
-      character.id === id
-        ? updateCharacterDescription(character, { sheet, sheetSource: "manual" })
-        : character,
-    );
-    setFormCharacters(updatedCharacters);
-    d.CharacterDescriptionsService(chatId!).saveDebounced(updatedCharacters);
-  };
-
-  const onRemoveCharacter = (id: string) => {
-    setCharacterToDeleteId(id);
-    setIsConfirmModalOpen(true);
-  };
-
-  const onConfirmRemoveCharacter = async () => {
-    if (characterToDeleteId) {
-      await d
-        .CharacterDescriptionsService(chatId!)
-        .removeDescription(characterToDeleteId);
-
-      const updatedCharacters = await d
-        .CharacterDescriptionsService(chatId!)
-        .get();
-
-      setFormCharacters(updatedCharacters);
-    }
-
-    setIsConfirmModalOpen(false);
-    setCharacterToDeleteId(null);
-  };
-
-  const handleGoBack = async () => {
-    await d.CharacterDescriptionsService(chatId!).save(formCharacters);
-    navigate(`/chat/${chatId}`);
-  };
-
-  const handlePreferredImageSelect = async (
+  const selectPreferredImage = async (
     characterId: string,
     preferredImage: PreferredImage | undefined,
   ) => {
-    const updatedCharacters = formCharacters.map((character) =>
-      character.id === characterId
-        ? updateCharacterDescription(character, { preferredImage })
-        : character,
-    );
-    setFormCharacters(updatedCharacters);
+    updateCharacter(characterId, { preferredImage });
     await d
-      .CharacterDescriptionsService(chatId!)
+      .CharacterDescriptionsService(chatId)
       .updateCharacter(characterId, { preferredImage });
+  };
+
+  const saveAndNavigate = async (target: string) => {
+    await d.CharacterDescriptionsService(chatId).save(formCharacters);
+    navigate(target);
   };
 
   return (
     <Page>
       <Paper mt={20}>
-        <CharacterDescriptionsHeader onGoBack={handleGoBack} />
+        <CharactersHeader
+          onBack={() => void saveAndNavigate(`/chat/${chatId}`)}
+        />
 
-        <Stack>
-          <Text size="sm" style={{ color: Theme.page.textMuted }}>
-            Character Sheets are durable story context used in every chat
-            response. Character Appearance is used separately to keep image
-            generations visually consistent.
-          </Text>
-          <Divider style={{ borderColor: Theme.character.border }} />
-          <Group justify="space-between">
-            <Text fw={500}>Characters</Text>
-            <Button
-              variant="subtle"
-              onClick={handleAddCharacter}
-              style={{ color: Theme.character.primary }}
-            >
-              <RiAddLine /> Add Character
-            </Button>
-          </Group>
-          {formCharacters.length === 0 && (
-            <Text size="sm" style={{ color: Theme.page.textMuted }}>
-              No characters yet. Add one above or generate an image to
-              automatically create character records.
-            </Text>
-          )}
-          {formCharacters.map((character) => (
-            <Stack key={character.id} gap="sm">
-              <TextInput
-                label="Character Name"
-                placeholder="e.g., Sarah Chen"
-                value={character.name}
-                onChange={(e) =>
-                  handleCharacterNameChange(character.id, e.currentTarget.value)
-                }
-                styles={{
-                  input: {
-                    backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    borderColor: Theme.character.border,
-                    color: Theme.page.text,
-                  },
-                  label: {
-                    color: Theme.page.text,
-                  },
-                }}
-              />
-              <Textarea
-                label="Character Sheet"
-                description="Narrative facts such as role, personality, motivations, relationships, voice, and constraints."
-                placeholder="No character sheet yet. Add durable facts the story should remember..."
-                value={character.sheet ?? ""}
-                onChange={(e) =>
-                  handleCharacterSheetChange(
-                    character.id,
-                    e.currentTarget.value,
-                  )
-                }
-                minRows={5}
-                autosize
-                styles={{
-                  input: {
-                    backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    borderColor: Theme.character.border,
-                    color: Theme.page.text,
-                  },
-                  label: {
-                    color: Theme.page.text,
-                  },
-                }}
-              />
-              <Textarea
-                label="Character Appearance"
-                description="Stable physical traits used for image generation. Exclude actions, poses, scenes, and temporary clothing."
-                placeholder={
-                  character.appearance.trim() === ""
-                    ? "No character appearance was generated. Add face shape, eye color, hair, age, build, distinctive features..."
-                    : "Describe physical features: face shape, eye color, hair, age, build, distinctive features..."
-                }
-                value={character.appearance}
-                onChange={(e) =>
-                  handleCharacterAppearanceChange(
-                    character.id,
-                    e.currentTarget.value,
-                  )
-                }
-                minRows={3}
-                autosize
-                styles={{
-                  input: {
-                    backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    borderColor: Theme.character.border,
-                    color: Theme.page.text,
-                  },
-                  label: {
-                    color: Theme.page.text,
-                  },
-                }}
-              />
-              <Group gap="xs" align="center">
-                <Text size="sm" style={{ color: Theme.page.text }}>
-                  Preferred Image Model:
+        <Stack gap="xl">
+          <CharacterSettingsPanel
+            chatId={chatId}
+            hasPendingProposal={proposal !== undefined}
+            onEditActivePrompt={() =>
+              void saveAndNavigate("/system-prompts#activeCharactersPrompt")
+            }
+            onEditSheetPrompt={() =>
+              void saveAndNavigate("/system-prompts#characterSheetUpdatePrompt")
+            }
+          />
+
+          <Stack gap="sm">
+            <Group justify="space-between">
+              <div>
+                <Text fw={600}>Characters</Text>
+                <Text size="sm" c="dimmed">
+                  Only approved, active Character Sheets are included in story
+                  context. Appearance remains exclusive to image generation.
                 </Text>
-                {character.preferredImage ? (
-                  <Badge
-                    size="sm"
-                    color={
-                      character.preferredImage.source === "variant"
-                        ? "violet"
-                        : "teal"
-                    }
-                    variant="light"
-                  >
-                    {character.preferredImage.source}
-                  </Badge>
-                ) : (
-                  <Text size="sm" c="dimmed">
-                    None (uses chat default)
-                  </Text>
-                )}
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  leftSection={<RiImageLine size={12} />}
-                  style={{ color: Theme.character.primary }}
-                  onClick={() => setModelPickerCharacterId(character.id)}
-                >
-                  Change
-                </Button>
-              </Group>
+              </div>
               <Button
-                variant="outline"
-                color="red"
-                onClick={() => onRemoveCharacter(character.id)}
-                style={{ alignSelf: "flex-start" }}
+                variant="subtle"
+                leftSection={<RiAddLine />}
+                style={{ color: Theme.character.primary }}
+                onClick={addCharacter}
               >
-                <RiDeleteBinLine /> Delete Character
+                Add Character
               </Button>
-              <Divider
-                my="sm"
-                style={{ borderColor: Theme.character.border }}
+            </Group>
+
+            {formCharacters.length === 0 && (
+              <Text size="sm" c="dimmed">
+                No characters yet. Add one or prepare automatic character
+                updates from story context.
+              </Text>
+            )}
+
+            {formCharacters.map((character) => (
+              <CharacterCard
+                key={character.id}
+                character={character}
+                isGenerating={generatingCharacterIds.has(character.id)}
+                generationStatus={generationStatuses[character.id]}
+                hasPendingProposal={proposal !== undefined}
+                onNameChange={(name) => updateCharacter(character.id, { name })}
+                onAppearanceChange={(appearance) =>
+                  updateCharacter(character.id, { appearance })
+                }
+                onSheetItemsChange={(sheetItems) =>
+                  updateCharacter(character.id, {
+                    sheetItems,
+                    sheetSource: "manual",
+                  })
+                }
+                onAddSheetItem={() => addSheetItem(character.id)}
+                onActivityOverrideChange={(activeOverride) =>
+                  updateCharacter(character.id, { activeOverride })
+                }
+                onUseAutomaticActivity={() =>
+                  updateCharacter(character.id, {
+                    activeOverride: undefined,
+                  })
+                }
+                onGenerateOrUpdate={() => void generateOrUpdate(character.id)}
+                onPreferredImageChange={() =>
+                  setModelPickerCharacterId(character.id)
+                }
+                onDelete={() => setCharacterToDeleteId(character.id)}
               />
-            </Stack>
-          ))}
+            ))}
+          </Stack>
         </Stack>
       </Paper>
 
       <ConfirmModal
-        isOpen={isConfirmModalOpen}
-        onCancel={() => setIsConfirmModalOpen(false)}
-        onConfirm={onConfirmRemoveCharacter}
+        isOpen={characterToDeleteId !== undefined}
+        onCancel={() => setCharacterToDeleteId(undefined)}
+        onConfirm={removeCharacter}
         title="Confirm Deletion"
         message="Are you sure you want to delete this character?"
       />
 
       {modelPickerCharacterId && (
         <CharacterImageModelModal
-          opened={!!modelPickerCharacterId}
-          onClose={() => setModelPickerCharacterId(null)}
-          chatId={chatId!}
+          opened
+          chatId={chatId}
           currentSelection={
-            formCharacters.find((c) => c.id === modelPickerCharacterId)
-              ?.preferredImage
+            formCharacters.find(
+              (character) => character.id === modelPickerCharacterId,
+            )?.preferredImage
           }
+          onClose={() => setModelPickerCharacterId(undefined)}
           onSelect={(selection) => {
-            handlePreferredImageSelect(modelPickerCharacterId, selection);
-            setModelPickerCharacterId(null);
+            void selectPreferredImage(modelPickerCharacterId, selection);
+            setModelPickerCharacterId(undefined);
           }}
         />
       )}
@@ -314,25 +248,30 @@ export const CharacterDescriptionsPage: React.FC = () => {
   );
 };
 
-interface CharacterDescriptionsHeaderProps {
-  onGoBack: () => void;
-}
-
-const CharacterDescriptionsHeader: React.FC<
-  CharacterDescriptionsHeaderProps
-> = ({ onGoBack }) => (
+const CharactersHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <>
-    <Group justify="space-between" align="center" mb="md">
-      <Group>
-        <ActionIcon onClick={onGoBack} variant="subtle" size="lg">
-          <RiArrowLeftLine color={Theme.page.text} />
-        </ActionIcon>
-        <FaUser size={20} color={Theme.character.primary} />
-        <Title order={2} fw={400} style={{ color: Theme.character.primary }}>
-          Characters
-        </Title>
-      </Group>
+    <Group mb="md">
+      <ActionIcon onClick={onBack} variant="subtle" size="lg">
+        <RiArrowLeftLine color={Theme.page.text} />
+      </ActionIcon>
+      <FaUser size={20} color={Theme.character.primary} />
+      <Title order={2} fw={400} style={{ color: Theme.character.primary }}>
+        Characters
+      </Title>
     </Group>
     <Divider mb="xl" style={{ borderColor: Theme.character.border }} />
   </>
 );
+
+const toGenerationStatus = (result: CharacterMaintenanceResult): string => {
+  if (result.status === "proposal-created") {
+    return "Update ready. Return to chat to review and approve it.";
+  }
+  if (result.status === "unchanged") {
+    return "The model proposed no changes.";
+  }
+  if (result.reason === "pending-approval") {
+    return "Review or discard the pending character proposal first.";
+  }
+  return "The Character Sheet update could not be prepared.";
+};

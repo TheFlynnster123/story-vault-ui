@@ -6,7 +6,6 @@ import {
   NumberInput,
   Paper,
   Stack,
-  Switch,
   Text,
 } from "@mantine/core";
 import type { ChatGenerationSettings } from "../services/SystemSettings";
@@ -25,8 +24,6 @@ export const SystemSettingsEditor: React.FC = () => {
     {},
   );
   const [trackedRequestLimit, setTrackedRequestLimit] = useState(20);
-  const [hideMessageBodiesByDefault, setHideMessageBodiesByDefault] =
-    useState(false);
   const [trailingChapterMessages, setTrailingChapterMessages] = useState(
     DEFAULT_TRAILING_CHAPTER_MESSAGES,
   );
@@ -41,10 +38,6 @@ export const SystemSettingsEditor: React.FC = () => {
       normalizeTrackedRequestLimit(
         systemSettings?.openRouterMonitoringSettings?.trackedRequestLimit,
       ),
-    );
-    setHideMessageBodiesByDefault(
-      systemSettings?.openRouterMonitoringSettings?.hideMessageBodiesByDefault ??
-        false,
     );
     setTrailingChapterMessages(
       systemSettings?.chapterCompressionSettings?.trailingChapterMessages ??
@@ -69,7 +62,6 @@ export const SystemSettingsEditor: React.FC = () => {
 
   const handleMonitoringChange = (settings: {
     trackedRequestLimit?: number;
-    hideMessageBodiesByDefault?: boolean;
   }) => {
     const updatedMonitoringSettings = {
       ...systemSettings?.openRouterMonitoringSettings,
@@ -80,10 +72,6 @@ export const SystemSettingsEditor: React.FC = () => {
       setTrackedRequestLimit(settings.trackedRequestLimit);
       d.RequestTracker().setRequestLimit(settings.trackedRequestLimit);
     }
-    if (settings.hideMessageBodiesByDefault !== undefined) {
-      setHideMessageBodiesByDefault(settings.hideMessageBodiesByDefault);
-    }
-
     d.SystemSettingsService().SaveDebounced({
       ...systemSettings,
       openRouterMonitoringSettings: updatedMonitoringSettings,
@@ -126,11 +114,13 @@ export const SystemSettingsEditor: React.FC = () => {
             reasoning: requestSettings?.reasoning,
             temperature: requestSettings?.temperature,
             top_p: requestSettings?.top_p,
+            top_k: requestSettings?.top_k,
             max_tokens: requestSettings?.max_tokens,
             frequency_penalty: requestSettings?.frequency_penalty,
             presence_penalty: requestSettings?.presence_penalty,
             repetition_penalty: requestSettings?.repetition_penalty,
             seed: requestSettings?.seed,
+            retry: requestSettings?.retry,
           })
         }
         withDescription
@@ -154,15 +144,6 @@ export const SystemSettingsEditor: React.FC = () => {
               }
               style={{ width: 240 }}
             />
-            <Switch
-              label="Hide request and response bodies by default"
-              checked={hideMessageBodiesByDefault}
-              onChange={(event) =>
-                handleMonitoringChange({
-                  hideMessageBodiesByDefault: event.currentTarget.checked,
-                })
-              }
-            />
           </Group>
         </Stack>
       </Paper>
@@ -178,7 +159,7 @@ export const SystemSettingsEditor: React.FC = () => {
             max={100}
             step={1}
             onChange={handleChapterCompressionChange}
-            style={{ width: 360 }}
+            style={{ width: "100%", maxWidth: 360 }}
           />
         </Stack>
       </Paper>
