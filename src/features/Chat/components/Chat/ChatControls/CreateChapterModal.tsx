@@ -2,45 +2,68 @@ import {
   Modal,
   Stack,
   Text,
-  Textarea,
-  TextInput,
   Button,
   Group,
 } from "@mantine/core";
-import { VscRefresh } from "react-icons/vsc";
+import { VscEdit, VscRefresh } from "react-icons/vsc";
 import { RiChat3Line } from "react-icons/ri";
+import type { ChapterCreationView } from "./useAddChapter";
+import { ChapterEditorModal } from "../ChatEntries/Chapter/ChapterEditorModal";
 
 interface CreateChapterModalProps {
   opened: boolean;
+  view?: ChapterCreationView;
   title: string;
   summary: string;
-  isGeneratingTitle: boolean;
+  isGenerating: boolean;
   isCreating: boolean;
   onTitleChange: (title: string) => void;
   onSummaryChange: (summary: string) => void;
   onGenerate: () => void;
   onDiscuss?: () => void;
+  onManual?: () => void;
   onSubmit: () => void;
   onCancel: () => void;
+  onDiscard: () => void;
 }
 
 export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
   opened,
+  view = "editor",
   title,
   summary,
-  isGeneratingTitle,
+  isGenerating,
   isCreating,
   onTitleChange,
   onSummaryChange,
   onGenerate,
   onDiscuss,
+  onManual,
   onSubmit,
   onCancel,
+  onDiscard,
 }) => {
-  const isBusy = isGeneratingTitle || isCreating;
-  const canGenerate = !isBusy;
-  const canCreate =
-    !!title.trim() && !!summary.trim() && !isBusy;
+  const isBusy = isGenerating || isCreating;
+  const showChoices = view === "choices";
+
+  if (!showChoices) {
+    return (
+      <ChapterEditorModal
+        opened={opened}
+        heading="Review Chapter"
+        description="Review and finalize the chapter before saving it."
+        submitLabel="Create Chapter"
+        title={title}
+        summary={summary}
+        isSubmitting={isCreating}
+        onTitleChange={onTitleChange}
+        onSummaryChange={onSummaryChange}
+        onSubmit={onSubmit}
+        onClose={onCancel}
+        onDiscard={onDiscard}
+      />
+    );
+  }
 
   return (
     <Modal
@@ -52,72 +75,52 @@ export const CreateChapterModal: React.FC<CreateChapterModalProps> = ({
     >
       <Stack>
         <Text size="sm" c="dimmed">
-          Create a new chapter to summarize the story so far. Enter the title
-          and summary manually, generate a draft for both fields, or discuss the
-          chapter summary before creating it.
+          Choose how you want to prepare this chapter.
         </Text>
-
-        <TextInput
-          label="Chapter Title"
-          placeholder="Enter a title for this chapter..."
-          value={title}
-          onChange={(e) => onTitleChange(e.currentTarget.value)}
-          required
-        />
-
-        <Textarea
-          label="Chapter Summary"
-          placeholder="Enter a summary or click Generate to draft one with the AI..."
-          value={summary}
-          onChange={(e) => onSummaryChange(e.currentTarget.value)}
-          minRows={8}
-          autosize
-        />
-
-        <Stack gap={4} align="flex-end" mt="md">
-          {(!title.trim() || !summary.trim()) && (
-            <Text size="xs" c="red">
-              Enter a chapter title and summary before creating
-            </Text>
-          )}
-          <Group justify="flex-end">
-            <Button
-              variant="default"
-              onClick={onCancel}
-              disabled={isBusy}
-            >
-              Cancel
-            </Button>
-            {onDiscuss && (
-              <Button
-                variant="light"
-                color="yellow"
-                onClick={onDiscuss}
-                disabled={isBusy}
-                leftSection={<RiChat3Line size={16} />}
-              >
-                Discuss
-              </Button>
-            )}
-            <Button
-              color="blue"
-              onClick={onSubmit}
-              disabled={!canCreate}
-              loading={isCreating}
-            >
-              Create Chapter
-            </Button>
-            <Button
-              color="yellow"
-              onClick={onGenerate}
-              disabled={!canGenerate}
-              loading={isBusy}
-              leftSection={<VscRefresh size={16} />}
-            >
-              Generate
-            </Button>
-          </Group>
-        </Stack>
+        <Button
+          variant="light"
+          color="yellow"
+          onClick={onGenerate}
+          disabled={isBusy}
+          leftSection={<VscRefresh size={18} />}
+          justify="flex-start"
+        >
+          Generate
+        </Button>
+        <Text size="xs" c="dimmed">
+          Generate in the background and keep chatting while you wait.
+        </Text>
+        <Button
+          variant="light"
+          color="yellow"
+          onClick={onDiscuss}
+          disabled={!onDiscuss || isBusy}
+          leftSection={<RiChat3Line size={18} />}
+          justify="flex-start"
+        >
+          Discuss
+        </Button>
+        <Text size="xs" c="dimmed">
+          Talk through the chapter with the AI before drafting it.
+        </Text>
+        <Button
+          variant="light"
+          color="blue"
+          onClick={onManual}
+          disabled={!onManual || isBusy}
+          leftSection={<VscEdit size={18} />}
+          justify="flex-start"
+        >
+          Manual
+        </Button>
+        <Text size="xs" c="dimmed">
+          Start with a blank title and summary.
+        </Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={onCancel} disabled={isBusy}>
+            Cancel
+          </Button>
+        </Group>
       </Stack>
     </Modal>
   );

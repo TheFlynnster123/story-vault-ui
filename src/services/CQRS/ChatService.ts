@@ -115,22 +115,32 @@ export class ChatService {
   }
 
   // ---- Chapter Operations ----
-  public async AddChapter(title: string, summary: string): Promise<string> {
-    const allMessages = d.UserChatProjection(this.chatId).GetMessages();
-    const coveredMessageIds = allMessages
-      .filter(
-        (m) =>
-          m.type !== "chapter" &&
-          m.type !== "story" &&
-          m.type !== "note" &&
-          !m.deleted,
-      )
-      .map((m) => m.id);
+  public async AddChapter(
+    title: string,
+    summary: string,
+    coveredMessageIds?: readonly string[],
+  ): Promise<string> {
+    const resolvedMessageIds = [
+      ...new Set(
+        coveredMessageIds ??
+          d
+            .UserChatProjection(this.chatId)
+            .GetMessages()
+            .filter(
+              (m) =>
+                m.type !== "chapter" &&
+                m.type !== "story" &&
+                m.type !== "note" &&
+                !m.deleted,
+            )
+            .map((m) => m.id),
+      ),
+    ];
 
     const event = ChapterCreatedEventUtil.Create(
       title,
       summary,
-      coveredMessageIds,
+      resolvedMessageIds,
     );
 
     await d.ChatEventService(this.chatId).AddChatEvent(event);

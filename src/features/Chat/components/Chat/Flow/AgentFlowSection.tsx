@@ -26,7 +26,7 @@ import { FlowButton } from "./FlowButton";
 import { FlowStyles } from "./FlowStyles";
 import { useLongPress } from "../../../hooks/useLongPress";
 import { CreateNoteModal } from "../ChatControls/CreateNoteModal";
-import { CreateChapterModal } from "../ChatControls/CreateChapterModal";
+import { useChapterCreation } from "../ChatControls/ChapterCreationContext";
 
 interface AgentFlowSectionProps {
   chatId: string;
@@ -42,6 +42,7 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
   onNavigateToSettings,
 }) => {
   const agentFlowService = d.AgentFlowService(chatId);
+  const chapterCreation = useChapterCreation();
   const [suggestion, setSuggestion] = useState<AgentFlowSuggestion | null>(
     agentFlowService.CurrentSuggestion,
   );
@@ -56,13 +57,6 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     content: "",
     hasExpiration: false,
     expiresAfterMessages: 10,
-  });
-  const [chapterDraft, setChapterDraft] = useState({
-    opened: false,
-    title: "",
-    summary: "",
-    isGeneratingTitle: false,
-    isCreating: false,
   });
   const [clarificationDraft, setClarificationDraft] = useState({
     opened: false,
@@ -119,7 +113,7 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
         onNavigateToMemories,
         onNavigateToPlans,
         openNoteDraft,
-        openChapterDraft,
+        chapterCreation.openEditor,
         openClarificationDraft,
       );
       setStatus(result);
@@ -181,56 +175,6 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
     );
     closeNoteDraft();
     setStatus("Note added.");
-  };
-
-  const openChapterDraft = (title: string = "", summary: string = "") => {
-    setChapterDraft({
-      opened: true,
-      title,
-      summary,
-      isGeneratingTitle: false,
-      isCreating: false,
-    });
-  };
-
-  const closeChapterDraft = () => {
-    setChapterDraft((draft) => ({ ...draft, opened: false }));
-  };
-
-  const submitChapterDraft = async () => {
-    const title = chapterDraft.title.trim();
-    const summary = chapterDraft.summary.trim();
-    if (!title || !summary) return;
-
-    setChapterDraft((draft) => ({ ...draft, isCreating: true }));
-    try {
-      await d.ChatService(chatId).AddChapter(title, summary);
-      closeChapterDraft();
-      setStatus("Chapter created.");
-    } finally {
-      setChapterDraft((draft) => ({ ...draft, isCreating: false }));
-    }
-  };
-
-  const generateChapterDraft = async () => {
-    setChapterDraft((draft) => ({ ...draft, isCreating: true }));
-    try {
-      const title = await d
-        .ChapterGenerationService(chatId)
-        .generateChapterTitle();
-      if (title) {
-        setChapterDraft((draft) => ({ ...draft, title }));
-      }
-
-      const summary = await d
-        .ChapterGenerationService(chatId)
-        .generateChapterSummary();
-      if (summary) {
-        setChapterDraft((draft) => ({ ...draft, summary }));
-      }
-    } finally {
-      setChapterDraft((draft) => ({ ...draft, isCreating: false }));
-    }
   };
 
   return (
@@ -317,23 +261,6 @@ export const AgentFlowSection: React.FC<AgentFlowSectionProps> = ({
         }
         onSubmit={submitNoteDraft}
         onCancel={closeNoteDraft}
-      />
-
-      <CreateChapterModal
-        opened={chapterDraft.opened}
-        title={chapterDraft.title}
-        summary={chapterDraft.summary}
-        isGeneratingTitle={chapterDraft.isGeneratingTitle}
-        isCreating={chapterDraft.isCreating}
-        onTitleChange={(title) =>
-          setChapterDraft((draft) => ({ ...draft, title }))
-        }
-        onSummaryChange={(summary) =>
-          setChapterDraft((draft) => ({ ...draft, summary }))
-        }
-        onGenerate={generateChapterDraft}
-        onSubmit={submitChapterDraft}
-        onCancel={closeChapterDraft}
       />
 
       <AgentClarificationModal
@@ -611,12 +538,8 @@ const executeAction = async (
     case "create_chapter": {
       const title = getStringArg(action, "title");
       const summary = getStringArg(action, "summary");
-      if (!title || !summary) {
-        openChapterDraft(title, summary);
-        return "Opened chapter editor.";
-      }
-      await d.ChatService(chatId).AddChapter(title, summary ?? "");
-      return "Chapter created.";
+      openChapterDraft(title, summary);
+      return "Opened chapter editor.";
     }
     case "ask_user":
       openClarificationDraft(

@@ -39,10 +39,6 @@ export interface SystemPrompts {
 
   /** Prompt for generating chapter titles */
   chapterTitlePrompt: string;
-  /** Model override for chapter title generation (empty = use default) */
-  chapterTitleModel?: string;
-  /** OpenRouter request settings paired with the chapter title model override */
-  chapterTitleRequestSettings?: OpenRouterRequestSettings;
 
   /** Prompt for generating book summaries (summaries of multiple chapters) */
   bookSummaryPrompt: string;

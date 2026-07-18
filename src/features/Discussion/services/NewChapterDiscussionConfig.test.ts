@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createNewChapterDiscussionConfig } from "./NewChapterDiscussionConfig";
 import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
+import { getChapterCreationDraft } from "../../Chat/services/ChapterCreationDraft";
 
 vi.mock("../../../services/Dependencies");
 
@@ -17,24 +18,17 @@ describe("NewChapterDiscussionConfig", () => {
     postChat: ReturnType<typeof vi.fn>;
   };
 
-  let mockChatService: {
-    AddChapter: ReturnType<typeof vi.fn>;
-  };
-
   beforeEach(() => {
+    localStorage.clear();
     mockLLMChatProjection = {
       GetMessages: vi.fn().mockReturnValue([
-        { role: "user", content: "Hello" },
-        { role: "assistant", content: "World" },
+        { id: "message-1", role: "user", content: "Hello" },
+        { id: "message-2", role: "assistant", content: "World" },
       ]),
     };
 
     mockOpenRouterChatAPI = {
       postChat: vi.fn().mockResolvedValue("Generated chapter summary."),
-    };
-
-    mockChatService = {
-      AddChapter: vi.fn().mockResolvedValue("chapter-new"),
     };
 
     vi.mocked(d.LLMChatProjection).mockReturnValue(
@@ -43,7 +37,13 @@ describe("NewChapterDiscussionConfig", () => {
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue(
       mockOpenRouterChatAPI as any,
     );
-    vi.mocked(d.ChatService).mockReturnValue(mockChatService as any);
+    vi.mocked(d.UserChatProjection).mockReturnValue({
+      GetMessages: vi.fn().mockReturnValue([
+        { id: "message-1", type: "user", deleted: false },
+        { id: "note-1", type: "note", deleted: false },
+        { id: "message-2", type: "assistant", deleted: false },
+      ]),
+    } as any);
   });
 
   afterEach(() => {
@@ -55,8 +55,8 @@ describe("NewChapterDiscussionConfig", () => {
       const config = createNewChapterDiscussionConfig(testChatId, testTitle);
       const messages = config.getChatMessages();
       expect(messages).toEqual([
-        { role: "user", content: "Hello" },
-        { role: "assistant", content: "World" },
+        { id: "message-1", role: "user", content: "Hello" },
+        { id: "message-2", role: "assistant", content: "World" },
       ]);
     });
   });
@@ -129,8 +129,8 @@ describe("NewChapterDiscussionConfig", () => {
 
       expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
         expect.arrayContaining([
-          { role: "user", content: "Hello" },
-          { role: "assistant", content: "World" },
+          { id: "message-1", role: "user", content: "Hello" },
+          { id: "message-2", role: "assistant", content: "World" },
         ]),
         undefined,
         "chat",
@@ -169,15 +169,17 @@ describe("NewChapterDiscussionConfig", () => {
       ).toBe(true);
     });
 
-    it("should create chapter with AddChapter using generated summary", async () => {
+    it("should send the generated summary to the shared review editor", async () => {
       const config = createNewChapterDiscussionConfig(testChatId, testTitle);
 
       await config.generateFromFeedback("Make it dramatic");
 
-      expect(mockChatService.AddChapter).toHaveBeenCalledWith(
-        "Chapter One",
-        "Generated chapter summary.",
-      );
+      expect(getChapterCreationDraft(testChatId)).toEqual({
+        title: "Chapter One",
+        summary: "Generated chapter summary.",
+        coveredMessageIds: ["message-1", "message-2"],
+        status: "ready",
+      });
     });
 
     it("should pass chapter summary model to postChat", async () => {
@@ -251,15 +253,17 @@ describe("NewChapterDiscussionConfig", () => {
   });
 
   describe("acceptMessage", () => {
-    it("should create chapter with the provided content directly", async () => {
+    it("should send accepted content to the shared review editor", async () => {
       const config = createNewChapterDiscussionConfig(testChatId, testTitle);
 
       await config.acceptMessage!("The heroes defeated the dragon.");
 
-      expect(mockChatService.AddChapter).toHaveBeenCalledWith(
-        "Chapter One",
-        "The heroes defeated the dragon.",
-      );
+      expect(getChapterCreationDraft(testChatId)).toEqual({
+        title: "Chapter One",
+        summary: "The heroes defeated the dragon.",
+        coveredMessageIds: ["message-1", "message-2"],
+        status: "ready",
+      });
     });
 
     it("should not call postChat", async () => {

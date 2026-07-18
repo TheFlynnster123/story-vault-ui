@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@mantine/core";
 import { RiEdit2Line } from "react-icons/ri";
-import { EditChapterModal } from "./EditChapterModal";
+import { ChapterEditorModal } from "./ChapterEditorModal";
 import type { ChapterChatMessage } from "../../../../../../services/CQRS/UserChatProjection";
 import { d } from "../../../../../../services/Dependencies";
 
@@ -17,6 +17,7 @@ export const EditChapterButton: React.FC<EditChapterButtonProps> = ({
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleOpenModal = () => {
     const message = d
@@ -30,11 +31,20 @@ export const EditChapterButton: React.FC<EditChapterButtonProps> = ({
     }
   };
 
-  const handleSubmit = () => {
-    if (title.trim() && summary.trim()) {
-      d.ChatService(chatId).EditChapter(chapterId, title, summary);
+  const handleSubmit = async () => {
+    if (!title.trim() || !summary.trim()) return;
+
+    setIsSaving(true);
+    try {
+      await d
+        .ChatService(chatId)
+        .EditChapter(chapterId, title.trim(), summary.trim());
+      setShowModal(false);
+    } catch (error) {
+      d.ErrorService().log("Failed to edit chapter", error);
+    } finally {
+      setIsSaving(false);
     }
-    setShowModal(false);
   };
 
   const handleCancel = () => {
@@ -61,14 +71,18 @@ export const EditChapterButton: React.FC<EditChapterButtonProps> = ({
         Edit
       </Button>
 
-      <EditChapterModal
+      <ChapterEditorModal
         opened={showModal}
+        heading="Edit Chapter"
+        description="Edit the chapter title and summary."
+        submitLabel="Save Changes"
         title={title}
         summary={summary}
+        isSubmitting={isSaving}
         onTitleChange={setTitle}
         onSummaryChange={setSummary}
         onSubmit={handleSubmit}
-        onCancel={handleCancel}
+        onClose={handleCancel}
       />
     </>
   );

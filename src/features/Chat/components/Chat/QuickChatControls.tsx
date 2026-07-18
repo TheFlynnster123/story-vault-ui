@@ -10,7 +10,6 @@ import {
   Textarea,
   Tooltip,
 } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
 import { RiBookOpenLine, RiSettings3Line, RiTreasureMapFill } from "react-icons/ri";
 import styled from "styled-components";
 import { Theme } from "../../../../components/Theme";
@@ -18,9 +17,9 @@ import { d } from "../../../../services/Dependencies";
 import { usePlanCache } from "../../../Plans/hooks/usePlanCache";
 import { usePlanContent } from "../../../Plans/hooks/usePlanContent";
 import { usePlanGenerationStatus } from "../../../Plans/hooks/usePlanGenerationStatus";
-import { CreateChapterModal } from "./ChatControls/CreateChapterModal";
-import { useAddChapter } from "./ChatControls/useAddChapter";
+import { useChapterCreation } from "./ChatControls/ChapterCreationContext";
 import { FlowStyles } from "./Flow/FlowStyles";
+import { AsyncActionControl } from "./ChatControls/AsyncActionControl";
 
 type RegenerationMode = "from-scratch" | "edit";
 
@@ -32,8 +31,7 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
   chatId,
 }) => {
   const [opened, setOpened] = useState(false);
-  const navigate = useNavigate();
-  const chapter = useAddChapter({ chatId });
+  const chapter = useChapterCreation();
   const { plans } = usePlanCache(chatId);
   const { getLatestPlanContent } = usePlanContent(chatId);
   const { isGenerating } = usePlanGenerationStatus(chatId);
@@ -48,24 +46,6 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
   const handleCompressChapter = () => {
     setOpened(false);
     chapter.handleOpenModal();
-  };
-
-  const handleDiscussChapter = async () => {
-    const params = new URLSearchParams();
-    if (chapter.title.trim()) {
-      params.set("title", chapter.title);
-    }
-    if (chapter.summary.trim()) {
-      params.set("summary", chapter.summary);
-    }
-
-    chapter.handleCloseModal();
-    const query = params.toString();
-    navigate(
-      query
-        ? `/chat/${chatId}/chapter/discuss?${query}`
-        : `/chat/${chatId}/chapter/discuss`,
-    );
   };
 
   const handleRegeneratePlanClick = () => {
@@ -140,27 +120,42 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
   return (
     <>
       <ControlsContainer>
-        <Tooltip label="Quick Chat Controls">
-          <ActionIcon
-            aria-label="Quick Chat Controls"
-            onClick={() => setOpened(true)}
-            size="xl"
-            variant="subtle"
-            styles={{
-              root: {
-                backgroundColor: "rgba(92, 92, 92, 0.42)",
-                color: "#e5e5e5",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(190, 190, 190, 0.28)",
-                "&:hover": {
-                  backgroundColor: "rgba(112, 112, 112, 0.52)",
+        <Stack gap="xs" align="flex-end">
+          <Tooltip label="Quick Chat Controls">
+            <ActionIcon
+              aria-label="Quick Chat Controls"
+              onClick={() => setOpened(true)}
+              size="xl"
+              variant="subtle"
+              styles={{
+                root: {
+                  backgroundColor: "rgba(92, 92, 92, 0.42)",
+                  color: "#e5e5e5",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(190, 190, 190, 0.28)",
+                  "&:hover": {
+                    backgroundColor: "rgba(112, 112, 112, 0.52)",
+                  },
                 },
-              },
-            }}
-          >
-            <RiSettings3Line size={20} />
-          </ActionIcon>
-        </Tooltip>
+              }}
+            >
+              <RiSettings3Line size={20} />
+            </ActionIcon>
+          </Tooltip>
+          {chapter.pendingDraftStatus &&
+            chapter.pendingDraftStatus !== "generating" && (
+              <AsyncActionControl
+                label={
+                  chapter.pendingDraftStatus === "failed"
+                    ? "Retry chapter draft"
+                    : "Review chapter draft"
+                }
+                icon={<RiBookOpenLine size={20} />}
+                theme={Theme.chapter}
+                onClick={chapter.handlePendingDraft}
+              />
+            )}
+        </Stack>
       </ControlsContainer>
 
       <Modal
@@ -282,19 +277,6 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
         </Stack>
       </Modal>
 
-      <CreateChapterModal
-        opened={chapter.showModal}
-        title={chapter.title}
-        summary={chapter.summary}
-        isGeneratingTitle={chapter.isGeneratingTitle}
-        isCreating={chapter.isCreating}
-        onTitleChange={chapter.setTitle}
-        onSummaryChange={chapter.setSummary}
-        onGenerate={chapter.handleGenerate}
-        onDiscuss={handleDiscussChapter}
-        onSubmit={chapter.handleSubmit}
-        onCancel={chapter.handleCloseModal}
-      />
     </>
   );
 };

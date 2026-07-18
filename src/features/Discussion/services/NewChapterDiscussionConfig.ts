@@ -3,15 +3,18 @@ import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import {
+  getChapterMessageIds,
+  saveChapterCreationDraft,
+} from "../../Chat/services/ChapterCreationDraft";
 
 /**
  * Creates a DiscussionConfig for discussing a new chapter's summary BEFORE
  * the chapter is created. All messages are still visible in the LLM context
  * since no chapter event has been persisted yet.
  *
- * When the user clicks "Generate", the summary is generated from the
- * conversation feedback and the chapter is created in one shot via
- * ChatService.AddChapter.
+ * When the user clicks "Generate", the summary is staged for the shared
+ * chapter review editor. Nothing is committed until the user reviews it.
  */
 export const createNewChapterDiscussionConfig = (
   chatId: string,
@@ -22,6 +25,10 @@ export const createNewChapterDiscussionConfig = (
   discussChapterPrompt?: string,
   draftSummary?: string,
 ): DiscussionConfig => {
+  const coveredMessageIds = getChapterMessageIds(
+    d.UserChatProjection(chatId).GetMessages(),
+  );
+
   const getChatMessages = (): LLMMessage[] =>
     d.LLMChatProjection(chatId).GetMessages();
 
@@ -100,11 +107,21 @@ export const createNewChapterDiscussionConfig = (
         requestSettingsOverride ?? chapterSummaryRequestSettings,
       );
 
-    await d.ChatService(chatId).AddChapter(chapterTitle, summary);
+    saveChapterCreationDraft(chatId, {
+      title: chapterTitle,
+      summary,
+      coveredMessageIds,
+      status: "ready",
+    });
   };
 
   const acceptMessage = async (content: string): Promise<void> => {
-    await d.ChatService(chatId).AddChapter(chapterTitle, content);
+    saveChapterCreationDraft(chatId, {
+      title: chapterTitle,
+      summary: content,
+      coveredMessageIds,
+      status: "ready",
+    });
   };
 
   return {

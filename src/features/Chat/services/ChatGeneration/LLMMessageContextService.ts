@@ -128,40 +128,32 @@ export class LLMMessageContextService {
     );
   }
 
-  async buildChapterSummaryRequestMessages(): Promise<LLMMessage[]> {
+  async buildChapterDraftRequestMessages(
+    snapshot: LLMMessage[],
+  ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
-    const memories = await this.fetchMemories();
-    const characters = await this.fetchCharacterDescriptions();
-    const chapterSummaryPrompt = await this.fetchChapterSummaryPrompt();
-    return this.assembleChapterSummaryMessages(
-      this.assembleDurableContextMessages(
-        chatMessages,
-        memories,
-        characters,
-        chatSettings,
-      ),
-      chapterSummaryPrompt,
+    const chatMessages = this.getChatMessages(chatSettings, snapshot);
+    const [memories, characters, prompts] = await Promise.all([
+      this.fetchMemories(),
+      this.fetchCharacterDescriptions(),
+      d.SystemPromptsService().Get(),
+    ]);
+    const durableContext = this.assembleDurableContextMessages(
+      chatMessages,
+      memories,
+      characters,
+      chatSettings,
     );
-  }
+    const draftPrompt = [
+      prompts?.chapterSummaryPrompt ||
+        DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt,
+      prompts?.chapterTitlePrompt || DEFAULT_SYSTEM_PROMPTS.chapterTitlePrompt,
+      "Return one JSON object with exactly two string fields: title and summary.",
+      "Do not use markdown fences or include any text outside the JSON object.",
+    ].join("\n\n");
 
-  async buildChapterTitleRequestMessages(): Promise<LLMMessage[]> {
-    const chatSettings = await this.fetchChatSettings();
-    await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
-    const memories = await this.fetchMemories();
-    const characters = await this.fetchCharacterDescriptions();
-    const chapterTitlePrompt = await this.fetchChapterTitlePrompt();
-    return this.assembleChapterTitleMessages(
-      this.assembleDurableContextMessages(
-        chatMessages,
-        memories,
-        characters,
-        chatSettings,
-      ),
-      chapterTitlePrompt,
-    );
+    return [...durableContext, toUserMessage(draftPrompt)];
   }
 
   async buildBookSummaryRequestMessages(
@@ -216,9 +208,12 @@ export class LLMMessageContextService {
     return d.ChatSettingsService(this.chatId).Get() as Promise<ChatSettings>;
   }
 
-  private getChatMessages(chatSettings: ChatSettings): LLMMessage[] {
+  private getChatMessages(
+    chatSettings: ChatSettings,
+    snapshot?: LLMMessage[],
+  ): LLMMessage[] {
     return this.excludeDisabledReasoningMessages(
-      d.LLMChatProjection(this.chatId).GetMessages(),
+      snapshot ?? d.LLMChatProjection(this.chatId).GetMessages(),
       chatSettings.reasoningExpiresAfterMessages ??
         DEFAULT_REASONING_RETENTION_MESSAGES,
     );
@@ -242,22 +237,6 @@ export class LLMMessageContextService {
 
   private async fetchCharacterDescriptions(): Promise<CharacterDescription[]> {
     return d.CharacterDescriptionsService(this.chatId).get();
-  }
-
-  private async fetchChapterSummaryPrompt(): Promise<string> {
-    const systemPrompts = await d.SystemPromptsService().Get();
-    return (
-      systemPrompts?.chapterSummaryPrompt ||
-      DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt
-    );
-  }
-
-  private async fetchChapterTitlePrompt(): Promise<string> {
-    const systemPrompts = await d.SystemPromptsService().Get();
-    return (
-      systemPrompts?.chapterTitlePrompt ||
-      DEFAULT_SYSTEM_PROMPTS.chapterTitlePrompt
-    );
   }
 
   private async fetchBookSummaryPrompt(): Promise<string> {
@@ -307,20 +286,6 @@ export class LLMMessageContextService {
       messages.push(this.createStoryPromptMessage(chatSettings));
 
     return messages;
-  }
-
-  private assembleChapterSummaryMessages(
-    chatMessages: LLMMessage[],
-    chapterSummaryPrompt: string,
-  ): LLMMessage[] {
-    return [...chatMessages, toUserMessage(chapterSummaryPrompt)];
-  }
-
-  private assembleChapterTitleMessages(
-    chatMessages: LLMMessage[],
-    chapterTitlePrompt: string,
-  ): LLMMessage[] {
-    return [...chatMessages, toUserMessage(chapterTitlePrompt)];
   }
 
   private assembleBookSummaryMessages(

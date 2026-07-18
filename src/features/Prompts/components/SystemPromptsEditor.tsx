@@ -392,7 +392,7 @@ export const SystemPromptsEditor: React.FC = () => {
               ),
             )
           }
-          label="Chapter Summary Model"
+          label="Chapter Draft Model"
           withDescription={false}
         />
       </PromptSection>
@@ -411,32 +411,6 @@ export const SystemPromptsEditor: React.FC = () => {
             handleResetClick("chapterTitlePrompt", "Chapter Title Prompt")
           }
           icon={<LuHeading size={18} color="orange" />}
-        />
-        <ModelSelect
-          value={localPrompts.chapterTitleModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "chapterTitleModel",
-                "chapterTitleRequestSettings",
-                value,
-                localPrompts.chapterTitleRequestSettings,
-              ),
-            )
-          }
-          requestSettings={localPrompts.chapterTitleRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "chapterTitleModel",
-                "chapterTitleRequestSettings",
-                localPrompts.chapterTitleModel || null,
-                requestSettings,
-              ),
-            )
-          }
-          label="Chapter Title Model"
-          withDescription={false}
         />
       </PromptSection>
 

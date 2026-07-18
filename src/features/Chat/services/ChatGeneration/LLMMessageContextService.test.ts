@@ -479,9 +479,8 @@ describe("LLMMessageContextService", () => {
     });
   });
 
-  // ---- buildChapterSummaryRequestMessages Tests ----
-  describe("buildChapterSummaryRequestMessages", () => {
-    it("includes character sheets in chapter summary context", async () => {
+  describe("buildChapterDraftRequestMessages", () => {
+    it("includes character sheets in chapter context", async () => {
       CharacterDescriptionsService.get.mockResolvedValue([
         {
           id: "character-1",
@@ -494,106 +493,84 @@ describe("LLMMessageContextService", () => {
       ]);
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildChapterSummaryRequestMessages();
+      const result = await service.buildChapterDraftRequestMessages(
+        createMockChatMessages(),
+      );
 
       expect(result.some((message) => message.content.includes("# Character Sheets"))).toBe(
         true,
       );
     });
 
-    it("should include chat messages", async () => {
+    it("uses the captured chat snapshot", async () => {
       const service = new LLMMessageContextService(testChatId);
-      const chatMessages = createMockChatMessages();
-      LLMChatProjection.GetMessages.mockReturnValue(chatMessages);
+      const snapshot = createMockChatMessages();
 
-      const result = await service.buildChapterSummaryRequestMessages();
+      const result = await service.buildChapterDraftRequestMessages(snapshot);
 
-      expect(result.slice(0, -1)).toEqual(chatMessages);
+      expect(result.slice(0, -1)).toEqual(snapshot);
+      expect(LLMChatProjection.GetMessages).not.toHaveBeenCalled();
     });
 
-    it("should include chapter summary prompt", async () => {
+    it("requests a structured title and summary together", async () => {
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildChapterSummaryRequestMessages();
+      const result = await service.buildChapterDraftRequestMessages(
+        createMockChatMessages(),
+      );
 
       const lastMessage = result[result.length - 1];
       expect(lastMessage.role).toBe("user");
       expect(lastMessage.content).toContain("generate a brief summary");
-    });
-
-    it("should use user-configured chapter summary prompt", async () => {
-      const customPrompt = "Custom chapter summary instructions";
-      SystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        chapterSummaryPrompt: customPrompt,
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildChapterSummaryRequestMessages();
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(customPrompt);
-    });
-
-    it("should fall back to default when system prompts return undefined", async () => {
-      SystemPromptsService.Get.mockResolvedValue(undefined);
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildChapterSummaryRequestMessages();
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(
-        DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt,
-      );
-    });
-  });
-
-  // ---- buildChapterTitleRequestMessages Tests ----
-  describe("buildChapterTitleRequestMessages", () => {
-    it("should include chat messages", async () => {
-      const service = new LLMMessageContextService(testChatId);
-      const chatMessages = createMockChatMessages();
-      LLMChatProjection.GetMessages.mockReturnValue(chatMessages);
-
-      const result = await service.buildChapterTitleRequestMessages();
-
-      expect(result.slice(0, -1)).toEqual(chatMessages);
-    });
-
-    it("should include chapter title prompt", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildChapterTitleRequestMessages();
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("user");
       expect(lastMessage.content).toContain(
         "generate a concise, engaging title",
       );
+      expect(lastMessage.content).toContain(
+        "exactly two string fields: title and summary",
+      );
     });
 
-    it("should use user-configured chapter title prompt", async () => {
-      const customPrompt = "Custom chapter title instructions";
+    it("uses both configured chapter prompts", async () => {
       SystemPromptsService.Get.mockResolvedValue({
         ...DEFAULT_SYSTEM_PROMPTS,
-        chapterTitlePrompt: customPrompt,
+        chapterSummaryPrompt: "Custom summary instructions",
+        chapterTitlePrompt: "Custom title instructions",
       });
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildChapterTitleRequestMessages();
+      const result = await service.buildChapterDraftRequestMessages(
+        createMockChatMessages(),
+      );
 
       const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(customPrompt);
+      expect(lastMessage.content).toContain("Custom summary instructions");
+      expect(lastMessage.content).toContain("Custom title instructions");
     });
 
-    it("should fall back to default when system prompts return undefined", async () => {
+    it("loads shared chapter context and prompts once", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      await service.buildChapterDraftRequestMessages(createMockChatMessages());
+
+      expect(MemoriesService.get).toHaveBeenCalledOnce();
+      expect(CharacterDescriptionsService.get).toHaveBeenCalledOnce();
+      expect(SystemPromptsService.Get).toHaveBeenCalledOnce();
+      expect(ChatSettingsService.Get).toHaveBeenCalledOnce();
+    });
+
+    it("falls back to both default prompts", async () => {
       SystemPromptsService.Get.mockResolvedValue(undefined);
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildChapterTitleRequestMessages();
+      const result = await service.buildChapterDraftRequestMessages(
+        createMockChatMessages(),
+      );
 
       const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(
+      expect(lastMessage.content).toContain(
+        DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt,
+      );
+      expect(lastMessage.content).toContain(
         DEFAULT_SYSTEM_PROMPTS.chapterTitlePrompt,
       );
     });
