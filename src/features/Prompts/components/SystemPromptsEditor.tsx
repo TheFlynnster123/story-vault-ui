@@ -64,12 +64,50 @@ export const SystemPromptsEditor: React.FC = () => {
     setLocalPrompts({ ...systemPrompts });
   }, [systemPrompts]);
 
-  const handlePromptChange = (newPrompts: Partial<SystemPrompts>) => {
-    const updatedPrompts = { ...localPrompts, ...newPrompts };
-    setLocalPrompts(updatedPrompts);
+  const handlePromptChange = (
+    patch:
+      | Partial<SystemPrompts>
+      | ((prev: SystemPrompts) => Partial<SystemPrompts>),
+  ) => {
+    setLocalPrompts((prev) => {
+      const updatedPrompts = {
+        ...prev,
+        ...(typeof patch === "function" ? patch(prev) : patch),
+      };
 
-    d.SystemPromptsService().SaveDebounced(updatedPrompts);
+      d.SystemPromptsService().SaveDebounced(updatedPrompts);
+
+      return updatedPrompts;
+    });
   };
+
+  // ModelSelect fires onChange and onRequestSettingsChange back-to-back when a
+  // model is picked. Both handlers must read the latest state (via the
+  // functional handlePromptChange updater) so the second call doesn't
+  // overwrite the model field with a stale value from before the change.
+  const createModelHandlers = (
+    modelKey: keyof SystemPrompts,
+    requestSettingsKey: keyof SystemPrompts,
+  ) => ({
+    onChange: (value: string | null) =>
+      handlePromptChange((prev) =>
+        buildModelPromptPatch(
+          modelKey,
+          requestSettingsKey,
+          value,
+          prev[requestSettingsKey] as OpenRouterRequestSettings | undefined,
+        ),
+      ),
+    onRequestSettingsChange: (requestSettings?: OpenRouterRequestSettings) =>
+      handlePromptChange((prev) =>
+        buildModelPromptPatch(
+          modelKey,
+          requestSettingsKey,
+          (prev[modelKey] as string | undefined) || null,
+          requestSettings,
+        ),
+      ),
+  });
 
   const handleResetClick = (
     promptKey: keyof SystemPrompts,
@@ -130,27 +168,8 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.newStoryModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "newStoryModel",
-                "newStoryRequestSettings",
-                value,
-                localPrompts.newStoryRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.newStoryRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "newStoryModel",
-                "newStoryRequestSettings",
-                localPrompts.newStoryModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers("newStoryModel", "newStoryRequestSettings")}
           label="Story Generation Model"
           withDescription={false}
         />
@@ -194,27 +213,8 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.defaultImageModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "defaultImageModel",
-                "defaultImageRequestSettings",
-                value,
-                localPrompts.defaultImageRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.defaultImageRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "defaultImageModel",
-                "defaultImageRequestSettings",
-                localPrompts.defaultImageModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers("defaultImageModel", "defaultImageRequestSettings")}
           label="Image Prompt Generation Model"
           withDescription={false}
         />
@@ -240,27 +240,8 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.characterSelectionModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "characterSelectionModel",
-                "characterSelectionRequestSettings",
-                value,
-                localPrompts.characterSelectionRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.characterSelectionRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "characterSelectionModel",
-                "characterSelectionRequestSettings",
-                localPrompts.characterSelectionModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers("characterSelectionModel", "characterSelectionRequestSettings")}
           label="Character Selection Model"
           withDescription={false}
         />
@@ -286,27 +267,8 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.characterDescriptionModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "characterDescriptionModel",
-                "characterDescriptionRequestSettings",
-                value,
-                localPrompts.characterDescriptionRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.characterDescriptionRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "characterDescriptionModel",
-                "characterDescriptionRequestSettings",
-                localPrompts.characterDescriptionModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers("characterDescriptionModel", "characterDescriptionRequestSettings")}
           label="Character Appearance Model"
           withDescription={false}
         />
@@ -333,27 +295,11 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.activeCharactersModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "activeCharactersModel",
-                "activeCharactersRequestSettings",
-                value,
-                localPrompts.activeCharactersRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.activeCharactersRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "activeCharactersModel",
-                "activeCharactersRequestSettings",
-                localPrompts.activeCharactersModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers(
+            "activeCharactersModel",
+            "activeCharactersRequestSettings",
+          )}
           label="Active Characters Model"
           withDescription={false}
         />
@@ -380,27 +326,11 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.characterSheetUpdateModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "characterSheetUpdateModel",
-                "characterSheetUpdateRequestSettings",
-                value,
-                localPrompts.characterSheetUpdateRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.characterSheetUpdateRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "characterSheetUpdateModel",
-                "characterSheetUpdateRequestSettings",
-                localPrompts.characterSheetUpdateModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers(
+            "characterSheetUpdateModel",
+            "characterSheetUpdateRequestSettings",
+          )}
           label="Character Sheet Update Model"
           withDescription={false}
         />
@@ -423,27 +353,11 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.chapterSummaryModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "chapterSummaryModel",
-                "chapterSummaryRequestSettings",
-                value,
-                localPrompts.chapterSummaryRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.chapterSummaryRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "chapterSummaryModel",
-                "chapterSummaryRequestSettings",
-                localPrompts.chapterSummaryModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers(
+            "chapterSummaryModel",
+            "chapterSummaryRequestSettings",
+          )}
           label="Chapter Draft Model"
           withDescription={false}
         />
@@ -481,27 +395,8 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.bookSummaryModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "bookSummaryModel",
-                "bookSummaryRequestSettings",
-                value,
-                localPrompts.bookSummaryRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.bookSummaryRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "bookSummaryModel",
-                "bookSummaryRequestSettings",
-                localPrompts.bookSummaryModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers("bookSummaryModel", "bookSummaryRequestSettings")}
           label="Book Summary Model"
           withDescription={false}
         />
@@ -522,27 +417,8 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.bookTitleModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "bookTitleModel",
-                "bookTitleRequestSettings",
-                value,
-                localPrompts.bookTitleRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.bookTitleRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "bookTitleModel",
-                "bookTitleRequestSettings",
-                localPrompts.bookTitleModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers("bookTitleModel", "bookTitleRequestSettings")}
           label="Book Title Model"
           withDescription={false}
         />
@@ -564,27 +440,8 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.agentIntentModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "agentIntentModel",
-                "agentIntentRequestSettings",
-                value,
-                localPrompts.agentIntentRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.agentIntentRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "agentIntentModel",
-                "agentIntentRequestSettings",
-                localPrompts.agentIntentModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers("agentIntentModel", "agentIntentRequestSettings")}
           label="Agent Intent Model"
           withDescription={false}
         />
@@ -608,27 +465,8 @@ export const SystemPromptsEditor: React.FC = () => {
         />
         <ModelSelect
           value={localPrompts.planSuggestionModel || ""}
-          onChange={(value) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "planSuggestionModel",
-                "planSuggestionRequestSettings",
-                value,
-                localPrompts.planSuggestionRequestSettings,
-              ),
-            )
-          }
           requestSettings={localPrompts.planSuggestionRequestSettings}
-          onRequestSettingsChange={(requestSettings) =>
-            handlePromptChange(
-              buildModelPromptPatch(
-                "planSuggestionModel",
-                "planSuggestionRequestSettings",
-                localPrompts.planSuggestionModel || null,
-                requestSettings,
-              ),
-            )
-          }
+          {...createModelHandlers("planSuggestionModel", "planSuggestionRequestSettings")}
           label="Plan Suggestion Model"
           withDescription={false}
         />

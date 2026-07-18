@@ -43,6 +43,7 @@ describe("LLMMessageContextService", () => {
     LLMChatProjection = {
       GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
       SetPreviousChapterMessageBuffer: vi.fn(),
+      SetReasoningRetention: vi.fn(),
     } as unknown as Mocked<LLMChatProjection>;
 
     MemoriesService = {
@@ -389,73 +390,51 @@ describe("LLMMessageContextService", () => {
     });
   });
 
-  describe("disabled reasoning context filtering", () => {
-    it("excludes reasoning after the configured number of newer regular messages", async () => {
+  describe("reasoning retention configuration", () => {
+    it("sets reasoning retention to 0 when reasoningEnabled is false", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        reasoningEnabled: false,
+      });
+      const service = new LLMMessageContextService(testChatId);
+
+      await service.buildGenerationRequestMessages(false);
+
+      expect(LLMChatProjection.SetReasoningRetention).toHaveBeenCalledWith(0);
+    });
+
+    it("sets reasoning retention to configured value", async () => {
       ChatSettingsService.Get.mockResolvedValue({
         ...createDefaultChatSettings(),
         reasoningExpiresAfterMessages: 2,
       });
-      LLMChatProjection.GetMessages.mockReturnValue([
-        {
-          id: "reasoning-1",
-          type: "reasoning",
-          role: "assistant",
-          content: "[Reasoning]\nOld reasoning\n[End of Reasoning]",
-        },
-        { id: "msg-1", type: "message", role: "user", content: "First" },
-        { id: "msg-2", type: "message", role: "assistant", content: "Second" },
-      ]);
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildGenerationRequestMessages(false);
+      await service.buildGenerationRequestMessages(false);
 
-      expect(result.some((m) => m.id === "reasoning-1")).toBe(false);
-      expect(result.map((m) => m.id)).toContain("msg-1");
-      expect(result.map((m) => m.id)).toContain("msg-2");
+      expect(LLMChatProjection.SetReasoningRetention).toHaveBeenCalledWith(2);
     });
 
-    it("keeps reasoning when expiration is disabled", async () => {
+    it("sets reasoning retention to null when expiration is disabled", async () => {
       ChatSettingsService.Get.mockResolvedValue({
         ...createDefaultChatSettings(),
         reasoningExpiresAfterMessages: null,
       });
-      LLMChatProjection.GetMessages.mockReturnValue([
-        {
-          id: "reasoning-1",
-          type: "reasoning",
-          role: "assistant",
-          content: "[Reasoning]\nPersistent reasoning\n[End of Reasoning]",
-        },
-        { id: "msg-1", type: "message", role: "user", content: "First" },
-        { id: "msg-2", type: "message", role: "assistant", content: "Second" },
-      ]);
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildGenerationRequestMessages(false);
+      await service.buildGenerationRequestMessages(false);
 
-      expect(result.map((m) => m.id)).toContain("reasoning-1");
+      expect(LLMChatProjection.SetReasoningRetention).toHaveBeenCalledWith(
+        null,
+      );
     });
 
-    it("keeps reasoning before it reaches the configured message limit", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        reasoningExpiresAfterMessages: 3,
-      });
-      LLMChatProjection.GetMessages.mockReturnValue([
-        {
-          id: "reasoning-1",
-          type: "reasoning",
-          role: "assistant",
-          content: "[Reasoning]\nRecent reasoning\n[End of Reasoning]",
-        },
-        { id: "msg-1", type: "message", role: "user", content: "First" },
-        { id: "msg-2", type: "message", role: "assistant", content: "Second" },
-      ]);
+    it("uses default retention when no override configured", async () => {
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildGenerationRequestMessages(false);
+      await service.buildGenerationRequestMessages(false);
 
-      expect(result.map((m) => m.id)).toContain("reasoning-1");
+      expect(LLMChatProjection.SetReasoningRetention).toHaveBeenCalledWith(4);
     });
   });
 

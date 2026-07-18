@@ -67,4 +67,54 @@ describe("LLMChatProjection - Reasoning Events", () => {
     };
     expect(reasoningMessage.hiddenByChapterId).toBe("chapter-1");
   });
+
+  describe("SetReasoningRetention filtering", () => {
+    it("excludes all reasoning when retention is set to 0", () => {
+      projection.process(ReasoningCreatedEventUtil.Create("First reasoning"));
+      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+      projection.process(ReasoningCreatedEventUtil.Create("Second reasoning"));
+      projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
+
+      projection.SetReasoningRetention(0);
+
+      const messages = projection.GetMessages();
+      expect(messages.every((m) => m.type !== "reasoning")).toBe(true);
+      expect(messages).toHaveLength(2);
+    });
+
+    it("excludes expired reasoning based on message count", () => {
+      projection.process(ReasoningCreatedEventUtil.Create("Old reasoning"));
+      projection.process(MessageCreatedEventUtil.Create("user", "First"));
+      projection.process(MessageCreatedEventUtil.Create("assistant", "Second"));
+      projection.process(MessageCreatedEventUtil.Create("user", "Third"));
+
+      projection.SetReasoningRetention(2);
+
+      const messages = projection.GetMessages();
+      expect(messages.every((m) => m.type !== "reasoning")).toBe(true);
+    });
+
+    it("keeps reasoning within retention window", () => {
+      projection.process(ReasoningCreatedEventUtil.Create("Recent reasoning"));
+      projection.process(MessageCreatedEventUtil.Create("user", "First"));
+
+      projection.SetReasoningRetention(2);
+
+      const messages = projection.GetMessages();
+      expect(messages.some((m) => m.type === "reasoning")).toBe(true);
+    });
+
+    it("keeps all reasoning when retention is null", () => {
+      projection.process(ReasoningCreatedEventUtil.Create("Old reasoning"));
+      projection.process(MessageCreatedEventUtil.Create("user", "First"));
+      projection.process(MessageCreatedEventUtil.Create("assistant", "Second"));
+      projection.process(MessageCreatedEventUtil.Create("user", "Third"));
+      projection.process(MessageCreatedEventUtil.Create("assistant", "Fourth"));
+
+      projection.SetReasoningRetention(null);
+
+      const messages = projection.GetMessages();
+      expect(messages.some((m) => m.type === "reasoning")).toBe(true);
+    });
+  });
 });

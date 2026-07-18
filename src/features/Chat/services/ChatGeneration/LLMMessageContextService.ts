@@ -47,8 +47,8 @@ export class LLMMessageContextService {
     guidance?: string,
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
-    await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
+    await this.applySystemContextSettings(chatSettings);
+    const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
     const characters = await this.fetchCharacterDescriptions();
 
@@ -67,8 +67,8 @@ export class LLMMessageContextService {
     guidance?: string,
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
-    await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
+    await this.applySystemContextSettings(chatSettings);
+    const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
     const characters = await this.fetchCharacterDescriptions();
     const reasoningPrompt = await this.fetchReasoningPrompt();
@@ -109,8 +109,8 @@ export class LLMMessageContextService {
     feedback?: string,
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
-    await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings);
+    await this.applySystemContextSettings(chatSettings);
+    const chatMessages = this.getChatMessages();
     const memories = await this.fetchMemories();
     const characters = await this.fetchCharacterDescriptions();
     const truncatedChatMessages = this.truncateMessagesBeforeId(
@@ -135,8 +135,11 @@ export class LLMMessageContextService {
     snapshot: LLMMessage[],
   ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
-    await this.applySystemContextSettings();
-    const chatMessages = this.getChatMessages(chatSettings, snapshot);
+    await this.applySystemContextSettings(chatSettings);
+    const chatMessages = this.filterReasoningMessages(
+      snapshot,
+      this.getReasoningRetention(chatSettings),
+    );
     const [memories, characters, prompts] = await Promise.all([
       this.fetchMemories(),
       this.fetchCharacterDescriptions(),
@@ -205,23 +208,50 @@ export class LLMMessageContextService {
     return d.ChatSettingsService(this.chatId).Get() as Promise<ChatSettings>;
   }
 
-  private getChatMessages(
-    chatSettings: ChatSettings,
-    snapshot?: LLMMessage[],
-  ): LLMMessage[] {
-    return this.excludeDisabledReasoningMessages(
-      snapshot ?? d.LLMChatProjection(this.chatId).GetMessages(),
-      chatSettings.reasoningExpiresAfterMessages ??
-        DEFAULT_REASONING_RETENTION_MESSAGES,
-    );
+  private getChatMessages(): LLMMessage[] {
+    return d.LLMChatProjection(this.chatId).GetMessages();
   }
 
-  private async applySystemContextSettings(): Promise<void> {
+  private async applySystemContextSettings(
+    chatSettings: ChatSettings,
+  ): Promise<void> {
     const settings = await this.fetchSystemSettings();
-    d.LLMChatProjection(this.chatId).SetPreviousChapterMessageBuffer(
+    const projection = d.LLMChatProjection(this.chatId);
+
+    projection.SetPreviousChapterMessageBuffer(
       settings?.chapterCompressionSettings?.trailingChapterMessages ??
         DEFAULT_TRAILING_CHAPTER_MESSAGES,
     );
+
+    projection.SetReasoningRetention(
+      this.getReasoningRetention(chatSettings),
+    );
+  }
+
+  private getReasoningRetention(chatSettings: ChatSettings): number | null {
+    if (chatSettings.reasoningEnabled === false) return 0;
+    if (chatSettings.reasoningExpiresAfterMessages === null) return null;
+    return (
+      chatSettings.reasoningExpiresAfterMessages ??
+      DEFAULT_REASONING_RETENTION_MESSAGES
+    );
+  }
+
+  private filterReasoningMessages(
+    messages: LLMMessage[],
+    retention: number | null,
+  ): LLMMessage[] {
+    if (retention === null) return messages;
+
+    return messages.filter((message, index) => {
+      if (message.type !== "reasoning") return true;
+      if (retention === 0) return false;
+
+      const regularMessagesAfter = messages
+        .slice(index + 1)
+        .filter((candidate) => candidate.type === "message").length;
+      return regularMessagesAfter < retention;
+    });
   }
 
   private fetchSystemSettings(): Promise<SystemSettings | undefined> {
@@ -470,26 +500,4 @@ export class LLMMessageContextService {
 
   private formatGuidanceMessage = (guidance: string): string =>
     `User guidance for the next response: ${guidance}`;
-
-  private excludeDisabledReasoningMessages(
-    messages: LLMMessage[],
-    expiresAfterMessages: number | null,
-  ): LLMMessage[] {
-    if (expiresAfterMessages === null) return messages;
-
-    return messages.filter(
-      (message, index) =>
-        message.type !== "reasoning" ||
-        this.countRegularMessagesAfter(messages, index) < expiresAfterMessages,
-    );
-  }
-
-  private countRegularMessagesAfter(
-    messages: LLMMessage[],
-    index: number,
-  ): number {
-    return messages
-      .slice(index + 1)
-      .filter((message) => message.type === "message").length;
-  }
 }
