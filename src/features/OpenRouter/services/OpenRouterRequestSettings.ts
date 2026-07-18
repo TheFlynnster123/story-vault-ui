@@ -9,6 +9,7 @@ export const OPENROUTER_ADVANCED_PARAMETER_KEYS = [
   "reasoning",
   "temperature",
   "top_p",
+  "top_k",
   "max_tokens",
   "frequency_penalty",
   "presence_penalty",
@@ -23,6 +24,7 @@ export interface OpenRouterRequestSettings {
   reasoning?: OpenRouterReasoningConfig;
   temperature?: number;
   top_p?: number;
+  top_k?: number;
   max_tokens?: number;
   frequency_penalty?: number;
   presence_penalty?: number;

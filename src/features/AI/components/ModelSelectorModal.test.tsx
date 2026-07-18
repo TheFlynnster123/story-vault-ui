@@ -3,13 +3,26 @@ import { render, screen, waitFor, userEvent } from "../../../testing";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { ModelSelectorModal } from "./ModelSelectorModal";
+import { d } from "../../../services/Dependencies";
+import type {
+  ModelPreset,
+  SaveModelPreset,
+} from "../services/ModelPresetsService";
 
 vi.mock("@mantine/notifications", () => ({
   notifications: { show: vi.fn() },
 }));
 
 vi.mock("react-virtuoso", () => ({
-  GroupedVirtuoso: ({ groupCounts, groupContent, itemContent }: any) => {
+  GroupedVirtuoso: ({
+    groupCounts,
+    groupContent,
+    itemContent,
+  }: {
+    groupCounts: number[];
+    groupContent: (groupIndex: number) => React.ReactNode;
+    itemContent: (itemIndex: number) => React.ReactNode;
+  }) => {
     const nodes: React.ReactNode[] = [];
     let itemIndex = 0;
     groupCounts.forEach((count: number, groupIndex: number) => {
@@ -68,17 +81,55 @@ type MockModel = Parameters<typeof createMockModelsResponse>[0][number];
 
 describe("ModelSelectorModal", () => {
   let queryClient: QueryClient;
+  let storedPresets: ModelPreset[];
+  let presetSubscribers: Array<() => void>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    storedPresets = [];
+    presetSubscribers = [];
+    vi.spyOn(d, "ModelPresetsService").mockReturnValue({
+      getPresets: vi.fn(async () => [...storedPresets]),
+      subscribe: vi.fn((callback: () => void) => {
+        presetSubscribers.push(callback);
+        return () => {
+          presetSubscribers = presetSubscribers.filter(
+            (subscriber) => subscriber !== callback,
+          );
+        };
+      }),
+      savePreset: vi.fn(async ({
+        name,
+        modelId,
+        requestSettings,
+      }: SaveModelPreset) => {
+        const preset: ModelPreset = {
+          id: `preset-${storedPresets.length + 1}`,
+          name: name.trim(),
+          modelId,
+          requestSettings,
+          createdAtUtcMs: Date.now(),
+          updatedAtUtcMs: Date.now(),
+        };
+        storedPresets = [preset, ...storedPresets];
+        presetSubscribers.forEach((subscriber) => subscriber());
+        return preset;
+      }),
+      deletePreset: vi.fn(async (presetId: string) => {
+        storedPresets = storedPresets.filter(
+          (preset) => preset.id !== presetId,
+        );
+        presetSubscribers.forEach((subscriber) => subscriber());
+      }),
+    } as unknown as ReturnType<typeof d.ModelPresetsService>);
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
   });
 
   afterEach(() => {
-    vi.mocked(global.fetch).mockReset();
+    vi.restoreAllMocks();
     queryClient.clear();
   });
 
@@ -198,6 +249,51 @@ describe("ModelSelectorModal", () => {
     expect(
       screen.getByLabelText("Reasoning level for o4-mini"),
     ).toBeInTheDocument();
+  });
+
+  it("should explain advanced fields and their typical ranges", async () => {
+    mockFetchModels([
+      {
+        id: "openai/gpt-4",
+        name: "GPT-4",
+        supported_parameters: ["temperature", "top_p", "top_k"],
+      },
+    ]);
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.click(
+      await screen.findByLabelText("Advanced settings for GPT-4"),
+    );
+
+    expect(
+      screen.getByText(/0 is consistent, 0.7–1 is balanced/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/0.8–1 is typical; tune this or Temperature/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/20–100 is a common focused range/),
+    ).toBeInTheDocument();
+  });
+
+  it("should expand the selected model configuration inline", async () => {
+    mockFetchModels([
+      {
+        id: "openai/gpt-4",
+        name: "GPT-4",
+        supported_parameters: ["temperature"],
+      },
+    ]);
+    renderModal({
+      selectedModelId: "openai/gpt-4",
+      selectedRequestSettings: { temperature: 0.6 },
+    });
+
+    expect(await screen.findByLabelText("Temperature")).toHaveValue(0.6);
+    expect(
+      screen.getByLabelText("Advanced settings for GPT-4"),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
   // --- Search ---
@@ -345,6 +441,74 @@ describe("ModelSelectorModal", () => {
       localStorage.getItem("story-vault-recent-models") || "[]",
     );
     expect(stored).toContain("openai/gpt-4");
+  });
+
+  it("should save and display a configured model preset", async () => {
+    mockFetchModels([
+      {
+        id: "openai/gpt-4",
+        name: "GPT-4",
+        supported_parameters: ["temperature"],
+      },
+    ]);
+    const user = userEvent.setup();
+    renderModal({
+      selectedModelId: "openai/gpt-4",
+      selectedRequestSettings: { temperature: 0.7 },
+    });
+
+    await user.type(
+      await screen.findByLabelText("Preset name for GPT-4"),
+      "Creative draft",
+    );
+    await user.click(screen.getByRole("button", { name: "Save preset" }));
+
+    expect(screen.getByText("Saved presets")).toBeInTheDocument();
+    expect(await screen.findByText("Creative draft")).toBeInTheDocument();
+  });
+
+  it("should reselect a saved model configuration", async () => {
+    storedPresets = [
+      {
+        id: "preset-1",
+        name: "Focused",
+        modelId: "openai/gpt-4",
+        requestSettings: { temperature: 0.2 },
+        createdAtUtcMs: 1,
+        updatedAtUtcMs: 1,
+      },
+    ];
+    mockFetchModels();
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderModal({ onSelect });
+
+    await user.click(await screen.findByLabelText("Use preset Focused"));
+
+    expect(onSelect).toHaveBeenCalledWith("openai/gpt-4", {
+      temperature: 0.2,
+    });
+  });
+
+  it("should delete a saved model preset", async () => {
+    storedPresets = [
+      {
+        id: "preset-1",
+        name: "Temporary",
+        modelId: "openai/gpt-4",
+        createdAtUtcMs: 1,
+        updatedAtUtcMs: 1,
+      },
+    ];
+    mockFetchModels();
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.click(
+      await screen.findByLabelText("Delete preset Temporary"),
+    );
+
+    expect(screen.queryByText("Temporary")).not.toBeInTheDocument();
   });
 
   // --- Close behavior ---

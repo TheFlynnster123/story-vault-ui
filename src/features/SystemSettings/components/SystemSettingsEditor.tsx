@@ -126,6 +126,7 @@ export const SystemSettingsEditor: React.FC = () => {
             reasoning: requestSettings?.reasoning,
             temperature: requestSettings?.temperature,
             top_p: requestSettings?.top_p,
+            top_k: requestSettings?.top_k,
             max_tokens: requestSettings?.max_tokens,
             frequency_penalty: requestSettings?.frequency_penalty,
             presence_penalty: requestSettings?.presence_penalty,

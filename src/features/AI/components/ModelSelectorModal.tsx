@@ -19,6 +19,7 @@ import {
   hasOpenRouterRequestSettings,
   supportsParameter,
 } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import type { ModelPreset } from "../services/ModelPresetsService";
 
 // --- Constants ---
 
@@ -59,6 +60,8 @@ const NUMBER_PARAMETERS = [
   {
     key: "temperature",
     label: "Temperature",
+    description:
+      "Controls randomness. 0 is consistent, 0.7–1 is balanced, and higher values are more surprising.",
     min: 0,
     max: 2,
     step: 0.1,
@@ -67,14 +70,27 @@ const NUMBER_PARAMETERS = [
   {
     key: "top_p",
     label: "Top P",
+    description:
+      "Limits the pool of likely words. 0.8–1 is typical; tune this or Temperature, not usually both.",
     min: 0,
     max: 1,
     step: 0.05,
     placeholder: "1.0",
   },
   {
+    key: "top_k",
+    label: "Top K",
+    description:
+      "Limits choices to the K most likely words. 0 uses the full vocabulary; 20–100 is a common focused range.",
+    min: 0,
+    step: 1,
+    placeholder: "Auto",
+  },
+  {
     key: "max_tokens",
     label: "Max Tokens",
+    description:
+      "Caps response length. About 1,000 is short and 4,000+ allows detailed output. Blank uses the provider default.",
     min: 1,
     step: 1,
     placeholder: "Auto",
@@ -82,6 +98,8 @@ const NUMBER_PARAMETERS = [
   {
     key: "frequency_penalty",
     label: "Frequency Penalty",
+    description:
+      "Discourages repeatedly using the same words. 0 is neutral; 0.2–0.8 usually adds variety.",
     min: -2,
     max: 2,
     step: 0.1,
@@ -90,6 +108,8 @@ const NUMBER_PARAMETERS = [
   {
     key: "presence_penalty",
     label: "Presence Penalty",
+    description:
+      "Encourages introducing new topics. 0 is neutral; 0.2–0.8 is a typical exploratory range.",
     min: -2,
     max: 2,
     step: 0.1,
@@ -98,6 +118,8 @@ const NUMBER_PARAMETERS = [
   {
     key: "repetition_penalty",
     label: "Repetition Penalty",
+    description:
+      "Reduces repeated phrases. 1 is neutral; values around 1.05–1.2 are a common starting range.",
     min: 0,
     max: 2,
     step: 0.05,
@@ -106,6 +128,8 @@ const NUMBER_PARAMETERS = [
   {
     key: "seed",
     label: "Seed",
+    description:
+      "Reuses a random starting point for more repeatable results. Leave blank for a new result each time.",
     min: 0,
     step: 1,
     placeholder: "Random",
@@ -232,25 +256,49 @@ const hasAdvancedControls = (model: OpenRouterModel): boolean =>
 
 const AdvancedNumberInput: React.FC<{
   label: string;
+  description: string;
   value: number | undefined;
   min?: number;
   max?: number;
   step?: number;
   placeholder?: string;
   onChange: (value: number | undefined) => void;
-}> = ({ label, value, min, max, step, placeholder, onChange }) => (
+}> = ({
+  label,
+  description,
+  value,
+  min,
+  max,
+  step,
+  placeholder,
+  onChange,
+}) => (
   <label
     style={{
       display: "grid",
-      gridTemplateColumns: "1fr 96px",
-      alignItems: "center",
+      gridTemplateColumns: "minmax(0, 1fr) 96px",
+      alignItems: "start",
       gap: "8px",
       fontSize: "12px",
       color: "#ddd",
     }}
   >
-    <span>{label}</span>
+    <span>
+      <span style={{ display: "block", fontWeight: 500 }}>{label}</span>
+      <span
+        style={{
+          display: "block",
+          color: "#92929d",
+          fontSize: "11px",
+          lineHeight: 1.35,
+          marginTop: "2px",
+        }}
+      >
+        {description}
+      </span>
+    </span>
     <input
+      aria-label={label}
       type="number"
       value={value ?? ""}
       min={min}
@@ -280,7 +328,10 @@ const AdvancedSettingsPanel: React.FC<{
   model: OpenRouterModel;
   settings: OpenRouterRequestSettings | undefined;
   onChange: (settings: OpenRouterRequestSettings | undefined) => void;
-}> = ({ model, settings, onChange }) => {
+  onSavePreset: (name: string) => void;
+}> = ({ model, settings, onChange, onSavePreset }) => {
+  const [presetName, setPresetName] = useState("");
+
   const updateSetting = (
     key: keyof OpenRouterRequestSettings,
     value: OpenRouterRequestSettings[keyof OpenRouterRequestSettings],
@@ -346,14 +397,31 @@ const AdvancedSettingsPanel: React.FC<{
           <label
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 120px",
-              alignItems: "center",
+              gridTemplateColumns: "minmax(0, 1fr) 120px",
+              alignItems: "start",
               gap: "8px",
               fontSize: "12px",
               color: "#ddd",
             }}
           >
-            <span>Reasoning</span>
+            <span>
+              <span style={{ display: "block", fontWeight: 500 }}>
+                Reasoning
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  color: "#92929d",
+                  fontSize: "11px",
+                  lineHeight: 1.35,
+                  marginTop: "2px",
+                }}
+              >
+                Controls how much internal analysis the model uses. Medium is a
+                balanced default; high or x-high may improve difficult work but
+                costs more time and tokens.
+              </span>
+            </span>
             <select
               aria-label={`Reasoning level for ${model.name}`}
               value={settings?.reasoning?.effort ?? ""}
@@ -390,6 +458,7 @@ const AdvancedSettingsPanel: React.FC<{
           <AdvancedNumberInput
             key={parameter.key}
             label={parameter.label}
+            description={parameter.description}
             value={settings?.[parameter.key]}
             min={parameter.min}
             max={"max" in parameter ? parameter.max : undefined}
@@ -399,6 +468,57 @@ const AdvancedSettingsPanel: React.FC<{
           />
         ))}
       </div>
+
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!presetName.trim()) return;
+          onSavePreset(presetName);
+          setPresetName("");
+        }}
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          display: "flex",
+          gap: "6px",
+          marginTop: "12px",
+          paddingTop: "10px",
+          borderTop: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <input
+          aria-label={`Preset name for ${model.name}`}
+          value={presetName}
+          onChange={(event) => setPresetName(event.currentTarget.value)}
+          placeholder="Preset name"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: "6px 8px",
+            backgroundColor: "rgba(0,0,0,0.28)",
+            border: "1px solid rgba(255,255,255,0.16)",
+            borderRadius: "4px",
+            color: "#fff",
+            fontSize: "12px",
+          }}
+        />
+        <button
+          type="submit"
+          disabled={!presetName.trim()}
+          style={{
+            border: "1px solid rgba(147,197,253,0.3)",
+            background: "rgba(147,197,253,0.14)",
+            borderRadius: "4px",
+            color: "#bfdbfe",
+            cursor: presetName.trim() ? "pointer" : "default",
+            fontSize: "11px",
+            padding: "4px 9px",
+            opacity: presetName.trim() ? 1 : 0.55,
+          }}
+        >
+          Save preset
+        </button>
+      </form>
     </div>
   );
 };
@@ -409,11 +529,12 @@ const ModelItem: React.FC<{
   allowAdvancedSettings: boolean;
   requestSettings?: OpenRouterRequestSettings;
   isAdvancedOpen: boolean;
-  onAdvancedToggle: () => void;
+  onAdvancedChange: (isOpen: boolean) => void;
   onRequestSettingsChange: (
     modelId: string,
     settings: OpenRouterRequestSettings | undefined,
   ) => void;
+  onSavePreset: (model: OpenRouterModel, name: string) => void;
   onClick: () => void;
 }> = ({
   model,
@@ -421,8 +542,9 @@ const ModelItem: React.FC<{
   allowAdvancedSettings,
   requestSettings,
   isAdvancedOpen,
-  onAdvancedToggle,
+  onAdvancedChange,
   onRequestSettingsChange,
+  onSavePreset,
   onClick,
 }) => (
   <div
@@ -430,7 +552,10 @@ const ModelItem: React.FC<{
     tabIndex={0}
     onClick={onClick}
     onKeyDown={(e) => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (
+        e.target === e.currentTarget &&
+        (e.key === "Enter" || e.key === " ")
+      ) {
         e.preventDefault();
         onClick();
       }
@@ -444,6 +569,7 @@ const ModelItem: React.FC<{
         ? "1px solid rgba(100, 100, 255, 0.4)"
         : "1px solid transparent",
       borderRadius: "6px",
+      boxSizing: "border-box",
       cursor: "pointer",
       textAlign: "left",
       color: "#fff",
@@ -457,21 +583,37 @@ const ModelItem: React.FC<{
       if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
     }}
   >
-    <div style={{ fontWeight: 500, fontSize: "14px", marginBottom: "2px" }}>
-      <span>{model.name}</span>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "8px",
+        minHeight: "24px",
+        fontWeight: 500,
+        fontSize: "14px",
+        marginBottom: "2px",
+      }}
+    >
+      <span style={{ minWidth: 0 }}>{model.name}</span>
       {allowAdvancedSettings && hasAdvancedControls(model) && (
         <button
           type="button"
           aria-label={`Advanced settings for ${model.name}`}
-          title="Advanced settings"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAdvancedToggle();
+          aria-expanded={isAdvancedOpen}
+          title={isAdvancedOpen ? "Collapse settings" : "Expand settings"}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAdvancedChange(!isAdvancedOpen);
           }}
           style={{
-            float: "right",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flex: "0 0 24px",
             width: "24px",
             height: "24px",
+            padding: 0,
             border: "1px solid rgba(147, 197, 253, 0.25)",
             borderRadius: "4px",
             backgroundColor: isAdvancedOpen
@@ -479,10 +621,13 @@ const ModelItem: React.FC<{
               : "rgba(255,255,255,0.05)",
             color: "#bfdbfe",
             cursor: "pointer",
-            lineHeight: "20px",
+            fontSize: "13px",
+            lineHeight: 1,
+            transform: isAdvancedOpen ? "rotate(180deg)" : "none",
+            transition: "transform 0.15s, background-color 0.15s",
           }}
         >
-          ⚙
+          ▼
         </button>
       )}
     </div>
@@ -530,6 +675,7 @@ const ModelItem: React.FC<{
         model={model}
         settings={requestSettings}
         onChange={(settings) => onRequestSettingsChange(model.id, settings)}
+        onSavePreset={(name) => onSavePreset(model, name)}
       />
     )}
   </div>
@@ -561,6 +707,113 @@ const GroupHeader: React.FC<{ label: string }> = ({ label }) => (
   </div>
 );
 
+const SavedPresets: React.FC<{
+  presets: ModelPreset[];
+  models: OpenRouterModel[];
+  onSelect: (preset: ModelPreset) => void;
+  onDelete: (presetId: string) => void;
+}> = ({ presets, models, onSelect, onDelete }) => {
+  if (presets.length === 0) return null;
+
+  const modelNames = new Map(models.map((model) => [model.id, model.name]));
+
+  return (
+    <div
+      style={{
+        padding: "0 20px 12px",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+      }}
+    >
+      <div
+        style={{
+          color: "#aaa",
+          fontSize: "11px",
+          fontWeight: 600,
+          letterSpacing: "0.5px",
+          marginBottom: "7px",
+          textTransform: "uppercase",
+        }}
+      >
+        Saved presets
+      </div>
+      <div style={{ display: "flex", gap: "7px", overflowX: "auto" }}>
+        {presets.map((preset) => (
+          <div
+            key={preset.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(90px, 1fr) auto",
+              alignItems: "center",
+              minWidth: "170px",
+              background: "rgba(147,197,253,0.08)",
+              border: "1px solid rgba(147,197,253,0.2)",
+              borderRadius: "6px",
+              overflow: "hidden",
+            }}
+          >
+            <button
+              type="button"
+              aria-label={`Use preset ${preset.name}`}
+              onClick={() => onSelect(preset)}
+              style={{
+                minWidth: 0,
+                padding: "7px 4px 7px 10px",
+                background: "transparent",
+                border: 0,
+                color: "#fff",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {preset.name}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  color: "#92929d",
+                  fontSize: "10px",
+                  marginTop: "2px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {modelNames.get(preset.modelId) ?? preset.modelId}
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-label={`Delete preset ${preset.name}`}
+              onClick={() => onDelete(preset.id)}
+              style={{
+                color: "#92929d",
+                fontSize: "13px",
+                lineHeight: 1,
+                padding: "9px 8px",
+                background: "transparent",
+                border: 0,
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // --- Main Component ---
 
 interface ModelSelectorModalProps {
@@ -585,9 +838,11 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
 }) => {
   const { models, isLoading } = useOpenRouterModels();
   const recentModelsService = useRef(d.RecentModelsService()).current;
+  const modelPresetsService = useRef(d.ModelPresetsService()).current;
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [advancedModelId, setAdvancedModelId] = useState<string | null>(null);
+  const [presets, setPresets] = useState<ModelPreset[]>([]);
   const [requestSettingsByModel, setRequestSettingsByModel] = useState<
     Record<string, OpenRouterRequestSettings | undefined>
   >({});
@@ -622,14 +877,39 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSearch("");
-      setAdvancedModelId(null);
+      setAdvancedModelId(selectedModelId ?? null);
       setRequestSettingsByModel(
         selectedModelId ? { [selectedModelId]: selectedRequestSettings } : {},
       );
       // Focus search input after modal opens
       requestAnimationFrame(() => searchInputRef.current?.focus());
     }
-  }, [isOpen, selectedModelId, selectedRequestSettings]);
+  }, [
+    isOpen,
+    modelPresetsService,
+    selectedModelId,
+    selectedRequestSettings,
+  ]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isActive = true;
+    const loadPresets = async () => {
+      const storedPresets = await modelPresetsService.getPresets();
+      if (isActive) setPresets(storedPresets);
+    };
+    const unsubscribe = modelPresetsService.subscribe(() => {
+      void loadPresets();
+    });
+
+    void loadPresets();
+
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, [isOpen, modelPresetsService]);
 
   const handleSelect = useCallback(
     (model: OpenRouterModel) => {
@@ -657,6 +937,38 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
       }));
     },
     [],
+  );
+
+  const handleSavePreset = useCallback(
+    async (model: OpenRouterModel, name: string) => {
+      await modelPresetsService.savePreset({
+        name,
+        modelId: model.id,
+        requestSettings: filterSettingsForModel(
+          requestSettingsByModel[model.id],
+          model,
+        ),
+      });
+      setPresets(await modelPresetsService.getPresets());
+    },
+    [modelPresetsService, requestSettingsByModel],
+  );
+
+  const handlePresetSelect = useCallback(
+    (preset: ModelPreset) => {
+      recentModelsService.trackModel(preset.modelId);
+      onSelect(preset.modelId, preset.requestSettings);
+      onClose();
+    },
+    [onClose, onSelect, recentModelsService],
+  );
+
+  const handlePresetDelete = useCallback(
+    async (presetId: string) => {
+      await modelPresetsService.deletePreset(presetId);
+      setPresets(await modelPresetsService.getPresets());
+    },
+    [modelPresetsService],
   );
 
   const handleBackdropClick = useCallback(
@@ -772,6 +1084,13 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
           </div>
         </div>
 
+        <SavedPresets
+          presets={presets}
+          models={models}
+          onSelect={handlePresetSelect}
+          onDelete={handlePresetDelete}
+        />
+
         {/* Model List */}
         <div
           style={{
@@ -814,12 +1133,11 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                           model,
                         )}
                         isAdvancedOpen={advancedModelId === model.id}
-                        onAdvancedToggle={() =>
-                          setAdvancedModelId((current) =>
-                            current === model.id ? null : model.id,
-                          )
+                        onAdvancedChange={(isOpen) =>
+                          setAdvancedModelId(isOpen ? model.id : null)
                         }
                         onRequestSettingsChange={handleRequestSettingsChange}
+                        onSavePreset={handleSavePreset}
                         onClick={() => handleSelect(model)}
                       />
                     );

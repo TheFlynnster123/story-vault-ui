@@ -3,6 +3,7 @@ import { render, screen, userEvent, waitFor } from "../../../testing";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { ModelSelect } from "./ModelSelect";
+import { d } from "../../../services/Dependencies";
 
 // Do NOT mock useOpenRouterModels - let the real hook run
 // Instead mock fetch to simulate OpenRouter API
@@ -26,6 +27,12 @@ describe("ModelSelect with ModelSelectorModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    vi.spyOn(d, "ModelPresetsService").mockReturnValue({
+      getPresets: vi.fn(async () => []),
+      subscribe: vi.fn(() => vi.fn()),
+      savePreset: vi.fn(),
+      deletePreset: vi.fn(),
+    } as unknown as ReturnType<typeof d.ModelPresetsService>);
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -34,7 +41,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
   });
 
   afterEach(() => {
-    vi.mocked(global.fetch).mockReset();
+    vi.restoreAllMocks();
     queryClient.clear();
   });
 

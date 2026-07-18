@@ -37,6 +37,8 @@ import { OpenRouterKeyAPI } from "../features/OpenRouter/services/OpenRouterKeyA
 import { OpenRouterModelsAPI } from "../features/OpenRouter/services/OpenRouterModelsAPI";
 import { OpenRouterCreditsAPI } from "../features/OpenRouter/services/OpenRouterCreditsAPI";
 import { RecentModelsService } from "../features/AI/services/RecentModelsService";
+import { ModelPresetsService } from "../features/AI/services/ModelPresetsService";
+import { getModelPresetsManagedBlobInstance } from "../features/AI/services/ModelPresetsManagedBlob";
 import { CivitJobOrchestrator } from "../features/Images/services/CivitJobOrchestrator";
 import { ImageModelFromGeneratedImageService } from "../features/Images/services/modelGeneration/ImageModelFromGeneratedImageService";
 import { ImageModelService } from "../features/Images/services/modelGeneration/ImageModelService";
@@ -100,6 +102,14 @@ export class Dependencies {
 
   RecentModelsService() {
     return new RecentModelsService();
+  }
+
+  ModelPresetsService() {
+    return new ModelPresetsService();
+  }
+
+  ModelPresetsManagedBlob() {
+    return getModelPresetsManagedBlobInstance();
   }
 
   EncryptionManager() {
