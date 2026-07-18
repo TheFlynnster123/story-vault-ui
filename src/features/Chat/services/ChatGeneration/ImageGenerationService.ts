@@ -4,7 +4,6 @@ import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { CharacterContext } from "../../../Images/services/ImageGenerator";
 import type {
-  CivitJobChatMessage,
   UserChatMessage,
   CivitWorkflowChatMessage,
 } from "../../../../services/CQRS/UserChatProjection";
@@ -480,18 +479,9 @@ export class ImageGenerationService extends GenerationOrchestrator {
 
   private async updateImageWorkflowMessage(
     messageId: string,
-    messageType: ImageCivitWorkflowChatMessage["type"],
+    _messageType: ImageCivitWorkflowChatMessage["type"],
     workflowPatch: ImageWorkflowPatch,
   ): Promise<void> {
-    if (messageType === "civit-job") {
-      const { workflowId, ...patch } = workflowPatch;
-      await d.ChatService(this.chatId).UpdateCivitJob(messageId, {
-        ...patch,
-        ...(workflowId ? { jobId: workflowId } : {}),
-      });
-      return;
-    }
-
     await d.ChatService(this.chatId).UpdateCivitWorkflow(messageId, workflowPatch);
   }
 
@@ -694,7 +684,7 @@ const writeGenerationLease = (key: string, lease: GenerationLease): void => {
 
 const createImageGenerationMessageId = (): string => `image-gen-${uuidv4()}`;
 
-type ImageCivitWorkflowChatMessage = CivitJobChatMessage | CivitWorkflowChatMessage;
+type ImageCivitWorkflowChatMessage = CivitWorkflowChatMessage;
 
 type ImageWorkflowPatch = Partial<{
   workflowId: string;
@@ -747,7 +737,7 @@ const isResumableImageGenerationMessage = (
 const isImageWorkflowMessage = (
   message: UserChatMessage,
 ): message is ImageCivitWorkflowChatMessage =>
-  message.type === "civit-job" || message.type === "civit-workflow";
+  message.type === "civit-workflow";
 
 const getImageWorkflowData = (
   message: ImageCivitWorkflowChatMessage,

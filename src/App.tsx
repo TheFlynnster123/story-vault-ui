@@ -1,5 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Navigate,
+  Routes,
+  Route,
+  useParams,
+} from "react-router-dom";
 import React from "react";
 import LandingPage from "./features/Auth/pages/LandingPage";
 import ChatMenuPage from "./features/Chat/pages/ChatMenuPage";
@@ -22,9 +28,6 @@ import { CharacterDescriptionsPage } from "./features/Characters/pages/Character
 import { StoryEditorPage } from "./features/StoryEditor/pages/StoryEditorPage";
 import { ChatImageVariantsPage } from "./features/Images/pages/ChatImageVariantsPage";
 import ChatImageVariantEditPage from "./features/Images/pages/ChatImageVariantEditPage";
-import { ChatImageModelsPage } from "./features/Images/pages/ChatImageModelsPage";
-import ChatImageModelTemplatePage from "./features/Images/pages/ChatImageModelTemplatePage";
-import ChatImageModelEditPage from "./features/Images/pages/ChatImageModelEditPage";
 import ProtectedRoute from "./features/Auth/components/ProtectedRoute";
 import LogoutPage from "./features/Auth/pages/LogoutPage";
 import { ChatCreationWizard } from "./features/Chat/components/ChatCreationWizard/ChatCreationWizard";
@@ -32,10 +35,14 @@ import { CreditsPage } from "./features/OpenRouter/pages/CreditsPage";
 import { AgentFlowSettingsPage } from "./features/Chat/pages/AgentFlowSettingsPage";
 import { ReasoningSettingsPage } from "./features/Chat/pages/ReasoningSettingsPage";
 import { QUERY_CLIENT } from "./services/QueryClient";
+import { ErrorDiagnosticsModal } from "./components/ErrorDiagnosticsModal";
+import { RequestInspectorModal } from "./features/OpenRouter/components/RequestInspectorModal";
 
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={QUERY_CLIENT}>
+      <ErrorDiagnosticsModal />
+      <RequestInspectorModal />
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -185,26 +192,10 @@ const App: React.FC = () => {
             }
           />
           <Route
-            path="/chat/:chatId/image-models"
+            path="/chat/:chatId/image-models/*"
             element={
               <ProtectedRoute>
-                <ChatImageModelsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chat/:chatId/image-models/add-from-template"
-            element={
-              <ProtectedRoute>
-                <ChatImageModelTemplatePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chat/:chatId/image-models/edit/:modelId"
-            element={
-              <ProtectedRoute>
-                <ChatImageModelEditPage />
+                <LegacyImageModelsRedirect />
               </ProtectedRoute>
             }
           />
@@ -260,6 +251,11 @@ const App: React.FC = () => {
       </Router>
     </QueryClientProvider>
   );
+};
+
+const LegacyImageModelsRedirect = () => {
+  const { chatId } = useParams<{ chatId: string }>();
+  return <Navigate replace to={`/chat/${chatId}/image-variants`} />;
 };
 
 export default App;

@@ -12,6 +12,7 @@ export type ChatEvent =
   | BookDeletedEvent
   | CivitWorkflowCreatedEvent
   | CivitWorkflowUpdatedEvent
+  // Legacy persisted shapes. Normalize at the event-store boundary before use.
   | CivitJobCreatedEvent
   | CivitJobUpdatedEvent
   | StoryCreatedEvent

@@ -25,8 +25,6 @@ describe("ImageGenerationService", () => {
   };
   let mockCivitMessage: any;
   let mockChatService: {
-    CreateCivitJob: ReturnType<typeof vi.fn>;
-    UpdateCivitJob: ReturnType<typeof vi.fn>;
     CreateCivitWorkflow: ReturnType<typeof vi.fn>;
     UpdateCivitWorkflow: ReturnType<typeof vi.fn>;
     DeleteMessage: ReturnType<typeof vi.fn>;
@@ -69,8 +67,6 @@ describe("ImageGenerationService", () => {
     };
 
     mockChatService = {
-      CreateCivitJob: vi.fn(),
-      UpdateCivitJob: vi.fn(),
       CreateCivitWorkflow: vi.fn(),
       UpdateCivitWorkflow: vi.fn(),
       DeleteMessage: vi.fn(),
@@ -80,27 +76,20 @@ describe("ImageGenerationService", () => {
       messageId: string,
       prompt: string,
       extras?: any,
-      type: "civit-job" | "civit-workflow" = "civit-workflow",
     ) => {
       mockCivitMessage = {
         id: messageId,
-        type,
+        type: "civit-workflow",
         data: {
-          ...(type === "civit-job"
-            ? { jobId: messageId }
-            : { workflowId: extras?.workflowId ?? messageId }),
+          workflowId: extras?.workflowId ?? messageId,
           prompt,
           ...extras,
         },
       };
     };
-    mockChatService.CreateCivitJob.mockImplementation(
-      (jobId: string, prompt: string, extras?: any) =>
-        createImageMessage(jobId, prompt, extras, "civit-job"),
-    );
     mockChatService.CreateCivitWorkflow.mockImplementation(
       (messageId: string, prompt: string, extras?: any) =>
-        createImageMessage(messageId, prompt, extras, "civit-workflow"),
+        createImageMessage(messageId, prompt, extras),
     );
     const updateImageMessage = (_messageId: string, patch: any) => {
       if (mockCivitMessage) {
@@ -113,7 +102,6 @@ describe("ImageGenerationService", () => {
         };
       }
     };
-    mockChatService.UpdateCivitJob.mockImplementation(updateImageMessage);
     mockChatService.UpdateCivitWorkflow.mockImplementation(updateImageMessage);
     mockUserChatProjection.GetMessage.mockImplementation(
       (messageId: string) =>
@@ -244,9 +232,9 @@ describe("ImageGenerationService", () => {
     const messageId = "image-gen-stale";
     mockCivitMessage = {
       id: messageId,
-      type: "civit-job",
+      type: "civit-workflow",
       data: {
-        jobId: messageId,
+        workflowId: messageId,
         prompt: "",
         generationStatus: "determining-character",
       },
@@ -277,10 +265,10 @@ describe("ImageGenerationService", () => {
 
     await vi.waitFor(() => {
       expect(mockImageGenerator.resolveCharacterContext).toHaveBeenCalled();
-      expect(mockChatService.UpdateCivitJob).toHaveBeenCalledWith(
+      expect(mockChatService.UpdateCivitWorkflow).toHaveBeenCalledWith(
         messageId,
         expect.objectContaining({
-          jobId: "job-resumed",
+          workflowId: "job-resumed",
           generationStatus: "submitted",
         }),
       );

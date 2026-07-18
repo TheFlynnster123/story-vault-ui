@@ -24,7 +24,6 @@ import { getBookGenerationServiceInstance } from "../features/Chat/services/Chat
 import { getLLMMessageContextServiceInstance } from "../features/Chat/services/ChatGeneration/LLMMessageContextService";
 import { getAgentFlowServiceInstance } from "../features/Chat/services/AgentFlow/AgentFlowService";
 import { ImageGenerator } from "../features/Images/services/ImageGenerator";
-import { getChatImageModelServiceInstance } from "../features/Images/services/ChatImageModelService";
 import { getChatImageVariantServiceInstance } from "../features/Images/services/ChatImageVariantService";
 import { getChatImageVariantsManagedBlobInstance } from "../features/Images/services/ChatImageVariantsManagedBlob";
 import { getUserChatProjectionInstance } from "./CQRS/UserChatProjection";
@@ -139,9 +138,6 @@ export class Dependencies {
   }
   ImageGenerator(chatId: string) {
     return new ImageGenerator(chatId);
-  }
-  ChatImageModelService(chatId: string) {
-    return getChatImageModelServiceInstance(chatId);
   }
   ChatImageModelsManagedBlob(chatId: string) {
     return getChatImageModelsManagedBlobInstance(chatId);

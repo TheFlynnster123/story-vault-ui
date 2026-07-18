@@ -19,6 +19,7 @@ import type {
   NoteEditedEvent,
   AgentClarificationCreatedEvent,
 } from "./events/ChatEvent";
+import { normalizeChatEvent } from "./events/normalizeChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
 
@@ -48,13 +49,13 @@ export class LLMChatProjection {
 
   // ---- Event Processing ----
   public process(event: ChatEvent) {
-    this.applyEvent(event);
+    this.applyEvent(normalizeChatEvent(event));
     this.notifySubscribers();
   }
 
   public processBatch(events: ChatEvent[]) {
     for (const event of events) {
-      this.applyEvent(event);
+      this.applyEvent(normalizeChatEvent(event));
     }
     this.notifySubscribers();
   }
@@ -103,10 +104,6 @@ export class LLMChatProjection {
       case "CivitWorkflowCreated":
         break;
       case "CivitWorkflowUpdated":
-        break;
-      case "CivitJobCreated":
-        break;
-      case "CivitJobUpdated":
         break;
       case "PlanCreated":
         this.processPlanCreated(event);

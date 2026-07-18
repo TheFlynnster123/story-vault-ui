@@ -19,7 +19,7 @@ or workflow into a generic framework.
 
 | Priority | Recommendation | Why it matters | Suggested scope |
 | --- | --- | --- | --- |
-| P1 | Retire legacy per-chat image models | The documented replacement is live, but the legacy routes, hooks, pages, and storage still ship. | One migration/release train |
+| Done | Retire legacy per-chat image models | Legacy settings now migrate at the storage boundary; the old UI and CRUD paths have been removed. | Completed July 18, 2026 |
 | P1 | Collapse `CivitJob` and `CivitWorkflow` event shapes | New image generation writes workflow events, while projections, UI, services, and tests still support both. | One migration/release train |
 | P1 | Centralize LLM context serialization and prompt-envelope assembly | The same history formatting and message-append rules are repeated in generation features. | Small, well-tested library extraction |
 | P1 | Parameterize the duplicate image-model editor | The global and per-chat editors differ chiefly by repository and route details. | Small refactor |
@@ -35,6 +35,12 @@ or workflow into a generic framework.
 ### 1. Finish the per-chat image-model migration
 
 **Priority: P1 — high duplication, meaningful deletion opportunity.**
+
+**Status: completed.** When a chat has no variant blob, its older
+`chat-image-models` blob is converted to variants. Successful migrations remove
+the obsolete blob; partial migrations retain it for recovery and expose a
+user-facing fallback notice. Old URLs redirect to the variant page, and the
+legacy pages, hook, CRUD service, and event writers have been removed.
 
 The image feature documentation explicitly identifies `useChatImageModels`,
 `ChatImageModel*Page`, `ChatImageModelService`, and
@@ -88,6 +94,11 @@ abstraction that preserves both concepts forever.
 ### 2. Collapse the duplicate image job/workflow event model
 
 **Priority: P1 — compatibility burden crosses the event-store boundary.**
+
+**Status: active generation migrated.** Legacy `CivitJob*` payloads are
+normalized to `CivitWorkflow*` events when replayed. Projections, image
+generation, and chat rendering now operate on the workflow shape; the legacy
+event interfaces remain only for persisted-history compatibility.
 
 `ChatEvent` defines parallel `CivitJobCreated`/`CivitJobUpdated` and
 `CivitWorkflowCreated`/`CivitWorkflowUpdated` events with effectively the same

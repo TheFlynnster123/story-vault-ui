@@ -10,6 +10,10 @@ export type ChatImageVariants = {
    */
   selectedSystemModelId: string;
   variants: ImageModelVariant[];
+  legacyMigration?: {
+    status: "migrated" | "partial";
+    message: string;
+  };
 };
 
 export const getChatImageVariantsManagedBlobInstance =

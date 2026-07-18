@@ -5,6 +5,7 @@ import type { ChatImageVariants } from "./ChatImageVariantsManagedBlob";
 import type { ImageModelVariant } from "./ImageModelVariant";
 import { resolveVariant } from "./ImageModelVariant";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
+import { LegacyChatImageModelsMigration } from "./LegacyChatImageModelsMigration";
 
 export const getChatImageVariantServiceInstance = createInstanceCache(
   (chatId: string) => new ChatImageVariantService(chatId),
@@ -24,7 +25,37 @@ export class ChatImageVariantService {
 
   public async GetAll(): Promise<ChatImageVariants> {
     const data = await this.blob().get();
-    return data ?? this.createEmpty();
+    if (data) return data;
+
+    try {
+      const migrated = await new LegacyChatImageModelsMigration(
+        this.chatId,
+      ).migrate();
+      await this.blob().save(migrated);
+      if (migrated.legacyMigration?.status === "migrated") {
+        try {
+          await d.ChatImageModelsManagedBlob(this.chatId).delete();
+        } catch (error) {
+          d.ErrorService().log(
+            "Older chat image settings were migrated but could not be cleaned up",
+            error,
+          );
+        }
+      }
+      return migrated;
+    } catch (error) {
+      d.ErrorService().log("Failed to migrate older chat image settings", error);
+      const fallback: ChatImageVariants = {
+        ...this.createEmpty(),
+        legacyMigration: {
+          status: "partial",
+          message:
+            "Older chat image settings could not be loaded. Image generation will use the system default; you can choose a new model here.",
+        },
+      };
+      await this.blob().save(fallback);
+      return fallback;
+    }
   }
 
   public async SaveVariant(variant: ImageModelVariant): Promise<boolean> {
@@ -78,7 +109,16 @@ export class ChatImageVariantService {
   public async SelectVariant(variantId: string): Promise<boolean> {
     try {
       const data = await this.GetAll();
-      if (!data.variants.find((v) => v.id === variantId)) {
+      const variant = data.variants.find((v) => v.id === variantId);
+      if (!variant) {
+        return false;
+      }
+      const parent = await this.findParentModel(variant.parentModelId);
+      if (!isWorkflowImageModel(parent)) {
+        d.ErrorService().log(
+          "Cannot select image model variant because its system model is unavailable",
+          new Error(`Missing workflow parent ${variant.parentModelId}`),
+        );
         return false;
       }
       this.blob().saveDebounced({
@@ -96,7 +136,12 @@ export class ChatImageVariantService {
   public async SelectSystemModel(modelId: string): Promise<boolean> {
     try {
       const globalModels = await d.ImageModelService().GetAllImageModels();
-      if (!globalModels.models.find((m) => m.id === modelId)) {
+      const model = globalModels.models.find((m) => m.id === modelId);
+      if (!isWorkflowImageModel(model)) {
+        d.ErrorService().log(
+          "Cannot select unavailable or incompatible system image model",
+          new Error(`Invalid system image model ${modelId}`),
+        );
         return false;
       }
       const data = await this.GetAll();
@@ -117,6 +162,14 @@ export class ChatImageVariantService {
     name: string,
   ): Promise<ImageModelVariant | null> {
     try {
+      const parent = await this.findParentModel(parentModelId);
+      if (!isWorkflowImageModel(parent)) {
+        d.ErrorService().log(
+          "Cannot create variant because its system image model is unavailable",
+          new Error(`Missing workflow parent ${parentModelId}`),
+        );
+        return null;
+      }
       const variant: ImageModelVariant = {
         id: crypto.randomUUID(),
         name,
@@ -140,7 +193,7 @@ export class ChatImageVariantService {
         (v) => v.id === data.selectedVariantId,
       );
       if (selected) {
-      const parent = await this.findParentModel(selected.parentModelId);
+        const parent = await this.findParentModel(selected.parentModelId);
         if (parent && isWorkflowImageModel(parent)) {
           return resolveVariant(selected, parent);
         }

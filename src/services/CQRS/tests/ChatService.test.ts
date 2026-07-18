@@ -117,51 +117,6 @@ describe("ChatService - General Operations", () => {
     });
   });
 
-  // ---- CreateCivitJob Tests ----
-  describe("CreateCivitJob", () => {
-    it("should create CivitJobCreated event with jobId and prompt", async () => {
-      const service = new ChatService(testChatId);
-      const jobId = "job-123";
-      const prompt = "Generate image of a cat";
-
-      await service.CreateCivitJob(jobId, prompt);
-
-      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
-      expect(calledEvent.type).toBe("CivitJobCreated");
-      expect(calledEvent.jobId).toBe(jobId);
-      expect(calledEvent.prompt).toBe(prompt);
-    });
-
-    it("should call ChatEventService with correct event", async () => {
-      const service = new ChatService(testChatId);
-
-      await service.CreateCivitJob("job-456", "test prompt");
-
-      expect(mockChatEventService.AddChatEvent).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe("UpdateCivitJob", () => {
-    it("should create CivitJobUpdated event with messageId and patch", async () => {
-      const service = new ChatService(testChatId);
-
-      await service.UpdateCivitJob("image-gen-1", {
-        generationStatus: "submitted",
-        jobId: "workflow-1",
-      });
-
-      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
-      expect(calledEvent).toEqual({
-        type: "CivitJobUpdated",
-        messageId: "image-gen-1",
-        patch: {
-          generationStatus: "submitted",
-          jobId: "workflow-1",
-        },
-      });
-    });
-  });
-
   describe("CreateCivitWorkflow", () => {
     it("should create CivitWorkflowCreated event with messageId and optional workflowId", async () => {
       const service = new ChatService(testChatId);
