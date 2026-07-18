@@ -72,6 +72,10 @@ export class ManagedBlob<T> {
     return this._isLoading;
   }
 
+  public getCached(): T | undefined {
+    return this.data;
+  }
+
   public get(): Promise<T | undefined> {
     if (this.initialized) return Promise.resolve(this.data);
     if (this.isFetching) return this.fetchPromise!;

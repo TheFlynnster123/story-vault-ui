@@ -16,6 +16,7 @@ const CHAT_ID = "test-chat-456";
 
 const createMockChatSettingsService = () => ({
   Get: vi.fn().mockResolvedValue(undefined),
+  getCached: vi.fn().mockReturnValue(undefined),
   subscribe: vi.fn().mockReturnValue(vi.fn()),
   isLoading: vi.fn().mockReturnValue(false),
 });
@@ -27,7 +28,9 @@ describe("useChatSettings", () => {
     vi.clearAllMocks();
     mockChatSettingsService = createMockChatSettingsService();
     vi.mocked(d.ChatSettingsService).mockReturnValue(
-      mockChatSettingsService as any,
+      mockChatSettingsService as unknown as ReturnType<
+        typeof d.ChatSettingsService
+      >,
     );
     mockUseCivitJob.mockReturnValue({ photoBase64: undefined });
   });
@@ -41,6 +44,36 @@ describe("useChatSettings", () => {
     const mod = await import("./useChatSettings");
     return mod.useChatSettings;
   };
+
+  it("returns cached settings on the initial render", async () => {
+    const cachedSettings = {
+      timestampCreatedUtcMs: Date.now(),
+      chatTitle: "Cached chat",
+      prompt: "prompt",
+      backgroundPhotoBase64: "data:image/png;base64,cached",
+    };
+    mockChatSettingsService.getCached.mockReturnValue(cachedSettings);
+    mockChatSettingsService.Get.mockResolvedValue(cachedSettings);
+
+    const useChatSettings = await importHook();
+    const { result } = renderHook(() => useChatSettings(CHAT_ID));
+
+    expect(result.current.chatSettings).toEqual(cachedSettings);
+    expect(result.current.backgroundPhotoBase64).toBe(
+      cachedSettings.backgroundPhotoBase64,
+    );
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("starts in a loading state when settings are not cached", async () => {
+    mockChatSettingsService.isLoading.mockReturnValue(true);
+
+    const useChatSettings = await importHook();
+    const { result } = renderHook(() => useChatSettings(CHAT_ID));
+
+    expect(result.current.chatSettings).toBeUndefined();
+    expect(result.current.isLoading).toBe(true);
+  });
 
   describe("messageTransparency", () => {
     it("should default to theme transparency when setting is undefined", async () => {

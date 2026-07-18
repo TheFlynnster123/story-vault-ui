@@ -17,6 +17,7 @@ export class ChatSettingsService {
   private blob = () => d.ChatSettingsManagedBlob(this.chatId);
 
   Get = () => this.blob().get();
+  getCached = () => this.blob().getCached();
   save = (data: ChatSettings) => this.blob().save(data);
   saveDebounced = (data: ChatSettings) => this.blob().saveDebounced(data);
   savePendingChanges = () => this.blob().savePendingChanges();
