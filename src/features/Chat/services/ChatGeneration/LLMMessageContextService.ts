@@ -6,6 +6,8 @@ import {
 } from "../../../../services/Utils/MessageUtils";
 import type { Memory } from "../../../Memories/services/Memory";
 import type { CharacterDescription } from "../../../Characters/services/CharacterDescription";
+import { isCharacterActive } from "../../../Characters/services/CharacterDescription";
+import { normalizeCharacterSheetTrailingMessageCount } from "../../../Characters/services/CharacterSheetSettings";
 import type { ChatSettings } from "../Chat/ChatSettings";
 import { DEFAULT_REASONING_RETENTION_MESSAGES } from "../Chat/ChatSettings";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
@@ -17,8 +19,6 @@ import { createInstanceCache } from "../../../../services/Utils/getOrCreateInsta
 export const getLLMMessageContextServiceInstance = createInstanceCache(
   (chatId: string) => new LLMMessageContextService(chatId),
 );
-
-export const DEFAULT_CHARACTER_SHEETS_TRAILING_MESSAGE_COUNT = 5;
 
 const consolidateMessagesToString = (messages: LLMMessage[]): string =>
   messages
@@ -63,7 +63,9 @@ export class LLMMessageContextService {
     return this.appendGuidanceMessage(messages, guidance);
   }
 
-  async buildReasoningRequestMessages(guidance?: string): Promise<LLMMessage[]> {
+  async buildReasoningRequestMessages(
+    guidance?: string,
+  ): Promise<LLMMessage[]> {
     const chatSettings = await this.fetchChatSettings();
     await this.applySystemContextSettings();
     const chatMessages = this.getChatMessages(chatSettings);
@@ -74,13 +76,14 @@ export class LLMMessageContextService {
       chatSettings.reasoningConsolidateMessageHistory ?? true;
 
     if (shouldConsolidateHistory) {
-      const consolidatedReasoningContext = this.buildConsolidatedReasoningContext(
-        chatMessages,
-        memories,
-        characters,
-        chatSettings,
-        reasoningPrompt,
-      );
+      const consolidatedReasoningContext =
+        this.buildConsolidatedReasoningContext(
+          chatMessages,
+          memories,
+          characters,
+          chatSettings,
+          reasoningPrompt,
+        );
       return this.appendGuidanceMessage(
         [toSystemMessage(consolidatedReasoningContext)],
         guidance,
@@ -190,13 +193,7 @@ export class LLMMessageContextService {
   buildCharacterSheetMessages(
     characters: CharacterDescription[],
   ): LLMMessage[] {
-    const content = characters
-      .filter((character) => this.isNonEmptyContent(character.sheet ?? ""))
-      .map(
-        (character) =>
-          `## ${character.name.trim() || "Unnamed character"}\r\n${character.sheet!.trim()}`,
-      )
-      .join("\r\n\r\n");
+    const content = this.combineCharacterSheetContent(characters);
     if (!content) return [];
 
     return [toSystemMessage(`# Character Sheets\r\n${content}`)];
@@ -325,10 +322,8 @@ export class LLMMessageContextService {
     chatSettings: ChatSettings,
     reasoningPrompt: string,
   ): string {
-    const { earlierMessages, trailingMessages } = this.splitMessagesForDurableContext(
-      chatMessages,
-      chatSettings,
-    );
+    const { earlierMessages, trailingMessages } =
+      this.splitMessagesForDurableContext(chatMessages, chatSettings);
     const sections = [
       `Chat History:\n\n${consolidateMessagesToString(earlierMessages)}`,
     ];
@@ -381,10 +376,18 @@ export class LLMMessageContextService {
     characters: CharacterDescription[],
   ): string {
     return characters
-      .filter((character) => this.isNonEmptyContent(character.sheet ?? ""))
-      .map(
+      .filter(
         (character) =>
-          `## ${character.name.trim() || "Unnamed character"}\n${character.sheet!.trim()}`,
+          isCharacterActive(character) &&
+          character.sheetItems.some((item) => this.isNonEmptyContent(item)),
+      )
+      .map((character) =>
+        [
+          `## ${character.name.trim() || "Unnamed character"}`,
+          ...character.sheetItems
+            .filter((item) => this.isNonEmptyContent(item))
+            .map((item) => `- ${item.trim()}`),
+        ].join("\n"),
       )
       .join("\n\n");
   }
@@ -395,10 +398,8 @@ export class LLMMessageContextService {
     characters: CharacterDescription[],
     chatSettings: ChatSettings,
   ): LLMMessage[] {
-    const { earlierMessages, trailingMessages } = this.splitMessagesForDurableContext(
-      chatMessages,
-      chatSettings,
-    );
+    const { earlierMessages, trailingMessages } =
+      this.splitMessagesForDurableContext(chatMessages, chatSettings);
     return [
       ...earlierMessages,
       ...this.buildMemoryMessages(memories),
@@ -411,9 +412,8 @@ export class LLMMessageContextService {
     chatMessages: LLMMessage[],
     chatSettings: ChatSettings,
   ): { earlierMessages: LLMMessage[]; trailingMessages: LLMMessage[] } {
-    const trailingCount = this.getCharacterSheetsTrailingMessageCount(
-      chatSettings,
-    );
+    const trailingCount =
+      this.getCharacterSheetsTrailingMessageCount(chatSettings);
     const splitIndex = Math.max(0, chatMessages.length - trailingCount);
     return {
       earlierMessages: chatMessages.slice(0, splitIndex),
@@ -424,11 +424,9 @@ export class LLMMessageContextService {
   private getCharacterSheetsTrailingMessageCount(
     chatSettings: ChatSettings,
   ): number {
-    const configured = chatSettings.characterSheetsTrailingMessageCount;
-    if (!Number.isFinite(configured)) {
-      return DEFAULT_CHARACTER_SHEETS_TRAILING_MESSAGE_COUNT;
-    }
-    return Math.max(0, Math.min(50, Math.round(configured!)));
+    return normalizeCharacterSheetTrailingMessageCount(
+      chatSettings.characterSheetsTrailingMessageCount,
+    );
   }
 
   private isNonEmptyContent(content: string): boolean {

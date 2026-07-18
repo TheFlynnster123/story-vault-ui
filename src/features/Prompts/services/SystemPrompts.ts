@@ -75,6 +75,20 @@ export interface SystemPrompts {
   /** OpenRouter request settings paired with the character sheet model override */
   characterSheetRequestSettings?: OpenRouterRequestSettings;
 
+  /** Prompt for selecting the active scene cast from known and newly introduced characters. */
+  activeCharactersPrompt: string;
+  /** Model override for active-character selection (empty = use default) */
+  activeCharactersModel?: string;
+  /** OpenRouter request settings paired with active-character selection */
+  activeCharactersRequestSettings?: OpenRouterRequestSettings;
+
+  /** Prompt for replacing complete identity-focused Character Sheet bullet lists. */
+  characterSheetUpdatePrompt: string;
+  /** Model override for Character Sheet updates (empty = use default) */
+  characterSheetUpdateModel?: string;
+  /** OpenRouter request settings paired with Character Sheet updates */
+  characterSheetUpdateRequestSettings?: OpenRouterRequestSettings;
+
   /** System prompt used during chapter discussion conversations */
   discussChapterPrompt: string;
 
@@ -167,6 +181,22 @@ For each qualifying character, write a concise factual sheet using only details 
 
 Return an empty list if no new primary character qualifies.`,
   characterSheetModel: "x-ai/grok-4.3",
+
+  activeCharactersPrompt: `Determine the characters active in the current scene using the recent scene context and the supplied canonical roster.
+
+Active means physically present, directly participating, the current point-of-view focus, or immediately able to affect the next response. Exclude characters who are only mentioned, remembered, discussed historically, absent, or who have left the scene.
+
+Return only active character names. Prefer canonical roster names. You may include a new name only when the recent context clearly introduces a named primary character who is active now. Do not include descriptions, reasoning, or inactive names.`,
+  activeCharactersModel: "x-ai/grok-4.3",
+
+  characterSheetUpdatePrompt: `Maintain concise identity-focused Character Sheets for story continuity. For every supplied character, return a complete replacement list, not a diff.
+
+Each item must state one supported, durable fact about who the character is: personality, beliefs, values, goals, fears, motivations, emotional stance toward others, important relationships, voice, habits, boundaries, or stable constraints.
+
+Preserve existing items that remain true, revise items whose meaning has changed, and remove contradicted, obsolete, temporary, or redundant items. Do not record scene actions, plot chronology, current location, temporary clothing or injuries, physical appearance, or history already represented by chapter or book context. Do not invent missing facts.
+
+Keep each item brief and independently useful. Return every requested character exactly once, with no prose outside the configured JSON response.`,
+  characterSheetUpdateModel: "x-ai/grok-4.3",
 
   discussChapterPrompt:
     "You are helping the user create and refine the summary for this chapter.\nConsider the full chat history above for context.\n\nThe user would like to discuss what the chapter summary should contain.\nEngage in a helpful conversation about what happened in this chapter.\nSuggest improvements, ask clarifying questions, and help them refine the summary.\nKeep responses concise and focused on accurately capturing the chapter's events.",

@@ -2,73 +2,110 @@
 
 ## Overview
 
-Characters are chat-scoped, encrypted records with two distinct forms of continuity:
+Characters are encrypted, chat-scoped records with two separate forms of
+continuity:
 
-- **Character Appearance** is a concise, stable physical description used only for image generation.
-- **Character Sheet** is concise narrative context—role, motivations, relationships, voice, and constraints—used by text chat, reasoning, regeneration, and Agent Flow.
+- **Appearance** is stable physical information used only for image generation.
+- **Character Sheet** is an explicit list of identity-focused narrative facts
+  used in text-model context.
 
-The Characters Flow section exposes sheet generation, its check cadence, and the context-placement setting. The Characters page is the editor for names, sheets, appearances, and preferred image models.
+Only approved sheets belonging to effectively active characters enter text
+context.
 
-## Character schema
+## Schema
 
-Character data is stored in the existing `character-descriptions` managed blob. New records use schema version 2:
+Characters are stored in the existing `character-descriptions` managed blob.
+Schema version 3 is:
 
 ```ts
 interface CharacterDescription {
   id: string;
   name: string;
   appearance: string;
-  sheet?: string;
+  sheetItems: string[];
   sheetSource?: "auto" | "manual";
+  detectedActive: boolean;
+  activeOverride?: boolean;
   preferredImage?: { id: string; source: "system" | "variant" };
   createdAt: string;
   updatedAt: string;
 }
 ```
 
-Existing version 1 records used `description` instead of `appearance`. On first character access, the client migrates the field and then writes `charactersSchemaVersion: 2` to the chat settings. The blob is saved before the version flag, so a failed settings update is safe to retry. See [Character Appearance Migration Retirement.md](../../../Character%20Appearance%20Migration%20Retirement.md) for the compatibility-removal process.
+Effective activity is `activeOverride ?? detectedActive`.
 
-## Automatic Character Sheets
+Version 1 records used `description`; version 2 records used `appearance` and
+`sheet?: string`. Migration preserves prose as one item, converts Markdown-only
+bullets to items, defaults missing activity to active, saves the blob, and only
+then advances `charactersSchemaVersion`.
 
-`CharacterSheetGenerationService` checks the current chat before an eligible text response. It uses the configurable Character Sheet prompt/model, receives the already-compressed chat context plus known character names, and requires strict structured output.
+## Synchronization pipeline
 
-Only new primary characters are saved. Blank output, malformed output, incidental names, and existing manually edited sheets are ignored. Failures are logged and never block a normal text response.
+`CharacterMaintenanceService` owns cadence and orchestration.
 
-Per-chat settings in `ChatSettings`:
+1. `ActiveCharacterSelectionService` uses recent projected scene messages,
+   strict structured output, and the canonical roster.
+2. Unknown names are accepted only when grounded in recent context. Fuzzy
+   variants of an existing name cannot create duplicates.
+3. `CharacterSheetSyncService` receives every effectively active record and its
+   complete current item list.
+4. It requires a complete, one-to-one replacement batch with bounded items.
+5. `CharacterMaintenanceService` writes a `CharacterUpdateProposal`; it does
+   not update character records.
 
-```ts
-characterSheetsAutoGenerateEnabled?: boolean; // default true
-characterSheetsCheckInterval?: number; // default 3 user messages
-characterSheetsMessagesSinceLastCheck?: number;
-characterSheetsTrailingMessageCount?: number; // default 5
-```
+Automatic runs are started after a saved user turn and execute without blocking
+the normal text response. Manual runs are available from Quick Chat Controls,
+the Characters settings panel, and each character card.
 
-The Flow section also provides a manual **Check now** action.
+## Approval
 
-## LLM context placement
+`CharacterUpdateProposalManagedBlob` persists the actionable result across
+navigation and refresh. `useCharacterUpdateProposal` derives the
+character-themed Async Control from this source of truth.
 
-`LLMMessageContextService` splits the projected chat history before the final configured number of messages. It places Memories and Character Sheets between the earlier and trailing slices:
+The review modal requires a confirm/dismiss decision for each character and
+also supports dismiss all or review later. Applying decisions selects the
+confirmed changes and calls `CharacterDescriptionsService.applyUpdateProposal`,
+which compares each selected existing record’s `updatedAt` with the proposal
+base version and checks selected new names for conflicts. It performs one
+character-blob save only when the confirmed set is conflict-free. Manual
+`activeOverride` values are preserved.
+
+The proposal blob is deleted only after a successful decision apply or explicit
+dismissal.
+
+## Context placement
+
+`LLMMessageContextService` places memories and approved active Character Sheets
+before the configured recent-message tail:
 
 ```text
-earlier chat history
+earlier projected messages
 Memories
 Character Sheets
-last N projected chat messages
-story/reasoning instruction
+last N projected messages
+generation instruction
 ```
 
-This keeps durable facts available without pushing the most recent conversation away from the final instruction. The same placement applies to normal generation, chapter title/summary generation, both reasoning modes, regeneration, and Agent Flow. Book title/summary generation also receives Character Sheets before its chapter-summary context.
+Character Sheet content is formatted from `sheetItems` as headings and bullets.
+Inactive characters, empty sheets, and appearances are excluded. The same
+central path covers chat, reasoning, regeneration, chapter work, book work, and
+Agent Flow consumers.
 
-## Image generation
+## Settings and prompts
 
-Image generation continues to select a single character and use only `appearance`. When it is missing, the image workflow offers Generate Appearance, Create Manually, or Skip for now. Narrative Character Sheets are intentionally not sent to image prompt generation.
+Canonical per-chat settings are:
 
-## Prompt configuration
+```ts
+characterSheetsAutoSyncEnabled?: boolean;
+characterSheetsSyncInterval?: number;
+characterSheetsMessagesSinceLastSync?: number;
+characterSheetsTrailingMessageCount?: number;
+```
 
-System Prompts includes independent controls for:
+System Prompts exposes independent prompt, model, and request settings for:
 
-- Character Selection Prompt + Model
-- Character Appearance Prompt + Model
-- Character Sheet Prompt + Model
+- Active Characters
+- Character Sheet Update
 
-Persisted system prompts are merged with defaults, so the new Character Sheet fields are backward compatible.
+Legacy fields remain decoder-only compatibility inputs during migration.

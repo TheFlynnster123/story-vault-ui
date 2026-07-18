@@ -12,6 +12,10 @@ vi.mock("../ChatControls/ChapterCreationContext", () => ({
 }));
 
 describe("AgentFlowSection", () => {
+  const initialize = vi.fn().mockResolvedValue(undefined);
+  const resolveAction = vi.fn().mockResolvedValue(undefined);
+  const dismissSuggestion = vi.fn().mockResolvedValue(undefined);
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(d.AgentFlowService).mockReturnValue({
@@ -34,6 +38,9 @@ describe("AgentFlowSection", () => {
       },
       IsLoading: false,
       subscribe: vi.fn(() => vi.fn()),
+      initialize,
+      resolveAction,
+      dismissSuggestion,
     } as never);
   });
 
@@ -54,6 +61,25 @@ describe("AgentFlowSection", () => {
       "Suggested title",
       "Suggested summary",
     );
+    expect(resolveAction).toHaveBeenCalledWith(0);
     expect(d.ChatService).not.toHaveBeenCalled();
+  });
+
+  it("explicitly dismisses pending suggestions", async () => {
+    const user = userEvent.setup();
+    render(
+      <AgentFlowSection
+        chatId="chat-1"
+        onNavigateToMemories={vi.fn()}
+        onNavigateToPlans={vi.fn()}
+        onNavigateToSettings={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Dismiss suggestions" }),
+    );
+
+    expect(dismissSuggestion).toHaveBeenCalledOnce();
   });
 });

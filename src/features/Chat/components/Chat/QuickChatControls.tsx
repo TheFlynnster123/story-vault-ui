@@ -10,7 +10,11 @@ import {
   Textarea,
   Tooltip,
 } from "@mantine/core";
-import { RiBookOpenLine, RiSettings3Line, RiTreasureMapFill } from "react-icons/ri";
+import {
+  RiBookOpenLine,
+  RiSettings3Line,
+  RiTreasureMapFill,
+} from "react-icons/ri";
 import styled from "styled-components";
 import { Theme } from "../../../../components/Theme";
 import { d } from "../../../../services/Dependencies";
@@ -20,6 +24,12 @@ import { usePlanGenerationStatus } from "../../../Plans/hooks/usePlanGenerationS
 import { useChapterCreation } from "./ChatControls/ChapterCreationContext";
 import { FlowStyles } from "./Flow/FlowStyles";
 import { AsyncActionControl } from "./ChatControls/AsyncActionControl";
+import { FaUser } from "react-icons/fa";
+import { LuSparkles } from "react-icons/lu";
+import { useCharacterUpdateProposal } from "../../../Characters/hooks/useCharacterUpdateProposal";
+import { CharacterUpdateReviewModal } from "../../../Characters/components/CharacterUpdateReviewModal";
+import type { CharacterMaintenanceResult } from "../../../Characters/services/CharacterMaintenanceService";
+import { AgentFlowAsyncControl } from "./ChatControls/AgentFlowAsyncControl";
 
 type RegenerationMode = "from-scratch" | "edit";
 
@@ -41,7 +51,13 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
   const [selectedMode, setSelectedMode] = useState<RegenerationMode | null>(
     null,
   );
+  const [isSuggestingWorkflowAction, setIsSuggestingWorkflowAction] =
+    useState(false);
+  const [isPreparingCharacterUpdates, setIsPreparingCharacterUpdates] =
+    useState(false);
+  const [characterUpdateStatus, setCharacterUpdateStatus] = useState<string>();
   const [feedback, setFeedback] = useState("");
+  const characterUpdates = useCharacterUpdateProposal(chatId);
 
   const handleCompressChapter = () => {
     setOpened(false);
@@ -59,6 +75,37 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
     }
 
     setPlanPickerOpened(true);
+  };
+
+  const handleSuggestWorkflowAction = async () => {
+    setOpened(false);
+    setIsSuggestingWorkflowAction(true);
+
+    try {
+      await d.AgentFlowService(chatId).analyzeIntentSuggestion();
+    } catch (error) {
+      d.ErrorService().log("Failed to suggest workflow action", error);
+    } finally {
+      setIsSuggestingWorkflowAction(false);
+    }
+  };
+
+  const handlePrepareCharacterUpdates = async () => {
+    setOpened(false);
+    setCharacterUpdateStatus(undefined);
+    setIsPreparingCharacterUpdates(true);
+
+    try {
+      const result = await d
+        .CharacterMaintenanceService(chatId)
+        .synchronizeNow();
+      setCharacterUpdateStatus(toCharacterUpdateStatus(result));
+    } catch (error) {
+      d.ErrorService().log("Failed to prepare character updates", error);
+      setCharacterUpdateStatus("Character updates could not be prepared.");
+    } finally {
+      setIsPreparingCharacterUpdates(false);
+    }
   };
 
   const handleSelectPlan = (planId: string) => {
@@ -91,11 +138,13 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
       }
 
       if (selectedMode === "edit") {
-        await d.PlanGenerationService(chatId).regeneratePlanFromMessage(
-          selectedPlanId,
-          latestContent,
-          feedback.trim() || undefined,
-        );
+        await d
+          .PlanGenerationService(chatId)
+          .regeneratePlanFromMessage(
+            selectedPlanId,
+            latestContent,
+            feedback.trim() || undefined,
+          );
       }
 
       closeRegenerationModals();
@@ -155,6 +204,15 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
                 onClick={chapter.handlePendingDraft}
               />
             )}
+          {characterUpdates.proposal && (
+            <AsyncActionControl
+              label="Review character updates"
+              icon={<FaUser size={18} />}
+              theme={Theme.character}
+              onClick={characterUpdates.openReview}
+            />
+          )}
+          <AgentFlowAsyncControl chatId={chatId} />
         </Stack>
       </ControlsContainer>
 
@@ -171,6 +229,33 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
             description="Create a chapter from the current conversation."
             onClick={handleCompressChapter}
           />
+
+          <QuickActionButton
+            icon={<LuSparkles size={18} color={Theme.plan.primary} />}
+            title="Suggest Workflow Action"
+            description="Analyze the conversation and suggest the next workflow action."
+            loading={isSuggestingWorkflowAction}
+            onClick={handleSuggestWorkflowAction}
+          />
+
+          <QuickActionButton
+            icon={<FaUser size={16} color={Theme.character.primary} />}
+            title="Prepare Character Sheet Updates"
+            description={
+              characterUpdates.proposal
+                ? "Review or discard the pending character updates first."
+                : "Analyze the active cast and prepare Character Sheet changes for approval."
+            }
+            loading={isPreparingCharacterUpdates}
+            disabled={Boolean(characterUpdates.proposal)}
+            onClick={handlePrepareCharacterUpdates}
+          />
+
+          {characterUpdateStatus && (
+            <Text size="xs" c="dimmed">
+              {characterUpdateStatus}
+            </Text>
+          )}
 
           <Stack gap="xs">
             <Button
@@ -247,9 +332,9 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
           </Group>
 
           {selectedMode === "edit" && !selectedPlanLatestContent && (
-              <Text size="xs" c="red">
-                This plan does not have existing content to edit.
-              </Text>
+            <Text size="xs" c="red">
+              This plan does not have existing content to edit.
+            </Text>
           )}
 
           <Textarea
@@ -277,6 +362,15 @@ export const QuickChatControls: React.FC<QuickChatControlsProps> = ({
         </Stack>
       </Modal>
 
+      <CharacterUpdateReviewModal
+        proposal={characterUpdates.proposal}
+        opened={characterUpdates.isReviewOpen}
+        isApplying={characterUpdates.isApplying}
+        error={characterUpdates.error}
+        onClose={characterUpdates.closeReview}
+        onApprove={characterUpdates.approve}
+        onDiscard={characterUpdates.discard}
+      />
     </>
   );
 };
@@ -285,6 +379,8 @@ interface QuickActionButtonProps {
   icon: React.ReactNode;
   title: string;
   description: string;
+  loading?: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }
 
@@ -292,12 +388,16 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   icon,
   title,
   description,
+  loading = false,
+  disabled = false,
   onClick,
 }) => (
   <Button
     variant="subtle"
     color="gray"
     onClick={onClick}
+    loading={loading}
+    disabled={disabled}
     h="auto"
     py="sm"
     justify="flex-start"
@@ -346,9 +446,7 @@ const ModeButton: React.FC<ModeButtonProps> = ({
         minWidth: 0,
         whiteSpace: "normal",
         overflow: "visible",
-        borderColor: active
-          ? Theme.plan.border
-          : quickButtonStyles.root.border,
+        borderColor: active ? Theme.plan.border : quickButtonStyles.root.border,
         backgroundColor: active
           ? "rgba(0, 188, 212, 0.12)"
           : quickButtonStyles.root.backgroundColor,
@@ -393,6 +491,21 @@ const quickButtonStyles = {
   section: {
     color: FlowStyles.text,
   },
+};
+
+const toCharacterUpdateStatus = (
+  result: CharacterMaintenanceResult,
+): string => {
+  if (result.status === "proposal-created") {
+    return "Character updates are ready. Close this menu to review them.";
+  }
+  if (result.status === "unchanged") {
+    return "No Character Sheet changes were proposed.";
+  }
+  if (result.reason === "pending-approval") {
+    return "Review or discard the pending character updates first.";
+  }
+  return "Character updates could not be prepared.";
 };
 
 const ControlsContainer = styled.div`

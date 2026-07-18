@@ -27,7 +27,11 @@ interface AgentFlowSuggestion {
 }
 ```
 
-Suggestions are shown in the Flow panel. Nothing mutates chat state until the user clicks the action button.
+Suggestions are shown in the Flow panel. Actionable suggestions also create an
+Async Control beside the chat so automatic results cannot be missed. Selecting
+that control opens a review modal where each action can be confirmed or the
+suggestion can be dismissed. Nothing mutates chat state until the user confirms
+an action.
 
 The Agent Flow row has a settings icon that opens the per-chat Agent Flow settings page. That page owns automatic analysis cadence and intent boldness.
 
@@ -88,7 +92,15 @@ Behavior:
 - The user adjusts the cadence with the message interval control.
 - After a saved user message, the counter increments.
 - When the counter reaches the configured interval, Agent Flow analyzes the chat and resets the counter.
-- Auto-run updates the suggestion shown in the Flow panel. It does not run actions.
+- Auto-run persists the suggestion shown in the Flow panel. It does not run
+  actions.
+- Suggestions with executable actions add a **Review Agent Flow suggestions**
+  Async Control beneath Quick Chat Controls.
+- Selecting the Async Control opens a modal with the pending suggestion.
+- A later analysis does not replace an unresolved suggestion.
+- Confirming an action runs it and removes it from pending review. The Async
+  Control disappears after all actions are confirmed or the user explicitly
+  dismisses the suggestion.
 
 ## Intent Boldness
 
@@ -267,7 +279,7 @@ The raw confidence percentage is still available as the badge tooltip.
 
 ## Current Design Constraints
 
-- Agent Flow is user-triggered, not autonomous.
+- Agent Flow actions are user-triggered, even when analysis runs automatically.
 - Actions require an explicit user click.
 - The model proposes actions; local services execute them.
 - Missing args now open relevant local UI where possible.

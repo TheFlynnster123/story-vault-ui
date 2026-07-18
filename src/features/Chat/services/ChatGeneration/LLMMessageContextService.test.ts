@@ -136,7 +136,8 @@ describe("LLMMessageContextService", () => {
           id: "character-1",
           name: "Mara",
           appearance: "dark curls",
-          sheet: "A determined navigator.",
+          sheetItems: ["A determined navigator."],
+          detectedActive: true,
           createdAt: "2026-01-01",
           updatedAt: "2026-01-01",
         },
@@ -152,6 +153,55 @@ describe("LLMMessageContextService", () => {
       expect(result[3].id).toBe("msg-3");
       expect(result[4].id).toBe("msg-4");
       expect(result[5].content).toBe("Test prompt");
+    });
+
+    it("includes only effectively active sheets and formats explicit bullets", async () => {
+      CharacterDescriptionsService.get.mockResolvedValue([
+        {
+          id: "active",
+          name: "Mara",
+          appearance: "must not enter text context",
+          sheetItems: ["Navigator", "Carries the brass key"],
+          detectedActive: true,
+          createdAt: "2026-01-01",
+          updatedAt: "2026-01-01",
+        },
+        {
+          id: "inactive",
+          name: "Ivo",
+          appearance: "",
+          sheetItems: ["Left the city"],
+          detectedActive: false,
+          createdAt: "2026-01-01",
+          updatedAt: "2026-01-01",
+        },
+        {
+          id: "overridden",
+          name: "Nell",
+          appearance: "",
+          sheetItems: ["Watching from the ridge"],
+          detectedActive: false,
+          activeOverride: true,
+          createdAt: "2026-01-01",
+          updatedAt: "2026-01-01",
+        },
+      ]);
+
+      const result = await new LLMMessageContextService(
+        testChatId,
+      ).buildGenerationRequestMessages();
+      const sheetMessage = result.find((message) =>
+        message.content.includes("# Character Sheets"),
+      );
+
+      expect(sheetMessage?.content).toContain("## Mara");
+      expect(sheetMessage?.content).toContain("- Navigator");
+      expect(sheetMessage?.content).toContain("- Carries the brass key");
+      expect(sheetMessage?.content).toContain("## Nell");
+      expect(sheetMessage?.content).not.toContain("## Ivo");
+      expect(sheetMessage?.content).not.toContain(
+        "must not enter text context",
+      );
     });
 
     it("should fetch chat settings for the correct chatId", async () => {
@@ -486,7 +536,8 @@ describe("LLMMessageContextService", () => {
           id: "character-1",
           name: "Mara",
           appearance: "dark curls",
-          sheet: "A determined navigator.",
+          sheetItems: ["A determined navigator."],
+          detectedActive: true,
           createdAt: "2026-01-01",
           updatedAt: "2026-01-01",
         },
@@ -497,9 +548,11 @@ describe("LLMMessageContextService", () => {
         createMockChatMessages(),
       );
 
-      expect(result.some((message) => message.content.includes("# Character Sheets"))).toBe(
-        true,
-      );
+      expect(
+        result.some((message) =>
+          message.content.includes("# Character Sheets"),
+        ),
+      ).toBe(true);
     });
 
     it("uses the captured chat snapshot", async () => {
@@ -584,14 +637,17 @@ describe("LLMMessageContextService", () => {
           id: "character-1",
           name: "Mara",
           appearance: "dark curls",
-          sheet: "A determined navigator.",
+          sheetItems: ["A determined navigator."],
+          detectedActive: true,
           createdAt: "2026-01-01",
           updatedAt: "2026-01-01",
         },
       ]);
       const service = new LLMMessageContextService(testChatId);
 
-      const result = await service.buildBookSummaryRequestMessages(["Summary 1"]);
+      const result = await service.buildBookSummaryRequestMessages([
+        "Summary 1",
+      ]);
 
       expect(result[0].content).toContain("# Character Sheets");
       expect(result[1].content).toContain("Chapter 1:");

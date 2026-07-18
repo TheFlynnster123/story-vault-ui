@@ -29,6 +29,11 @@ Implemented:
   The selected model starts expanded with its current configuration so users
   can review, reset, slightly adjust, select, or save it as a preset.
 - Model and preset behavior is covered by focused component and service tests.
+- Model configurations can optionally retry transient failures. Enabling
+  retries starts with one immediate retry, while allowing the retry count and
+  delay to be customized. Transient failures and empty model responses are
+  retried. Retry policy stays client-side and errors are shown only after all
+  eligible attempts fail.
 
 ## Refactor opportunities
 

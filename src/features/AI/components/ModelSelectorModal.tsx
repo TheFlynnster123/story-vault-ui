@@ -15,6 +15,7 @@ import {
 } from "../../OpenRouter/services/OpenRouterReasoning";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 import {
+  DEFAULT_RETRY_SETTINGS,
   filterSettingsForModel,
   hasOpenRouterRequestSettings,
   supportsParameter,
@@ -250,10 +251,6 @@ const ModelStatBadge: React.FC<{
   </span>
 );
 
-const hasAdvancedControls = (model: OpenRouterModel): boolean =>
-  supportsParameter(model, "reasoning") ||
-  NUMBER_PARAMETERS.some(({ key }) => supportsParameter(model, key));
-
 const AdvancedNumberInput: React.FC<{
   label: string;
   description: string;
@@ -393,6 +390,84 @@ const AdvancedSettingsPanel: React.FC<{
       </div>
 
       <div style={{ display: "grid", gap: "8px" }}>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "12px",
+            color: "#ddd",
+          }}
+        >
+          <input
+            aria-label="Enable retries"
+            type="checkbox"
+            checked={settings?.retry !== undefined}
+            onChange={(event) =>
+              updateSetting(
+                "retry",
+                event.currentTarget.checked
+                  ? { ...DEFAULT_RETRY_SETTINGS }
+                  : undefined,
+              )
+            }
+          />
+          <span>
+            <span style={{ display: "block", fontWeight: 500 }}>
+              Retry failed requests
+            </span>
+            <span
+              style={{
+                display: "block",
+                color: "#92929d",
+                fontSize: "11px",
+                lineHeight: 1.35,
+                marginTop: "2px",
+              }}
+            >
+              Automatically retry transient network, timeout, rate-limit, and
+              provider errors.
+            </span>
+          </span>
+        </label>
+
+        {settings?.retry && (
+          <>
+            <AdvancedNumberInput
+              label="Retry delay in seconds"
+              description="Wait this long before each retry. Use 0 to retry immediately."
+              value={settings.retry.retryDelaySeconds}
+              min={0}
+              step={1}
+              onChange={(value) =>
+                updateSetting("retry", {
+                  ...settings.retry!,
+                  retryDelaySeconds:
+                    value === undefined
+                      ? undefined
+                      : Math.max(0, Math.round(value)),
+                })
+              }
+            />
+            <AdvancedNumberInput
+              label="Number of Retries"
+              description="How many additional attempts to make after the first request fails."
+              value={settings.retry.numberOfRetries}
+              min={1}
+              step={1}
+              onChange={(value) =>
+                updateSetting("retry", {
+                  ...settings.retry!,
+                  numberOfRetries:
+                    value === undefined
+                      ? undefined
+                      : Math.max(1, Math.round(value)),
+                })
+              }
+            />
+          </>
+        )}
+
         {supportsParameter(model, "reasoning") && (
           <label
             style={{
@@ -596,7 +671,7 @@ const ModelItem: React.FC<{
       }}
     >
       <span style={{ minWidth: 0 }}>{model.name}</span>
-      {allowAdvancedSettings && hasAdvancedControls(model) && (
+      {allowAdvancedSettings && (
         <button
           type="button"
           aria-label={`Advanced settings for ${model.name}`}

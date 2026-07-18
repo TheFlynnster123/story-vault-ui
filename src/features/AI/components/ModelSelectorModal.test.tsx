@@ -277,6 +277,54 @@ describe("ModelSelectorModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("should enable one immediate retry by default", async () => {
+    mockFetchModels([
+      {
+        id: "openai/gpt-4",
+        name: "GPT-4",
+      },
+    ]);
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.click(
+      await screen.findByLabelText("Advanced settings for GPT-4"),
+    );
+    await user.click(screen.getByLabelText("Enable retries"));
+
+    expect(screen.getByLabelText("Retry delay in seconds")).toHaveValue(0);
+    expect(screen.getByLabelText("Number of Retries")).toHaveValue(1);
+  });
+
+  it("should save configured retry settings with the model", async () => {
+    mockFetchModels([
+      {
+        id: "openai/gpt-4",
+        name: "GPT-4",
+      },
+    ]);
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderModal({ onSelect });
+
+    await user.click(
+      await screen.findByLabelText("Advanced settings for GPT-4"),
+    );
+    await user.click(screen.getByLabelText("Enable retries"));
+    await user.clear(screen.getByLabelText("Retry delay in seconds"));
+    await user.type(screen.getByLabelText("Retry delay in seconds"), "2");
+    await user.clear(screen.getByLabelText("Number of Retries"));
+    await user.type(screen.getByLabelText("Number of Retries"), "3");
+    screen.getByText("GPT-4").click();
+
+    expect(onSelect).toHaveBeenCalledWith("openai/gpt-4", {
+      retry: {
+        retryDelaySeconds: 2,
+        numberOfRetries: 3,
+      },
+    });
+  });
+
   it("should expand the selected model configuration inline", async () => {
     mockFetchModels([
       {

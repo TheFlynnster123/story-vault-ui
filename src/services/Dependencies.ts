@@ -23,6 +23,7 @@ import { getChapterGenerationServiceInstance } from "../features/Chat/services/C
 import { getBookGenerationServiceInstance } from "../features/Chat/services/ChatGeneration/BookGenerationService";
 import { getLLMMessageContextServiceInstance } from "../features/Chat/services/ChatGeneration/LLMMessageContextService";
 import { getAgentFlowServiceInstance } from "../features/Chat/services/AgentFlow/AgentFlowService";
+import { getAgentFlowStateManagedBlobInstance } from "../features/Chat/services/AgentFlow/AgentFlowStateManagedBlob";
 import { ImageGenerator } from "../features/Images/services/ImageGenerator";
 import { getChatImageVariantServiceInstance } from "../features/Images/services/ChatImageVariantService";
 import { getChatImageVariantsManagedBlobInstance } from "../features/Images/services/ChatImageVariantsManagedBlob";
@@ -60,7 +61,11 @@ import { getCharacterDescriptionsManagedBlobInstance } from "../features/Charact
 import { CharacterDescriptionsService } from "../features/Characters/services/CharacterDescriptionsService";
 import { CharacterSelectionService } from "../features/Characters/services/CharacterSelectionService";
 import { CharacterDescriptionGenerationService } from "../features/Characters/services/CharacterDescriptionGenerationService";
-import { getCharacterSheetGenerationServiceInstance } from "../features/Characters/services/CharacterSheetGenerationService";
+import { ActiveCharacterSelectionService } from "../features/Characters/services/ActiveCharacterSelectionService";
+import { CharacterSheetSyncService } from "../features/Characters/services/CharacterSheetSyncService";
+import { getCharacterMaintenanceServiceInstance } from "../features/Characters/services/CharacterMaintenanceService";
+import { CharacterUpdateProposalService } from "../features/Characters/services/CharacterUpdateProposalService";
+import { getCharacterUpdateProposalManagedBlobInstance } from "../features/Characters/services/CharacterUpdateProposalManagedBlob";
 import { getRequestTrackerInstance } from "../features/OpenRouter/services/RequestTracker";
 import { ModelPricingEstimator } from "../features/OpenRouter/services/ModelPricingEstimator";
 import { getOpenRouterModelsQueryKey } from "../features/OpenRouter/hooks/useOpenRouterModels";
@@ -143,8 +148,17 @@ export class Dependencies {
   CharacterDescriptionGenerationService(chatId: string) {
     return new CharacterDescriptionGenerationService(chatId);
   }
-  CharacterSheetGenerationService(chatId: string) {
-    return getCharacterSheetGenerationServiceInstance(chatId);
+  ActiveCharacterSelectionService(chatId: string) {
+    return new ActiveCharacterSelectionService(chatId);
+  }
+  CharacterSheetSyncService(chatId: string) {
+    return new CharacterSheetSyncService(chatId);
+  }
+  CharacterMaintenanceService(chatId: string) {
+    return getCharacterMaintenanceServiceInstance(chatId);
+  }
+  CharacterUpdateProposalService(chatId: string) {
+    return new CharacterUpdateProposalService(chatId);
   }
   ImageGenerator(chatId: string) {
     return new ImageGenerator(chatId);
@@ -181,6 +195,9 @@ export class Dependencies {
   }
   AgentFlowService(chatId: string) {
     return getAgentFlowServiceInstance(chatId);
+  }
+  AgentFlowStateManagedBlob(chatId: string) {
+    return getAgentFlowStateManagedBlobInstance(chatId);
   }
   OpenRouterChatAPI() {
     return new OpenRouterChatAPI();
@@ -222,6 +239,9 @@ export class Dependencies {
 
   CharacterDescriptionsManagedBlob(chatId: string) {
     return getCharacterDescriptionsManagedBlobInstance(chatId);
+  }
+  CharacterUpdateProposalManagedBlob(chatId: string) {
+    return getCharacterUpdateProposalManagedBlobInstance(chatId);
   }
 
   PlansManagedBlob(chatId: string) {

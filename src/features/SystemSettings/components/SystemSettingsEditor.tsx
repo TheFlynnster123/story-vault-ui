@@ -120,6 +120,7 @@ export const SystemSettingsEditor: React.FC = () => {
             presence_penalty: requestSettings?.presence_penalty,
             repetition_penalty: requestSettings?.repetition_penalty,
             seed: requestSettings?.seed,
+            retry: requestSettings?.retry,
           })
         }
         withDescription
@@ -158,7 +159,7 @@ export const SystemSettingsEditor: React.FC = () => {
             max={100}
             step={1}
             onChange={handleChapterCompressionChange}
-            style={{ width: 360 }}
+            style={{ width: "100%", maxWidth: 360 }}
           />
         </Stack>
       </Paper>

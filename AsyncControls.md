@@ -74,6 +74,32 @@ chapter review editor. Creating or discarding the draft removes the control.
 Generation failures use the same location with the accessible label
 **Retry chapter draft**.
 
+## Character Sheet Example
+
+Preparing Character Sheet updates persists a proposal and adds a
+character-themed control with the accessible label **Review character
+updates**. Selecting it opens the shared review modal.
+
+Each affected character must be confirmed or dismissed independently before
+the decisions can be applied. Only confirmed changes update Character Sheets;
+dismissed characters remain unchanged. The control disappears after the
+decisions are applied or the entire proposal is dismissed.
+
+## Agent Flow Example
+
+Automatic Agent Flow analysis persists actionable suggestions for review. When
+an analysis proposes one or more workflow actions, an Agent Flow-themed control
+with the accessible label **Review Agent Flow suggestions** appears beneath
+Quick Chat Controls.
+
+Selecting it opens a review modal with the reasoning behind each suggested
+action. Confirming an action runs it and removes it from the pending review. The
+control remains visible while other actions are unresolved and disappears only
+after every action is confirmed or the user selects **Dismiss suggestion**.
+
+Another analysis does not replace an unresolved suggestion. Suggestions with no
+executable actions do not create an Async Control.
+
 ## Implementation Checklist
 
 - Is the item actionable now?

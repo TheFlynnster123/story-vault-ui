@@ -27,16 +27,19 @@ export const useChatGeneration = (chatId: string) => {
     async (userInput: string, guidance?: string): Promise<string> => {
       try {
         const hasUserInput = userInput.trim().length > 0;
-        const visibleMessages = hasUserInput
-          ? d.UserChatProjection(chatId).GetMessages()
+        const contextMessages = hasUserInput
+          ? d.LLMChatProjection(chatId).GetMessages()
           : [];
-        const previousMessage = visibleMessages[visibleMessages.length - 1];
+        const previousMessage = contextMessages[contextMessages.length - 1];
         const skipReasoning =
           hasUserInput && previousMessage?.type === "reasoning";
 
         if (hasUserInput) {
           await d.ChatService(chatId).AddUserMessage(userInput);
           void maybeAutoRunAgentFlow(chatId);
+          void d
+            .CharacterMaintenanceService(chatId)
+            .maybeCreateProposalAfterSavedUserTurn();
         }
 
         return (
@@ -219,7 +222,7 @@ const maybeAutoRunAgentFlow = async (chatId: string): Promise<void> => {
       agentFlowMessagesSinceLastRun: 0,
     });
 
-    await d.AgentFlowService(chatId).analyzeIntentSuggestion();
+    await d.AgentFlowService(chatId).analyzeAutomaticSuggestion();
   } catch (error) {
     d.ErrorService().log("Failed to auto-run agent flow", error);
   }

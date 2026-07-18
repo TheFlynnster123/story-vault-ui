@@ -314,42 +314,94 @@ export const SystemPromptsEditor: React.FC = () => {
 
       <PromptSection>
         <PromptInput
-          id="characterSheetPrompt"
-          label="Character Sheet Prompt"
-          helpText="This prompt identifies newly introduced primary characters and generates concise narrative continuity sheets. The result is injected into text-chat context, not image prompts."
-          value={localPrompts.characterSheetPrompt || ""}
-          isHighlighted={highlightedPrompt === "characterSheetPrompt"}
-          onChange={(value) => handlePromptChange({ characterSheetPrompt: value })}
+          id="activeCharactersPrompt"
+          label="Active Characters Prompt"
+          helpText="This prompt selects only the characters active in the current scene. Its proposed activity changes require approval before they are applied."
+          value={localPrompts.activeCharactersPrompt || ""}
+          isHighlighted={highlightedPrompt === "activeCharactersPrompt"}
+          onChange={(value) =>
+            handlePromptChange({ activeCharactersPrompt: value })
+          }
           onReset={() =>
-            handleResetClick("characterSheetPrompt", "Character Sheet Prompt")
+            handleResetClick(
+              "activeCharactersPrompt",
+              "Active Characters Prompt",
+            )
           }
           minRows={8}
-          icon={<LuUser size={18} color="orange" />}
+          icon={<LuUserSearch size={18} color="orange" />}
         />
         <ModelSelect
-          value={localPrompts.characterSheetModel || ""}
+          value={localPrompts.activeCharactersModel || ""}
           onChange={(value) =>
             handlePromptChange(
               buildModelPromptPatch(
-                "characterSheetModel",
-                "characterSheetRequestSettings",
+                "activeCharactersModel",
+                "activeCharactersRequestSettings",
                 value,
-                localPrompts.characterSheetRequestSettings,
+                localPrompts.activeCharactersRequestSettings,
               ),
             )
           }
-          requestSettings={localPrompts.characterSheetRequestSettings}
+          requestSettings={localPrompts.activeCharactersRequestSettings}
           onRequestSettingsChange={(requestSettings) =>
             handlePromptChange(
               buildModelPromptPatch(
-                "characterSheetModel",
-                "characterSheetRequestSettings",
-                localPrompts.characterSheetModel || null,
+                "activeCharactersModel",
+                "activeCharactersRequestSettings",
+                localPrompts.activeCharactersModel || null,
                 requestSettings,
               ),
             )
           }
-          label="Character Sheet Model"
+          label="Active Characters Model"
+          withDescription={false}
+        />
+      </PromptSection>
+
+      <PromptSection>
+        <PromptInput
+          id="characterSheetUpdatePrompt"
+          label="Character Sheet Update Prompt"
+          helpText="This prompt replaces complete identity-focused bullet lists for selected characters. Proposed changes require approval before they are applied."
+          value={localPrompts.characterSheetUpdatePrompt || ""}
+          isHighlighted={highlightedPrompt === "characterSheetUpdatePrompt"}
+          onChange={(value) =>
+            handlePromptChange({ characterSheetUpdatePrompt: value })
+          }
+          onReset={() =>
+            handleResetClick(
+              "characterSheetUpdatePrompt",
+              "Character Sheet Update Prompt",
+            )
+          }
+          minRows={10}
+          icon={<LuUser size={18} color="orange" />}
+        />
+        <ModelSelect
+          value={localPrompts.characterSheetUpdateModel || ""}
+          onChange={(value) =>
+            handlePromptChange(
+              buildModelPromptPatch(
+                "characterSheetUpdateModel",
+                "characterSheetUpdateRequestSettings",
+                value,
+                localPrompts.characterSheetUpdateRequestSettings,
+              ),
+            )
+          }
+          requestSettings={localPrompts.characterSheetUpdateRequestSettings}
+          onRequestSettingsChange={(requestSettings) =>
+            handlePromptChange(
+              buildModelPromptPatch(
+                "characterSheetUpdateModel",
+                "characterSheetUpdateRequestSettings",
+                localPrompts.characterSheetUpdateModel || null,
+                requestSettings,
+              ),
+            )
+          }
+          label="Character Sheet Update Model"
           withDescription={false}
         />
       </PromptSection>

@@ -1,348 +1,241 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { CharacterDescriptionsService } from "./CharacterDescriptionsService";
-import type { CharacterDescription } from "./CharacterDescription";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { d } from "../../../services/Dependencies";
+import type { CharacterDescription } from "./CharacterDescription";
+import { CharacterDescriptionsService } from "./CharacterDescriptionsService";
+import type { CharacterUpdateProposal } from "./CharacterUpdateProposal";
 
 vi.mock("../../../services/Dependencies");
 
 describe("CharacterDescriptionsService", () => {
+  const chatId = "chat-1";
+  const blob = {
+    get: vi.fn(),
+    save: vi.fn(),
+    saveDebounced: vi.fn(),
+    savePendingChanges: vi.fn(),
+    subscribe: vi.fn(),
+  };
+  const settings = {
+    Get: vi.fn(),
+    update: vi.fn(),
+  };
   let service: CharacterDescriptionsService;
-  let mockBlob: any;
-  let mockSettingsService: any;
-  const chatId = "test-chat-123";
 
   beforeEach(() => {
-    mockBlob = {
-      get: vi.fn(),
-      save: vi.fn(),
-      saveDebounced: vi.fn(),
-      subscribe: vi.fn(),
-    };
-
-    (d.CharacterDescriptionsManagedBlob as any) = vi.fn(() => mockBlob);
-    mockSettingsService = {
-      Get: vi.fn().mockResolvedValue({ charactersSchemaVersion: 2 }),
-      update: vi.fn().mockResolvedValue(undefined),
-    };
-    (d.ChatSettingsService as any) = vi.fn(() => mockSettingsService);
+    vi.clearAllMocks();
+    blob.get.mockResolvedValue([]);
+    settings.Get.mockResolvedValue({ charactersSchemaVersion: 3 });
+    vi.mocked(d.CharacterDescriptionsManagedBlob).mockReturnValue(
+      blob as never,
+    );
+    vi.mocked(d.ChatSettingsService).mockReturnValue(settings as never);
     service = new CharacterDescriptionsService(chatId);
   });
 
-  describe("get", () => {
-    it("should return empty array when no descriptions exist", async () => {
-      mockBlob.get.mockResolvedValue(undefined);
+  it("reads schema-v3 characters without rewriting them", async () => {
+    const characters = [createCharacter()];
+    blob.get.mockResolvedValue(characters);
 
-      const result = await service.get();
+    await expect(service.get()).resolves.toEqual(characters);
+    expect(blob.save).not.toHaveBeenCalled();
+    expect(settings.update).not.toHaveBeenCalled();
+  });
 
-      expect(result).toEqual([]);
-    });
-
-    it("should return existing descriptions", async () => {
-      const mockDescriptions = createMockDescriptions();
-      mockBlob.get.mockResolvedValue(mockDescriptions);
-
-      const result = await service.get();
-
-      expect(result).toEqual(mockDescriptions);
-    });
-
-    it("migrates legacy descriptions to appearance before marking schema version 2", async () => {
-      mockBlob.get.mockResolvedValue([
-        {
-          id: "legacy-1",
-          name: "Mara",
-          description: "Short black curls",
-          createdAt: "2024-01-01T00:00:00.000Z",
-          updatedAt: "2024-01-01T00:00:00.000Z",
-        },
-      ]);
-      mockSettingsService.Get.mockResolvedValue({ charactersSchemaVersion: 1 });
-
-      const result = await service.get();
-
-      expect(result[0]).toMatchObject({
-        id: "legacy-1",
+  it("migrates legacy appearance and bullet sheets before advancing schema", async () => {
+    blob.get.mockResolvedValue([
+      {
+        id: "mara",
         name: "Mara",
-        appearance: "Short black curls",
-      });
-      expect(mockBlob.save).toHaveBeenCalledWith([
-        expect.objectContaining({ appearance: "Short black curls" }),
-      ]);
-      expect(mockSettingsService.update).toHaveBeenCalledWith({
-        charactersSchemaVersion: 2,
-      });
+        description: "Short black curls",
+        sheet: "- Navigator\n- Carries the brass key",
+        createdAt: "2024-01-01",
+        updatedAt: "2024-01-01",
+      },
+    ]);
+    settings.Get.mockResolvedValue({
+      charactersSchemaVersion: 1,
+      characterSheetsAutoGenerateEnabled: true,
+      characterSheetsCheckInterval: 7,
     });
+
+    const result = await service.get();
+
+    expect(result[0]).toMatchObject({
+      appearance: "Short black curls",
+      sheetItems: ["Navigator", "Carries the brass key"],
+      detectedActive: true,
+    });
+    expect(blob.save).toHaveBeenCalledWith(result);
+    expect(blob.save.mock.invocationCallOrder[0]).toBeLessThan(
+      settings.update.mock.invocationCallOrder[0],
+    );
+    expect(settings.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        charactersSchemaVersion: 3,
+        characterSheetsAutoSyncEnabled: false,
+        characterSheetsSyncInterval: 7,
+        characterSheetsMessagesSinceLastSync: 0,
+      }),
+    );
   });
 
-  describe("save", () => {
-    it("should save descriptions to blob", async () => {
-      const descriptions = createMockDescriptions();
+  it("preserves legacy prose as one sheet item", async () => {
+    blob.get.mockResolvedValue([
+      {
+        ...createCharacter(),
+        sheetItems: undefined,
+        sheet: "Keeps watch over the northern road.\nNever trusts Ivo.",
+      },
+    ]);
 
-      await service.save(descriptions);
+    const result = await service.get();
 
-      expect(mockBlob.save).toHaveBeenCalledWith(descriptions);
-    });
+    expect(result[0].sheetItems).toEqual([
+      "Keeps watch over the northern road.\nNever trusts Ivo.",
+    ]);
   });
 
-  describe("saveDebounced", () => {
-    it("should save descriptions with debounce", () => {
-      const descriptions = createMockDescriptions();
-
-      service.saveDebounced(descriptions);
-
-      expect(mockBlob.saveDebounced).toHaveBeenCalledWith(descriptions);
+  it("finds unambiguous character aliases but rejects ambiguous ones", async () => {
+    blob.get.mockResolvedValue([
+      createCharacter({ name: "Sarah Chen", id: "sarah-chen" }),
+      createCharacter({ name: "Mara Venn", id: "mara" }),
+    ]);
+    await expect(service.findByName("Sarah")).resolves.toMatchObject({
+      id: "sarah-chen",
     });
+
+    blob.get.mockResolvedValue([
+      createCharacter({ name: "Sarah Chen", id: "sarah-chen" }),
+      createCharacter({ name: "Sarah Connor", id: "sarah-connor" }),
+    ]);
+    await expect(service.findByName("Sarah")).resolves.toBeUndefined();
   });
 
-  describe("findByName", () => {
-    it("should find character by exact name match", async () => {
-      const descriptions = createMockDescriptions();
-      mockBlob.get.mockResolvedValue(descriptions);
+  it("creates, updates, removes, and debounces characters", async () => {
+    const mara = createCharacter();
+    blob.get.mockResolvedValueOnce([]).mockResolvedValueOnce([mara]);
 
-      const result = await service.findByName("Sarah Chen");
-
-      expect(result).toEqual(descriptions[0]);
+    const created = await service.createBlankCharacter("Ivo");
+    expect(created).toMatchObject({
+      name: "Ivo",
+      sheetItems: [],
+      detectedActive: true,
     });
+    expect(blob.save).toHaveBeenCalledWith([created]);
 
-    it("should find character by case-insensitive match", async () => {
-      const descriptions = createMockDescriptions();
-      mockBlob.get.mockResolvedValue(descriptions);
-
-      const result = await service.findByName("SARAH CHEN");
-
-      expect(result).toEqual(descriptions[0]);
+    await service.updateCharacter(mara.id, {
+      sheetItems: ["  New clue  ", "New clue"],
+      sheetSource: "manual",
     });
+    expect(blob.save).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        sheetItems: ["New clue"],
+        sheetSource: "manual",
+      }),
+    ]);
 
-    it("should find character ignoring whitespace", async () => {
-      const descriptions = createMockDescriptions();
-      mockBlob.get.mockResolvedValue(descriptions);
+    blob.get.mockResolvedValue([mara]);
+    await service.removeDescription(mara.id);
+    expect(blob.save).toHaveBeenLastCalledWith([]);
 
-      const result = await service.findByName("  Sarah Chen  ");
-
-      expect(result).toEqual(descriptions[0]);
-    });
-
-    it("should find character by high-confidence fuzzy match", async () => {
-      const descriptions = createMockDescriptions();
-      mockBlob.get.mockResolvedValue(descriptions);
-
-      const result = await service.findByName("Sarah");
-
-      expect(result).toEqual(descriptions[0]);
-    });
-
-    it("should return undefined for ambiguous fuzzy matches", async () => {
-      const ambiguousDescriptions = [
-        createMockCharacter("Sarah Chen", "char-1"),
-        createMockCharacter("Sarah Connor", "char-2"),
-      ];
-      mockBlob.get.mockResolvedValue(ambiguousDescriptions);
-
-      const result = await service.findByName("Sarah");
-
-      expect(result).toBeUndefined();
-    });
-
-    it("should return undefined when character not found", async () => {
-      const descriptions = createMockDescriptions();
-      mockBlob.get.mockResolvedValue(descriptions);
-
-      const result = await service.findByName("Unknown Character");
-
-      expect(result).toBeUndefined();
-    });
+    service.saveDebounced([mara]);
+    expect(blob.saveDebounced).toHaveBeenCalledWith([mara]);
   });
 
-  describe("upsertDescription", () => {
-    it("should add new character when it does not exist", async () => {
-      mockBlob.get.mockResolvedValue([]);
-      const newCharacter = createMockCharacter("New Character");
+  it("applies an approved proposal while preserving the user activity override", async () => {
+    const mara = createCharacter({ activeOverride: false });
+    blob.get.mockResolvedValue([mara]);
 
-      await service.upsertDescription(newCharacter);
+    const result = await service.applyUpdateProposal(
+      createProposal(mara, {
+        proposedSheetItems: ["Knows the passphrase"],
+        proposedDetectedActive: false,
+      }),
+    );
 
-      expect(mockBlob.save).toHaveBeenCalledWith([newCharacter]);
-    });
-
-    it("should update existing character when it exists", async () => {
-      const existing = createMockCharacter("Sarah Chen", "char-1");
-      mockBlob.get.mockResolvedValue([existing]);
-      const updated = { ...existing, appearance: "Updated appearance" };
-
-      await service.upsertDescription(updated);
-
-      expect(mockBlob.save).toHaveBeenCalledWith([updated]);
-    });
-
-    it("should preserve other characters when updating", async () => {
-      const char1 = createMockCharacter("Sarah Chen", "char-1");
-      const char2 = createMockCharacter("John Doe", "char-2");
-      mockBlob.get.mockResolvedValue([char1, char2]);
-      const updatedChar1 = { ...char1, appearance: "Updated" };
-
-      await service.upsertDescription(updatedChar1);
-
-      expect(mockBlob.save).toHaveBeenCalledWith([updatedChar1, char2]);
-    });
-  });
-
-  describe("removeDescription", () => {
-    it("should remove character by id", async () => {
-      const char1 = createMockCharacter("Sarah Chen", "char-1");
-      const char2 = createMockCharacter("John Doe", "char-2");
-      mockBlob.get.mockResolvedValue([char1, char2]);
-
-      await service.removeDescription("char-1");
-
-      expect(mockBlob.save).toHaveBeenCalledWith([char2]);
-    });
-
-    it("should do nothing when character not found", async () => {
-      const char1 = createMockCharacter("Sarah Chen", "char-1");
-      mockBlob.get.mockResolvedValue([char1]);
-
-      await service.removeDescription("non-existent");
-
-      expect(mockBlob.save).toHaveBeenCalledWith([char1]);
-    });
-  });
-
-  describe("createBlankCharacter", () => {
-    it("should create new blank character when it does not exist", async () => {
-      mockBlob.get.mockResolvedValue([]);
-
-      const result = await service.createBlankCharacter("New Character");
-
-      expect(result.name).toBe("New Character");
-      expect(result.appearance).toBe("");
-      expect(mockBlob.save).toHaveBeenCalled();
-    });
-
-    it("should return existing character when it exists", async () => {
-      const existing = createMockCharacter("Sarah Chen", "char-1");
-      mockBlob.get.mockResolvedValue([existing]);
-
-      const result = await service.createBlankCharacter("Sarah Chen");
-
-      expect(result).toEqual(existing);
-      expect(mockBlob.save).not.toHaveBeenCalled();
-    });
-
-    it("should return existing character for fuzzy high-confidence name", async () => {
-      const existing = createMockCharacter("Sarah Chen", "char-1");
-      mockBlob.get.mockResolvedValue([existing]);
-
-      const result = await service.createBlankCharacter("Sarah");
-
-      expect(result).toEqual(existing);
-      expect(mockBlob.save).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("updateCharacter", () => {
-    it("should update character name", async () => {
-      const existing = createMockCharacter("Sarah Chen", "char-1");
-      mockBlob.get.mockResolvedValue([existing]);
-
-      await service.updateCharacter("char-1", { name: "Sarah Johnson" });
-
-      const savedCall = mockBlob.save.mock.calls[0][0];
-      expect(savedCall[0].name).toBe("Sarah Johnson");
-    });
-
-    it("should update character appearance", async () => {
-      const existing = createMockCharacter("Sarah Chen", "char-1");
-      mockBlob.get.mockResolvedValue([existing]);
-
-      await service.updateCharacter("char-1", {
-        appearance: "New appearance",
-      });
-
-      const savedCall = mockBlob.save.mock.calls[0][0];
-      expect(savedCall[0].appearance).toBe("New appearance");
-    });
-
-    it("should update updatedAt timestamp", async () => {
-      const existing = createMockCharacter("Sarah Chen", "char-1");
-      const originalUpdatedAt = existing.updatedAt;
-      mockBlob.get.mockResolvedValue([existing]);
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      await service.updateCharacter("char-1", { name: "Sarah Johnson" });
-
-      const savedCall = mockBlob.save.mock.calls[0][0];
-      expect(savedCall[0].updatedAt).not.toBe(originalUpdatedAt);
-    });
-
-    it("should do nothing when character not found", async () => {
-      mockBlob.get.mockResolvedValue([]);
-
-      await service.updateCharacter("non-existent", { name: "New Name" });
-
-      expect(mockBlob.save).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("upsertGeneratedSheet", () => {
-    it("creates a new character sheet for a newly detected primary character", async () => {
-      mockBlob.get.mockResolvedValue([]);
-
-      const result = await service.upsertGeneratedSheet(
-        "Mara Venn",
-        "A determined navigator.",
-      );
-
-      expect(result).toMatchObject({
-        name: "Mara Venn",
-        sheet: "A determined navigator.",
+    expect(result).toEqual({ status: "applied" });
+    expect(blob.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        sheetItems: ["Knows the passphrase"],
         sheetSource: "auto",
-      });
-      expect(mockBlob.save).toHaveBeenCalledWith([
-        expect.objectContaining({ sheetSource: "auto" }),
-      ]);
-    });
-
-    it("never replaces a manually edited sheet", async () => {
-      const character = {
-        ...createMockCharacter("Mara Venn"),
-        sheet: "User-authored continuity.",
-        sheetSource: "manual" as const,
-      };
-      mockBlob.get.mockResolvedValue([character]);
-
-      const result = await service.upsertGeneratedSheet(
-        "Mara Venn",
-        "Generated replacement.",
-      );
-
-      expect(result).toBeUndefined();
-      expect(mockBlob.save).not.toHaveBeenCalled();
-    });
+        detectedActive: false,
+        activeOverride: false,
+      }),
+    ]);
   });
 
-  describe("subscribe", () => {
-    it("should subscribe to blob changes", () => {
-      const callback = vi.fn();
-      mockBlob.subscribe.mockReturnValue(() => {});
+  it("rejects a stale proposal without saving partial changes", async () => {
+    const mara = createCharacter({ updatedAt: "newer" });
+    blob.get.mockResolvedValue([mara]);
 
-      service.subscribe(callback);
+    const result = await service.applyUpdateProposal(
+      createProposal(mara, {
+        baseUpdatedAt: "older",
+        proposedSheetItems: ["Stale"],
+      }),
+    );
 
-      expect(mockBlob.subscribe).toHaveBeenCalledWith(callback);
+    expect(result).toEqual({
+      status: "conflict",
+      characterNames: ["Mara"],
     });
+    expect(blob.save).not.toHaveBeenCalled();
+  });
+
+  it("rejects a proposed new character when its name now exists", async () => {
+    const mara = createCharacter();
+    blob.get.mockResolvedValue([mara]);
+    const proposal: CharacterUpdateProposal = {
+      id: "proposal",
+      source: "automatic",
+      createdAt: "2026-01-01",
+      changes: [
+        {
+          characterId: "new-id",
+          characterName: "Mara",
+          isNew: true,
+          previousSheetItems: [],
+          proposedSheetItems: ["Duplicate"],
+        },
+      ],
+    };
+
+    await expect(service.applyUpdateProposal(proposal)).resolves.toEqual({
+      status: "conflict",
+      characterNames: ["Mara"],
+    });
+    expect(blob.save).not.toHaveBeenCalled();
   });
 });
 
-const createMockCharacter = (
-  name: string,
-  id: string = "char-1",
+const createCharacter = (
+  overrides: Partial<CharacterDescription> = {},
 ): CharacterDescription => ({
-  id,
-  name,
-  appearance: `Appearance for ${name}`,
-  createdAt: "2024-01-01T00:00:00.000Z",
-  updatedAt: "2024-01-01T00:00:00.000Z",
+  id: "mara",
+  name: "Mara",
+  appearance: "Short black curls",
+  sheetItems: ["Navigator"],
+  detectedActive: true,
+  createdAt: "2026-01-01",
+  updatedAt: "2026-01-01",
+  ...overrides,
 });
 
-const createMockDescriptions = (): CharacterDescription[] => [
-  createMockCharacter("Sarah Chen", "char-1"),
-  createMockCharacter("John Doe", "char-2"),
-];
+const createProposal = (
+  character: CharacterDescription,
+  changeOverrides: Partial<CharacterUpdateProposal["changes"][number]>,
+): CharacterUpdateProposal => ({
+  id: "proposal",
+  source: "automatic",
+  createdAt: "2026-01-02",
+  changes: [
+    {
+      characterId: character.id,
+      characterName: character.name,
+      baseUpdatedAt: character.updatedAt,
+      isNew: false,
+      previousSheetItems: character.sheetItems,
+      ...changeOverrides,
+    },
+  ],
+});
