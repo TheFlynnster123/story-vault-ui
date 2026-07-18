@@ -83,8 +83,8 @@ const ChatMenuContainer = styled.div`
 `;
 
 const ChatMenuHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   width: 100%;
   margin-bottom: 15px;
@@ -95,13 +95,15 @@ const ChatMenuTitle = styled.h2`
   font-size: 1.4em;
   color: white;
   text-align: center;
-  flex: 1;
+  grid-column: 2;
 `;
 
 const SystemSettingsContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  grid-column: 3;
+  justify-self: end;
 `;
 
 const LoadingState = styled.div`

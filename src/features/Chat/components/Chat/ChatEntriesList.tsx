@@ -51,7 +51,7 @@ export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
           data-testid="chat-more-below-indicator"
           $isVisible={!isAtBottom}
         >
-          <RiArrowDownSLine size={26} />
+          <RiArrowDownSLine size={30} />
         </MoreBelowIndicator>
       )}
     </ChatEntriesContainer>
@@ -95,12 +95,12 @@ const moreBelowIndicatorAnimation = keyframes`
   0%,
   100% {
     transform: translateX(-50%) translateY(0);
-    opacity: 0.4;
+    opacity: 0.65;
   }
 
   50% {
     transform: translateX(-50%) translateY(4px);
-    opacity: 0.7;
+    opacity: 0.9;
   }
 `;
 
@@ -113,7 +113,10 @@ const MoreBelowIndicator = styled.div<{ $isVisible: boolean }>`
   justify-content: center;
   pointer-events: none;
   z-index: 1;
-  color: rgba(170, 170, 170, 0.36);
+  color: rgba(186, 230, 253, 0.9);
+  background-color: rgba(15, 23, 42, 0.42);
+  border-radius: 999px;
+  padding: 0 2px;
   opacity: ${({ $isVisible }) => ($isVisible ? 1 : 0)};
   visibility: ${({ $isVisible }) => ($isVisible ? "visible" : "hidden")};
   transform: translateX(-50%)
