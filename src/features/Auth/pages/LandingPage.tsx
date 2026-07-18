@@ -7,9 +7,9 @@ import { useOpenRouterKey } from "../../OpenRouter/hooks/useOpenRouterKey";
 import { OpenRouterKeyInput } from "../../OpenRouter/components/OpenRouterKeyInput";
 
 const LandingPage: React.FC = () => {
-  const { isAuthenticated, loginWithRedirect } = useAuth0();
+  const { isLoading, isAuthenticated, loginWithRedirect } = useAuth0();
   const { hasValidOpenRouterKey, refreshOpenRouterKeyStatus } =
-    useOpenRouterKey();
+    useOpenRouterKey(!isLoading && isAuthenticated);
   const navigate = useNavigate();
 
   useAuth0Setup();
@@ -23,6 +23,10 @@ const LandingPage: React.FC = () => {
   const handleOpenRouterKeyUpdated = () => {
     refreshOpenRouterKeyStatus();
   };
+
+  if (isLoading) {
+    return <LoadingContainer>Loading...</LoadingContainer>;
+  }
 
   if (!isAuthenticated) {
     return (
