@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Modal,
   Stack,
@@ -41,19 +41,24 @@ export const StoryDiscussionModal: React.FC<StoryDiscussionModalProps> = ({
   onStoryGenerated,
 }) => {
   const [opened, setOpened] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const handleStoryGenerated = (story: string) => {
     onStoryGenerated(story);
     setOpened(false);
   };
+  const restoreTriggerFocus = () =>
+    triggerRef.current?.focus({ preventScroll: true });
 
   return (
     <>
-      <GenerateButton onClick={() => setOpened(true)} />
+      <GenerateButton ref={triggerRef} onClick={() => setOpened(true)} />
 
       <Modal
         opened={opened}
         onClose={() => setOpened(false)}
+        onExitTransitionEnd={restoreTriggerFocus}
+        returnFocus={false}
         title={
           <Group gap="xs">
             <LuBookOpen size={20} color={Theme.chatSettings.primary} />

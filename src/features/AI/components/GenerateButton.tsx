@@ -9,12 +9,12 @@ interface GenerateButtonProps extends Omit<ButtonProps, "leftSection"> {
   leftSection?: React.ReactNode;
 }
 
-export const GenerateButton: React.FC<GenerateButtonProps> = ({
-  children = "Generate",
-  leftSection,
-  ...props
-}) => (
+export const GenerateButton = React.forwardRef<
+  HTMLButtonElement,
+  GenerateButtonProps
+>(({ children = "Generate", leftSection, ...props }, ref) => (
   <Button
+    ref={ref}
     variant="default"
     leftSection={
       leftSection ?? <LuSparkles size={16} color={Theme.chatSettings.primary} />
@@ -23,4 +23,6 @@ export const GenerateButton: React.FC<GenerateButtonProps> = ({
   >
     {children}
   </Button>
-);
+));
+
+GenerateButton.displayName = "GenerateButton";

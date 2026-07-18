@@ -12,6 +12,8 @@ interface IChatEntriesList {
   chatId: string;
 }
 
+const INITIAL_CHAT_LOCATION = { index: "LAST" as const, align: "end" as const };
+
 export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const { messages } = useUserChatProjection(chatId);
@@ -29,6 +31,7 @@ export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
         data={messages}
         style={{ height: "100%", width: "100%" }}
         followOutput={false}
+        computeItemKey={(_, message) => message.id}
         atBottomStateChange={setIsAtBottom}
         itemContent={(index, msg) => (
           <ChatEntry
@@ -42,7 +45,7 @@ export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
           />
         )}
         increaseViewportBy={{ top: 800, bottom: 800 }}
-        initialTopMostItemIndex={messages.length - 1}
+        initialTopMostItemIndex={INITIAL_CHAT_LOCATION}
       />
 
       {messages.length > 0 && (

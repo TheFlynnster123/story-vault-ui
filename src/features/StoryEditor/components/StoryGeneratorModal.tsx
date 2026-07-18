@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Group, Modal, Stack, Text, Textarea } from "@mantine/core";
 import { ModelSelect } from "../../AI/components/ModelSelect";
@@ -27,6 +27,7 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
     OpenRouterRequestSettings | undefined
   >();
   const [isGenerating, setIsGenerating] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const defaultModel = useMemo(
     () =>
@@ -50,6 +51,8 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
   }, [opened, defaultModel, defaultRequestSettings]);
 
   const handleClose = () => setOpened(false);
+  const restoreTriggerFocus = () =>
+    triggerRef.current?.focus({ preventScroll: true });
 
   const handleEditPrompt = () => {
     navigate("/system-prompts#newStoryPrompt");
@@ -92,6 +95,7 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
   return (
     <>
       <GenerateButton
+        ref={triggerRef}
         className="StoryEditorAIButton"
         onClick={() => setOpened(true)}
       />
@@ -99,6 +103,8 @@ export const StoryGeneratorModal: React.FC<StoryGeneratorModalProps> = ({
       <Modal
         opened={opened}
         onClose={handleClose}
+        onExitTransitionEnd={restoreTriggerFocus}
+        returnFocus={false}
         title="Generate Story with AI"
         size="lg"
         centered
