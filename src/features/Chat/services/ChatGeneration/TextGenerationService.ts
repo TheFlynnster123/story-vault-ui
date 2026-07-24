@@ -53,13 +53,25 @@ export class TextGenerationService extends GenerationOrchestrator {
   }
 
   async generateResponse(
+    userInput = "",
     guidance?: string,
-    skipReasoning = false,
   ): Promise<string | undefined> {
     return this.orchestrate(async () => {
+      const previousMessage = d
+        .UserChatProjection(this.chatId)
+        .GetLastPersistedTextMessage();
+
+      if (userInput.trim()) {
+        await d.ChatService(this.chatId).AddUserMessage(userInput);
+        void this.runPostUserMessageTasks();
+      }
+
       d.PlanGenerationService(this.chatId).onMessageSent();
 
-      if (!skipReasoning && (await this.shouldGenerateReasoning())) {
+      if (
+        previousMessage?.type !== "reasoning" &&
+        (await this.shouldGenerateReasoning())
+      ) {
         await this.generateReasoning(guidance);
       }
 
@@ -94,6 +106,35 @@ export class TextGenerationService extends GenerationOrchestrator {
         throw error;
       }
     });
+  }
+
+  private async runPostUserMessageTasks(): Promise<void> {
+    void d
+      .CharacterMaintenanceService(this.chatId)
+      .maybeCreateProposalAfterSavedUserTurn();
+
+    try {
+      const chatSettingsService = d.ChatSettingsService(this.chatId);
+      const settings = await chatSettingsService.Get();
+      if (!settings?.agentFlowAutoRunEnabled) return;
+
+      const interval = Math.max(1, settings.agentFlowAutoRunInterval ?? 3);
+      const nextCount = (settings.agentFlowMessagesSinceLastRun ?? 0) + 1;
+
+      if (nextCount < interval) {
+        await chatSettingsService.update({
+          agentFlowMessagesSinceLastRun: nextCount,
+        });
+        return;
+      }
+
+      await chatSettingsService.update({
+        agentFlowMessagesSinceLastRun: 0,
+      });
+      await d.AgentFlowService(this.chatId).analyzeAutomaticSuggestion();
+    } catch (error) {
+      d.ErrorService().log("Failed to auto-run agent flow", error);
+    }
   }
 
   private async shouldGenerateReasoning(): Promise<boolean> {

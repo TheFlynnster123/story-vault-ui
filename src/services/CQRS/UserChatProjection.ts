@@ -32,6 +32,10 @@ export const getUserChatProjectionInstance = createInstanceCache(
 export class UserChatProjection {
   public Messages: UserChatMessage[] = [];
 
+  private static readonly TEXT_MESSAGE_TYPES = new Set<
+    UserChatMessage["type"]
+  >(["user-message", "system-message", "assistant", "reasoning"]);
+
   private subscribers = new Set<() => void>();
 
   constructor() {
@@ -190,6 +194,22 @@ export class UserChatProjection {
     );
 
     return this.computeNoteExpiration(visible);
+  }
+
+  public GetLastPersistedTextMessage(): UserChatMessage | undefined {
+    const visibleMessages = this.GetMessages();
+
+    for (let index = visibleMessages.length - 1; index >= 0; index--) {
+      const message = visibleMessages[index];
+      if (
+        message.id !== this.streamingMessageId &&
+        UserChatProjection.TEXT_MESSAGE_TYPES.has(message.type)
+      ) {
+        return message;
+      }
+    }
+
+    return undefined;
   }
 
   public GetLatestPlanContent(planDefinitionId: string): string | undefined {

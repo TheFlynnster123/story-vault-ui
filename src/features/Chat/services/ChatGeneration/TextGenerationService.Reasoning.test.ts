@@ -11,9 +11,13 @@ describe("TextGenerationService reasoning", () => {
   const mockReasoningMessages = [
     { role: "system" as const, content: "Reason first" },
   ];
+  const getLastPersistedTextMessage = vi.fn();
+  const addUserMessage = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    getLastPersistedTextMessage.mockReturnValue(undefined);
+    addUserMessage.mockResolvedValue(undefined);
 
     vi.mocked(d.PlanGenerationService).mockReturnValue({
       onMessageSent: vi.fn(),
@@ -33,6 +37,7 @@ describe("TextGenerationService reasoning", () => {
     } as unknown as ReturnType<typeof d.LLMMessageContextService>);
 
     vi.mocked(d.UserChatProjection).mockReturnValue({
+      GetLastPersistedTextMessage: getLastPersistedTextMessage,
       addStreamingMessage: vi.fn(),
       updateStreamingMessage: vi.fn(),
       removeStreamingMessage: vi.fn(),
@@ -44,9 +49,24 @@ describe("TextGenerationService reasoning", () => {
     } as unknown as ReturnType<typeof d.OpenRouterChatAPI>);
 
     vi.mocked(d.ChatService).mockReturnValue({
+      AddUserMessage: addUserMessage,
       AddReasoningMessage: vi.fn().mockResolvedValue(undefined),
       AddAssistantMessage: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReturnType<typeof d.ChatService>);
+
+    vi.mocked(d.CharacterMaintenanceService).mockReturnValue({
+      maybeCreateProposalAfterSavedUserTurn: vi.fn().mockResolvedValue({
+        status: "not-due",
+      }),
+    } as unknown as ReturnType<typeof d.CharacterMaintenanceService>);
+
+    vi.mocked(d.AgentFlowService).mockReturnValue({
+      analyzeAutomaticSuggestion: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof d.AgentFlowService>);
+
+    vi.mocked(d.ErrorService).mockReturnValue({
+      log: vi.fn(),
+    } as unknown as ReturnType<typeof d.ErrorService>);
   });
 
   it("generates and saves reasoning before the assistant response when enabled", async () => {
@@ -117,10 +137,14 @@ describe("TextGenerationService reasoning", () => {
     expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
   });
 
-  it("skips the reasoning request when the previous visible message is reasoning", async () => {
+  it("skips reasoning for an empty continuation after a reasoning message", async () => {
+    getLastPersistedTextMessage.mockReturnValue({
+      id: "reasoning-1",
+      type: "reasoning",
+    });
     const service = new TextGenerationService(CHAT_ID);
 
-    await service.generateResponse(undefined, true);
+    await service.generateResponse();
 
     expect(
       d.LLMMessageContextService(CHAT_ID).buildReasoningRequestMessages,
@@ -128,5 +152,53 @@ describe("TextGenerationService reasoning", () => {
     expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
     expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
     expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
+  });
+
+  it("captures the prior message before saving new user input", async () => {
+    getLastPersistedTextMessage.mockReturnValue({
+      id: "reasoning-1",
+      type: "reasoning",
+    });
+    const service = new TextGenerationService(CHAT_ID);
+
+    await service.generateResponse("Continue the story");
+
+    expect(getLastPersistedTextMessage).toHaveBeenCalledOnce();
+    expect(addUserMessage).toHaveBeenCalledWith("Continue the story");
+    expect(getLastPersistedTextMessage.mock.invocationCallOrder[0]).toBeLessThan(
+      addUserMessage.mock.invocationCallOrder[0],
+    );
+    expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
+  });
+
+  it("runs post-user-message tasks after saving non-empty input", async () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    const analyzeAutomaticSuggestion = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(d.ChatSettingsService).mockReturnValue({
+      Get: vi.fn().mockResolvedValue({
+        reasoningEnabled: true,
+        agentFlowAutoRunEnabled: true,
+        agentFlowAutoRunInterval: 1,
+        agentFlowMessagesSinceLastRun: 0,
+      }),
+      update,
+    } as unknown as ReturnType<typeof d.ChatSettingsService>);
+    vi.mocked(d.AgentFlowService).mockReturnValue({
+      analyzeAutomaticSuggestion,
+    } as unknown as ReturnType<typeof d.AgentFlowService>);
+    const service = new TextGenerationService(CHAT_ID);
+
+    await service.generateResponse("Continue");
+
+    await vi.waitFor(() => {
+      expect(update).toHaveBeenCalledWith({
+        agentFlowMessagesSinceLastRun: 0,
+      });
+      expect(analyzeAutomaticSuggestion).toHaveBeenCalledOnce();
+    });
+    expect(
+      d.CharacterMaintenanceService(CHAT_ID)
+        .maybeCreateProposalAfterSavedUserTurn,
+    ).toHaveBeenCalledOnce();
   });
 });

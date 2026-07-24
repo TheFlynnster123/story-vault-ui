@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Story Vault — Deterministic Reasoning Continuation Plan</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --page: #08110f;
+        --panel: #0d1916;
+        --panel-2: #101f1b;
+        --line: #243b34;
+        --text: #edf8f3;
+        --muted: #9bb2a9;
+        --accent: #62e6b0;
+        --accent-dim: #173b2f;
+        --amber: #f6c76b;
+        --red: #ff8e82;
+        --blue: #8fc9ff;
+        --shadow: 0 20px 70px rgba(0, 0, 0, 0.32);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 75% -10%, #173c31 0, transparent 32rem),
+          radial-gradient(circle at -10% 25%, #112a25 0, transparent 25rem),
+          var(--page);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      code,
+      pre {
+        font-family:
+          "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .shell {
+        width: min(1160px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 56px 0 96px;
+      }
+
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 750;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        width: 28px;
+        height: 2px;
+        background: var(--accent);
+        content: "";
+      }
+
+      h1 {
+        max-width: 850px;
+        margin: 18px 0;
+        font-size: clamp(2.6rem, 7vw, 5.7rem);
+        font-weight: 730;
+        letter-spacing: -0.055em;
+        line-height: 0.98;
+      }
+
+      h1 span {
+        color: var(--accent);
+      }
+
+      .lede {
+        max-width: 760px;
+        margin: 0;
+        color: var(--muted);
+        font-size: clamp(1.05rem, 2vw, 1.25rem);
+      }
+
+      .verdict {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 18px;
+        align-items: start;
+        margin-top: 36px;
+        padding: 22px;
+        border: 1px solid #356252;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #10271f, #0d1b17);
+        box-shadow: var(--shadow);
+      }
+
+      .verdict-mark {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #062116;
+        font-size: 1.25rem;
+        font-weight: 900;
+      }
+
+      .verdict strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 1.05rem;
+      }
+
+      .verdict p {
+        margin: 0;
+        color: #bfd2ca;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+        margin-top: 56px;
+      }
+
+      .card {
+        grid-column: span 12;
+        padding: clamp(22px, 3vw, 34px);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: linear-gradient(145deg, var(--panel-2), var(--panel));
+        box-shadow: var(--shadow);
+      }
+
+      .half {
+        grid-column: span 6;
+      }
+
+      .third {
+        grid-column: span 4;
+      }
+
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.45rem;
+        letter-spacing: -0.025em;
+      }
+
+      h3 {
+        margin: 0 0 7px;
+        font-size: 1rem;
+      }
+
+      .section-kicker {
+        margin-bottom: 12px;
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 750;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .card > p:last-child {
+        margin-bottom: 0;
+      }
+
+      .root-cause {
+        display: grid;
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .cause-row {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        gap: 16px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .cause-row:first-child {
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .cause-label {
+        color: var(--amber);
+        font-size: 0.78rem;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .rule {
+        margin: 22px 0 0;
+        padding: 22px;
+        border-left: 3px solid var(--accent);
+        background: #091612;
+        color: #dff9ee;
+        font-size: clamp(1.05rem, 2vw, 1.3rem);
+      }
+
+      .rule strong {
+        color: var(--accent);
+      }
+
+      .filter-list {
+        display: grid;
+        gap: 10px;
+        padding: 0;
+        margin: 22px 0 0;
+        list-style: none;
+      }
+
+      .filter-list li {
+        display: grid;
+        grid-template-columns: 26px 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .yes,
+      .no {
+        display: grid;
+        width: 22px;
+        height: 22px;
+        place-items: center;
+        border-radius: 6px;
+        font-size: 0.76rem;
+        font-weight: 900;
+      }
+
+      .yes {
+        background: var(--accent-dim);
+        color: var(--accent);
+      }
+
+      .no {
+        background: #3a211f;
+        color: var(--red);
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+        gap: 10px;
+        align-items: stretch;
+        margin-top: 24px;
+      }
+
+      .flow-step {
+        min-height: 150px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #0a1512;
+      }
+
+      .step-number {
+        display: inline-grid;
+        width: 24px;
+        height: 24px;
+        margin-bottom: 24px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--accent-dim);
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 800;
+      }
+
+      .flow-step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .arrow {
+        align-self: center;
+        color: #4d7567;
+        font-size: 1.4rem;
+      }
+
+      .code {
+        margin: 22px 0 0;
+        padding: 20px;
+        overflow-x: auto;
+        border: 1px solid #263d35;
+        border-radius: 12px;
+        background: #07100e;
+        color: #cce2da;
+        font-size: 0.86rem;
+        line-height: 1.65;
+      }
+
+      .code .accent {
+        color: var(--accent);
+      }
+
+      .code .blue {
+        color: var(--blue);
+      }
+
+      .code .amber {
+        color: var(--amber);
+      }
+
+      .demo-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin: 22px 0 18px;
+      }
+
+      button {
+        padding: 9px 13px;
+        border: 1px solid #315548;
+        border-radius: 999px;
+        background: #0b1915;
+        color: #cde3da;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 650;
+        transition:
+          border-color 120ms ease,
+          background 120ms ease,
+          transform 120ms ease;
+      }
+
+      button:hover {
+        border-color: var(--accent);
+        background: #12261f;
+        transform: translateY(-1px);
+      }
+
+      button.active {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #062116;
+      }
+
+      .timeline {
+        display: flex;
+        gap: 9px;
+        align-items: center;
+        min-height: 76px;
+        padding: 15px;
+        overflow-x: auto;
+        border: 1px dashed #315044;
+        border-radius: 12px;
+        background: #091310;
+      }
+
+      .message {
+        flex: 0 0 auto;
+        padding: 8px 11px;
+        border: 1px solid #365247;
+        border-radius: 8px;
+        color: #c7dbd3;
+        font-size: 0.78rem;
+      }
+
+      .message.reasoning {
+        border-color: #3d7f67;
+        background: #123326;
+        color: var(--accent);
+      }
+
+      .message.excluded {
+        border-style: dashed;
+        opacity: 0.35;
+        text-decoration: line-through;
+      }
+
+      .decision {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-top: 14px;
+        padding: 16px;
+        border-radius: 12px;
+        background: #0a1512;
+      }
+
+      .decision-badge {
+        padding: 7px 10px;
+        border-radius: 7px;
+        background: var(--accent-dim);
+        color: var(--accent);
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .decision p {
+        margin: 0;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+      }
+
+      th,
+      td {
+        padding: 12px 10px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      td:last-child {
+        color: var(--accent);
+        font-weight: 750;
+      }
+
+      .implementation-list {
+        padding: 0;
+        margin: 22px 0 0;
+        list-style: none;
+        counter-reset: implementation;
+      }
+
+      .implementation-list li {
+        position: relative;
+        padding: 0 0 24px 48px;
+        counter-increment: implementation;
+      }
+
+      .implementation-list li::before {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border: 1px solid #3a6857;
+        border-radius: 8px;
+        color: var(--accent);
+        content: counter(implementation);
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+
+      .implementation-list li::after {
+        position: absolute;
+        top: 35px;
+        bottom: 5px;
+        left: 15px;
+        width: 1px;
+        background: var(--line);
+        content: "";
+      }
+
+      .implementation-list li:last-child {
+        padding-bottom: 0;
+      }
+
+      .implementation-list li:last-child::after {
+        display: none;
+      }
+
+      .implementation-list p {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+
+      .file {
+        color: var(--blue);
+        font-family:
+          "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 0.82rem;
+      }
+
+      .acceptance {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px 24px;
+        padding: 0;
+        margin: 22px 0 0;
+        list-style: none;
+      }
+
+      .acceptance li {
+        position: relative;
+        padding-left: 27px;
+        color: #c4d8d0;
+      }
+
+      .acceptance li::before {
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        content: "✓";
+        font-weight: 900;
+      }
+
+      .warning {
+        border-color: #5d4b2c;
+        background: linear-gradient(145deg, #211b10, #15140f);
+      }
+
+      .warning .section-kicker {
+        color: var(--amber);
+      }
+
+      footer {
+        margin-top: 48px;
+        padding-top: 22px;
+        border-top: 1px solid var(--line);
+        color: #789086;
+        font-size: 0.82rem;
+      }
+
+      @media (max-width: 850px) {
+        .half,
+        .third {
+          grid-column: span 12;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .flow-step {
+          min-height: auto;
+        }
+
+        .step-number {
+          margin-bottom: 12px;
+        }
+
+        .arrow {
+          justify-self: center;
+          transform: rotate(90deg);
+        }
+
+        .acceptance {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 540px) {
+        .shell {
+          width: min(100% - 20px, 1160px);
+          padding-top: 32px;
+        }
+
+        .verdict {
+          grid-template-columns: 1fr;
+        }
+
+        .cause-row {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="eyebrow">Implementation plan · July 2026</div>
+      <h1>Never generate the same <span>reasoning</span> twice.</h1>
+      <p class="lede">
+        Make the rendered chat timeline the only authority for “what came
+        before this turn,” capture that fact before mutating the timeline, and
+        keep the reasoning decision inside the generation workflow.
+      </p>
+
+      <div class="verdict">
+        <div class="verdict-mark">✓</div>
+        <div>
+          <strong>The rule can be absolute.</strong>
+          <p>
+            If the last eligible, persisted text message in the chat view is
+            reasoning, reuse it and generate only the assistant response.
+            Otherwise, generate reasoning when the setting is enabled.
+          </p>
+        </div>
+      </div>
+
+      <section class="grid">
+        <article class="card half">
+          <div class="section-kicker">Diagnosis</div>
+          <h2>Why the current check still fails</h2>
+          <div class="root-cause">
+            <div class="cause-row">
+              <div class="cause-label">Wrong source</div>
+              <div>
+                <span class="file">useChatGeneration.ts</span> asks
+                <span class="file">LLMChatProjection.GetMessages()</span>.
+                That projection describes model context, not the chat view.
+                Retention, chapter buffers, and prompt assembly can make those
+                two histories differ.
+              </div>
+            </div>
+            <div class="cause-row">
+              <div class="cause-label">Empty retry</div>
+              <div>
+                The lookup only runs when <code>userInput.trim()</code> is
+                non-empty. An empty continuation after response generation
+                fails therefore hard-codes <code>skipReasoning = false</code>
+                and creates the duplicate.
+              </div>
+            </div>
+            <div class="cause-row">
+              <div class="cause-label">Leaky policy</div>
+              <div>
+                The React hook decides whether reasoning runs, then passes a
+                boolean into <span class="file">TextGenerationService</span>.
+                Any other caller can accidentally bypass the same policy.
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card half">
+          <div class="section-kicker">Invariant</div>
+          <h2>One selector, one meaning</h2>
+          <p class="muted">
+            Add a named selector to the user-facing projection. Its contract
+            must match the visible timeline, not the request sent to a model.
+          </p>
+          <div class="rule">
+            <strong>Generate reasoning iff</strong> reasoning is enabled and
+            the turn-start message is not a reasoning message.
+          </div>
+          <ul class="filter-list">
+            <li>
+              <span class="yes">✓</span>
+              <span
+                >Include persisted <code>user-message</code>,
+                <code>system-message</code>, <code>assistant</code>, and
+                <code>reasoning</code> entries.</span
+              >
+            </li>
+            <li>
+              <span class="no">×</span>
+              <span
+                >Exclude deleted, hidden, chapter-covered, or book-covered
+                entries exactly as the chat view does.</span
+              >
+            </li>
+            <li>
+              <span class="no">×</span>
+              <span
+                >Exclude transient streaming/regeneration placeholders; only
+                event-backed messages can anchor a new turn.</span
+              >
+            </li>
+            <li>
+              <span class="no">×</span>
+              <span
+                >Exclude story prompts, response prompts, memories, notes,
+                plans, images, and other non-conversation artifacts.</span
+              >
+            </li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <div class="section-kicker">Ordering guarantee</div>
+          <h2>Capture before mutation</h2>
+          <p class="muted">
+            “Prior” must be evaluated at the start of the send operation,
+            before a newly typed user message is persisted and before request
+            prompts are assembled.
+          </p>
+          <div class="flow" aria-label="Generation turn flow">
+            <div class="flow-step">
+              <span class="step-number">1</span>
+              <h3>Read timeline</h3>
+              <p>Use the user chat projection’s single eligible-message selector.</p>
+            </div>
+            <div class="arrow">→</div>
+            <div class="flow-step">
+              <span class="step-number">2</span>
+              <h3>Freeze decision</h3>
+              <p>Record the message ID, type, and reuse-reasoning decision.</p>
+            </div>
+            <div class="arrow">→</div>
+            <div class="flow-step">
+              <span class="step-number">3</span>
+              <h3>Persist input</h3>
+              <p>Add a user message only when the input contains text.</p>
+            </div>
+            <div class="arrow">→</div>
+            <div class="flow-step">
+              <span class="step-number">4</span>
+              <h3>Generate</h3>
+              <p>Reuse prior reasoning or create it, then stream the response.</p>
+            </div>
+          </div>
+          <pre class="code"><span class="blue">const</span> anchor = userTimeline.<span class="accent">getLastPersistedTextMessage</span>();
+<span class="blue">const</span> shouldGenerateReasoning =
+  reasoningEnabled &amp;&amp; anchor?.type !== <span class="amber">"reasoning"</span>;
+
+<span class="blue">if</span> (userInput.trim()) await addUserMessage(userInput);
+<span class="blue">if</span> (shouldGenerateReasoning) await generateReasoning();
+await generateAssistantResponse();</pre>
+        </article>
+
+        <article class="card">
+          <div class="section-kicker">Interactive proof</div>
+          <h2>Decision simulator</h2>
+          <p class="muted">
+            Each scenario applies the proposed selector. Dashed entries are
+            present somewhere in state or request assembly but are ineligible
+            to become the turn anchor.
+          </p>
+          <div class="demo-controls" id="scenario-controls"></div>
+          <div class="timeline" id="timeline"></div>
+          <div class="decision">
+            <span class="decision-badge" id="decision-badge">Reuse</span>
+            <p id="decision-copy"></p>
+          </div>
+        </article>
+
+        <article class="card half">
+          <div class="section-kicker">Behavior matrix</div>
+          <h2>Expected outcomes</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Turn-start anchor</th>
+                <th>Input</th>
+                <th>Reasoning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>reasoning</td>
+                <td>empty continuation</td>
+                <td>reuse</td>
+              </tr>
+              <tr>
+                <td>reasoning</td>
+                <td>new user text</td>
+                <td>reuse</td>
+              </tr>
+              <tr>
+                <td>reasoning + request prompt</td>
+                <td>any</td>
+                <td>reuse</td>
+              </tr>
+              <tr>
+                <td>reasoning + deleted assistant</td>
+                <td>any</td>
+                <td>reuse</td>
+              </tr>
+              <tr>
+                <td>assistant or user</td>
+                <td>any</td>
+                <td>generate</td>
+              </tr>
+              <tr>
+                <td>no eligible message</td>
+                <td>first turn</td>
+                <td>generate</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="card half">
+          <div class="section-kicker">Ownership</div>
+          <h2>Where the fix belongs</h2>
+          <ol class="implementation-list">
+            <li>
+              <h3>Define the timeline selector</h3>
+              <p>
+                Add <code>GetLastPersistedTextMessage()</code> to
+                <span class="file">UserChatProjection.ts</span>. Keep the
+                eligibility predicate beside <code>GetMessages()</code> so the
+                render filter and anchor filter cannot drift silently.
+              </p>
+            </li>
+            <li>
+              <h3>Make one service own the turn boundary</h3>
+              <p>
+                Change the send workflow so
+                <span class="file">TextGenerationService</span> receives the
+                user input, captures the anchor, persists the input, and
+                applies the reasoning rule in that exact order.
+              </p>
+            </li>
+            <li>
+              <h3>Delete the hook heuristic</h3>
+              <p>
+                Remove the <code>hasUserInput</code>,
+                <code>contextMessages</code>, and
+                <code>skipReasoning</code> calculation from
+                <span class="file">useChatGeneration.ts</span>. The hook should
+                initiate a turn, not interpret history.
+              </p>
+            </li>
+            <li>
+              <h3>Keep regeneration separate</h3>
+              <p>
+                <code>regenerateResponse(messageId)</code> continues to
+                regenerate only the selected assistant response. It must never
+                enter the new-turn reasoning path.
+              </p>
+            </li>
+          </ol>
+        </article>
+
+        <article class="card warning third">
+          <div class="section-kicker">Guardrail</div>
+          <h2>No content sniffing</h2>
+          <p class="muted">
+            Never infer reasoning from <code>[Reasoning]</code> markers or
+            prompt text. Message type and persisted timeline position are the
+            only inputs.
+          </p>
+        </article>
+
+        <article class="card third">
+          <div class="section-kicker">Guardrail</div>
+          <h2>No LLM projection</h2>
+          <p class="muted">
+            Model context is allowed to compress, retain, reorder, or append
+            instructions. Those transformations must not affect UI turn
+            semantics.
+          </p>
+        </article>
+
+        <article class="card third">
+          <div class="section-kicker">Guardrail</div>
+          <h2>No timing guess</h2>
+          <p class="muted">
+            Capture the anchor synchronously before the first awaited mutation.
+            Persist the anchor ID in the turn object for diagnostics and tests.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="section-kicker">Verification</div>
+          <h2>Tests that make the invariant difficult to regress</h2>
+          <ul class="acceptance">
+            <li>
+              Selector returns reasoning when later assistant entries are
+              deleted or hidden.
+            </li>
+            <li>
+              Selector ignores streaming and regeneration placeholders.
+            </li>
+            <li>
+              Empty continuation after failed response makes zero reasoning
+              API calls.
+            </li>
+            <li>
+              Non-empty send after a reasoning anchor makes zero reasoning API
+              calls.
+            </li>
+            <li>
+              Request prompts appended after chat history cannot change the
+              decision.
+            </li>
+            <li>
+              Assistant/user anchor generates exactly one reasoning message
+              when enabled.
+            </li>
+            <li>
+              Disabled reasoning makes zero reasoning API calls for every
+              anchor type.
+            </li>
+            <li>
+              Response regeneration edits in place and makes zero reasoning
+              API calls.
+            </li>
+          </ul>
+        </article>
+      </section>
+
+      <footer>
+        Proposed scope: projection selector, send-turn ownership, focused unit
+        tests, and removal of the existing hook heuristic. No event migration
+        or prompt-format change required.
+      </footer>
+    </main>
+
+    <script>
+      const scenarios = [
+        {
+          label: "Failed response",
+          messages: [
+            { label: "User", type: "user-message" },
+            { label: "Reasoning", type: "reasoning" },
+          ],
+        },
+        {
+          label: "Prompt artifact",
+          messages: [
+            { label: "User", type: "user-message" },
+            { label: "Reasoning", type: "reasoning" },
+            { label: "Response prompt", type: "prompt", excluded: true },
+          ],
+        },
+        {
+          label: "Deleted response",
+          messages: [
+            { label: "User", type: "user-message" },
+            { label: "Reasoning", type: "reasoning" },
+            { label: "Assistant · deleted", type: "assistant", excluded: true },
+          ],
+        },
+        {
+          label: "Transient regeneration",
+          messages: [
+            { label: "Reasoning", type: "reasoning" },
+            {
+              label: "Assistant · streaming",
+              type: "assistant",
+              excluded: true,
+            },
+          ],
+        },
+        {
+          label: "Normal next turn",
+          messages: [
+            { label: "Reasoning", type: "reasoning" },
+            { label: "Assistant", type: "assistant" },
+          ],
+        },
+        {
+          label: "First turn",
+          messages: [
+            { label: "Story", type: "story", excluded: true },
+            { label: "System prompt", type: "prompt", excluded: true },
+          ],
+        },
+      ];
+
+      const controls = document.getElementById("scenario-controls");
+      const timeline = document.getElementById("timeline");
+      const badge = document.getElementById("decision-badge");
+      const copy = document.getElementById("decision-copy");
+
+      function renderScenario(index) {
+        const scenario = scenarios[index];
+        const anchor = [...scenario.messages]
+          .reverse()
+          .find((message) => !message.excluded);
+        const reuse = anchor?.type === "reasoning";
+
+        [...controls.children].forEach((button, buttonIndex) => {
+          button.classList.toggle("active", buttonIndex === index);
+        });
+
+        timeline.innerHTML = "";
+        scenario.messages.forEach((message) => {
+          const node = document.createElement("span");
+          node.className = [
+            "message",
+            message.type === "reasoning" ? "reasoning" : "",
+            message.excluded ? "excluded" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          node.textContent = message.label;
+          timeline.appendChild(node);
+        });
+
+        badge.textContent = reuse ? "Reuse" : "Generate";
+        copy.textContent = reuse
+          ? `Anchor: ${anchor.label}. Generate the assistant response only.`
+          : anchor
+            ? `Anchor: ${anchor.label}. Generate reasoning, then the assistant response.`
+            : "No eligible anchor. Generate reasoning, then the assistant response.";
+      }
+
+      scenarios.forEach((scenario, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = scenario.label;
+        button.addEventListener("click", () => renderScenario(index));
+        controls.appendChild(button);
+      });
+
+      renderScenario(0);
+    </script>
+  </body>
+</html>

@@ -68,4 +68,61 @@ describe("UserChatProjection - Reasoning Events", () => {
 
     expect(projection.GetMessages().map((m) => m.type)).toEqual(["chapter"]);
   });
+
+  it("returns the last persisted text message from the chat view", () => {
+    projection.process(MessageCreatedEventUtil.Create("user", "Start"));
+    const reasoning = ReasoningCreatedEventUtil.Create("Think first.");
+    projection.process(reasoning);
+    projection.process({
+      type: "PlanCreated",
+      messageId: "plan-1",
+      planDefinitionId: "definition-1",
+      planName: "Draft",
+      content: "Plan content",
+    });
+
+    expect(projection.GetLastPersistedTextMessage()?.id).toBe(
+      reasoning.messageId,
+    );
+  });
+
+  it("ignores deleted text messages after reasoning", () => {
+    const reasoning = ReasoningCreatedEventUtil.Create("Keep this reasoning.");
+    const assistant = MessageCreatedEventUtil.Create(
+      "assistant",
+      "Failed response",
+    );
+    projection.process(reasoning);
+    projection.process(assistant);
+    projection.process({
+      type: "MessageDeleted",
+      messageId: assistant.messageId,
+    });
+
+    expect(projection.GetLastPersistedTextMessage()?.id).toBe(
+      reasoning.messageId,
+    );
+  });
+
+  it("ignores a transient new response after reasoning", () => {
+    const reasoning = ReasoningCreatedEventUtil.Create("Keep this reasoning.");
+    projection.process(reasoning);
+    projection.addStreamingMessage("streaming-response");
+
+    expect(projection.GetLastPersistedTextMessage()?.id).toBe(
+      reasoning.messageId,
+    );
+  });
+
+  it("ignores an assistant message while it is being regenerated", () => {
+    const reasoning = ReasoningCreatedEventUtil.Create("Keep this reasoning.");
+    const assistant = MessageCreatedEventUtil.Create("assistant", "Response");
+    projection.process(reasoning);
+    projection.process(assistant);
+    projection.startStreamingExistingMessage(assistant.messageId);
+
+    expect(projection.GetLastPersistedTextMessage()?.id).toBe(
+      reasoning.messageId,
+    );
+  });
 });
