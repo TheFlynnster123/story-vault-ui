@@ -53,13 +53,25 @@ export class TextGenerationService extends GenerationOrchestrator {
   }
 
   async generateResponse(
+    userInput = "",
     guidance?: string,
-    skipReasoning = false,
   ): Promise<string | undefined> {
     return this.orchestrate(async () => {
+      const previousMessage = d
+        .UserChatProjection(this.chatId)
+        .GetLastPersistedTextMessage();
+
+      if (userInput.trim()) {
+        await d.ChatService(this.chatId).AddUserMessage(userInput);
+        void this.runPostUserMessageTasks();
+      }
+
       d.PlanGenerationService(this.chatId).onMessageSent();
 
-      if (!skipReasoning && (await this.shouldGenerateReasoning())) {
+      if (
+        previousMessage?.type !== "reasoning" &&
+        (await this.shouldGenerateReasoning())
+      ) {
         await this.generateReasoning(guidance);
       }
 
@@ -96,6 +108,35 @@ export class TextGenerationService extends GenerationOrchestrator {
     });
   }
 
+  private async runPostUserMessageTasks(): Promise<void> {
+    void d
+      .CharacterMaintenanceService(this.chatId)
+      .maybeCreateProposalAfterSavedUserTurn();
+
+    try {
+      const chatSettingsService = d.ChatSettingsService(this.chatId);
+      const settings = await chatSettingsService.Get();
+      if (!settings?.agentFlowAutoRunEnabled) return;
+
+      const interval = Math.max(1, settings.agentFlowAutoRunInterval ?? 3);
+      const nextCount = (settings.agentFlowMessagesSinceLastRun ?? 0) + 1;
+
+      if (nextCount < interval) {
+        await chatSettingsService.update({
+          agentFlowMessagesSinceLastRun: nextCount,
+        });
+        return;
+      }
+
+      await chatSettingsService.update({
+        agentFlowMessagesSinceLastRun: 0,
+      });
+      await d.AgentFlowService(this.chatId).analyzeAutomaticSuggestion();
+    } catch (error) {
+      d.ErrorService().log("Failed to auto-run agent flow", error);
+    }
+  }
+
   private async shouldGenerateReasoning(): Promise<boolean> {
     const chatSettings = await d.ChatSettingsService(this.chatId).Get();
     return chatSettings?.reasoningEnabled ?? true;
@@ -109,18 +150,27 @@ export class TextGenerationService extends GenerationOrchestrator {
     this.setStatus("Reasoning...");
 
     const modelOverride = await this.getReasoningModelOverride();
-    const reasoning = await d
-      .OpenRouterChatAPI()
-      .postChat(
+    const projection = d.UserChatProjection(this.chatId);
+    const streamingId = crypto.randomUUID();
+    projection.addStreamingMessage(streamingId, "reasoning");
+
+    try {
+      const reasoning = await d.OpenRouterChatAPI().postChatStream(
         requestMessages,
+        (content) => {
+          projection.updateStreamingMessage(content);
+        },
         modelOverride?.model,
+        modelOverride?.requestSettings,
         "chat",
         "Reasoning",
-        modelOverride?.requestSettings,
       );
 
-    if (reasoning.trim()) {
       await d.ChatService(this.chatId).AddReasoningMessage(reasoning);
+      projection.removeStreamingMessage();
+    } catch (error) {
+      projection.removeStreamingMessage();
+      throw error;
     }
   }
 

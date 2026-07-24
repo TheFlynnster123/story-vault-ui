@@ -1,5 +1,8 @@
 import { d } from "../../../../services/Dependencies";
-import { getCharacterAppearance } from "../../../Characters/services/CharacterDescription";
+import {
+  getCharacterAppearance,
+  isCharacterTracked,
+} from "../../../Characters/services/CharacterDescription";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { CharacterContext } from "../../../Images/services/ImageGenerator";
@@ -86,21 +89,29 @@ export class ImageGenerationService extends GenerationOrchestrator {
           await this.runImageGenerationSteps(noCharacterContext());
           return { type: "started" };
         }
+        if (!(await this.canGenerateCharacterDescription(characterName))) {
+          await this.runImageGenerationSteps(noCharacterContext());
+          return { type: "started" };
+        }
 
         const generatedDescription = await d
           .CharacterDescriptionGenerationService(this.chatId)
           .generateDescription(characterName);
 
-        await this.saveGeneratedCharacterDescription(
+        const saved = await this.saveGeneratedCharacterDescription(
           characterName,
           generatedDescription,
         );
 
-        await this.runImageGenerationSteps({
-          type: "existing-description",
-          characterName,
-          description: generatedDescription,
-        });
+        await this.runImageGenerationSteps(
+          saved
+            ? {
+                type: "existing-description",
+                characterName,
+                description: generatedDescription,
+              }
+            : noCharacterContext(),
+        );
 
         return { type: "started" };
       },
@@ -375,22 +386,28 @@ export class ImageGenerationService extends GenerationOrchestrator {
       await this.runImageGenerationSteps(noCharacterContext(), messageId);
       return { type: "started" };
     }
+    if (!(await this.canGenerateCharacterDescription(characterName))) {
+      await this.runImageGenerationSteps(noCharacterContext(), messageId);
+      return { type: "started" };
+    }
 
     const generatedDescription = await d
       .CharacterDescriptionGenerationService(this.chatId)
       .generateDescription(characterName);
 
-    await this.saveGeneratedCharacterDescription(
+    const saved = await this.saveGeneratedCharacterDescription(
       characterName,
       generatedDescription,
     );
 
     await this.runImageGenerationSteps(
-      {
-        type: "existing-description",
-        characterName,
-        description: generatedDescription,
-      },
+      saved
+        ? {
+            type: "existing-description",
+            characterName,
+            description: generatedDescription,
+          }
+        : noCharacterContext(),
       messageId,
     );
 
@@ -631,11 +648,28 @@ export class ImageGenerationService extends GenerationOrchestrator {
   private saveGeneratedCharacterDescription = async (
     characterName: string,
     description: string,
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     const characterService = d.CharacterDescriptionsService(this.chatId);
+    const existing = await characterService.findByName(characterName);
+    if (existing && !isCharacterTracked(existing)) return false;
+
     const character =
-      await characterService.createBlankCharacter(characterName);
-    await characterService.updateCharacter(character.id, { appearance: description });
+      existing ?? (await characterService.createBlankCharacter(characterName));
+    if (!isCharacterTracked(character)) return false;
+
+    await characterService.updateCharacter(character.id, {
+      appearance: description,
+    });
+    return true;
+  };
+
+  private canGenerateCharacterDescription = async (
+    characterName: string,
+  ): Promise<boolean> => {
+    const character = await d
+      .CharacterDescriptionsService(this.chatId)
+      .findByName(characterName);
+    return character === undefined || isCharacterTracked(character);
   };
 }
 
@@ -764,7 +798,10 @@ const resolveCharacterContextByName = async (
     .CharacterDescriptionsService(chatId)
     .findByName(characterName);
 
-  const appearance = character ? getCharacterAppearance(character) : "";
+  const appearance =
+    character && isCharacterTracked(character)
+      ? getCharacterAppearance(character)
+      : "";
   if (!appearance.trim()) {
     return noCharacterContext();
   }

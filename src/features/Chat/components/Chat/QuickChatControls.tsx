@@ -497,7 +497,19 @@ const toCharacterUpdateStatus = (
   result: CharacterMaintenanceResult,
 ): string => {
   if (result.status === "proposal-created") {
+    if (result.autoAppliedChangeCount > 0) {
+      return `${result.autoAppliedChangeCount} character update${
+        result.autoAppliedChangeCount === 1 ? "" : "s"
+      } applied automatically. ${result.proposedChangeCount} ${
+        result.proposedChangeCount === 1 ? "is" : "are"
+      } ready for review.`;
+    }
     return "Character updates are ready. Close this menu to review them.";
+  }
+  if (result.status === "auto-applied") {
+    return `${result.autoAppliedChangeCount} character update${
+      result.autoAppliedChangeCount === 1 ? "" : "s"
+    } applied automatically.`;
   }
   if (result.status === "unchanged") {
     return "No Character Sheet changes were proposed.";

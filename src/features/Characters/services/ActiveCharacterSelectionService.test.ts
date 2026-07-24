@@ -48,6 +48,31 @@ describe("ActiveCharacterSelectionService", () => {
     );
   });
 
+  it("keeps untracked names in the roster but rejects them from model output", async () => {
+    const untrackedCharacters = [
+      { ...characters[0], isTracked: false },
+      characters[1],
+    ];
+    api.postStructuredChat.mockResolvedValue({
+      activeCharacterNames: ["Mara"],
+    });
+
+    const result = await new ActiveCharacterSelectionService("chat-1").select(
+      untrackedCharacters,
+    );
+
+    expect(result).toEqual({
+      existingCharacterIds: [],
+      newCharacterNames: [],
+    });
+    const requestMessages = api.postStructuredChat.mock.calls[0][0] as
+      | LLMMessage[]
+      | undefined;
+    expect(requestMessages?.[requestMessages.length - 1]?.content).toContain(
+      '"name":"Mara Venn","isTracked":false',
+    );
+  });
+
   it("uses only the last twelve projected scene messages", async () => {
     contextService.buildGenerationRequestMessages.mockResolvedValue([
       { role: "system", content: "Discarded prompt" },

@@ -32,6 +32,10 @@ export const getUserChatProjectionInstance = createInstanceCache(
 export class UserChatProjection {
   public Messages: UserChatMessage[] = [];
 
+  private static readonly TEXT_MESSAGE_TYPES = new Set<
+    UserChatMessage["type"]
+  >(["user-message", "system-message", "assistant", "reasoning"]);
+
   private subscribers = new Set<() => void>();
 
   constructor() {
@@ -51,13 +55,17 @@ export class UserChatProjection {
   private streamingMessageId: string | null = null;
   private isStreamingNewMessage: boolean = false;
 
-  public addStreamingMessage(id: string): void {
+  public addStreamingMessage(
+    id: string,
+    type: "assistant" | "reasoning" = "assistant",
+  ): void {
     this.streamingMessageId = id;
     this.isStreamingNewMessage = true;
     this.Messages.push({
       id,
-      type: "assistant",
+      type,
       content: "",
+      isStreaming: true,
       hiddenByChapterId: undefined,
       deleted: false,
       hidden: false,
@@ -73,7 +81,7 @@ export class UserChatProjection {
   public startStreamingExistingMessage(id: string): void {
     this.streamingMessageId = id;
     this.isStreamingNewMessage = false;
-    this.replaceMessage(id, { content: "" });
+    this.replaceMessage(id, { content: "", isStreaming: true });
     this.notifySubscribers();
   }
 
@@ -93,6 +101,8 @@ export class UserChatProjection {
       if (index !== -1) {
         this.Messages.splice(index, 1);
       }
+    } else {
+      this.replaceMessage(this.streamingMessageId, { isStreaming: false });
     }
 
     this.streamingMessageId = null;
@@ -192,6 +202,22 @@ export class UserChatProjection {
     return this.computeNoteExpiration(visible);
   }
 
+  public GetLastPersistedTextMessage(): UserChatMessage | undefined {
+    const visibleMessages = this.GetMessages();
+
+    for (let index = visibleMessages.length - 1; index >= 0; index--) {
+      const message = visibleMessages[index];
+      if (
+        message.id !== this.streamingMessageId &&
+        UserChatProjection.TEXT_MESSAGE_TYPES.has(message.type)
+      ) {
+        return message;
+      }
+    }
+
+    return undefined;
+  }
+
   public GetLatestPlanContent(planDefinitionId: string): string | undefined {
     const planMessages = this.Messages.filter(
       (m) =>
@@ -212,9 +238,8 @@ export class UserChatProjection {
 
     if (!chapter || !chapter.data.coveredMessageIds) return [];
 
-    return this.Messages.filter((m) =>
-      chapter.data.coveredMessageIds!.includes(m.id),
-    );
+    const coveredMessageIds = new Set(chapter.data.coveredMessageIds);
+    return this.Messages.filter((message) => coveredMessageIds.has(message.id));
   }
 
   public getBookChapters(bookId: string): UserChatMessage[] {
@@ -224,9 +249,8 @@ export class UserChatProjection {
 
     if (!book || !book.data.coveredChapterIds) return [];
 
-    return this.Messages.filter((m) =>
-      book.data.coveredChapterIds!.includes(m.id),
-    );
+    const coveredChapterIds = new Set(book.data.coveredChapterIds);
+    return this.Messages.filter((message) => coveredChapterIds.has(message.id));
   }
 
   // ---- Event Handlers ----
@@ -283,14 +307,25 @@ export class UserChatProjection {
   }
 
   private processChapterCreated(event: ChapterCreatedEvent) {
-    event.coveredMessageIds.forEach((id) => {
-      const index = this.Messages.findIndex((m) => m.id === id);
-      if (index !== -1 && this.isHideableByChapter(this.Messages[index]))
+    const coveredMessageIds = new Set(event.coveredMessageIds);
+    let remainingMessages = coveredMessageIds.size;
+
+    for (
+      let index = 0;
+      index < this.Messages.length && remainingMessages > 0;
+      index++
+    ) {
+      const message = this.Messages[index];
+      const isCovered = coveredMessageIds.has(message.id);
+      if (isCovered) remainingMessages--;
+
+      if (isCovered && this.isHideableByChapter(message)) {
         this.Messages[index] = {
-          ...this.Messages[index],
+          ...message,
           hiddenByChapterId: event.chapterId,
         };
-    });
+      }
+    }
 
     this.Messages.push({
       id: event.chapterId,
@@ -645,6 +680,8 @@ export interface UserChatMessage {
     | "agent-clarification";
 
   content?: string; // Text-based content of the message
+
+  isStreaming?: boolean;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any; // Data specific to message type

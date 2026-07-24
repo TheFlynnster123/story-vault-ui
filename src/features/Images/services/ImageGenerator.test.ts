@@ -189,6 +189,37 @@ describe("ImageGenerator", () => {
       ).not.toHaveBeenCalled();
     });
 
+    it("should not include or recreate an untracked character", async () => {
+      const messages = createMockMessages();
+      const characterName = "POV";
+
+      mockSystemPromptsService.Get.mockResolvedValue(undefined);
+      mockCharacterSelectionService.selectCharacterForImage.mockResolvedValue(
+        characterName,
+      );
+      mockCharacterDescriptionsService.findByName.mockResolvedValue({
+        id: "pov",
+        name: characterName,
+        description: "Must not enter image context",
+        isTracked: false,
+        createdAt: "2024-01-01",
+        updatedAt: "2024-01-01",
+      });
+      mockOpenRouterChatAPI.postChat.mockResolvedValue("Generated prompt");
+
+      await imageGenerator.generatePrompt(messages);
+
+      const promptMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
+      expect(
+        promptMessages.some((message: LLMMessage) =>
+          message.content.includes(`# Character: ${characterName}`),
+        ),
+      ).toBe(false);
+      expect(
+        mockCharacterDescriptionsService.createBlankCharacter,
+      ).not.toHaveBeenCalled();
+    });
+
     it("should use custom image model when specified", async () => {
       const messages = createMockMessages();
       const customModel = "custom-image-model";

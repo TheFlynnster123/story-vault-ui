@@ -382,6 +382,25 @@ describe("LLMChatProjection - Plan Events", () => {
   });
 
   describe("Chapter-Plan Interaction", () => {
+    it("does not duplicate a covered plan while the chapter buffer is active", () => {
+      const message = MessageCreatedEventUtil.Create("user", "Hello");
+      const plan = createPlanEvent("def-1", "Story Plan", "Plan content");
+      projection.process(message);
+      projection.process(plan);
+      projection.process(
+        createChapterEvent("ch-1", [message.messageId, plan.messageId]),
+      );
+
+      const messages = projection.GetMessages();
+
+      expect(messages.filter((item) => item.id === plan.messageId)).toHaveLength(
+        1,
+      );
+      expect(new Set(messages.map((item) => item.id)).size).toBe(
+        messages.length,
+      );
+    });
+
     it("should not hide plan messages when chapter covers their IDs", () => {
       const msg = MessageCreatedEventUtil.Create("user", "Hello");
       projection.process(msg);

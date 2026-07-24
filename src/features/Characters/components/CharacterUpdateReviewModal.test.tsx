@@ -20,9 +20,10 @@ describe("CharacterUpdateReviewModal", () => {
       />,
     );
 
-    expect(screen.getByText("Current sheet")).toBeInTheDocument();
-    expect(screen.getByText("Proposed sheet")).toBeInTheDocument();
-    expect(screen.getAllByText("Navigator")).toHaveLength(2);
+    expect(screen.getByText("Added")).toBeInTheDocument();
+    expect(screen.getByText("Removed")).toBeInTheDocument();
+    expect(screen.queryByText("Navigator")).not.toBeInTheDocument();
+    expect(screen.getByText("Carries the old key")).toBeInTheDocument();
     expect(screen.getByText("Carries the brass key")).toBeInTheDocument();
     expect(
       screen.getByText(/Nothing below changes Character Sheets/i),
@@ -133,8 +134,8 @@ const createProposal = (): CharacterUpdateProposal => ({
       characterName: "Mara",
       baseUpdatedAt: "2026-01-01",
       isNew: false,
-      previousSheetItems: ["Navigator"],
-      proposedSheetItems: ["Navigator", "Carries the brass key"],
+      previousSheetItems: ["Navigator", "Carries the old key"],
+      proposedSheetItems: ["Carries the brass key", "Navigator"],
       previousDetectedActive: false,
       proposedDetectedActive: true,
     },

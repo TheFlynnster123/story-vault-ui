@@ -214,6 +214,8 @@ export class OpenRouterChatAPI {
     onToken: (token: string) => void,
     modelOverride?: string,
     requestSettingsOverride?: OpenRouterRequestSettings,
+    requestType: RequestType = "chat",
+    requestLabel: string = "Chat",
   ): Promise<string> {
     const openRouterEncryptionKey = await d
       .EncryptionManager()
@@ -244,6 +246,8 @@ export class OpenRouterChatAPI {
             requestBody,
             accessToken,
             openRouterEncryptionKey,
+            requestType,
+            requestLabel,
           ),
         retrySettings,
       );
@@ -269,6 +273,8 @@ export class OpenRouterChatAPI {
     requestBody: PostChatRequest,
     accessToken: string,
     openRouterEncryptionKey: string,
+    requestType: RequestType,
+    requestLabel: string,
   ): Promise<string> {
     const startedAt = nowMs();
     let timeToFirstTokenMs: number | undefined;
@@ -338,7 +344,13 @@ export class OpenRouterChatAPI {
       await this.refreshCredits();
 
       d.RequestTracker().record({
-        ...buildTrackedBase(messages, requestBody, "Chat", "chat", startedAt),
+        ...buildTrackedBase(
+          messages,
+          requestBody,
+          requestLabel,
+          requestType,
+          startedAt,
+        ),
         status: "success",
         timeToFirstTokenMs,
         responseCharCount: fullContent.length,
@@ -352,7 +364,13 @@ export class OpenRouterChatAPI {
       return fullContent;
     } catch (error) {
       d.RequestTracker().record({
-        ...buildTrackedBase(messages, requestBody, "Chat", "chat", startedAt),
+        ...buildTrackedBase(
+          messages,
+          requestBody,
+          requestLabel,
+          requestType,
+          startedAt,
+        ),
         timeToFirstTokenMs,
         ...buildTrackedFailure(error),
       });

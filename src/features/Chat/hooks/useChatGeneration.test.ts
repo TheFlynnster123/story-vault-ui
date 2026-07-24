@@ -59,23 +59,6 @@ describe("useChatGeneration", () => {
     vi.mocked(d.ErrorService).mockReturnValue({
       log: mockErrorLog,
     } as unknown as ReturnType<typeof d.ErrorService>);
-    vi.mocked(d.ChatService).mockReturnValue({
-      AddUserMessage: vi.fn().mockResolvedValue(undefined),
-    } as unknown as ReturnType<typeof d.ChatService>);
-    vi.mocked(d.LLMChatProjection).mockReturnValue({
-      GetMessages: vi.fn().mockReturnValue([]),
-    } as unknown as ReturnType<typeof d.LLMChatProjection>);
-    vi.mocked(d.ChatSettingsService).mockReturnValue({
-      Get: vi.fn().mockResolvedValue({ agentFlowAutoRunEnabled: false }),
-    } as unknown as ReturnType<typeof d.ChatSettingsService>);
-    vi.mocked(d.AgentFlowService).mockReturnValue({
-      analyzeAutomaticSuggestion: vi.fn().mockResolvedValue(undefined),
-    } as unknown as ReturnType<typeof d.AgentFlowService>);
-    vi.mocked(d.CharacterMaintenanceService).mockReturnValue({
-      maybeCreateProposalAfterSavedUserTurn: vi.fn().mockResolvedValue({
-        status: "not-due",
-      }),
-    } as unknown as ReturnType<typeof d.CharacterMaintenanceService>);
   });
 
   // ---------------------------------------------------------------------------
@@ -107,74 +90,50 @@ describe("useChatGeneration", () => {
   // ---------------------------------------------------------------------------
 
   describe("generateResponse", () => {
-    it("skips new reasoning when the last message in context is reasoning", async () => {
-      vi.mocked(d.LLMChatProjection).mockReturnValue({
-        GetMessages: vi
-          .fn()
-          .mockReturnValue([{ id: "reasoning-1", type: "reasoning" }]),
-      } as unknown as ReturnType<typeof d.LLMChatProjection>);
+    it("passes user input and guidance to the generation service", async () => {
       const { result } = await renderChatGeneration();
 
       await act(async () => {
-        await result.current.generateResponse("Follow-up message");
+        await result.current.generateResponse(
+          "Follow-up message",
+          "Keep it tense",
+        );
       });
 
-      expect(d.ChatService(CHAT_ID).AddUserMessage).toHaveBeenCalledWith(
+      expect(mockTextGeneration.generateResponse).toHaveBeenCalledWith(
         "Follow-up message",
-      );
-      expect(
-        d.CharacterMaintenanceService(CHAT_ID)
-          .maybeCreateProposalAfterSavedUserTurn,
-      ).toHaveBeenCalledOnce();
-      expect(mockTextGeneration.generateResponse).toHaveBeenCalledWith(
-        undefined,
-        true,
+        "Keep it tense",
       );
     });
 
-    it("generates reasoning when the last message in context is not reasoning", async () => {
-      vi.mocked(d.LLMChatProjection).mockReturnValue({
-        GetMessages: vi
-          .fn()
-          .mockReturnValue([{ id: "assistant-1", type: "message" }]),
-      } as unknown as ReturnType<typeof d.LLMChatProjection>);
+    it("passes an empty continuation to the generation service", async () => {
       const { result } = await renderChatGeneration();
 
       await act(async () => {
-        await result.current.generateResponse("Follow-up message");
+        await result.current.generateResponse("");
       });
 
       expect(mockTextGeneration.generateResponse).toHaveBeenCalledWith(
+        "",
         undefined,
-        false,
       );
     });
 
-    it("uses the protected automatic Agent Flow analysis at its configured interval", async () => {
-      const update = vi.fn().mockResolvedValue(undefined);
-      const analyzeAutomaticSuggestion = vi.fn().mockResolvedValue(undefined);
-      vi.mocked(d.ChatSettingsService).mockReturnValue({
-        Get: vi.fn().mockResolvedValue({
-          agentFlowAutoRunEnabled: true,
-          agentFlowAutoRunInterval: 1,
-          agentFlowMessagesSinceLastRun: 0,
-        }),
-        update,
-      } as unknown as ReturnType<typeof d.ChatSettingsService>);
-      vi.mocked(d.AgentFlowService).mockReturnValue({
-        analyzeAutomaticSuggestion,
-      } as unknown as ReturnType<typeof d.AgentFlowService>);
+    it("returns an empty response when generation fails", async () => {
+      const error = new Error("generation failed");
+      mockTextGeneration.generateResponse.mockRejectedValue(error);
       const { result } = await renderChatGeneration();
+      let response = "not-empty";
 
       await act(async () => {
-        await result.current.generateResponse("Follow-up message");
+        response = await result.current.generateResponse("Follow-up message");
       });
-      await act(async () => {});
 
-      expect(update).toHaveBeenCalledWith({
-        agentFlowMessagesSinceLastRun: 0,
-      });
-      expect(analyzeAutomaticSuggestion).toHaveBeenCalledOnce();
+      expect(response).toBe("");
+      expect(mockErrorLog).toHaveBeenCalledWith(
+        "Failed to generate response",
+        error,
+      );
     });
   });
 

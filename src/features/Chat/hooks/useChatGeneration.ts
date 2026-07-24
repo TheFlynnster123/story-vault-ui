@@ -26,24 +26,8 @@ export const useChatGeneration = (chatId: string) => {
   const generateResponse = useCallback(
     async (userInput: string, guidance?: string): Promise<string> => {
       try {
-        const hasUserInput = userInput.trim().length > 0;
-        const contextMessages = hasUserInput
-          ? d.LLMChatProjection(chatId).GetMessages()
-          : [];
-        const previousMessage = contextMessages[contextMessages.length - 1];
-        const skipReasoning =
-          hasUserInput && previousMessage?.type === "reasoning";
-
-        if (hasUserInput) {
-          await d.ChatService(chatId).AddUserMessage(userInput);
-          void maybeAutoRunAgentFlow(chatId);
-          void d
-            .CharacterMaintenanceService(chatId)
-            .maybeCreateProposalAfterSavedUserTurn();
-        }
-
         return (
-          (await textGeneration.generateResponse(guidance, skipReasoning)) ?? ""
+          (await textGeneration.generateResponse(userInput, guidance)) ?? ""
         );
       } catch (e) {
         if (!isAlreadyHandled(e)) {
@@ -52,7 +36,7 @@ export const useChatGeneration = (chatId: string) => {
         return "";
       }
     },
-    [chatId, textGeneration],
+    [textGeneration],
   );
 
   const regenerateResponse = useCallback(
@@ -200,30 +184,4 @@ export const useChatGeneration = (chatId: string) => {
     isTextLoading,
     isImageLoading,
   };
-};
-
-const maybeAutoRunAgentFlow = async (chatId: string): Promise<void> => {
-  try {
-    const chatSettingsService = d.ChatSettingsService(chatId);
-    const settings = await chatSettingsService.Get();
-    if (!settings?.agentFlowAutoRunEnabled) return;
-
-    const interval = Math.max(1, settings.agentFlowAutoRunInterval ?? 3);
-    const nextCount = (settings.agentFlowMessagesSinceLastRun ?? 0) + 1;
-
-    if (nextCount < interval) {
-      await chatSettingsService.update({
-        agentFlowMessagesSinceLastRun: nextCount,
-      });
-      return;
-    }
-
-    await chatSettingsService.update({
-      agentFlowMessagesSinceLastRun: 0,
-    });
-
-    await d.AgentFlowService(chatId).analyzeAutomaticSuggestion();
-  } catch (error) {
-    d.ErrorService().log("Failed to auto-run agent flow", error);
-  }
 };

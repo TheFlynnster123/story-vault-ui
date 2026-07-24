@@ -3,7 +3,10 @@ import { FaUser } from "react-icons/fa";
 import { Theme } from "../../../components/Theme";
 import { FlowButton } from "../../Chat/components/Chat/Flow/FlowButton";
 import { useCharacterDescriptions } from "../hooks/useCharacterDescriptions";
-import { isCharacterActive } from "../services/CharacterDescription";
+import {
+  isCharacterActive,
+  isCharacterTracked,
+} from "../services/CharacterDescription";
 
 interface CharacterDescriptionsSectionProps {
   chatId: string;
@@ -14,7 +17,10 @@ export const CharacterDescriptionsSection: React.FC<
   CharacterDescriptionsSectionProps
 > = ({ chatId, onNavigate }) => {
   const { characters } = useCharacterDescriptions(chatId);
-  const activeCount = characters.filter(isCharacterActive).length;
+  const activeCount = characters.filter(
+    (character) =>
+      isCharacterTracked(character) && isCharacterActive(character),
+  ).length;
 
   return (
     <FlowButton

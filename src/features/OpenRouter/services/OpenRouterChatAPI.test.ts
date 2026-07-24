@@ -227,6 +227,37 @@ describe("OpenRouterChatAPI", () => {
       });
     });
 
+    it("should preserve a custom label for streamed reasoning requests", async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: "Think first."\n'));
+          controller.close();
+        },
+      });
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(stream, { status: 200 }),
+      );
+
+      await api.postChatStream(
+        [{ role: "user", content: "Continue" }],
+        vi.fn(),
+        undefined,
+        undefined,
+        "chat",
+        "Reasoning",
+      );
+
+      expect(d.RequestTracker().record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          label: "Reasoning",
+          type: "chat",
+          status: "success",
+          responseContent: "Think first.",
+        }),
+      );
+    });
+
     it("should retry a transient request once immediately by default when enabled", async () => {
       vi.mocked(d.SystemSettingsService).mockReturnValue({
         Get: vi.fn().mockResolvedValue({

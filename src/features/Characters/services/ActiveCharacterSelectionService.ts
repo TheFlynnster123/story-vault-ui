@@ -7,6 +7,7 @@ import {
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { CharacterDescription } from "./CharacterDescription";
+import { isCharacterTracked } from "./CharacterDescription";
 import {
   findCharacterByName,
   normalizeCharacterName,
@@ -105,8 +106,13 @@ const buildActiveCharacterMessages = (
   toUserMessage(
     [
       "Select the active cast and return exactly the configured JSON object.",
+      "Never select a known character whose isTracked value is false.",
       JSON.stringify({
-        knownCharacters: characters.map(({ id, name }) => ({ id, name })),
+        knownCharacters: characters.map((character) => ({
+          id: character.id,
+          name: character.name,
+          isTracked: isCharacterTracked(character),
+        })),
       }),
     ].join("\n\n"),
   ),
@@ -127,7 +133,9 @@ const normalizeActiveSelection = (
   for (const name of names) {
     const match = findCharacterByName(characters, name);
     if (match) {
-      existingCharacterIds.add(match.id);
+      if (isCharacterTracked(match)) {
+        existingCharacterIds.add(match.id);
+      }
       continue;
     }
 

@@ -450,6 +450,40 @@ describe("ImageGenerationService", () => {
       }),
     );
   });
+
+  it("skips stale appearance generation requests for untracked characters", async () => {
+    mockCharacterDescriptionsService.findByName.mockResolvedValue({
+      id: "pov",
+      name: "POV",
+      appearance: "",
+      isTracked: false,
+    });
+    mockImageGenerator.generatePromptWithCharacterContext.mockResolvedValue(
+      "image prompt",
+    );
+    mockImageGenerator.triggerJob.mockResolvedValue({
+      jobId: "job-4",
+      workflowId: "job-4",
+      modelName: "Test Model",
+      fullPrompt: "full combined prompt",
+    });
+
+    const result = await service.resolveMissingCharacterDescription(
+      "POV",
+      "generate",
+    );
+
+    expect(result).toEqual({ type: "started" });
+    expect(
+      mockCharacterDescriptionGenerationService.generateDescription,
+    ).not.toHaveBeenCalled();
+    expect(
+      mockCharacterDescriptionsService.updateCharacter,
+    ).not.toHaveBeenCalled();
+    expect(
+      mockImageGenerator.generatePromptWithCharacterContext,
+    ).toHaveBeenCalledWith(createMockMessages(), { type: "none" });
+  });
 });
 
 const createMockMessages = (): LLMMessage[] => [

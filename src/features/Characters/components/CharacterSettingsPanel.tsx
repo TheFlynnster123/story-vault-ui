@@ -81,8 +81,8 @@ export const CharacterSettingsPanel: React.FC<CharacterSettingsPanelProps> = ({
           <Text fw={600}>Character synchronization</Text>
           <Text size="sm" c="dimmed">
             Story context can prepare active-cast and Character Sheet changes.
-            Changes remain pending until you approve them from the chat&apos;s
-            character update control.
+            Per-character auto-accepted changes apply immediately; other
+            changes remain pending in the chat&apos;s character update control.
           </Text>
         </div>
 
@@ -162,9 +162,16 @@ export const CharacterSettingsPanel: React.FC<CharacterSettingsPanelProps> = ({
 
 const toStatusMessage = (result: CharacterMaintenanceResult): string => {
   if (result.status === "proposal-created") {
-    return `${result.proposedChangeCount} character update${
+    const pending = `${result.proposedChangeCount} character update${
       result.proposedChangeCount === 1 ? "" : "s"
     } ready for review.`;
+    if (result.autoAppliedChangeCount === 0) return pending;
+    return `${result.autoAppliedChangeCount} applied automatically; ${pending}`;
+  }
+  if (result.status === "auto-applied") {
+    return `${result.autoAppliedChangeCount} character update${
+      result.autoAppliedChangeCount === 1 ? "" : "s"
+    } applied automatically.`;
   }
   if (result.status === "unchanged") {
     return "No character changes were proposed.";

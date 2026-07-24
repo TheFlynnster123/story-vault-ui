@@ -115,10 +115,12 @@ describe("SystemPromptsEditor", () => {
     await user.click(screen.getByLabelText("Story Generation Model"));
 
     await waitFor(() => {
-      expect(screen.getByText("Select Model")).toBeInTheDocument();
+      expect(screen.getByText("Select model setup")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("GPT-4"));
+    await user.click(screen.getByRole("radio", { name: "Browse models" }));
+    await user.click(await screen.findByText("GPT-4"));
+    await user.click(screen.getByRole("button", { name: "Use this setup" }));
 
     await waitFor(() => {
       expect(savedPrompts.newStoryModel).toBe("openai/gpt-4");

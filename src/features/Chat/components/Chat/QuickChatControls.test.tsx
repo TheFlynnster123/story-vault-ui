@@ -52,6 +52,7 @@ describe("QuickChatControls", () => {
       synchronizeNow: vi.fn().mockResolvedValue({
         status: "proposal-created",
         proposedChangeCount: 1,
+        autoAppliedChangeCount: 0,
       }),
     } as never);
   });
