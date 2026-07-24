@@ -495,29 +495,6 @@ describe("LLMChatProjection - Core Operations", () => {
       expectMessageCount(messages, 100);
     });
 
-    it("should return last 6 non-deleted messages even when some are deleted", () => {
-      // Create 10 messages
-      for (let i = 1; i <= 10; i++) {
-        processMessageCreated(projection, `msg-${i}`, "user", `Message ${i}`);
-      }
-
-      // Delete the last 3 messages
-      processMessagesDeleted(projection, ["msg-8", "msg-9", "msg-10"]);
-
-      // getLastSixChapterMessages should return 6 non-deleted messages (msg-2 through msg-7)
-      const coveredIds = Array.from({ length: 10 }, (_, i) => `msg-${i + 1}`);
-      const lastSix = projection.getLastSixChapterMessages(coveredIds);
-
-      expect(lastSix).toHaveLength(6);
-      expect(lastSix.map((m) => m.id)).toEqual([
-        "msg-2",
-        "msg-3",
-        "msg-4",
-        "msg-5",
-        "msg-6",
-        "msg-7",
-      ]);
-    });
   });
 
   // ---- Helper Functions ----

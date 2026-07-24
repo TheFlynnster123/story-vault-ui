@@ -307,14 +307,25 @@ export class UserChatProjection {
   }
 
   private processChapterCreated(event: ChapterCreatedEvent) {
-    event.coveredMessageIds.forEach((id) => {
-      const index = this.Messages.findIndex((m) => m.id === id);
-      if (index !== -1 && this.isHideableByChapter(this.Messages[index]))
+    const coveredMessageIds = new Set(event.coveredMessageIds);
+    let remainingMessages = coveredMessageIds.size;
+
+    for (
+      let index = 0;
+      index < this.Messages.length && remainingMessages > 0;
+      index++
+    ) {
+      const message = this.Messages[index];
+      const isCovered = coveredMessageIds.has(message.id);
+      if (isCovered) remainingMessages--;
+
+      if (isCovered && this.isHideableByChapter(message)) {
         this.Messages[index] = {
-          ...this.Messages[index],
+          ...message,
           hiddenByChapterId: event.chapterId,
         };
-    });
+      }
+    }
 
     this.Messages.push({
       id: event.chapterId,

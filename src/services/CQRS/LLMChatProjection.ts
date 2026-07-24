@@ -27,11 +27,48 @@ export const getLLMChatProjectionInstance = createInstanceCache(
   () => new LLMChatProjection(),
 );
 
+export interface LLMContextProjectionPolicy {
+  trailingChapterMessages?: number;
+  reasoningRetentionMessages?: number | null;
+  planSelection?: PlanContextSelection;
+}
+
+export type PlanContextSelection =
+  | { mode: "include" }
+  | { mode: "exclude-all" }
+  | { mode: "exclude-definition"; planDefinitionId: string };
+
+export type LLMContextExclusionReason =
+  | "deleted"
+  | "hidden"
+  | "chapter-compressed"
+  | "book-compressed"
+  | "expired-note"
+  | "expired-reasoning"
+  | "plan-filtered";
+
+export interface LLMContextProjectionTraceEntry {
+  id: string;
+  type: LLMContextItemType;
+  included: boolean;
+  buffered: boolean;
+  exclusionReason?: LLMContextExclusionReason;
+}
+
+export interface LLMContextProjectionResult {
+  messages: LLMMessage[];
+  trace: LLMContextProjectionTraceEntry[];
+}
+
+export const DEFAULT_LLM_CONTEXT_PROJECTION_POLICY = {
+  trailingChapterMessages: 6,
+  reasoningRetentionMessages: null,
+  planSelection: { mode: "include" },
+} as const satisfies Required<LLMContextProjectionPolicy>;
+
 // ---- LLM Chat Projection ----
 export class LLMChatProjection {
   private messages: MessageState[] = [];
-  private numberOfPreviousChapterMessages: number = 6;
-  private reasoningRetentionMessages: number | null = null;
 
   private subscribers = new Set<() => void>();
 
@@ -125,34 +162,40 @@ export class LLMChatProjection {
   }
 
   // ---- LLM Message Retrieval ----
-  public SetPreviousChapterMessageBuffer(count: number): void {
-    this.numberOfPreviousChapterMessages = Math.max(0, Math.round(count));
+  public GetMessages(policy: LLMContextProjectionPolicy = {}): LLMMessage[] {
+    return this.GetContext(policy).messages;
   }
 
-  /**
-   * Sets how many regular messages after a reasoning message before it expires.
-   * Pass `null` to keep all reasoning messages. Pass `0` to exclude all reasoning.
-   */
-  public SetReasoningRetention(messagesUntilExpiry: number | null): void {
-    this.reasoningRetentionMessages = messagesUntilExpiry;
-  }
+  public GetContext(
+    policy: LLMContextProjectionPolicy = {},
+  ): LLMContextProjectionResult {
+    const resolvedPolicy = resolveProjectionPolicy(policy);
+    const visibleMessages = this.getVisibleMessages();
+    const bufferedMessages = this.addLatestChapterBuffer(
+      visibleMessages,
+      resolvedPolicy.trailingChapterMessages,
+    );
+    const messagesWithActiveNotes = this.excludeExpiredNotes(bufferedMessages);
 
-  public GetMessages(): LLMMessage[] {
-    const lastChapter = this.getLastChapter();
-    let messages: MessageState[];
-    if (!lastChapter) {
-      messages = this.getVisibleMessages();
-    } else {
-      const messagesSinceChapter = this.getMessagesSinceChapter(lastChapter);
-      if (!this.shouldIncludePreviousChapterBuffer(messagesSinceChapter)) {
-        messages =
-          this.getVisibleMessagesWithBufferBeforeLastChapter(lastChapter);
-      } else {
-        messages = this.getVisibleMessages();
-      }
-    }
+    const messagesWithRetainedReasoning = filterReasoningMessagesByRetention(
+      messagesWithActiveNotes,
+      resolvedPolicy.reasoningRetentionMessages,
+    );
+    const selectedMessages = filterPlans(
+      messagesWithRetainedReasoning,
+      resolvedPolicy.planSelection,
+    );
 
-    return this.excludeExpiredReasoning(this.excludeExpiredNotes(messages));
+    return {
+      messages: selectedMessages,
+      trace: this.createProjectionTrace({
+        visibleMessages,
+        bufferedMessages,
+        messagesWithActiveNotes,
+        messagesWithRetainedReasoning,
+        selectedMessages,
+      }),
+    };
   }
 
   /**
@@ -160,13 +203,16 @@ export class LLMChatProjection {
    * Used during plan regeneration so the plan's own content isn't in the context
    * (it's provided separately in the prompt instead).
    */
-  public GetMessagesExcludingPlan(planDefinitionId: string): LLMMessage[] {
-    return this.GetMessages().filter((m) => {
-      const state = this.getMessage(m.id ?? "");
-      return !(
-        state?.type === "plan" &&
-        state.data?.planDefinitionId === planDefinitionId
-      );
+  public GetMessagesExcludingPlan(
+    planDefinitionId: string,
+    policy: LLMContextProjectionPolicy = {},
+  ): LLMMessage[] {
+    return this.GetMessages({
+      ...policy,
+      planSelection: {
+        mode: "exclude-definition",
+        planDefinitionId,
+      },
     });
   }
 
@@ -174,10 +220,12 @@ export class LLMChatProjection {
    * Returns LLM context messages excluding all plan messages.
    * Used when a plan has hideOtherPlans enabled to prevent model confusion.
    */
-  public GetMessagesExcludingAllPlans(): LLMMessage[] {
-    return this.GetMessages().filter((m) => {
-      const state = this.getMessage(m.id ?? "");
-      return state?.type !== "plan";
+  public GetMessagesExcludingAllPlans(
+    policy: LLMContextProjectionPolicy = {},
+  ): LLMMessage[] {
+    return this.GetMessages({
+      ...policy,
+      planSelection: { mode: "exclude-all" },
     });
   }
 
@@ -192,7 +240,7 @@ export class LLMChatProjection {
   processStoryCreated(event: StoryCreatedEvent) {
     const storyContent = this.formatStoryContent(event.content);
     this.messages.unshift(
-      this.createMessageState(event.storyId, "message", "system", storyContent),
+      this.createMessageState(event.storyId, "story", "system", storyContent),
     );
   }
 
@@ -212,8 +260,6 @@ export class LLMChatProjection {
         event.content,
       ),
     );
-
-    this.updateLastChapterFormat();
   }
 
   processReasoningCreated(event: ReasoningCreatedEvent) {
@@ -225,8 +271,6 @@ export class LLMChatProjection {
         this.formatReasoningContent(event.content),
       ),
     );
-
-    this.updateLastChapterFormat();
   }
 
   processMessageEdited(event: MessageEditedEvent) {
@@ -249,11 +293,7 @@ export class LLMChatProjection {
   processChapterCreated(event: ChapterCreatedEvent) {
     this.hideMessages(event.chapterId, event.coveredMessageIds);
 
-    const previousLastChapter = this.getLastChapter();
-    if (previousLastChapter)
-      this.updateChapterToSimpleFormat(previousLastChapter.id);
-
-    const chapterContent = this.formatChapterContentFull(
+    const chapterContent = this.formatChapterContent(
       event.title,
       event.summary,
     );
@@ -290,20 +330,11 @@ export class LLMChatProjection {
     const chapter = this.getMessage(event.chapterId);
     if (!chapter || !chapter.coveredMessageIds) return;
 
-    // Update metadata
     chapter.data = {
       title: event.title,
       summary: event.summary,
     };
-
-    // Determine if this is the last chapter
-    const isLastChapter = this.getLastChapter()?.id === event.chapterId;
-
-    if (isLastChapter) {
-      this.updateChapterToFullFormat(event.chapterId);
-    } else {
-      this.updateChapterToSimpleFormat(event.chapterId);
-    }
+    chapter.content = this.formatChapterContent(event.title, event.summary);
   }
 
   processChapterDeleted(event: ChapterDeletedEvent) {
@@ -494,17 +525,9 @@ export class LLMChatProjection {
   // ---- Helpers ----
   formatStoryContent = (content: string): string => `# Story\r\n${content}`;
 
-  /** Message types that count toward note expiration */
-  private static NOTE_EXPIRATION_TYPES: ReadonlySet<string> = new Set([
-    "message",
-  ]);
-
-  /**
-   * Filters out expired notes from the message list.
-   * A note is expired when the number of qualifying messages after it
-   * meets or exceeds its expiresAfterMessages threshold.
-   */
   private excludeExpiredNotes(messages: MessageState[]): MessageState[] {
+    const regularMessagesAfter = this.countRegularMessagesAfterEachItem();
+
     return messages.filter((msg) => {
       if (msg.type !== "note") return true;
       if (
@@ -513,62 +536,30 @@ export class LLMChatProjection {
       )
         return true;
 
-      return this.countMessagesAfterNote(msg.id) < msg.data.expiresAfterMessages;
+      return (
+        (regularMessagesAfter.get(msg.id) ?? 0) <
+        msg.data.expiresAfterMessages
+      );
     });
   }
 
-  private excludeExpiredReasoning(messages: MessageState[]): MessageState[] {
-    if (this.reasoningRetentionMessages === null) return messages;
+  private countRegularMessagesAfterEachItem(): Map<string, number> {
+    const counts = new Map<string, number>();
+    let regularMessagesAfter = 0;
 
-    return messages.filter((msg, index) => {
-      if (msg.type !== "reasoning") return true;
-      if (this.reasoningRetentionMessages === 0) return false;
-
-      const regularMessagesAfter = messages
-        .slice(index + 1)
-        .filter((m) => m.type === "message").length;
-      return regularMessagesAfter < this.reasoningRetentionMessages!;
-    });
-  }
-
-  private countMessagesAfterNote(noteId: string): number {
-    const noteIndex = this.messages.findIndex((m) => m.id === noteId);
-    if (noteIndex === -1) return 0;
-
-    let count = 0;
-    for (let i = noteIndex + 1; i < this.messages.length; i++) {
-      const message = this.messages[i];
-      if (
-        !message.deleted &&
-        LLMChatProjection.NOTE_EXPIRATION_TYPES.has(message.type)
-      ) {
-        count++;
+    for (let index = this.messages.length - 1; index >= 0; index--) {
+      const message = this.messages[index];
+      counts.set(message.id, regularMessagesAfter);
+      if (!message.deleted && message.type === "message") {
+        regularMessagesAfter++;
       }
     }
-    return count;
+
+    return counts;
   }
-
-  getMessagesSinceChapter = (lastChapter: MessageState) =>
-    this.getVisibleMessages().filter(
-      (m) => this.getMessageIndex(m.id) > this.getMessageIndex(lastChapter.id),
-    );
-
-  getVisibleChapterMessages = (chapter: MessageState) => {
-    if (!chapter.coveredMessageIds) return [];
-    return chapter.coveredMessageIds
-      .map((id) => this.getMessage(id))
-      .filter((msg) => msg !== undefined && !msg.deleted) as MessageState[];
-  };
-
-  shouldIncludePreviousChapterBuffer = (messagesSinceChapter: MessageState[]) =>
-    this.numberOfPreviousChapterMessages === 0 ||
-    messagesSinceChapter.length >= this.numberOfPreviousChapterMessages;
 
   getMessage = (id: string): MessageState | undefined =>
     this.messages.find((m) => m.id === id);
-
-  getMessageIndex = (id: string): number =>
-    this.messages.findIndex((m) => m.id === id);
 
   getVisibleMessages = (): MessageState[] =>
     this.messages.filter(
@@ -576,123 +567,109 @@ export class LLMChatProjection {
         !m.hiddenByChapterId && !m.hiddenByBookId && !m.deleted && !m.hidden,
     );
 
-  getVisibleMessagesWithBufferBeforeLastChapter(
-    lastChapter: MessageState,
+  private addLatestChapterBuffer(
+    visibleMessages: MessageState[],
+    bufferSize: number,
   ): MessageState[] {
-    const visibleMessages = this.getVisibleMessages();
-    const bufferMessages = this.getPreviousChapterBufferMessages(lastChapter);
+    if (bufferSize === 0) return visibleMessages;
 
-    if (bufferMessages.length === 0) return visibleMessages;
-
-    const lastChapterIndex = visibleMessages.findIndex(
-      (m) => m.id === lastChapter.id,
+    const chapterIndex = findLastIndex(
+      visibleMessages,
+      (message) => message.type === "chapter",
     );
+    if (chapterIndex === -1) return visibleMessages;
 
-    if (lastChapterIndex === -1) return visibleMessages;
+    const visibleItemsAfterChapter =
+      visibleMessages.length - chapterIndex - 1;
+    if (visibleItemsAfterChapter >= bufferSize) return visibleMessages;
 
-    // Insert buffer messages just before the last chapter
+    const latestChapter = visibleMessages[chapterIndex];
+    const visibleIds = new Set(visibleMessages.map((message) => message.id));
+    const bufferMessages = (latestChapter.coveredMessageIds ?? [])
+      .map((id) => this.getMessage(id))
+      .filter(
+        (message): message is MessageState =>
+          message !== undefined &&
+          !message.deleted &&
+          message.hiddenByChapterId === latestChapter.id &&
+          this.isHideableByChapter(message) &&
+          !visibleIds.has(message.id),
+      )
+      .slice(-bufferSize);
+
     return [
-      ...visibleMessages.slice(0, lastChapterIndex),
+      ...visibleMessages.slice(0, chapterIndex),
       ...bufferMessages,
-      ...visibleMessages.slice(lastChapterIndex),
+      ...visibleMessages.slice(chapterIndex),
     ];
   }
 
-  getLastChapter(): MessageState | null {
-    for (let i = this.messages.length - 1; i >= 0; i--) {
-      const m = this.messages[i];
-      if (m.type === "chapter") return m;
-    }
-
-    return null;
-  }
-
-  getPreviousChapterBufferMessages(lastChapter: MessageState): MessageState[] {
-    if (!lastChapter.coveredMessageIds) return [];
-    if (this.numberOfPreviousChapterMessages === 0) return [];
-
-    const bufferIds = lastChapter.coveredMessageIds.slice(
-      -this.numberOfPreviousChapterMessages,
+  private createProjectionTrace(stages: {
+    visibleMessages: MessageState[];
+    bufferedMessages: MessageState[];
+    messagesWithActiveNotes: MessageState[];
+    messagesWithRetainedReasoning: MessageState[];
+    selectedMessages: MessageState[];
+  }): LLMContextProjectionTraceEntry[] {
+    const visibleIds = createIdSet(stages.visibleMessages);
+    const bufferedIds = createIdSet(stages.bufferedMessages);
+    const activeNoteIds = createIdSet(stages.messagesWithActiveNotes);
+    const retainedReasoningIds = createIdSet(
+      stages.messagesWithRetainedReasoning,
     );
+    const selectedIds = createIdSet(stages.selectedMessages);
 
-    return bufferIds
-      .map((id) => this.getMessage(id))
-      .filter(Boolean) as MessageState[];
+    return this.messages.map((message) => {
+      const included = selectedIds.has(message.id);
+      return {
+        id: message.id,
+        type: message.type,
+        included,
+        buffered: included && !visibleIds.has(message.id),
+        exclusionReason: included
+          ? undefined
+          : this.getExclusionReason(
+              message,
+              bufferedIds,
+              activeNoteIds,
+              retainedReasoningIds,
+            ),
+      };
+    });
   }
 
-  formatChapterContentSimple = (title?: string, summary?: string): string =>
+  private getExclusionReason(
+    message: MessageState,
+    bufferedIds: Set<string>,
+    activeNoteIds: Set<string>,
+    retainedReasoningIds: Set<string>,
+  ): LLMContextExclusionReason {
+    if (message.deleted) return "deleted";
+    if (message.hidden) return "hidden";
+    if (message.hiddenByBookId) return "book-compressed";
+    if (message.hiddenByChapterId && !bufferedIds.has(message.id)) {
+      return "chapter-compressed";
+    }
+    if (message.type === "note" && !activeNoteIds.has(message.id)) {
+      return "expired-note";
+    }
+    if (
+      message.type === "reasoning" &&
+      !retainedReasoningIds.has(message.id)
+    ) {
+      return "expired-reasoning";
+    }
+    return "plan-filtered";
+  }
+
+  formatChapterContent = (title?: string, summary?: string): string =>
     `[Previous Chapter Summary: ${title ?? ""}]\n${
       summary ?? ""
     }\n[End of Chapter Summary]`;
 
-  formatChapterContentFull = (title?: string, summary?: string): string => {
-    const content = `[Previous Chapter Summary: ${title ?? ""}]\n${
-      summary ?? ""
-    }\n[End of Chapter Summary]`;
-
-    return content;
-  };
-
-  getLastSixChapterMessages(coveredMessageIds: string[]): MessageState[] {
-    const validMessages = coveredMessageIds
-      .map((id) => this.getMessage(id))
-      .filter((msg): msg is MessageState => msg !== undefined && !msg.deleted);
-
-    return validMessages.slice(-6);
-  }
-
-  updateChapterToSimpleFormat(chapterId: string): void {
-    const chapter = this.getMessage(chapterId);
-    if (!chapter) return;
-
-    const { title, summary } = chapter?.data || {};
-
-    chapter.content = this.formatChapterContentSimple(title, summary);
-  }
-
-  updateChapterToFullFormat(chapterId: string): void {
-    const chapter = this.getMessage(chapterId);
-    if (!chapter) return;
-
-    const { title, summary } = chapter.data || {};
-    chapter.content = this.formatChapterContentFull(title, summary);
-  }
-
-  updateLastChapterFormat(): void {
-    const lastChapter = this.getLastChapter();
-    if (!lastChapter?.data || !lastChapter.coveredMessageIds) return;
-
-    const { title, summary } = lastChapter.data;
-    if (!title || !summary) return;
-
-    // Count visible messages after the last chapter
-    const chapterIndex = this.getMessageIndex(lastChapter.id);
-    const messagesAfterChapter = this.getVisibleMessages().filter(
-      (m) => this.getMessageIndex(m.id) > chapterIndex,
-    );
-
-    // If we have 6 or more messages after chapter, don't include covered messages
-    if (messagesAfterChapter.length >= this.numberOfPreviousChapterMessages) {
-      const chapter = this.getMessage(lastChapter.id);
-      if (chapter) {
-        chapter.content = this.formatChapterContentSimple(title, summary);
-      }
-    } else {
-      // Use full format with last 6 covered messages
-      this.updateChapterToFullFormat(lastChapter.id);
-    }
-  }
-
   createMessageState(
     id: string,
-    type:
-      | "message"
-      | "chapter"
-      | "book"
-      | "plan"
-      | "reasoning"
-      | "note"
-      | "agent-clarification",
+    type: LLMContextItemType,
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[],
@@ -712,16 +689,19 @@ export class LLMChatProjection {
 }
 
 // ---- Types ----
+export type LLMContextItemType =
+  | "story"
+  | "message"
+  | "chapter"
+  | "book"
+  | "plan"
+  | "reasoning"
+  | "note"
+  | "agent-clarification";
+
 interface MessageState {
   id: string;
-  type:
-    | "message"
-    | "chapter"
-    | "book"
-    | "plan"
-    | "reasoning"
-    | "note"
-    | "agent-clarification";
+  type: LLMContextItemType;
   role: "user" | "assistant" | "system";
   content: string;
   hiddenByChapterId: string | null;
@@ -754,3 +734,80 @@ export interface LLMMessage {
   role: "user" | "assistant" | "system";
   content: string;
 }
+
+export const filterReasoningMessagesByRetention = <T extends LLMMessage>(
+  messages: T[],
+  retention: number | null,
+): T[] => {
+  if (retention === null) return messages;
+
+  const retainedMessages: T[] = [];
+  let regularMessagesAfter = 0;
+
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index];
+    const shouldRetain =
+      message.type !== "reasoning" ||
+      (retention > 0 && regularMessagesAfter < retention);
+
+    if (shouldRetain) retainedMessages.push(message);
+    if (message.type === "message") regularMessagesAfter++;
+  }
+
+  return retainedMessages.reverse();
+};
+
+const resolveProjectionPolicy = (
+  policy: LLMContextProjectionPolicy,
+): Required<LLMContextProjectionPolicy> => ({
+  trailingChapterMessages: normalizeNonNegativeInteger(
+    policy.trailingChapterMessages,
+    DEFAULT_LLM_CONTEXT_PROJECTION_POLICY.trailingChapterMessages,
+  ),
+  reasoningRetentionMessages:
+    policy.reasoningRetentionMessages === null
+      ? null
+      : normalizeNonNegativeInteger(
+          policy.reasoningRetentionMessages,
+          DEFAULT_LLM_CONTEXT_PROJECTION_POLICY.reasoningRetentionMessages,
+        ),
+  planSelection:
+    policy.planSelection ??
+    DEFAULT_LLM_CONTEXT_PROJECTION_POLICY.planSelection,
+});
+
+const normalizeNonNegativeInteger = <T extends number | null>(
+  value: number | undefined,
+  fallback: T,
+): number | T => {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.round(value!));
+};
+
+const findLastIndex = <T>(
+  values: T[],
+  predicate: (value: T) => boolean,
+): number => {
+  for (let index = values.length - 1; index >= 0; index--) {
+    if (predicate(values[index])) return index;
+  }
+  return -1;
+};
+
+const filterPlans = <T extends MessageState>(
+  messages: T[],
+  selection: PlanContextSelection,
+): T[] => {
+  if (selection.mode === "include") return messages;
+  if (selection.mode === "exclude-all") {
+    return messages.filter((message) => message.type !== "plan");
+  }
+  return messages.filter(
+    (message) =>
+      message.type !== "plan" ||
+      message.data?.planDefinitionId !== selection.planDefinitionId,
+  );
+};
+
+const createIdSet = (messages: MessageState[]): Set<string> =>
+  new Set(messages.map((message) => message.id));

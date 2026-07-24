@@ -42,8 +42,6 @@ describe("LLMMessageContextService", () => {
 
     LLMChatProjection = {
       GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
-      SetPreviousChapterMessageBuffer: vi.fn(),
-      SetReasoningRetention: vi.fn(),
     } as unknown as Mocked<LLMChatProjection>;
 
     MemoriesService = {
@@ -234,7 +232,7 @@ describe("LLMMessageContextService", () => {
       expect(LLMChatProjection.GetMessages).toHaveBeenCalled();
     });
 
-    it("should apply system trailing chapter message setting before reading chat messages", async () => {
+    it("passes the system trailing chapter setting into projection selection", async () => {
       SystemSettingsService.Get.mockResolvedValue({
         chapterCompressionSettings: {
           trailingChapterMessages: 3,
@@ -244,9 +242,9 @@ describe("LLMMessageContextService", () => {
 
       await service.buildGenerationRequestMessages();
 
-      expect(
-        LLMChatProjection.SetPreviousChapterMessageBuffer,
-      ).toHaveBeenCalledWith(3);
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ trailingChapterMessages: 3 }),
+      );
     });
 
     it("should default trailing chapter message setting when system setting is unset", async () => {
@@ -254,9 +252,11 @@ describe("LLMMessageContextService", () => {
 
       await service.buildGenerationRequestMessages();
 
-      expect(
-        LLMChatProjection.SetPreviousChapterMessageBuffer,
-      ).toHaveBeenCalledWith(DEFAULT_TRAILING_CHAPTER_MESSAGES);
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trailingChapterMessages: DEFAULT_TRAILING_CHAPTER_MESSAGES,
+        }),
+      );
     });
 
     it("should fetch memories", async () => {
@@ -268,7 +268,7 @@ describe("LLMMessageContextService", () => {
       expect(MemoriesService.get).toHaveBeenCalled();
     });
 
-    it("should include story prompt by default", async () => {
+    it("should include the response prompt by default", async () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildGenerationRequestMessages();
@@ -278,13 +278,15 @@ describe("LLMMessageContextService", () => {
       expect(lastMessage.content).toBe("Test prompt");
     });
 
-    it("should exclude story prompt when includeStoryPrompt is false", async () => {
+    it("should exclude the response prompt when requested", async () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildGenerationRequestMessages(false);
 
-      const hasStoryPrompt = result.some((m) => m.content === "Test prompt");
-      expect(hasStoryPrompt).toBe(false);
+      const hasResponsePrompt = result.some(
+        (m) => m.content === "Test prompt",
+      );
+      expect(hasResponsePrompt).toBe(false);
     });
 
     it("should build messages in correct order", async () => {
@@ -295,7 +297,40 @@ describe("LLMMessageContextService", () => {
 
       expectMessagesContainChatMessages(result);
       expectMessagesContainMemories(result);
-      expectStoryPromptIsLast(result);
+      expectResponsePromptIsLast(result);
+    });
+
+    it("returns a source trace for durable context and appended instructions", async () => {
+      MemoriesService.get.mockResolvedValue(createMockMemories());
+      const service = new LLMMessageContextService(testChatId);
+
+      const request = await service.buildGenerationRequestWithTrace(
+        true,
+        "Keep it tense",
+      );
+
+      expect(request.trace.sections).toEqual([
+        {
+          source: "earlier-history",
+          messageCount: 0,
+          messageIds: [],
+        },
+        {
+          source: "memories",
+          messageCount: 1,
+          messageIds: [expect.any(String)],
+        },
+        { source: "character-sheets", messageCount: 0, messageIds: [] },
+        {
+          source: "recent-history",
+          messageCount: 2,
+          messageIds: ["msg-1", "msg-2"],
+        },
+      ]);
+      expect(request.trace.appendedSources).toEqual([
+        "response-prompt",
+        "guidance",
+      ]);
     });
 
     it("should append guidance message when guidance is provided", async () => {
@@ -329,7 +364,7 @@ describe("LLMMessageContextService", () => {
       expect(lastMessage.content).toBe("Test prompt");
     });
 
-    it("should place guidance message after story prompt", async () => {
+    it("should place guidance after the response prompt", async () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildGenerationRequestMessages(
@@ -400,10 +435,19 @@ describe("LLMMessageContextService", () => {
       expect(lastMessage.role).toBe("system");
       expect(lastMessage.content).toBe(DEFAULT_SYSTEM_PROMPTS.reasoningPrompt);
     });
+
+    it("loads chat settings and system prompts once", async () => {
+      const service = new LLMMessageContextService(testChatId);
+
+      await service.buildReasoningRequestMessages();
+
+      expect(ChatSettingsService.Get).toHaveBeenCalledOnce();
+      expect(SystemPromptsService.Get).toHaveBeenCalledOnce();
+    });
   });
 
   describe("reasoning retention configuration", () => {
-    it("sets reasoning retention to 0 when reasoningEnabled is false", async () => {
+    it("selects projection context with retention 0 when reasoning is disabled", async () => {
       ChatSettingsService.Get.mockResolvedValue({
         ...createDefaultChatSettings(),
         reasoningEnabled: false,
@@ -412,7 +456,9 @@ describe("LLMMessageContextService", () => {
 
       await service.buildGenerationRequestMessages(false);
 
-      expect(LLMChatProjection.SetReasoningRetention).toHaveBeenCalledWith(0);
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ reasoningRetentionMessages: 0 }),
+      );
     });
 
     it("sets reasoning retention to configured value", async () => {
@@ -424,7 +470,9 @@ describe("LLMMessageContextService", () => {
 
       await service.buildGenerationRequestMessages(false);
 
-      expect(LLMChatProjection.SetReasoningRetention).toHaveBeenCalledWith(2);
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ reasoningRetentionMessages: 2 }),
+      );
     });
 
     it("sets reasoning retention to null when expiration is disabled", async () => {
@@ -436,8 +484,8 @@ describe("LLMMessageContextService", () => {
 
       await service.buildGenerationRequestMessages(false);
 
-      expect(LLMChatProjection.SetReasoningRetention).toHaveBeenCalledWith(
-        null,
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ reasoningRetentionMessages: null }),
       );
     });
 
@@ -446,7 +494,9 @@ describe("LLMMessageContextService", () => {
 
       await service.buildGenerationRequestMessages(false);
 
-      expect(LLMChatProjection.SetReasoningRetention).toHaveBeenCalledWith(4);
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ reasoningRetentionMessages: 4 }),
+      );
     });
   });
 
@@ -491,7 +541,7 @@ describe("LLMMessageContextService", () => {
       expect(lastMessage.content).not.toContain("Please regenerate");
     });
 
-    it("should not include story prompt", async () => {
+    it("should not include the response prompt", async () => {
       const service = new LLMMessageContextService(testChatId);
 
       const result = await service.buildRegenerationRequestMessages(
@@ -500,8 +550,10 @@ describe("LLMMessageContextService", () => {
         "Feedback",
       );
 
-      const hasStoryPrompt = result.some((m) => m.content === "Test prompt");
-      expect(hasStoryPrompt).toBe(false);
+      const hasResponsePrompt = result.some(
+        (m) => m.content === "Test prompt",
+      );
+      expect(hasResponsePrompt).toBe(false);
     });
 
     it("should only include messages before the regenerated message", async () => {
@@ -773,7 +825,7 @@ describe("LLMMessageContextService", () => {
     expect(message.content).toBe(expectedContent);
   }
 
-  function expectStoryPromptIsLast(messages: LLMMessage[]): void {
+  function expectResponsePromptIsLast(messages: LLMMessage[]): void {
     const lastMessage = messages[messages.length - 1];
     expect(lastMessage.role).toBe("system");
     expect(lastMessage.content).toBe("Test prompt");

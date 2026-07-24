@@ -137,7 +137,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
   // ---- Prior Messages Display Tests ----
   describe("Prior Messages Display", () => {
     it("uses configurable prior message count", () => {
-      projection.SetPreviousChapterMessageBuffer(3);
       const messageIds = createMessagesSequence(projection, 10);
 
       createChapter(
@@ -148,7 +147,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         messageIds,
       );
 
-      const messages = projection.GetMessages();
+      const messages = projection.GetMessages({ trailingChapterMessages: 3 });
       expect(messages).toHaveLength(4);
       expect(messages.slice(0, 3).map((m) => m.id)).toEqual(
         messageIds.slice(-3),
@@ -156,7 +155,6 @@ describe("LLMChatProjection - Chapter Operations", () => {
     });
 
     it("can disable prior message buffering", () => {
-      projection.SetPreviousChapterMessageBuffer(0);
       const messageIds = createMessagesSequence(projection, 10);
 
       createChapter(
@@ -167,7 +165,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
         messageIds,
       );
 
-      const messages = projection.GetMessages();
+      const messages = projection.GetMessages({ trailingChapterMessages: 0 });
       expect(messages).toHaveLength(1);
       expect(messages[0].id).toBe("chapter-1");
     });
@@ -560,15 +558,9 @@ describe("LLMChatProjection - Chapter Operations", () => {
       deleteChapter(projection, "chapter-1");
 
       const messages = projection.GetMessages();
-      // Note: Due to getLastChapter not filtering deleted chapters,
-      // buffer messages are included, causing duplication
-      // Expected behavior would be 10, but current implementation includes buffer
-      expect(messages.length).toBeGreaterThanOrEqual(10);
+      expect(messages).toHaveLength(10);
       expect(messages.every((m) => m.role !== "system")).toBe(true);
-      // Verify all original messages are present
-      expect(
-        messages.filter((m) => m.content.startsWith("Message")).length,
-      ).toBeGreaterThanOrEqual(10);
+      expect(new Set(messages.map((message) => message.id)).size).toBe(10);
     });
 
     it("restores all covered messages", () => {
@@ -585,10 +577,8 @@ describe("LLMChatProjection - Chapter Operations", () => {
       deleteChapter(projection, "chapter-1");
 
       const messages = projection.GetMessages();
-      // Note: Due to getLastChapter not filtering deleted chapters,
-      // buffer messages are included, causing duplication
-      expect(messages.length).toBeGreaterThanOrEqual(20);
-      // Verify we can find the first and last messages
+      expect(messages).toHaveLength(20);
+      expect(new Set(messages.map((message) => message.id)).size).toBe(20);
       expect(messages.some((m) => m.content === "Message 1")).toBe(true);
       expect(messages.some((m) => m.content === "Message 20")).toBe(true);
     });

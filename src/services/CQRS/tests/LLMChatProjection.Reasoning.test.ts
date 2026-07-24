@@ -68,16 +68,16 @@ describe("LLMChatProjection - Reasoning Events", () => {
     expect(reasoningMessage.hiddenByChapterId).toBe("chapter-1");
   });
 
-  describe("SetReasoningRetention filtering", () => {
+  describe("reasoning retention policy", () => {
     it("excludes all reasoning when retention is set to 0", () => {
       projection.process(ReasoningCreatedEventUtil.Create("First reasoning"));
       projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
       projection.process(ReasoningCreatedEventUtil.Create("Second reasoning"));
       projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
 
-      projection.SetReasoningRetention(0);
-
-      const messages = projection.GetMessages();
+      const messages = projection.GetMessages({
+        reasoningRetentionMessages: 0,
+      });
       expect(messages.every((m) => m.type !== "reasoning")).toBe(true);
       expect(messages).toHaveLength(2);
     });
@@ -88,9 +88,9 @@ describe("LLMChatProjection - Reasoning Events", () => {
       projection.process(MessageCreatedEventUtil.Create("assistant", "Second"));
       projection.process(MessageCreatedEventUtil.Create("user", "Third"));
 
-      projection.SetReasoningRetention(2);
-
-      const messages = projection.GetMessages();
+      const messages = projection.GetMessages({
+        reasoningRetentionMessages: 2,
+      });
       expect(messages.every((m) => m.type !== "reasoning")).toBe(true);
     });
 
@@ -98,9 +98,9 @@ describe("LLMChatProjection - Reasoning Events", () => {
       projection.process(ReasoningCreatedEventUtil.Create("Recent reasoning"));
       projection.process(MessageCreatedEventUtil.Create("user", "First"));
 
-      projection.SetReasoningRetention(2);
-
-      const messages = projection.GetMessages();
+      const messages = projection.GetMessages({
+        reasoningRetentionMessages: 2,
+      });
       expect(messages.some((m) => m.type === "reasoning")).toBe(true);
     });
 
@@ -111,9 +111,9 @@ describe("LLMChatProjection - Reasoning Events", () => {
       projection.process(MessageCreatedEventUtil.Create("user", "Third"));
       projection.process(MessageCreatedEventUtil.Create("assistant", "Fourth"));
 
-      projection.SetReasoningRetention(null);
-
-      const messages = projection.GetMessages();
+      const messages = projection.GetMessages({
+        reasoningRetentionMessages: null,
+      });
       expect(messages.some((m) => m.type === "reasoning")).toBe(true);
     });
   });
