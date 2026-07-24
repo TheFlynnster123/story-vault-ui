@@ -1,3 +1,5 @@
+import { normalizeSheetItems } from "./CharacterDescription";
+
 export type CharacterUpdateProposalSource = "automatic" | "manual";
 
 export interface CharacterUpdateChange {
@@ -29,11 +31,43 @@ export const createCharacterUpdateProposal = (
 });
 
 export const proposalChangesSheet = (change: CharacterUpdateChange): boolean =>
-  change.proposedSheetItems !== undefined;
+  change.proposedSheetItems !== undefined &&
+  hasCharacterSheetItemChanges(
+    change.previousSheetItems,
+    change.proposedSheetItems,
+  );
 
 export const proposalChangesActivity = (
   change: CharacterUpdateChange,
 ): boolean => change.proposedDetectedActive !== undefined;
+
+export interface CharacterSheetItemDiff {
+  added: string[];
+  removed: string[];
+}
+
+export const getCharacterSheetItemDiff = (
+  previousItems: readonly string[],
+  proposedItems: readonly string[],
+): CharacterSheetItemDiff => {
+  const previous = normalizeSheetItems(previousItems);
+  const proposed = normalizeSheetItems(proposedItems);
+  const previousSet = new Set(previous);
+  const proposedSet = new Set(proposed);
+
+  return {
+    added: proposed.filter((item) => !previousSet.has(item)),
+    removed: previous.filter((item) => !proposedSet.has(item)),
+  };
+};
+
+export const hasCharacterSheetItemChanges = (
+  previousItems: readonly string[],
+  proposedItems: readonly string[],
+): boolean => {
+  const diff = getCharacterSheetItemDiff(previousItems, proposedItems);
+  return diff.added.length > 0 || diff.removed.length > 0;
+};
 
 export const selectCharacterUpdateChanges = (
   proposal: CharacterUpdateProposal,

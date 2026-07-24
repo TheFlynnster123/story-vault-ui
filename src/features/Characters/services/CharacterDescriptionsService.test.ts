@@ -24,7 +24,7 @@ describe("CharacterDescriptionsService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     blob.get.mockResolvedValue([]);
-    settings.Get.mockResolvedValue({ charactersSchemaVersion: 3 });
+    settings.Get.mockResolvedValue({ charactersSchemaVersion: 4 });
     vi.mocked(d.CharacterDescriptionsManagedBlob).mockReturnValue(
       blob as never,
     );
@@ -32,13 +32,40 @@ describe("CharacterDescriptionsService", () => {
     service = new CharacterDescriptionsService(chatId);
   });
 
-  it("reads schema-v3 characters without rewriting them", async () => {
+  it("reads schema-v4 characters without rewriting them", async () => {
     const characters = [createCharacter()];
     blob.get.mockResolvedValue(characters);
 
     await expect(service.get()).resolves.toEqual(characters);
     expect(blob.save).not.toHaveBeenCalled();
     expect(settings.update).not.toHaveBeenCalled();
+  });
+
+  it("migrates schema-v3 records with safe tracking defaults", async () => {
+    const character = createCharacter();
+    blob.get.mockResolvedValue([
+      {
+        id: character.id,
+        name: character.name,
+        appearance: character.appearance,
+        sheetItems: character.sheetItems,
+        detectedActive: character.detectedActive,
+        createdAt: character.createdAt,
+        updatedAt: character.updatedAt,
+      },
+    ]);
+    settings.Get.mockResolvedValue({ charactersSchemaVersion: 3 });
+
+    const result = await service.get();
+
+    expect(result[0]).toMatchObject({
+      isTracked: true,
+      autoAcceptChanges: false,
+    });
+    expect(blob.save).toHaveBeenCalledWith(result);
+    expect(settings.update).toHaveBeenCalledWith(
+      expect.objectContaining({ charactersSchemaVersion: 4 }),
+    );
   });
 
   it("migrates legacy appearance and bullet sheets before advancing schema", async () => {
@@ -63,6 +90,8 @@ describe("CharacterDescriptionsService", () => {
     expect(result[0]).toMatchObject({
       appearance: "Short black curls",
       sheetItems: ["Navigator", "Carries the brass key"],
+      isTracked: true,
+      autoAcceptChanges: false,
       detectedActive: true,
     });
     expect(blob.save).toHaveBeenCalledWith(result);
@@ -71,7 +100,7 @@ describe("CharacterDescriptionsService", () => {
     );
     expect(settings.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        charactersSchemaVersion: 3,
+        charactersSchemaVersion: 4,
         characterSheetsAutoSyncEnabled: false,
         characterSheetsSyncInterval: 7,
         characterSheetsMessagesSinceLastSync: 0,
@@ -182,6 +211,23 @@ describe("CharacterDescriptionsService", () => {
     expect(blob.save).not.toHaveBeenCalled();
   });
 
+  it("rejects a pending AI proposal after tracking is disabled", async () => {
+    const mara = createCharacter({ isTracked: false });
+    blob.get.mockResolvedValue([mara]);
+
+    const result = await service.applyUpdateProposal(
+      createProposal(mara, {
+        proposedSheetItems: ["Must not be applied"],
+      }),
+    );
+
+    expect(result).toEqual({
+      status: "conflict",
+      characterNames: ["Mara"],
+    });
+    expect(blob.save).not.toHaveBeenCalled();
+  });
+
   it("rejects a proposed new character when its name now exists", async () => {
     const mara = createCharacter();
     blob.get.mockResolvedValue([mara]);
@@ -215,6 +261,8 @@ const createCharacter = (
   name: "Mara",
   appearance: "Short black curls",
   sheetItems: ["Navigator"],
+  isTracked: true,
+  autoAcceptChanges: false,
   detectedActive: true,
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",

@@ -19,26 +19,34 @@ export const useUserChatProjection = (
   useEffect(() => {
     const projection = d.UserChatProjection(chatId);
     const settingsService = d.ChatSettingsService(chatId);
-    const updateState = async () => {
-      const [messages, settings] = await Promise.all([
-        projection.GetMessages(),
-        settingsService.Get(),
-      ]);
+    let isSubscribed = true;
+
+    const updateMessages = () => {
+      if (!isSubscribed) return;
+
+      const settings = settingsService.getCached();
       setMessages(
         applyReasoningDisabledState(
-          messages,
+          projection.GetMessages(),
           settings?.reasoningExpiresAfterMessages ??
             DEFAULT_REASONING_RETENTION_MESSAGES,
         ),
       );
     };
 
-    const unsubscribeProjection = projection.subscribe(updateState);
-    const unsubscribeSettings = settingsService.subscribe(updateState);
+    const refreshSettings = async () => {
+      await settingsService.Get();
+      updateMessages();
+    };
 
-    void updateState();
+    const unsubscribeProjection = projection.subscribe(updateMessages);
+    const unsubscribeSettings = settingsService.subscribe(updateMessages);
+
+    updateMessages();
+    void refreshSettings();
 
     return () => {
+      isSubscribed = false;
       unsubscribeProjection();
       unsubscribeSettings();
     };

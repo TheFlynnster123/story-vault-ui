@@ -14,10 +14,12 @@ describe("CharacterMaintenanceService", () => {
   const proposals = {
     get: vi.fn(),
     save: vi.fn(),
+    discard: vi.fn(),
   };
   const descriptions = {
     get: vi.fn(),
     savePendingChanges: vi.fn(),
+    applyUpdateProposal: vi.fn(),
   };
   const activeSelection = { select: vi.fn() };
   const sheetSync = { synchronize: vi.fn() };
@@ -34,8 +36,10 @@ describe("CharacterMaintenanceService", () => {
     settings.update.mockResolvedValue(undefined);
     proposals.get.mockResolvedValue(undefined);
     proposals.save.mockResolvedValue(undefined);
+    proposals.discard.mockResolvedValue(undefined);
     descriptions.get.mockResolvedValue([mara]);
     descriptions.savePendingChanges.mockResolvedValue(undefined);
+    descriptions.applyUpdateProposal.mockResolvedValue({ status: "applied" });
     activeSelection.select.mockResolvedValue({
       existingCharacterIds: ["mara"],
       newCharacterNames: [],
@@ -70,6 +74,7 @@ describe("CharacterMaintenanceService", () => {
     ).resolves.toEqual({
       status: "skipped",
       proposedChangeCount: 0,
+      autoAppliedChangeCount: 0,
       reason: "interval",
     });
     expect(settings.update).toHaveBeenCalledWith({
@@ -112,6 +117,7 @@ describe("CharacterMaintenanceService", () => {
     ).resolves.toEqual({
       status: "proposal-created",
       proposedChangeCount: 2,
+      autoAppliedChangeCount: 0,
     });
     expect(settings.update).toHaveBeenCalledWith({
       characterSheetsMessagesSinceLastSync: 0,
@@ -135,9 +141,7 @@ describe("CharacterMaintenanceService", () => {
         ]),
       }),
     );
-    expect(
-      (descriptions as { applyUpdateProposal?: unknown }).applyUpdateProposal,
-    ).toBeUndefined();
+    expect(descriptions.applyUpdateProposal).not.toHaveBeenCalled();
   });
 
   it("keeps a manually active character in sheet synchronization", async () => {
@@ -173,6 +177,7 @@ describe("CharacterMaintenanceService", () => {
     expect(result).toEqual({
       status: "proposal-created",
       proposedChangeCount: 1,
+      autoAppliedChangeCount: 0,
     });
     expect(proposals.save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -187,6 +192,121 @@ describe("CharacterMaintenanceService", () => {
     );
   });
 
+  it("does not generate or update an untracked character", async () => {
+    descriptions.get.mockResolvedValue([
+      createCharacter({ isTracked: false }),
+    ]);
+
+    await expect(
+      service.generateOrUpdateCharacter("mara"),
+    ).resolves.toEqual({
+      status: "skipped",
+      proposedChangeCount: 0,
+      autoAppliedChangeCount: 0,
+      reason: "tracking-disabled",
+    });
+    expect(sheetSync.synchronize).not.toHaveBeenCalled();
+  });
+
+  it("keeps untracked characters out of automatic activity and sheet changes", async () => {
+    descriptions.get.mockResolvedValue([
+      createCharacter({ isTracked: false, detectedActive: true }),
+    ]);
+    activeSelection.select.mockResolvedValue({
+      existingCharacterIds: ["mara"],
+      newCharacterNames: [],
+    });
+    sheetSync.synchronize.mockResolvedValue([]);
+
+    await expect(service.synchronizeNow()).resolves.toEqual({
+      status: "unchanged",
+      proposedChangeCount: 0,
+      autoAppliedChangeCount: 0,
+    });
+    expect(sheetSync.synchronize).toHaveBeenCalledWith([]);
+    expect(proposals.save).not.toHaveBeenCalled();
+  });
+
+  it("automatically applies an opted-in character without leaving a proposal", async () => {
+    descriptions.get.mockResolvedValue([
+      createCharacter({ autoAcceptChanges: true }),
+    ]);
+
+    await expect(
+      service.generateOrUpdateCharacter("mara"),
+    ).resolves.toEqual({
+      status: "auto-applied",
+      proposedChangeCount: 0,
+      autoAppliedChangeCount: 1,
+    });
+    expect(descriptions.applyUpdateProposal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        changes: [
+          expect.objectContaining({
+            characterId: "mara",
+            proposedSheetItems: ["Navigator", "Has the key"],
+          }),
+        ],
+      }),
+    );
+    expect(proposals.discard).toHaveBeenCalledOnce();
+  });
+
+  it("applies opted-in changes and saves the rest of a mixed batch for review", async () => {
+    const automaticMara = createCharacter({ autoAcceptChanges: true });
+    const reviewIvo = createCharacter({
+      id: "ivo",
+      name: "Ivo",
+      sheetItems: ["Scout"],
+    });
+    descriptions.get.mockResolvedValue([automaticMara, reviewIvo]);
+    activeSelection.select.mockResolvedValue({
+      existingCharacterIds: ["mara", "ivo"],
+      newCharacterNames: [],
+    });
+    sheetSync.synchronize.mockResolvedValue([
+      { characterId: "mara", sheetItems: ["Navigator", "Has the key"] },
+      { characterId: "ivo", sheetItems: ["Scout", "Keeps watch"] },
+    ]);
+
+    await expect(service.synchronizeNow()).resolves.toEqual({
+      status: "proposal-created",
+      proposedChangeCount: 1,
+      autoAppliedChangeCount: 1,
+    });
+    expect(proposals.save).toHaveBeenCalledTimes(2);
+    expect(proposals.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        changes: [
+          expect.objectContaining({
+            characterId: "ivo",
+            proposedSheetItems: ["Scout", "Keeps watch"],
+          }),
+        ],
+      }),
+    );
+  });
+
+  it("keeps the full batch for review when automatic acceptance conflicts", async () => {
+    descriptions.get.mockResolvedValue([
+      createCharacter({ autoAcceptChanges: true }),
+    ]);
+    descriptions.applyUpdateProposal.mockResolvedValue({
+      status: "conflict",
+      characterNames: ["Mara"],
+    });
+
+    await expect(
+      service.generateOrUpdateCharacter("mara"),
+    ).resolves.toEqual({
+      status: "proposal-created",
+      proposedChangeCount: 1,
+      autoAppliedChangeCount: 0,
+    });
+    expect(proposals.save).toHaveBeenCalledOnce();
+    expect(proposals.discard).not.toHaveBeenCalled();
+  });
+
   it("does not create an empty proposal when sheets are unchanged", async () => {
     sheetSync.synchronize.mockResolvedValue([
       { characterId: "mara", sheetItems: ["Navigator"] },
@@ -195,6 +315,23 @@ describe("CharacterMaintenanceService", () => {
     await expect(service.generateOrUpdateCharacter("mara")).resolves.toEqual({
       status: "unchanged",
       proposedChangeCount: 0,
+      autoAppliedChangeCount: 0,
+    });
+    expect(proposals.save).not.toHaveBeenCalled();
+  });
+
+  it("does not create a proposal when sheet items only change order", async () => {
+    sheetSync.synchronize.mockResolvedValue([
+      { characterId: "mara", sheetItems: ["Has the key", "Navigator"] },
+    ]);
+    descriptions.get.mockResolvedValue([
+      createCharacter({ sheetItems: ["Navigator", "Has the key"] }),
+    ]);
+
+    await expect(service.generateOrUpdateCharacter("mara")).resolves.toEqual({
+      status: "unchanged",
+      proposedChangeCount: 0,
+      autoAppliedChangeCount: 0,
     });
     expect(proposals.save).not.toHaveBeenCalled();
   });
@@ -206,6 +343,7 @@ describe("CharacterMaintenanceService", () => {
     await expect(service.synchronizeNow()).resolves.toEqual({
       status: "failed",
       proposedChangeCount: 0,
+      autoAppliedChangeCount: 0,
       reason: "error",
     });
     expect(errorService.log).toHaveBeenCalledWith(
@@ -223,6 +361,8 @@ const createCharacter = (
   name: "Mara",
   appearance: "",
   sheetItems: ["Navigator"],
+  isTracked: true,
+  autoAcceptChanges: false,
   detectedActive: true,
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",

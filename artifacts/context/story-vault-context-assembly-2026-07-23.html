@@ -1,0 +1,1548 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Story Vault — How text becomes model context</title>
+  <style>
+    :root {
+      --ink: #182327;
+      --muted: #617076;
+      --paper: #f5f1e8;
+      --surface: #fffdf7;
+      --line: #c9c2b4;
+      --line-strong: #918978;
+      --teal: #176b68;
+      --teal-soft: #dcecea;
+      --amber: #b86224;
+      --amber-soft: #f5e2cf;
+      --rose: #9b4258;
+      --rose-soft: #f1dde2;
+      --blue: #3e6687;
+      --blue-soft: #dee8f0;
+      --shadow: 0 16px 36px rgba(42, 51, 50, 0.09);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 4%, rgba(23, 107, 104, 0.08), transparent 28rem),
+        radial-gradient(circle at 92% 18%, rgba(184, 98, 36, 0.08), transparent 24rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    a {
+      color: var(--teal);
+    }
+
+    a:focus-visible,
+    summary:focus-visible,
+    .table-scroll:focus-visible {
+      outline: 3px solid var(--amber);
+      outline-offset: 4px;
+      border-radius: 6px;
+    }
+
+    code,
+    .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 52px 0 72px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(28px, 5vw, 58px);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      top: -78px;
+      right: -55px;
+      width: 230px;
+      height: 230px;
+      border: 42px solid var(--teal-soft);
+      border-radius: 50%;
+      opacity: 0.78;
+      pointer-events: none;
+    }
+
+    .eyebrow,
+    .section-kicker {
+      margin: 0 0 10px;
+      color: var(--teal);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      position: relative;
+      z-index: 1;
+      max-width: 780px;
+      margin-bottom: 16px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.3rem, 6vw, 5.3rem);
+      font-weight: 600;
+      letter-spacing: -0.052em;
+      line-height: 0.98;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.7rem, 3vw, 2.55rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.08;
+    }
+
+    h3 {
+      margin-bottom: 7px;
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .lede {
+      position: relative;
+      z-index: 1;
+      max-width: 790px;
+      margin-bottom: 27px;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.2rem);
+    }
+
+    .hero-summary {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .summary-chip {
+      min-height: 88px;
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .summary-chip strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--ink);
+      font-size: 0.9rem;
+    }
+
+    .summary-chip span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .section {
+      margin-top: 52px;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(240px, 0.8fr);
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+
+    .section-head p {
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .stage-number {
+      display: inline-grid;
+      width: 34px;
+      height: 34px;
+      margin-right: 7px;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      color: var(--teal);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.92rem;
+      vertical-align: 0.18em;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 10px 24px rgba(42, 51, 50, 0.055);
+    }
+
+    .projection {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(270px, 0.8fr);
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .chronology {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+    }
+
+    .chronology-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #f7f4ed;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .rail {
+      display: grid;
+      gap: 0;
+      padding: 15px;
+    }
+
+    .rail-item {
+      position: relative;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 67px;
+      padding: 11px 12px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+    }
+
+    .rail-item + .rail-item::before {
+      content: "";
+      position: absolute;
+      top: -10px;
+      left: 28px;
+      width: 2px;
+      height: 18px;
+      background: var(--line-strong);
+    }
+
+    .rail-item.is-story {
+      border-color: #91bbb7;
+      background: var(--teal-soft);
+    }
+
+    .rail-item.is-summary {
+      border-color: #d9b794;
+      background: var(--amber-soft);
+    }
+
+    .rail-item.is-buffer {
+      border-style: dashed;
+      border-color: #9eb6c9;
+      background: var(--blue-soft);
+    }
+
+    .rail-item.is-live {
+      border-color: #d4c9b8;
+      background: #faf8f2;
+    }
+
+    .rail-icon {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border: 1px solid currentColor;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 850;
+    }
+
+    .rail-copy strong,
+    .rail-copy small {
+      display: block;
+    }
+
+    .rail-copy strong {
+      font-size: 0.92rem;
+    }
+
+    .rail-copy small {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+
+    .role {
+      padding: 3px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: #fff;
+      font-size: 0.66rem;
+      font-weight: 760;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .rules {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .rule {
+      padding: 14px 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .rule p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .rule .rule-label {
+      display: inline-block;
+      margin-bottom: 6px;
+      color: var(--amber);
+      font-size: 0.67rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .split-panel {
+      padding: clamp(18px, 3vw, 28px);
+    }
+
+    .formula {
+      display: grid;
+      grid-template-columns:
+        minmax(125px, 1.35fr) 25px minmax(120px, 0.82fr) 25px
+        minmax(130px, 0.95fr) 25px minmax(140px, 1.1fr);
+      align-items: stretch;
+      margin-top: 8px;
+    }
+
+    .formula-card {
+      min-height: 174px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .formula-card.is-memory {
+      border-color: #d9b794;
+      background: var(--amber-soft);
+    }
+
+    .formula-card.is-character {
+      border-color: #91bbb7;
+      background: var(--teal-soft);
+    }
+
+    .formula-card.is-recent {
+      border-color: #9eb6c9;
+      background: var(--blue-soft);
+    }
+
+    .formula-card .index {
+      display: inline-block;
+      margin-bottom: 19px;
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.68rem;
+    }
+
+    .formula-card strong,
+    .formula-card span {
+      display: block;
+    }
+
+    .formula-card strong {
+      margin-bottom: 7px;
+      font-size: 0.94rem;
+    }
+
+    .formula-card span {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .plus {
+      display: grid;
+      place-items: center;
+      color: var(--line-strong);
+      font-size: 1.4rem;
+      font-weight: 300;
+    }
+
+    .important {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid #d1a879;
+      border-radius: 12px;
+      background: #fff9ee;
+      font-size: 0.85rem;
+    }
+
+    .important-mark {
+      color: var(--amber);
+      font-weight: 900;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .detail-card {
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .detail-card ul {
+      margin: 9px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .detail-card li + li {
+      margin-top: 5px;
+    }
+
+    .request-flow {
+      display: grid;
+      grid-template-columns: minmax(0, 0.75fr) 34px minmax(0, 1.3fr) 34px minmax(0, 1.3fr);
+      align-items: stretch;
+      padding: 18px;
+    }
+
+    .flow-card {
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .flow-card.reasoning {
+      border-color: #b9a6c2;
+      background: #f1eaf4;
+    }
+
+    .flow-card.response {
+      border-color: #91bbb7;
+      background: var(--teal-soft);
+    }
+
+    .flow-arrow {
+      display: grid;
+      place-items: center;
+      color: var(--line-strong);
+      font-size: 1.7rem;
+    }
+
+    .flow-card ol {
+      margin: 12px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .flow-card li + li {
+      margin-top: 6px;
+    }
+
+    .mini-stack {
+      display: grid;
+      gap: 5px;
+      margin-top: 12px;
+    }
+
+    .mini-row {
+      padding: 7px 9px;
+      border: 1px solid rgba(24, 35, 39, 0.18);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.64);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.7rem;
+    }
+
+    .branch-note {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .table-panel {
+      overflow: hidden;
+    }
+
+    .context-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .context-table th,
+    .context-table td {
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .context-table th {
+      color: var(--muted);
+      background: #f4f1ea;
+      font-size: 0.69rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .context-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .source-name {
+      font-weight: 780;
+      white-space: nowrap;
+    }
+
+    .source-name small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-weight: 500;
+      white-space: normal;
+    }
+
+    .yes,
+    .conditional,
+    .no {
+      display: inline-block;
+      padding: 2px 7px;
+      border: 1px solid;
+      border-radius: 999px;
+      font-size: 0.66rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .yes {
+      color: var(--teal);
+      border-color: #91bbb7;
+      background: var(--teal-soft);
+    }
+
+    .conditional {
+      color: #8b4a19;
+      border-color: #d9b794;
+      background: var(--amber-soft);
+    }
+
+    .no {
+      color: var(--rose);
+      border-color: #d3a2ae;
+      background: var(--rose-soft);
+    }
+
+    .variants {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    summary {
+      padding: 14px 15px;
+      cursor: pointer;
+      font-weight: 780;
+    }
+
+    details p {
+      margin: 0;
+      padding: 0 15px 15px;
+      color: var(--muted);
+      font-size: 0.81rem;
+    }
+
+    .finding-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .finding {
+      padding: 17px;
+      border: 1px solid #d3a2ae;
+      border-radius: 14px;
+      background: var(--rose-soft);
+    }
+
+    .finding .priority,
+    .roadmap-step .priority {
+      display: inline-block;
+      margin-bottom: 9px;
+      padding: 3px 8px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .finding .priority {
+      color: var(--rose);
+      background: rgba(255, 255, 255, 0.48);
+    }
+
+    .finding p {
+      margin-bottom: 0;
+      color: #66414b;
+      font-size: 0.82rem;
+    }
+
+    .roadmap {
+      display: grid;
+      gap: 0;
+      padding: clamp(16px, 3vw, 26px);
+    }
+
+    .roadmap-step {
+      position: relative;
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) minmax(210px, 0.7fr);
+      gap: 17px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .roadmap-step:first-child {
+      padding-top: 0;
+    }
+
+    .roadmap-step:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .roadmap-index {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 13px;
+      color: var(--teal);
+      background: #fff;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.8rem;
+      font-weight: 850;
+    }
+
+    .roadmap-step .priority {
+      margin-bottom: 7px;
+      color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .roadmap-step p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .roadmap-step ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 0.79rem;
+    }
+
+    .roadmap-step li + li {
+      margin-top: 5px;
+    }
+
+    .architecture {
+      display: grid;
+      grid-template-columns:
+        minmax(120px, 0.85fr) 28px minmax(140px, 1fr) 28px
+        minmax(160px, 1.15fr) 28px minmax(190px, 1.4fr);
+      align-items: stretch;
+      padding: 18px;
+    }
+
+    .architecture-card {
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .architecture-card.is-policy {
+      border-color: #d9b794;
+      background: var(--amber-soft);
+    }
+
+    .architecture-card.is-document {
+      border-color: #91bbb7;
+      background: var(--teal-soft);
+    }
+
+    .architecture-card strong,
+    .architecture-card span {
+      display: block;
+    }
+
+    .architecture-card strong {
+      margin-bottom: 8px;
+      font-size: 0.92rem;
+    }
+
+    .architecture-card span {
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+
+    .architecture-arrow {
+      display: grid;
+      place-items: center;
+      color: var(--line-strong);
+      font-size: 1.35rem;
+    }
+
+    .renderer-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .renderer-list span {
+      padding: 5px 7px;
+      border: 1px solid rgba(24, 35, 39, 0.16);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.58);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.66rem;
+    }
+
+    .guardrails {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .guardrail {
+      padding: 14px 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .guardrail strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.86rem;
+    }
+
+    .guardrail span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.77rem;
+    }
+
+    .footer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      margin-top: 52px;
+      padding-top: 22px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .footer code {
+      color: var(--ink);
+    }
+
+    @media (max-width: 900px) {
+      .hero-summary,
+      .section-head,
+      .projection,
+      .detail-grid,
+      .request-flow,
+      .variants,
+      .finding-grid,
+      .guardrails,
+      .footer {
+        grid-template-columns: 1fr;
+      }
+
+      .roadmap-step {
+        grid-template-columns: 52px minmax(0, 1fr);
+      }
+
+      .roadmap-step ul {
+        grid-column: 2;
+      }
+
+      .architecture {
+        grid-template-columns: 1fr;
+        gap: 7px;
+      }
+
+      .architecture-arrow {
+        height: 22px;
+        transform: rotate(90deg);
+      }
+
+      .formula {
+        grid-template-columns: 1fr;
+        gap: 7px;
+      }
+
+      .plus {
+        height: 20px;
+      }
+
+      .flow-arrow {
+        min-height: 26px;
+        transform: rotate(90deg);
+      }
+
+      .context-table {
+        min-width: 760px;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .page {
+        width: min(100% - 20px, 1180px);
+        padding-top: 16px;
+      }
+
+      .hero {
+        border-radius: 18px;
+      }
+
+      .hero::after {
+        display: none;
+      }
+
+      .rail-item {
+        grid-template-columns: 30px minmax(0, 1fr);
+      }
+
+      .role {
+        grid-column: 2;
+        justify-self: start;
+      }
+
+      .projection,
+      .request-flow,
+      .architecture {
+        padding: 10px;
+      }
+
+      .roadmap-step {
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 10px;
+      }
+
+      .roadmap-index {
+        width: 40px;
+        height: 40px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .page {
+        width: 100%;
+        padding: 0;
+      }
+
+      .hero,
+      .panel {
+        box-shadow: none;
+      }
+
+      details {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Story Vault · context assembly map · 23 July 2026</p>
+      <h1>What the model actually sees</h1>
+      <p class="lede">
+        Text reaches the model in two passes: the event history is first compressed into a
+        projected chronology, then durable context is floated near the recent conversation
+        before a request-specific instruction is appended.
+      </p>
+      <div class="hero-summary" aria-label="Three governing ideas">
+        <div class="summary-chip">
+          <strong>1 · Compress the past</strong>
+          <span>Books replace chapters; chapters replace covered chat and reasoning.</span>
+        </div>
+        <div class="summary-chip">
+          <strong>2 · Re-anchor durable facts</strong>
+          <span>Memories and tracked, active Character Sheets sit just before the last N projected items.</span>
+        </div>
+        <div class="summary-chip">
+          <strong>3 · Finish for the request</strong>
+          <span>A response prompt or reasoning prompt closes the context; optional guidance comes last.</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="section" aria-labelledby="projection-heading">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Pass one · LLMChatProjection</p>
+          <h2 id="projection-heading"><span class="stage-number">1</span>Build a compressed chronology</h2>
+        </div>
+        <p>
+          The projection processes the chat event stream, preserves chronology, and removes
+          material already represented by a summary or explicit lifecycle rule.
+        </p>
+      </div>
+
+      <div class="panel projection">
+        <div class="chronology" aria-label="Example projected order">
+          <div class="chronology-title">
+            <span>Example projected order</span>
+            <span>oldest → newest</span>
+          </div>
+          <div class="rail">
+            <div class="rail-item is-story">
+              <span class="rail-icon" aria-hidden="true">S</span>
+              <div class="rail-copy">
+                <strong><code># Story</code> document</strong>
+                <small>Inserted at the beginning of the projection.</small>
+              </div>
+              <span class="role">system</span>
+            </div>
+            <div class="rail-item is-summary">
+              <span class="rail-icon" aria-hidden="true">B</span>
+              <div class="rail-copy">
+                <strong>Book summaries</strong>
+                <small>Each sits where its first covered chapter used to be.</small>
+              </div>
+              <span class="role">system</span>
+            </div>
+            <div class="rail-item is-summary">
+              <span class="rail-icon" aria-hidden="true">C</span>
+              <div class="rail-copy">
+                <strong>Older visible chapter summaries</strong>
+                <small>Covered chapters disappear when a book summarizes them.</small>
+              </div>
+              <span class="role">system</span>
+            </div>
+            <div class="rail-item is-buffer">
+              <span class="rail-icon" aria-hidden="true">N</span>
+              <div class="rail-copy">
+                <strong>Latest chapter’s trailing buffer</strong>
+                <small>Up to N covered items replay immediately before the latest chapter.</small>
+              </div>
+              <span class="role">temporary</span>
+            </div>
+            <div class="rail-item is-summary">
+              <span class="rail-icon" aria-hidden="true">C</span>
+              <div class="rail-copy">
+                <strong>Latest chapter summary</strong>
+                <small>Remains after its covered messages are hidden.</small>
+              </div>
+              <span class="role">system</span>
+            </div>
+            <div class="rail-item is-live">
+              <span class="rail-icon" aria-hidden="true">↕</span>
+              <div class="rail-copy">
+                <strong>Newer messages · Notes · Plans · reasoning</strong>
+                <small>Kept in event order, with each item’s own visibility rules.</small>
+              </div>
+              <span class="role">mixed</span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="rules" aria-label="Compression rules">
+          <div class="rule">
+            <span class="rule-label">Book compression</span>
+            <h3>Book summary hides covered chapters</h3>
+            <p>Deleting the book reveals those chapter summaries again.</p>
+          </div>
+          <div class="rule">
+            <span class="rule-label">Chapter compression</span>
+            <h3>Chapter hides only chat + reasoning</h3>
+            <p>Notes, Plans, and User Clarifications survive even if their IDs are covered.</p>
+          </div>
+          <div class="rule">
+            <span class="rule-label">Recency bridge</span>
+            <h3>Default trailing chapter buffer: 6</h3>
+            <p>
+              It remains while fewer than 6 visible items follow the latest chapter, then drops.
+              The setting can be 0.
+            </p>
+          </div>
+          <div class="rule">
+            <span class="rule-label">Lifecycle filters</span>
+            <h3>Deleted, hidden, and expired items leave</h3>
+            <p>Notes can expire; older Plan versions are hidden; reasoning has its own retention window.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="durable-heading">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Pass two · LLMMessageContextService</p>
+          <h2 id="durable-heading"><span class="stage-number">2</span>Float durable context toward recency</h2>
+        </div>
+        <p>
+          The projected chronology is split before its last T items. Durable context is inserted
+          into that split, keeping it near the model’s attention while preserving the newest turns after it.
+        </p>
+      </div>
+
+      <div class="panel split-panel">
+        <div class="formula" aria-label="Final durable context ordering">
+          <div class="formula-card">
+            <span class="index">[ 1 … length − T ]</span>
+            <strong>Earlier projected chronology</strong>
+            <span>Story, summaries, messages, Notes, Plans, reasoning—whatever survived pass one.</span>
+          </div>
+          <div class="plus" aria-hidden="true">+</div>
+          <div class="formula-card is-memory">
+            <span class="index">system message</span>
+            <strong><code># Memories</code></strong>
+            <span>All non-empty memory content joined in stored order.</span>
+          </div>
+          <div class="plus" aria-hidden="true">+</div>
+          <div class="formula-card is-character">
+            <span class="index">system message</span>
+            <strong><code># Character Sheets</code></strong>
+            <span>Tracked, active characters with non-empty sheet bullets.</span>
+          </div>
+          <div class="plus" aria-hidden="true">+</div>
+          <div class="formula-card is-recent">
+            <span class="index">last T projected items</span>
+            <strong>Recent projected chronology</strong>
+            <span>T defaults to 5 and is configurable from 0–50 per chat.</span>
+          </div>
+        </div>
+
+        <div class="important">
+          <span class="important-mark" aria-hidden="true">!</span>
+          <div>
+            <strong>Current code order: Memories, then Character Sheets.</strong>
+            Both are inserted before the final T <em>projected items</em>, not after a special
+            “messages only” count. In a very short chat, they can even precede <code># Story</code>
+            in the final request although <code># Story</code> is first inside the projection.
+          </div>
+        </div>
+
+        <div class="detail-grid">
+          <article class="detail-card">
+            <h3>Memories are broad and durable</h3>
+            <ul>
+              <li>Every non-blank memory is included.</li>
+              <li>There is no active/inactive filter in this builder.</li>
+              <li>Content is concatenated into one system message.</li>
+            </ul>
+          </article>
+          <article class="detail-card">
+            <h3>Character Sheets are selective</h3>
+            <ul>
+              <li>Only tracked and effectively active characters are included.</li>
+              <li>Only non-empty <code>sheetItems</code> become bullets.</li>
+              <li>The appearance field does not enter text-generation context here.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="request-heading">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Request branch · TextGenerationService</p>
+          <h2 id="request-heading"><span class="stage-number">3</span>Close with reasoning or response instructions</h2>
+        </div>
+        <p>
+          A normal user turn may produce two model calls. Reasoning runs first and is saved back
+          into history; the final response request is then rebuilt so it can see that reasoning.
+        </p>
+      </div>
+
+      <div class="panel request-flow">
+        <article class="flow-card">
+          <p class="section-kicker">Trigger</p>
+          <h3>User turn is saved</h3>
+          <ol>
+            <li>The user message enters the event history.</li>
+            <li>Post-turn maintenance starts in the background.</li>
+            <li>If enabled and appropriate, reasoning runs before the response.</li>
+          </ol>
+        </article>
+        <div class="flow-arrow" aria-hidden="true">→</div>
+        <article class="flow-card reasoning">
+          <p class="section-kicker">Optional call 1</p>
+          <h3>Reasoning request</h3>
+          <div class="mini-stack" aria-label="Default consolidated reasoning sections">
+            <div class="mini-row">Chat History · earlier projection</div>
+            <div class="mini-row">Memories</div>
+            <div class="mini-row">Character Sheets</div>
+            <div class="mini-row">Recent Chat History · last T</div>
+            <div class="mini-row">Reasoning Instructions</div>
+            <div class="mini-row">optional User Guidance · separate user msg</div>
+          </div>
+          <p class="branch-note">
+            By default those first five sections are consolidated into one system message.
+            The chat response prompt is not included. The result is saved as an assistant
+            <code>[Reasoning]</code> item.
+          </p>
+        </article>
+        <div class="flow-arrow" aria-hidden="true">→</div>
+        <article class="flow-card response">
+          <p class="section-kicker">Call 2</p>
+          <h3>Response request</h3>
+          <div class="mini-stack" aria-label="Response request ordering">
+            <div class="mini-row">Earlier projection</div>
+            <div class="mini-row"># Memories</div>
+            <div class="mini-row"># Character Sheets</div>
+            <div class="mini-row">Recent projection · may include new reasoning</div>
+            <div class="mini-row">Chat response prompt · system</div>
+            <div class="mini-row">optional User Guidance · user</div>
+          </div>
+          <p class="branch-note">
+            This last system prompt is <code>chatSettings.prompt</code>. It is separate from the
+            editable <code># Story</code> document at the beginning of projected history.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="source-heading">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Source-by-source reference</p>
+          <h2 id="source-heading">What survives, where it lands, and why</h2>
+        </div>
+        <p>
+          “Chronological” below means chronological inside the projected history, before the
+          durable-context split moves Memories and Character Sheets near the end.
+        </p>
+      </div>
+
+      <div class="panel table-panel table-scroll" tabindex="0" aria-label="Scrollable context source table">
+        <table class="context-table">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Included?</th>
+              <th>Role / format</th>
+              <th>Placement &amp; lifecycle</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="source-name">Story document<small>StoryCreated / StoryEdited</small></td>
+              <td><span class="yes">Yes</span></td>
+              <td>system · <code># Story</code></td>
+              <td>First in projection; editable. Durable insertion can precede it only when the projected history is shorter than T.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Book</td>
+              <td><span class="conditional">If visible</span></td>
+              <td>system · marked summary</td>
+              <td>Inserted at the first covered chapter’s position and hides all covered chapters.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Chapter</td>
+              <td><span class="conditional">If not book-covered</span></td>
+              <td>system · marked summary</td>
+              <td>Hides covered message/reasoning items. The newest chapter may temporarily receive its trailing buffer.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Trailing chapter items</td>
+              <td><span class="conditional">Temporary</span></td>
+              <td>original roles</td>
+              <td>Last N covered IDs are inserted before the latest chapter until N visible items follow it. Default N = 6.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Chat messages</td>
+              <td><span class="conditional">Unless hidden/deleted</span></td>
+              <td>user / assistant / system</td>
+              <td>Chronological. Covered messages are replaced by their chapter summary outside the temporary buffer.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Notes</td>
+              <td><span class="conditional">Until expiry</span></td>
+              <td>system · <code>[Note]</code></td>
+              <td>Chronological and not hidden by chapters. Expiry counts later regular message events; null means permanent.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Plans</td>
+              <td><span class="conditional">Latest visible state</span></td>
+              <td>system · named markers</td>
+              <td>Chronological and not hidden by chapters. Refresh hides prior instances for that Plan definition.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Saved reasoning</td>
+              <td><span class="conditional">Retention setting</span></td>
+              <td>assistant · <code>[Reasoning]</code></td>
+              <td>Chronological; chapter-compressible. Default retention is 4 later regular messages; 0 excludes all, null keeps all.</td>
+            </tr>
+            <tr>
+              <td class="source-name">User Clarifications</td>
+              <td><span class="yes">Yes</span></td>
+              <td>system · marked Q/A</td>
+              <td>Chronological; not hidden by chapter compression.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Memories</td>
+              <td><span class="conditional">Non-empty</span></td>
+              <td>one system message</td>
+              <td>Inserted after earlier projected items and before Character Sheets.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Character Sheets</td>
+              <td><span class="conditional">Tracked + active + non-empty</span></td>
+              <td>one system message</td>
+              <td>Inserted after Memories and before the final T projected items. Sheet bullets only; appearance omitted.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Chat response prompt</td>
+              <td><span class="yes">Response only</span></td>
+              <td>system · raw prompt</td>
+              <td>Appended after all assembled context. Omitted from reasoning and response regeneration.</td>
+            </tr>
+            <tr>
+              <td class="source-name">Reasoning prompt</td>
+              <td><span class="yes">Reasoning only</span></td>
+              <td>system instruction</td>
+              <td>Last section/message of reasoning context; per-chat override wins over the system default.</td>
+            </tr>
+            <tr>
+              <td class="source-name">One-off guidance</td>
+              <td><span class="conditional">When supplied</span></td>
+              <td>user · wrapped guidance</td>
+              <td>Always appended after the request-specific prompt/context.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="variants-heading">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Related request variants</p>
+          <h2 id="variants-heading">The same ingredients are reused differently</h2>
+        </div>
+        <p>
+          These are not the normal two-call chat path, but they explain why inspecting a different
+          generation workflow may show a different final context.
+        </p>
+      </div>
+
+      <div class="variants">
+        <details>
+          <summary>Regenerate a response</summary>
+          <p>
+            Projected history is truncated before the target assistant message, then Memories and
+            Character Sheets are inserted. The chat response prompt is omitted; optional feedback
+            is appended as a user message quoting the prior response.
+          </p>
+        </details>
+        <details>
+          <summary>Draft a chapter</summary>
+          <p>
+            A captured message snapshot receives reasoning-retention filtering, Memories, and
+            Character Sheets. A user instruction combining chapter-summary and chapter-title
+            prompts is appended, requesting one JSON object.
+          </p>
+        </details>
+        <details>
+          <summary>Summarize or title a book</summary>
+          <p>
+            This is a narrower path: tracked, active Character Sheets, the supplied chapter summaries,
+            then the book summary/title prompt. Memories and ordinary chat history are not included.
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="refactor-heading">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Recommended cleanup · correctness first</p>
+          <h2 id="refactor-heading">Refactor toward one explicit context document</h2>
+        </div>
+        <p>
+          Preserve the event format and external behavior while separating event reduction,
+          selection policy, durable-context composition, and request rendering.
+        </p>
+      </div>
+
+      <div class="finding-grid" aria-label="Correctness issues to address first">
+        <article class="finding">
+          <span class="priority">Fix before extraction</span>
+          <h3>Deleted chapters can still be “latest”</h3>
+          <p>
+            <code>getLastChapter()</code> ignores the deleted flag. Existing tests acknowledge
+            that deleting a chapter can duplicate restored messages through the trailing buffer.
+          </p>
+        </article>
+        <article class="finding">
+          <span class="priority">Fix before extraction</span>
+          <h3>The trailing buffer can duplicate visible items</h3>
+          <p>
+            It rehydrates covered IDs without restricting them to chapter-hidden message/reasoning
+            types or deduplicating against the visible list. A covered Plan can therefore appear twice.
+          </p>
+        </article>
+      </div>
+
+      <div class="panel roadmap" aria-label="Prioritized refactoring roadmap">
+        <article class="roadmap-step">
+          <div class="roadmap-index" aria-hidden="true">P0</div>
+          <div>
+            <span class="priority">Correctness</span>
+            <h3>Make chapter buffering safe</h3>
+            <p>
+              Select the latest non-deleted chapter, buffer only items actually hidden by that
+              chapter, and enforce unique message IDs in the result.
+            </p>
+          </div>
+          <ul>
+            <li>Turn the acknowledged deletion behavior into a failing regression test.</li>
+            <li>Add invariants for stable order and no duplicate IDs.</li>
+            <li>Cover Plans, Notes, Clarifications, deleted items, and a book-hidden latest chapter.</li>
+          </ul>
+        </article>
+
+        <article class="roadmap-step">
+          <div class="roadmap-index" aria-hidden="true">P1</div>
+          <div>
+            <span class="priority">Clarity</span>
+            <h3>Fix vocabulary and delete dead branches</h3>
+            <p>
+              Rename private “story prompt” APIs to “response prompt”; the actual Story is the
+              <code># Story</code> event. Give Story its own item type instead of representing it
+              as a generic message.
+            </p>
+          </div>
+          <ul>
+            <li>Carry <code>includeResponsePrompt</code> consistently through private methods.</li>
+            <li>Merge identical book-summary and book-title assemblers.</li>
+            <li>Remove identical “full/simple” chapter formatting and runtime-unused helpers.</li>
+          </ul>
+        </article>
+
+        <article class="roadmap-step">
+          <div class="roadmap-index" aria-hidden="true">P2</div>
+          <div>
+            <span class="priority">Isolation</span>
+            <h3>Replace mutable setters with a pure projection policy</h3>
+            <p>
+              The cached projection currently receives request-time settings through
+              <code>SetPreviousChapterMessageBuffer</code> and <code>SetReasoningRetention</code>.
+              Pass an immutable policy to selection instead.
+            </p>
+          </div>
+          <ul>
+            <li>Use <code>selectMessages(state, policy)</code> with no projection mutation.</li>
+            <li>Normalize defaults once into a typed <code>ContextPolicy</code>.</li>
+            <li>Make the counting basis explicit: visible items, regular messages, or user turns.</li>
+          </ul>
+        </article>
+
+        <article class="roadmap-step">
+          <div class="roadmap-index" aria-hidden="true">P3</div>
+          <div>
+            <span class="priority">Consolidation</span>
+            <h3>Build one snapshot, then render each request</h3>
+            <p>
+              Load settings, prompts, Memories, and Character Sheets once per request. Compose a
+              typed context document, then render it as response, reasoning, regeneration, chapter,
+              or book messages.
+            </p>
+          </div>
+          <ul>
+            <li>Share one durable split instead of rebuilding it for consolidated reasoning.</li>
+            <li>Avoid fetching chat settings twice when resolving the reasoning prompt.</li>
+            <li>Fetch independent sources in parallel and freeze them for the request.</li>
+          </ul>
+        </article>
+
+        <article class="roadmap-step">
+          <div class="roadmap-index" aria-hidden="true">P4</div>
+          <div>
+            <span class="priority">Confidence</span>
+            <h3>Add traces, parity fixtures, and linear-time filters</h3>
+            <p>
+              Every included item should retain its source and every excluded item should have a
+              reason. Use those traces for Request Inspection and exact old-vs-new parity tests.
+            </p>
+          </div>
+          <ul>
+            <li>Golden fixtures for response, reasoning, regeneration, chapter, and book paths.</li>
+            <li>One reverse pass for note/reasoning age instead of repeated slices and scans.</li>
+            <li>Index message state by ID if stress measurements justify it.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="architecture-heading">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Target shape</p>
+          <h2 id="architecture-heading">Facts in; policy applied once; renderers out</h2>
+        </div>
+        <p>
+          The useful consolidation is a shared intermediate representation—not forcing every
+          workflow to include the same sources.
+        </p>
+      </div>
+
+      <div class="panel architecture" aria-label="Proposed context architecture">
+        <div class="architecture-card">
+          <strong>Chat events</strong>
+          <span>Persisted facts and lifecycle events. No request settings.</span>
+        </div>
+        <div class="architecture-arrow" aria-hidden="true">→</div>
+        <div class="architecture-card">
+          <strong>Context state reducer</strong>
+          <span>Typed items, ordering, coverage relationships, deletion, and visibility facts.</span>
+        </div>
+        <div class="architecture-arrow" aria-hidden="true">→</div>
+        <div class="architecture-card is-policy">
+          <strong>Pure selector + ContextPolicy</strong>
+          <span>Book/chapter compression, safe trailing buffer, expiration, and Plan exclusions.</span>
+        </div>
+        <div class="architecture-arrow" aria-hidden="true">→</div>
+        <div class="architecture-card is-document">
+          <strong>ContextDocument + renderers</strong>
+          <span>Earlier history, Memories, Character Sheets, recent history, prompts, and trace metadata.</span>
+          <div class="renderer-list" aria-label="Request renderers">
+            <span>response</span>
+            <span>reasoning</span>
+            <span>regenerate</span>
+            <span>chapter</span>
+            <span>book</span>
+            <span>inspection</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="guardrails" aria-label="Refactoring guardrails">
+        <div class="guardrail">
+          <strong>No event migration in the first pass</strong>
+          <span>Change read-side composition first; preserve persisted ChatEvent compatibility.</span>
+        </div>
+        <div class="guardrail">
+          <strong>Exact message-array parity</strong>
+          <span>Roles, order, marker text, and prompt placement stay byte-for-byte stable unless deliberately changed.</span>
+        </div>
+        <div class="guardrail">
+          <strong>Keep specialized workflows specialized</strong>
+          <span>Book generation should keep its narrow inputs; share primitives, not accidental context.</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>
+        Derived from the current working tree, principally
+        <code>LLMChatProjection.ts</code>,
+        <code>LLMMessageContextService.ts</code>, and
+        <code>TextGenerationService.ts</code>.
+      </div>
+      <div>Defaults shown: chapter buffer 6 · Character Sheet trailing split 5 · reasoning retention 4</div>
+    </footer>
+  </main>
+</body>
+</html>

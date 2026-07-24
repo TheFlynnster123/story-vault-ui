@@ -115,12 +115,13 @@ describe("SystemSettingsEditor", () => {
       expect(screen.getByLabelText("Model")).toBeInTheDocument();
     });
 
-    // Click to open the model selector modal
     screen.getByLabelText("Model").click();
 
-    // Wait for modal to appear and verify the model is present
     await waitFor(() => {
-      expect(screen.getByText("Select Model")).toBeInTheDocument();
+      expect(screen.getByText("Select model setup")).toBeInTheDocument();
+    });
+    screen.getByRole("radio", { name: "Browse models" }).click();
+    await waitFor(() => {
       expect(screen.getByText("Grok 4.20 Beta")).toBeInTheDocument();
     });
   });
@@ -135,8 +136,11 @@ describe("SystemSettingsEditor", () => {
     screen.getByLabelText("Model").click();
 
     await waitFor(() => {
-      expect(screen.getByText("Select Model")).toBeInTheDocument();
+      expect(screen.getByText("Select model setup")).toBeInTheDocument();
+    });
+    screen.getByRole("radio", { name: "Browse models" }).click();
 
+    await waitFor(() => {
       expect(screen.getByText("Claude Opus 4")).toBeInTheDocument();
       expect(screen.getByText("Claude Sonnet 4")).toBeInTheDocument();
       expect(screen.getByText("GPT-5")).toBeInTheDocument();

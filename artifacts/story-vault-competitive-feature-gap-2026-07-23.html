@@ -1,0 +1,1558 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A research-backed comparison of Story Vault with Poe and Character.AI, with a phased feature roadmap."
+    />
+    <title>Story Vault — Poe &amp; Character.AI feature gap</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #17233a;
+        --muted: #5d687b;
+        --paper: #f4f0e8;
+        --surface: #fffdf8;
+        --line: #d9d2c5;
+        --navy: #223659;
+        --teal: #147d73;
+        --teal-soft: #dff1ed;
+        --coral: #c85b46;
+        --coral-soft: #f8e7df;
+        --gold: #8b6b12;
+        --gold-soft: #f6edc9;
+        --slate-soft: #e9edf3;
+        --shadow: 0 14px 38px rgba(23, 35, 58, 0.1);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        line-height: 1.55;
+      }
+
+      a {
+        color: #075e58;
+        text-underline-offset: 0.18em;
+      }
+
+      a:hover {
+        color: var(--coral);
+      }
+
+      a:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 3px solid var(--coral);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
+      .wrap {
+        width: min(1160px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      .hero {
+        padding: 72px 0 56px;
+        background: var(--navy);
+        color: #fff;
+        border-bottom: 6px solid var(--teal);
+      }
+
+      .eyebrow,
+      .kicker {
+        margin: 0 0 10px;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow {
+        color: #9ce0d5;
+      }
+
+      h1 {
+        max-width: 900px;
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2.45rem, 6vw, 5rem);
+        line-height: 0.98;
+        letter-spacing: -0.04em;
+      }
+
+      .lede {
+        max-width: 820px;
+        margin: 26px 0 0;
+        color: #dfe8f6;
+        font-size: clamp(1.02rem, 2vw, 1.25rem);
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 30px;
+      }
+
+      .hero-meta span {
+        padding: 7px 11px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 999px;
+        color: #eef5ff;
+        font-size: 0.82rem;
+      }
+
+      main {
+        padding: 42px 0 80px;
+      }
+
+      section {
+        margin-top: 52px;
+      }
+
+      section:first-child {
+        margin-top: 0;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(1.75rem, 3vw, 2.45rem);
+        line-height: 1.1;
+        letter-spacing: -0.025em;
+      }
+
+      h3 {
+        margin: 0;
+        line-height: 1.25;
+      }
+
+      .section-intro {
+        max-width: 780px;
+        margin: 0 0 24px;
+        color: var(--muted);
+      }
+
+      .verdict {
+        display: grid;
+        grid-template-columns: 1.25fr 0.75fr;
+        gap: 18px;
+      }
+
+      .verdict-card,
+      .audit-card,
+      .strength,
+      .gap-card,
+      .phase,
+      .dependency,
+      .source-card {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .verdict-card {
+        padding: clamp(24px, 4vw, 42px);
+        border-top: 5px solid var(--teal);
+      }
+
+      .verdict-card blockquote {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(1.45rem, 3vw, 2.35rem);
+        line-height: 1.22;
+      }
+
+      .verdict-card p {
+        margin: 18px 0 0;
+        color: var(--muted);
+      }
+
+      .audit-card {
+        padding: 24px;
+        box-shadow: none;
+      }
+
+      .audit-card h3 {
+        font-size: 1rem;
+      }
+
+      .audit-card ul,
+      .phase ul,
+      .dependency ul {
+        margin: 12px 0 0;
+        padding-left: 1.15rem;
+      }
+
+      .audit-card li + li,
+      .phase li + li,
+      .dependency li + li {
+        margin-top: 7px;
+      }
+
+      .audit-card p,
+      .audit-card li {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .strength-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+
+      .strength {
+        padding: 20px;
+        box-shadow: none;
+      }
+
+      .strength-mark {
+        display: inline-grid;
+        width: 30px;
+        height: 30px;
+        margin-bottom: 14px;
+        place-items: center;
+        border-radius: 50%;
+        color: #fff;
+        background: var(--teal);
+        font-weight: 900;
+      }
+
+      .strength p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin: 18px 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--teal);
+      }
+
+      .dot.now {
+        background: var(--coral);
+      }
+
+      .dot.later {
+        background: var(--gold);
+      }
+
+      .gap-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .gap-card {
+        position: relative;
+        padding: 24px;
+        overflow: hidden;
+        box-shadow: none;
+      }
+
+      .gap-card::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: var(--teal);
+        content: "";
+      }
+
+      .gap-card.p0::before {
+        background: var(--coral);
+      }
+
+      .gap-card.p2::before {
+        background: var(--gold);
+      }
+
+      .gap-head {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+
+      .gap-title {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .rank {
+        display: grid;
+        flex: 0 0 32px;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--slate-soft);
+        font-weight: 900;
+      }
+
+      .tag {
+        flex: 0 0 auto;
+        padding: 4px 8px;
+        border-radius: 999px;
+        color: #823a2c;
+        background: var(--coral-soft);
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.06em;
+      }
+
+      .p1 .tag {
+        color: #075c54;
+        background: var(--teal-soft);
+      }
+
+      .p2 .tag {
+        color: #694f08;
+        background: var(--gold-soft);
+      }
+
+      .gap-card > p {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 0.93rem;
+      }
+
+      .evidence {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .evidence div {
+        padding: 11px 12px;
+        border-radius: 8px;
+        background: #f5f2eb;
+        font-size: 0.82rem;
+      }
+
+      .evidence strong {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--ink);
+        font-size: 0.72rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .evidence span {
+        color: var(--muted);
+      }
+
+      .matrix-shell {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      table {
+        width: 100%;
+        min-width: 830px;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+      }
+
+      th,
+      td {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: #fff;
+        background: var(--navy);
+        font-size: 0.77rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #f8f5ef;
+      }
+
+      .yes {
+        color: #09665d;
+        font-weight: 800;
+      }
+
+      .partial {
+        color: #815f08;
+        font-weight: 800;
+      }
+
+      .no {
+        color: #a44231;
+        font-weight: 800;
+      }
+
+      .roadmap {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+        counter-reset: phase;
+      }
+
+      .roadmap::before {
+        position: absolute;
+        top: 25px;
+        right: 4%;
+        left: 4%;
+        height: 2px;
+        background: var(--line);
+        content: "";
+      }
+
+      .phase {
+        position: relative;
+        padding: 56px 18px 20px;
+        box-shadow: none;
+        counter-increment: phase;
+      }
+
+      .phase::before {
+        position: absolute;
+        z-index: 1;
+        top: 9px;
+        left: 18px;
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 4px solid var(--paper);
+        border-radius: 50%;
+        color: #fff;
+        background: var(--navy);
+        content: counter(phase);
+        font-weight: 900;
+      }
+
+      .phase h3 {
+        font-size: 1rem;
+      }
+
+      .phase p,
+      .phase li {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .phase p {
+        margin: 7px 0 0;
+      }
+
+      .phase .done {
+        margin-top: 14px;
+        color: #0d665c;
+        font-weight: 750;
+      }
+
+      .dependencies {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+
+      .dependency {
+        padding: 22px;
+        box-shadow: none;
+      }
+
+      .dependency h3 {
+        font-size: 1rem;
+      }
+
+      .dependency p,
+      .dependency li {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .dependency p {
+        margin: 8px 0 0;
+      }
+
+      .decision {
+        padding: 24px;
+        border: 1px solid #d7c16d;
+        background: var(--gold-soft);
+      }
+
+      .decision strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .decision p {
+        margin: 0;
+      }
+
+      .sources {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .source-card {
+        padding: 18px;
+        box-shadow: none;
+      }
+
+      .source-card h3 {
+        font-size: 0.95rem;
+      }
+
+      .source-card p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      footer {
+        padding: 28px 0 44px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .print-note {
+        float: right;
+      }
+
+      @media (max-width: 920px) {
+        .verdict,
+        .strength-grid,
+        .dependencies {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .roadmap {
+          grid-template-columns: 1fr;
+        }
+
+        .roadmap::before {
+          top: 18px;
+          bottom: 18px;
+          left: 34px;
+          width: 2px;
+          height: auto;
+        }
+
+        .phase {
+          padding: 20px 20px 20px 72px;
+        }
+
+        .phase::before {
+          top: 18px;
+          left: 15px;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .hero {
+          padding: 48px 0 40px;
+        }
+
+        .wrap {
+          width: min(100% - 22px, 1160px);
+        }
+
+        main {
+          padding-top: 26px;
+        }
+
+        section {
+          margin-top: 40px;
+        }
+
+        .verdict,
+        .strength-grid,
+        .gap-grid,
+        .dependencies,
+        .sources {
+          grid-template-columns: 1fr;
+        }
+
+        .evidence {
+          grid-template-columns: 1fr;
+        }
+
+        .print-note {
+          display: block;
+          float: none;
+          margin-top: 6px;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .hero {
+          padding: 30px 0;
+        }
+
+        .verdict-card,
+        .audit-card,
+        .strength,
+        .gap-card,
+        .phase,
+        .dependency,
+        .source-card,
+        .matrix-shell {
+          box-shadow: none;
+        }
+
+        .gap-card,
+        .phase,
+        .dependency {
+          break-inside: avoid;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="wrap">
+        <p class="eyebrow">Competitive product audit · 23 July 2026</p>
+        <h1>What Story Vault is missing from Poe &amp; Character.AI</h1>
+        <p class="lede">
+          Story Vault already wins at deliberate, long-form continuity. The
+          opportunity is to borrow modern interaction patterns without diluting
+          that advantage into a generic chatbot marketplace.
+        </p>
+        <div class="hero-meta" aria-label="Audit scope">
+          <span>Frontend repository inspected</span>
+          <span>Official competitor sources</span>
+          <span>12 gaps ranked</span>
+          <span>Qualitative priorities—not delivery estimates</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section aria-labelledby="verdict-title">
+        <p class="kicker">Executive verdict</p>
+        <div class="verdict">
+          <article class="verdict-card">
+            <h2 id="verdict-title">Build depth before distribution</h2>
+            <blockquote>
+              The best next release is “alternate timelines + reusable cast,”
+              not “community feed.”
+            </blockquote>
+            <p>
+              Non-destructive branching, player personas, a reusable character
+              library, cast-mode roleplay, and lore ingestion all compound the
+              continuity engine Story Vault already has. Social publishing and
+              monetization only become good bets after those objects are
+              reusable, shareable, and safe.
+            </p>
+          </article>
+          <aside class="audit-card" aria-label="Audit boundary">
+            <h3>How to read “missing”</h3>
+            <ul>
+              <li>
+                It means no implementation was found in this UI repository,
+                its routes, feature docs, or dependencies.
+              </li>
+              <li>
+                Backend-only or uncommitted work may exist; those rows should
+                be validated with the product owner.
+              </li>
+              <li>
+                Competitor features are confirmed from official help, blog, or
+                creator documentation linked below.
+              </li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section aria-labelledby="strengths-title">
+        <p class="kicker">Do not rebuild what already works</p>
+        <h2 id="strengths-title">Story Vault’s current advantages</h2>
+        <p class="section-intro">
+          These capabilities were found directly in the repository and should
+          remain the foundation of the roadmap.
+        </p>
+        <div class="strength-grid">
+          <article class="strength">
+            <span class="strength-mark" aria-hidden="true">✓</span>
+            <h3>Controlled continuity</h3>
+            <p>
+              Persistent memories plus active character sheets, with proposed
+              updates reviewed before they become canon.
+            </p>
+          </article>
+          <article class="strength">
+            <span class="strength-mark" aria-hidden="true">✓</span>
+            <h3>Long-form structure</h3>
+            <p>
+              Stories, plans, notes, chapters, books, compression, and focused
+              discussion flows—not just an endless message list.
+            </p>
+          </article>
+          <article class="strength">
+            <span class="strength-mark" aria-hidden="true">✓</span>
+            <h3>Power-user AI control</h3>
+            <p>
+              Streaming output, model and reasoning overrides, advanced request
+              settings, cost tracking, and request inspection.
+            </p>
+          </article>
+          <article class="strength">
+            <span class="strength-mark" aria-hidden="true">✓</span>
+            <h3>Deep image workflow</h3>
+            <p>
+              CivitAI generation, parent/variant model inheritance, LoRAs,
+              character appearance, and regeneration with feedback.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="gaps-title">
+        <p class="kicker">Ranked gaps</p>
+        <h2 id="gaps-title">What is actually missing</h2>
+        <p class="section-intro">
+          Ordered by fit with Story Vault’s product, user value, and dependency
+          leverage—not by competitor novelty.
+        </p>
+        <div class="legend" aria-label="Priority legend">
+          <span><i class="dot now"></i>P0: next foundation</span>
+          <span><i class="dot"></i>P1: deepen the loop</span>
+          <span><i class="dot later"></i>P2: platform expansion</span>
+        </div>
+
+        <div class="gap-grid">
+          <article class="gap-card p0">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">1</span>
+                <h3>Alternate timelines &amp; saved response variants</h3>
+              </div>
+              <span class="tag">P0</span>
+            </div>
+            <p>
+              “Start a new path here” should preserve the original branch.
+              Regeneration should keep swipable variants instead of editing the
+              same assistant event in place. This is the highest-fit gap for a
+              story product.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Character.AI offers Start New Chat From Here, rewind, and
+                  many response swipes.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  Can delete all below and regenerate, but has no branch graph
+                  or retained alternatives.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p0">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">2</span>
+                <h3>Reusable player personas &amp; character library</h3>
+              </div>
+              <span class="tag">P0</span>
+            </div>
+            <p>
+              Separate “who I am in this story” from the chat prompt, and let
+              characters live across stories. Existing chat-scoped character
+              sheets are rich source material for reusable templates.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Character.AI supports detailed personas and reusable
+                  Characters with visibility controls.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  Character records are chat-scoped; no player persona,
+                  character home, greeting, or reusable template was found.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p0">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">3</span>
+                <h3>Search, pin, archive &amp; export</h3>
+              </div>
+              <span class="tag">P0</span>
+            </div>
+            <p>
+              Add full-text search across chats, chapters, memories, and
+              characters; pin or archive projects; and export/import a portable
+              story bundle. This is inexpensive leverage as vaults grow.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Character.AI has Recents search, pin/archive/rename flows and
+                  substantially expanded per-Character history.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  The chat hub sorts recent chats; no vault search, pin,
+                  archive, transcript export, or portable import UI was found.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p0">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">4</span>
+                <h3>Cast mode: multiple speaking Characters</h3>
+              </div>
+              <span class="tag">P0</span>
+            </div>
+            <p>
+              Turn the active roster into an orchestrated cast with explicit
+              speakers, avatars, turn rules, and @mentions. Today the roster
+              informs one assistant response; it does not create distinct
+              conversational agents.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Poe has multi-bot threads; Character.AI is developing group
+                  roleplay where Characters react to one another.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  Messages have user/assistant/system roles only, even when
+                  multiple character sheets are in context.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p1">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">5</span>
+                <h3>Lore files &amp; multimodal input</h3>
+              </div>
+              <span class="tag">P1</span>
+            </div>
+            <p>
+              Let users attach PDFs, documents, images, maps, and reference
+              art; extract cited lore into a searchable canon library; and let
+              vision-capable models reason over image inputs.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Poe accepts attachments, parses files and images, and gives
+                  creator bots retrieval-backed knowledge bases with citations.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  Image generation is output-oriented. No message attachment or
+                  document-ingestion path was found.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p1">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">6</span>
+                <h3>Voice, calls &amp; character voice identity</h3>
+              </div>
+              <span class="tag">P1</span>
+            </div>
+            <p>
+              Add push-to-talk first, then two-way calls with live
+              transcription, per-character voices, interruption, and a text
+              transcript saved into the same event stream.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Character.AI provides two-way calls, transcripts, and
+                  user-created public/private voices; Poe spans audio models.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  No audio capture, speech recognition, TTS, voice asset, or
+                  call UI was found.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p1">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">7</span>
+                <h3>Reusable Scenes &amp; guided interactive Stories</h3>
+              </div>
+              <span class="tag">P1</span>
+            </div>
+            <p>
+              Package world state, roles, cast, opening beat, completion goal,
+              and optional choices into a reusable Scene. Add guided,
+              multi-path Story playback only after branching exists.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Character.AI Scenes supply built-in roles and momentum;
+                  Stories provide a visual, structured, multi-path format.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  New chats use title, story context, prompt, and settings, but
+                  there is no reusable scenario object or guided player.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p1">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">8</span>
+                <h3>Installable mobile experience &amp; notifications</h3>
+              </div>
+              <span class="tag">P1</span>
+            </div>
+            <p>
+              Ship an installable PWA with share-target support, resumable
+              drafts, background job notifications, and a touch-first voice and
+              image flow before considering native apps.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Poe syncs across web and multiple app platforms;
+                  Character.AI operates dedicated web and mobile experiences.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  Responsive React UI exists, but no web manifest, service
+                  worker, offline shell, push, or install flow was found.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p2">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">9</span>
+                <h3>Publishing, sharing, remixing &amp; discovery</h3>
+              </div>
+              <span class="tag">P2</span>
+            </div>
+            <p>
+              Once Characters and Scenes are reusable, add private-link,
+              unlisted, and public publishing; tags; remix attribution; creator
+              profiles; search; follows; and curated discovery.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Character.AI has public/unlisted/private content, tags,
+                  ranking filters and a community feed. Poe distributes
+                  creator-made bots and apps.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  Authenticated personal vaults have no public profile,
+                  visibility model, publishing, follows, reactions, or feed.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p2">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">10</span>
+                <h3>Human group collaboration</h3>
+              </div>
+              <span class="tag">P2</span>
+            </div>
+            <p>
+              Invite co-writers or roleplayers into a shared branch with
+              presence, permissions, comments, conflict handling, and live
+              synchronization. Keep this distinct from AI cast mode.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Poe group chats let up to 200 people collaborate with many
+                  models in one synchronized context.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  No membership, invitation, collaborator role, presence, or
+                  real-time multi-user protocol was found.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p2">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">11</span>
+                <h3>Trust, safety &amp; well-being controls</h3>
+              </div>
+              <span class="tag">P2*</span>
+            </div>
+            <p>
+              Add content controls, muted terms, reporting, creator/content
+              labels, age-aware policy, blocks, rate limits, and usage reminders
+              before any public marketplace or group feature. This becomes P0
+              the moment social distribution enters scope.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Character.AI documents muted words, reporting/restrictions,
+                  age assurance, time limits, and parental insights.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  Authentication and encrypted storage exist, but no end-user
+                  moderation or well-being controls were found.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article class="gap-card p2">
+            <div class="gap-head">
+              <div class="gap-title">
+                <span class="rank">12</span>
+                <h3>Creator platform, monetization &amp; richer media</h3>
+              </div>
+              <span class="tag">P2</span>
+            </div>
+            <p>
+              Later-stage options include creator APIs, composable tools,
+              revenue sharing, video/animated avatars, stickers, and audio
+              generation. These are ecosystem bets, not prerequisites for a
+              better story vault.
+            </p>
+            <div class="evidence">
+              <div>
+                <strong>Competitor proof</strong>
+                <span>
+                  Poe supports prompt/server/script/API bots, Canvas Apps and
+                  creator pricing; Character.AI offers AvatarFX and social media
+                  formats.
+                </span>
+              </div>
+              <div>
+                <strong>Current app</strong>
+                <span>
+                  No public extension contract, creator economics, video model,
+                  animated avatar, or item/sticker system was found.
+                </span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="matrix-title">
+        <p class="kicker">At-a-glance comparison</p>
+        <h2 id="matrix-title">Competitive capability matrix</h2>
+        <p class="section-intro">
+          “Partial” means Story Vault has a related primitive, but not the
+          competitor-style product experience.
+        </p>
+        <div class="matrix-shell" tabindex="0" aria-label="Scrollable feature comparison">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Capability</th>
+                <th scope="col">Story Vault</th>
+                <th scope="col">Poe</th>
+                <th scope="col">Character.AI</th>
+                <th scope="col">Recommendation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Durable story memory</td>
+                <td class="yes">Strong</td>
+                <td class="partial">Bot knowledge / context</td>
+                <td class="yes">Pinned + auto memory</td>
+                <td>Keep approval-based canon as a differentiator</td>
+              </tr>
+              <tr>
+                <td>Streaming text + model control</td>
+                <td class="yes">Strong</td>
+                <td class="yes">Strong</td>
+                <td class="partial">Model/chat-style controls</td>
+                <td>No parity project needed</td>
+              </tr>
+              <tr>
+                <td>Response variants / branching</td>
+                <td class="partial">Destructive regeneration</td>
+                <td class="partial">Threads and multi-bot comparison</td>
+                <td class="yes">Swipes + new chat from here</td>
+                <td>P0: preserve alternate timelines</td>
+              </tr>
+              <tr>
+                <td>Reusable Persona / Character</td>
+                <td class="no">Chat-scoped sheets only</td>
+                <td class="yes">Creator bots</td>
+                <td class="yes">Personas + Characters</td>
+                <td>P0: promote sheets into reusable library objects</td>
+              </tr>
+              <tr>
+                <td>Multi-character / multi-bot chat</td>
+                <td class="no">Single assistant role</td>
+                <td class="yes">@mention any bot</td>
+                <td class="yes">Group roleplay in rollout</td>
+                <td>P0: cast-mode orchestration</td>
+              </tr>
+              <tr>
+                <td>Attachments / knowledge ingestion</td>
+                <td class="no">No message attachments found</td>
+                <td class="yes">Files, vision, knowledge bases</td>
+                <td class="partial">Media-centric experiences</td>
+                <td>P1: cited lore library</td>
+              </tr>
+              <tr>
+                <td>Voice / calls</td>
+                <td class="no">Not found</td>
+                <td class="yes">Audio models</td>
+                <td class="yes">Calls + custom voices</td>
+                <td>P1: transcript-first voice</td>
+              </tr>
+              <tr>
+                <td>Image generation</td>
+                <td class="yes">Deep CivitAI controls</td>
+                <td class="yes">Many models</td>
+                <td class="yes">Imagine / chat images</td>
+                <td>Improve input/reference workflow, not basic output</td>
+              </tr>
+              <tr>
+                <td>Scenes / guided story format</td>
+                <td class="partial">Story plans and chapters</td>
+                <td class="partial">Creator apps</td>
+                <td class="yes">Scenes + Stories</td>
+                <td>P1: build after branches and reusable cast</td>
+              </tr>
+              <tr>
+                <td>Discovery / social / publishing</td>
+                <td class="no">Personal vault only</td>
+                <td class="yes">Bot/app distribution</td>
+                <td class="yes">Feed, tags, follows, reactions</td>
+                <td>P2: only with moderation foundation</td>
+              </tr>
+              <tr>
+                <td>Human group collaboration</td>
+                <td class="no">Not found</td>
+                <td class="yes">Synchronized group chat</td>
+                <td class="partial">Character group chats</td>
+                <td>P2: co-writer mode after shareable branches</td>
+              </tr>
+              <tr>
+                <td>Creator API / monetization</td>
+                <td class="no">Not found</td>
+                <td class="yes">Broad creator platform</td>
+                <td class="partial">Creator distribution</td>
+                <td>Defer until there is marketplace demand</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="roadmap-title">
+        <p class="kicker">Dependency-led sequence</p>
+        <h2 id="roadmap-title">A five-phase roadmap</h2>
+        <p class="section-intro">
+          Phases express dependency order only. No calendar or team-size
+          estimate is implied.
+        </p>
+        <div class="roadmap">
+          <article class="phase">
+            <h3>Own the timeline</h3>
+            <p>Make experimentation safe and the vault manageable.</p>
+            <ul>
+              <li>Branch graph + “new path here”</li>
+              <li>Retained response variants</li>
+              <li>Search, pin, archive, export</li>
+            </ul>
+            <p class="done">Done when every divergence is reversible.</p>
+          </article>
+          <article class="phase">
+            <h3>Own identity</h3>
+            <p>Turn continuity records into reusable creative objects.</p>
+            <ul>
+              <li>Player personas</li>
+              <li>Reusable character library</li>
+              <li>Per-story overrides and greetings</li>
+            </ul>
+            <p class="done">Done when a cast can enter a new story intact.</p>
+          </article>
+          <article class="phase">
+            <h3>Deepen immersion</h3>
+            <p>Add richer inputs and more alive conversations.</p>
+            <ul>
+              <li>Cast-mode speakers</li>
+              <li>Lore files + cited retrieval</li>
+              <li>Voice capture, playback, transcripts</li>
+            </ul>
+            <p class="done">Done when text, lore and voice share one canon.</p>
+          </article>
+          <article class="phase">
+            <h3>Package experiences</h3>
+            <p>Make stories replayable, portable and easy to enter.</p>
+            <ul>
+              <li>Reusable Scenes</li>
+              <li>Guided multi-path Stories</li>
+              <li>Installable PWA + job notifications</li>
+            </ul>
+            <p class="done">Done when a new user can play without setup.</p>
+          </article>
+          <article class="phase">
+            <h3>Open the platform</h3>
+            <p>Add distribution only after objects and policy are ready.</p>
+            <ul>
+              <li>Share, publish, remix, discovery</li>
+              <li>Safety, moderation, provenance</li>
+              <li>Co-writers, APIs, monetization, video</li>
+            </ul>
+            <p class="done">Done when public growth is governable.</p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="dependencies-title">
+        <p class="kicker">Architecture &amp; risk</p>
+        <h2 id="dependencies-title">Decisions that change the roadmap</h2>
+        <div class="dependencies">
+          <article class="dependency">
+            <h3>Branching fits the event store</h3>
+            <p>
+              The existing CQRS/event model is a useful primitive, but a branch
+              needs its own identity, parent checkpoint, projection, and
+              branch-aware settings/memories. Copying a prefix is the simple
+              first version; shared immutable ancestry is the scalable one.
+            </p>
+          </article>
+          <article class="dependency">
+            <h3>Sharing conflicts with private encryption</h3>
+            <p>
+              Publishing cannot simply expose current blobs. It needs a
+              deliberate public projection, redaction, ownership, versioning,
+              remix license, and a clear answer to whether public content
+              remains end-to-end encrypted.
+            </p>
+          </article>
+          <article class="dependency">
+            <h3>Group chat is a backend product</h3>
+            <p>
+              Multi-user collaboration requires presence, membership,
+              permissions, ordering, conflict resolution, abuse controls, and
+              real-time transport. It is materially larger than adding a group
+              icon to the React UI.
+            </p>
+          </article>
+        </div>
+        <div class="decision" style="margin-top: 14px">
+          <strong>Recommended product decision</strong>
+          <p>
+            Treat Characters, Personas, Scenes, and Branches as first-class,
+            versioned domain objects. That single choice unlocks reuse,
+            publishing, collaboration, provenance, and future creator economics
+            without forcing chat events to carry every responsibility.
+          </p>
+        </div>
+      </section>
+
+      <section aria-labelledby="sources-title">
+        <p class="kicker">Research trail</p>
+        <h2 id="sources-title">Primary competitor sources</h2>
+        <p class="section-intro">
+          Official sources reviewed for this audit. Competitor availability can
+          vary by platform, subscription, market, or rollout cohort.
+        </p>
+        <div class="sources">
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://support.character.ai/hc/en-us/articles/34428285052827-Community-Update-February-2025"
+                >Character.AI: personas, response swipes and branching</a
+              >
+            </h3>
+            <p>
+              Documents expanded Personas, Start New Chat From Here, and more
+              response swipes.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://support.character.ai/hc/en-us/articles/23957274129691-Character-Calls-Voice-FAQ"
+                >Character.AI: Calls &amp; Voice FAQ</a
+              >
+            </h3>
+            <p>
+              Confirms two-way calls, saved transcripts, and public/private
+              custom voices.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://blog.character.ai/introducing-scenes-your-new-way-to-tell-stories-on-c-ai/"
+                >Character.AI: Scenes</a
+              >
+            </h3>
+            <p>
+              Describes reusable, role-based scenarios with built-in context
+              and narrative momentum.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://blog.character.ai/introducing-stories-a-new-way-to-create-play-and-share-adventures-with-your-favorite-characters/"
+                >Character.AI: Stories</a
+              >
+            </h3>
+            <p>
+              Confirms a structured, visual, multi-path interactive-fiction
+              format.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://support.character.ai/hc/en-us/articles/40696393615387-Introducing-Community-Feed"
+                >Character.AI: Community Feed</a
+              >
+            </h3>
+            <p>
+              Covers follows, reactions, chat snippets, Character cards,
+              Streams, images and video posts.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://support.character.ai/hc/en-us/articles/36429196456475-Community-Update-April-2025"
+                >Character.AI: memory, tags, search and chat pinning</a
+              >
+            </h3>
+            <p>
+              Confirms editable auto-memory, tags, ranking filters, and pinned
+              recent chats.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://support.character.ai/hc/en-us/articles/41760067000475-Community-Update-September-2025"
+                >Character.AI: multi-Character group roleplay</a
+              >
+            </h3>
+            <p>
+              Describes Character-to-Character reactions and automatic group
+              dynamics under staged rollout.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://blog.character.ai/avatar-fx-cutting-edge-video-generation-by-character-ai/"
+                >Character.AI: AvatarFX</a
+              >
+            </h3>
+            <p>
+              Documents image-to-video generation with speech, emotion, and
+              multiple speakers.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://support.character.ai/hc/en-us/articles/42645561782555-Important-Changes-for-Teens-on-Character-ai"
+                >Character.AI: teen safety controls</a
+              >
+            </h3>
+            <p>
+              Covers age-aware experiences, time limits, content controls, and
+              parental-safety direction.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a href="https://poe.com/blog/multi-bot-chat-on-poe"
+                >Poe: multi-bot chat</a
+              >
+            </h3>
+            <p>
+              Documents @mentions and one-click comparison among models and
+              bots in the same conversation.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://poe.com/blog/introducing-group-chat-for-all-poe-users"
+                >Poe: human group chat</a
+              >
+            </h3>
+            <p>
+              Confirms shared, synchronized conversations for people and many
+              text, image, video and audio models.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a
+                href="https://creator.poe.com/docs/prompt-bots/how-to-create-a-prompt-bot"
+                >Poe: prompt bots and knowledge bases</a
+              >
+            </h3>
+            <p>
+              Covers creator bot identity, file-backed retrieval, source
+              citations, greetings, and model settings.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a href="https://creator.poe.com/docs"
+                >Poe Creator Platform</a
+              >
+            </h3>
+            <p>
+              Lists prompt, server, script and API bots, Canvas Apps,
+              distribution, and creator monetization paths.
+            </p>
+          </article>
+          <article class="source-card">
+            <h3>
+              <a href="https://poe.com/blog/introducing-poe-apps"
+                >Poe: visual creator apps</a
+              >
+            </h3>
+            <p>
+              Describes visual interfaces that can run beside chat and combine
+              multiple models with custom logic.
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        Prepared from the Story Vault UI repository and official competitor
+        documentation. No delivery dates or quantitative impact claims are
+        implied.
+        <span class="print-note">Designed to print cleanly.</span>
+      </div>
+    </footer>
+  </body>
+</html>

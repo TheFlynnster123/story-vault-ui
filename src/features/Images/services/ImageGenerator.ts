@@ -4,6 +4,7 @@ import type { ImageModel } from "./modelGeneration/ImageModel";
 import { isWorkflowImageModel } from "./modelGeneration/ImageModel";
 import {
   getCharacterAppearance,
+  isCharacterTracked,
   type CharacterDescription,
 } from "../../Characters/services/CharacterDescription";
 import { toSystemMessage } from "../../../services/Utils/MessageUtils";
@@ -141,6 +142,7 @@ export class ImageGenerator {
         characterName,
       };
     }
+    if (!isCharacterTracked(character)) return noCharacterContext();
 
     const appearance = getCharacterAppearance(character);
     if (!hasDescription(appearance)) {

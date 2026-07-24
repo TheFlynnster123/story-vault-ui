@@ -1,30 +1,54 @@
 import React, {
-  useState,
+  useCallback,
+  useEffect,
   useMemo,
   useRef,
-  useEffect,
-  useCallback,
+  useState,
 } from "react";
-import { GroupedVirtuoso } from "react-virtuoso";
-import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
+import {
+  Accordion,
+  ActionIcon,
+  Badge,
+  Box,
+  Button,
+  Checkbox,
+  Divider,
+  Group,
+  Loader,
+  Modal,
+  NumberInput,
+  Paper,
+  ScrollArea,
+  SegmentedControl,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import {
+  RiArrowLeftLine,
+  RiArrowRightSLine,
+  RiDeleteBinLine,
+  RiRobot2Line,
+} from "react-icons/ri";
 import { d } from "../../../services/Dependencies";
+import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
 import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
 import {
   OPENROUTER_REASONING_EFFORTS,
   type OpenRouterReasoningEffort,
 } from "../../OpenRouter/services/OpenRouterReasoning";
-import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 import {
   DEFAULT_RETRY_SETTINGS,
   filterSettingsForModel,
   hasOpenRouterRequestSettings,
   supportsParameter,
+  type OpenRouterRequestSettings,
 } from "../../OpenRouter/services/OpenRouterRequestSettings";
 import type { ModelPreset } from "../services/ModelPresetsService";
 
-// --- Constants ---
-
-const REDDIT_RECOMMENDED_IDS = new Set([
+const RECOMMENDED_MODEL_IDS = new Set([
   "deepseek/deepseek-v3.2-speciale",
   "deepseek/deepseek-v3.2",
   "anthropic/claude-sonnet-4.6",
@@ -35,18 +59,6 @@ const REDDIT_RECOMMENDED_IDS = new Set([
   "qwen/qwen3.5-122b-a10b",
   "writer/palmyra-x5",
 ]);
-
-/** Reasonable defaults for color-coding model stats */
-const CONTEXT_THRESHOLDS = {
-  large: 128_000,
-  medium: 32_000,
-} as const;
-
-const PRICE_THRESHOLDS = {
-  /** per million tokens */
-  cheap: 1,
-  moderate: 5,
-} as const;
 
 const REASONING_LABELS: Record<OpenRouterReasoningEffort, string> = {
   none: "None",
@@ -67,6 +79,7 @@ const NUMBER_PARAMETERS = [
     max: 2,
     step: 0.1,
     placeholder: "1.0",
+    basic: true,
   },
   {
     key: "top_p",
@@ -137,759 +150,36 @@ const NUMBER_PARAMETERS = [
   },
 ] as const;
 
-// --- Helpers ---
+type PickerView = "setups" | "browse";
+type PickerScreen = "list" | "detail";
 
-const formatContextLength = (ctx?: number): string => {
-  if (!ctx) return "—";
-  if (ctx >= 1_000_000) return `${(ctx / 1_000_000).toFixed(1)}M`;
-  if (ctx >= 1_000) return `${Math.round(ctx / 1_000)}K`;
-  return String(ctx);
-};
-
-const formatPrice = (priceStr?: string): string => {
-  if (!priceStr) return "—";
-  const perToken = parseFloat(priceStr);
-  if (isNaN(perToken)) return "—";
-  const perMillion = perToken * 1_000_000;
-  if (perMillion < 0.01) return "Free";
-  if (perMillion < 1) return `$${perMillion.toFixed(2)}`;
-  return `$${perMillion.toFixed(2)}`;
-};
-
-const getContextColor = (ctx?: number): string => {
-  if (!ctx) return "#888";
-  if (ctx >= CONTEXT_THRESHOLDS.large) return "#4ade80"; // green — large
-  if (ctx >= CONTEXT_THRESHOLDS.medium) return "#facc15"; // yellow — medium
-  return "#f87171"; // red — small
-};
-
-const getPriceColor = (priceStr?: string): string => {
-  if (!priceStr) return "#888";
-  const perMillion = parseFloat(priceStr) * 1_000_000;
-  if (isNaN(perMillion)) return "#888";
-  if (perMillion < PRICE_THRESHOLDS.cheap) return "#4ade80"; // green — cheap
-  if (perMillion < PRICE_THRESHOLDS.moderate) return "#facc15"; // yellow — moderate
-  return "#f87171"; // red — expensive
-};
-
-const matchesSearch = (model: OpenRouterModel, query: string): boolean => {
-  const lower = query.toLowerCase();
-  return (
-    model.name.toLowerCase().includes(lower) ||
-    model.id.toLowerCase().includes(lower) ||
-    (model.description?.toLowerCase().includes(lower) ?? false)
-  );
-};
-
-// --- Data grouping (mirrors original ModelSelect logic) ---
-
-interface ModelGroup {
-  label: string;
-  models: OpenRouterModel[];
+interface ModelDraft {
+  modelId: string;
+  name: string;
+  requestSettings?: OpenRouterRequestSettings;
 }
 
-const deduplicateModels = (models: OpenRouterModel[]): OpenRouterModel[] => {
-  const seen = new Set<string>();
-  return models.filter((m) => {
-    if (!m.id || !m.name || seen.has(m.id)) return false;
-    seen.add(m.id);
-    return true;
-  });
-};
-
-const buildGroups = (
-  models: OpenRouterModel[],
-  recentIds: string[],
-): ModelGroup[] => {
-  const unique = deduplicateModels(models);
-  const byId = new Map(unique.map((m) => [m.id, m]));
-
-  const recentModels = recentIds
-    .map((id) => byId.get(id))
-    .filter((m): m is OpenRouterModel => m !== undefined);
-
-  const recentIdSet = new Set(recentIds);
-  const recommendedModels = [...REDDIT_RECOMMENDED_IDS]
-    .filter((id) => !recentIdSet.has(id))
-    .map((id) => byId.get(id))
-    .filter((m): m is OpenRouterModel => m !== undefined);
-
-  const promotedIds = new Set([...recentIds, ...REDDIT_RECOMMENDED_IDS]);
-  const allModels = unique
-    .filter((m) => !promotedIds.has(m.id))
-    .sort((a, b) => b.name.localeCompare(a.name));
-
-  const groups: ModelGroup[] = [];
-  if (recentModels.length > 0)
-    groups.push({ label: "🕐 Recent", models: recentModels });
-  if (recommendedModels.length > 0)
-    groups.push({ label: "⭐ Reddit Recommended", models: recommendedModels });
-  if (allModels.length > 0)
-    groups.push({ label: "All Models", models: allModels });
-
-  return groups;
-};
-
-// --- Sub-components ---
-
-const ModelStatBadge: React.FC<{
-  label: string;
-  value: string;
-  color: string;
-}> = ({ label, value, color }) => (
-  <span
-    style={{
-      fontSize: "11px",
-      color,
-      backgroundColor: `${color}18`,
-      padding: "1px 6px",
-      borderRadius: "3px",
-      whiteSpace: "nowrap",
-    }}
-  >
-    {label}: {value}
-  </span>
-);
-
-const AdvancedNumberInput: React.FC<{
-  label: string;
-  description: string;
-  value: number | undefined;
-  min?: number;
-  max?: number;
-  step?: number;
-  placeholder?: string;
-  onChange: (value: number | undefined) => void;
-}> = ({
-  label,
-  description,
-  value,
-  min,
-  max,
-  step,
-  placeholder,
-  onChange,
-}) => (
-  <label
-    style={{
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) 96px",
-      alignItems: "start",
-      gap: "8px",
-      fontSize: "12px",
-      color: "#ddd",
-    }}
-  >
-    <span>
-      <span style={{ display: "block", fontWeight: 500 }}>{label}</span>
-      <span
-        style={{
-          display: "block",
-          color: "#92929d",
-          fontSize: "11px",
-          lineHeight: 1.35,
-          marginTop: "2px",
-        }}
-      >
-        {description}
-      </span>
-    </span>
-    <input
-      aria-label={label}
-      type="number"
-      value={value ?? ""}
-      min={min}
-      max={max}
-      step={step}
-      placeholder={placeholder}
-      onClick={(e) => e.stopPropagation()}
-      onChange={(e) => {
-        const raw = e.currentTarget.value;
-        onChange(raw === "" ? undefined : Number(raw));
-      }}
-      style={{
-        width: "96px",
-        padding: "4px 6px",
-        backgroundColor: "rgba(0,0,0,0.28)",
-        border: "1px solid rgba(255,255,255,0.16)",
-        borderRadius: "4px",
-        color: "#fff",
-        fontSize: "12px",
-        boxSizing: "border-box",
-      }}
-    />
-  </label>
-);
-
-const AdvancedSettingsPanel: React.FC<{
-  model: OpenRouterModel;
-  settings: OpenRouterRequestSettings | undefined;
-  onChange: (settings: OpenRouterRequestSettings | undefined) => void;
-  onSavePreset: (name: string) => void;
-}> = ({ model, settings, onChange, onSavePreset }) => {
-  const [presetName, setPresetName] = useState("");
-
-  const updateSetting = (
-    key: keyof OpenRouterRequestSettings,
-    value: OpenRouterRequestSettings[keyof OpenRouterRequestSettings],
-  ) => {
-    const next: OpenRouterRequestSettings = { ...(settings ?? {}) };
-    if (value === undefined) {
-      delete next[key];
-    } else {
-      (next as Record<string, unknown>)[key] = value;
-    }
-    onChange(Object.keys(next).length > 0 ? next : undefined);
-  };
-
-  const supportedNumberParameters = NUMBER_PARAMETERS.filter(({ key }) =>
-    supportsParameter(model, key),
+const useMobileViewport = (): boolean => {
+  const query = "(max-width: 48em)";
+  const [isMobile, setIsMobile] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      (window.matchMedia(query)?.matches ?? false),
   );
 
-  return (
-    <div
-      onClick={(e) => e.stopPropagation()}
-      style={{
-        marginTop: "10px",
-        padding: "10px",
-        borderRadius: "6px",
-        border: "1px solid rgba(147, 197, 253, 0.2)",
-        backgroundColor: "rgba(8, 12, 20, 0.52)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "8px",
-          marginBottom: "8px",
-        }}
-      >
-        <span style={{ fontSize: "12px", fontWeight: 600, color: "#bfdbfe" }}>
-          Advanced
-        </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onChange(undefined);
-          }}
-          style={{
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(255,255,255,0.05)",
-            borderRadius: "4px",
-            color: "#ccc",
-            cursor: "pointer",
-            fontSize: "11px",
-            padding: "2px 6px",
-          }}
-        >
-          Reset
-        </button>
-      </div>
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mediaQuery = window.matchMedia(query);
+    if (!mediaQuery) return;
+    const updateViewport = () => setIsMobile(mediaQuery.matches);
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
 
-      <div style={{ display: "grid", gap: "8px" }}>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            fontSize: "12px",
-            color: "#ddd",
-          }}
-        >
-          <input
-            aria-label="Enable retries"
-            type="checkbox"
-            checked={settings?.retry !== undefined}
-            onChange={(event) =>
-              updateSetting(
-                "retry",
-                event.currentTarget.checked
-                  ? { ...DEFAULT_RETRY_SETTINGS }
-                  : undefined,
-              )
-            }
-          />
-          <span>
-            <span style={{ display: "block", fontWeight: 500 }}>
-              Retry failed requests
-            </span>
-            <span
-              style={{
-                display: "block",
-                color: "#92929d",
-                fontSize: "11px",
-                lineHeight: 1.35,
-                marginTop: "2px",
-              }}
-            >
-              Automatically retry transient network, timeout, rate-limit, and
-              provider errors.
-            </span>
-          </span>
-        </label>
-
-        {settings?.retry && (
-          <>
-            <AdvancedNumberInput
-              label="Retry delay in seconds"
-              description="Wait this long before each retry. Use 0 to retry immediately."
-              value={settings.retry.retryDelaySeconds}
-              min={0}
-              step={1}
-              onChange={(value) =>
-                updateSetting("retry", {
-                  ...settings.retry!,
-                  retryDelaySeconds:
-                    value === undefined
-                      ? undefined
-                      : Math.max(0, Math.round(value)),
-                })
-              }
-            />
-            <AdvancedNumberInput
-              label="Number of Retries"
-              description="How many additional attempts to make after the first request fails."
-              value={settings.retry.numberOfRetries}
-              min={1}
-              step={1}
-              onChange={(value) =>
-                updateSetting("retry", {
-                  ...settings.retry!,
-                  numberOfRetries:
-                    value === undefined
-                      ? undefined
-                      : Math.max(1, Math.round(value)),
-                })
-              }
-            />
-          </>
-        )}
-
-        {supportsParameter(model, "reasoning") && (
-          <label
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) 120px",
-              alignItems: "start",
-              gap: "8px",
-              fontSize: "12px",
-              color: "#ddd",
-            }}
-          >
-            <span>
-              <span style={{ display: "block", fontWeight: 500 }}>
-                Reasoning
-              </span>
-              <span
-                style={{
-                  display: "block",
-                  color: "#92929d",
-                  fontSize: "11px",
-                  lineHeight: 1.35,
-                  marginTop: "2px",
-                }}
-              >
-                Controls how much internal analysis the model uses. Medium is a
-                balanced default; high or x-high may improve difficult work but
-                costs more time and tokens.
-              </span>
-            </span>
-            <select
-              aria-label={`Reasoning level for ${model.name}`}
-              value={settings?.reasoning?.effort ?? ""}
-              onChange={(e) => {
-                const effort = e.currentTarget.value as
-                  | OpenRouterReasoningEffort
-                  | "";
-                updateSetting(
-                  "reasoning",
-                  effort ? { effort } : undefined,
-                );
-              }}
-              style={{
-                width: "120px",
-                padding: "4px 6px",
-                backgroundColor: "rgba(0,0,0,0.28)",
-                border: "1px solid rgba(255,255,255,0.16)",
-                borderRadius: "4px",
-                color: "#fff",
-                fontSize: "12px",
-              }}
-            >
-              <option value="">Auto</option>
-              {OPENROUTER_REASONING_EFFORTS.map((effort) => (
-                <option key={effort} value={effort}>
-                  {REASONING_LABELS[effort]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {supportedNumberParameters.map((parameter) => (
-          <AdvancedNumberInput
-            key={parameter.key}
-            label={parameter.label}
-            description={parameter.description}
-            value={settings?.[parameter.key]}
-            min={parameter.min}
-            max={"max" in parameter ? parameter.max : undefined}
-            step={parameter.step}
-            placeholder={parameter.placeholder}
-            onChange={(value) => updateSetting(parameter.key, value)}
-          />
-        ))}
-      </div>
-
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!presetName.trim()) return;
-          onSavePreset(presetName);
-          setPresetName("");
-        }}
-        onClick={(event) => event.stopPropagation()}
-        style={{
-          display: "flex",
-          gap: "6px",
-          marginTop: "12px",
-          paddingTop: "10px",
-          borderTop: "1px solid rgba(255,255,255,0.1)",
-        }}
-      >
-        <input
-          aria-label={`Preset name for ${model.name}`}
-          value={presetName}
-          onChange={(event) => setPresetName(event.currentTarget.value)}
-          placeholder="Preset name"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            padding: "6px 8px",
-            backgroundColor: "rgba(0,0,0,0.28)",
-            border: "1px solid rgba(255,255,255,0.16)",
-            borderRadius: "4px",
-            color: "#fff",
-            fontSize: "12px",
-          }}
-        />
-        <button
-          type="submit"
-          disabled={!presetName.trim()}
-          style={{
-            border: "1px solid rgba(147,197,253,0.3)",
-            background: "rgba(147,197,253,0.14)",
-            borderRadius: "4px",
-            color: "#bfdbfe",
-            cursor: presetName.trim() ? "pointer" : "default",
-            fontSize: "11px",
-            padding: "4px 9px",
-            opacity: presetName.trim() ? 1 : 0.55,
-          }}
-        >
-          Save preset
-        </button>
-      </form>
-    </div>
-  );
+  return isMobile;
 };
-
-const ModelItem: React.FC<{
-  model: OpenRouterModel;
-  isSelected: boolean;
-  allowAdvancedSettings: boolean;
-  requestSettings?: OpenRouterRequestSettings;
-  isAdvancedOpen: boolean;
-  onAdvancedChange: (isOpen: boolean) => void;
-  onRequestSettingsChange: (
-    modelId: string,
-    settings: OpenRouterRequestSettings | undefined,
-  ) => void;
-  onSavePreset: (model: OpenRouterModel, name: string) => void;
-  onClick: () => void;
-}> = ({
-  model,
-  isSelected,
-  allowAdvancedSettings,
-  requestSettings,
-  isAdvancedOpen,
-  onAdvancedChange,
-  onRequestSettingsChange,
-  onSavePreset,
-  onClick,
-}) => (
-  <div
-    role="button"
-    tabIndex={0}
-    onClick={onClick}
-    onKeyDown={(e) => {
-      if (
-        e.target === e.currentTarget &&
-        (e.key === "Enter" || e.key === " ")
-      ) {
-        e.preventDefault();
-        onClick();
-      }
-    }}
-    style={{
-      display: "block",
-      width: "100%",
-      padding: "10px 14px",
-      backgroundColor: isSelected ? "rgba(100, 100, 255, 0.15)" : "transparent",
-      border: isSelected
-        ? "1px solid rgba(100, 100, 255, 0.4)"
-        : "1px solid transparent",
-      borderRadius: "6px",
-      boxSizing: "border-box",
-      cursor: "pointer",
-      textAlign: "left",
-      color: "#fff",
-      transition: "background-color 0.15s",
-    }}
-    onMouseEnter={(e) => {
-      if (!isSelected)
-        e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
-    }}
-    onMouseLeave={(e) => {
-      if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
-    }}
-  >
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "8px",
-        minHeight: "24px",
-        fontWeight: 500,
-        fontSize: "14px",
-        marginBottom: "2px",
-      }}
-    >
-      <span style={{ minWidth: 0 }}>{model.name}</span>
-      {allowAdvancedSettings && (
-        <button
-          type="button"
-          aria-label={`Advanced settings for ${model.name}`}
-          aria-expanded={isAdvancedOpen}
-          title={isAdvancedOpen ? "Collapse settings" : "Expand settings"}
-          onClick={(event) => {
-            event.stopPropagation();
-            onAdvancedChange(!isAdvancedOpen);
-          }}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: "0 0 24px",
-            width: "24px",
-            height: "24px",
-            padding: 0,
-            border: "1px solid rgba(147, 197, 253, 0.25)",
-            borderRadius: "4px",
-            backgroundColor: isAdvancedOpen
-              ? "rgba(147, 197, 253, 0.18)"
-              : "rgba(255,255,255,0.05)",
-            color: "#bfdbfe",
-            cursor: "pointer",
-            fontSize: "13px",
-            lineHeight: 1,
-            transform: isAdvancedOpen ? "rotate(180deg)" : "none",
-            transition: "transform 0.15s, background-color 0.15s",
-          }}
-        >
-          ▼
-        </button>
-      )}
-    </div>
-    <div
-      style={{
-        fontSize: "11px",
-        color: "#999",
-        marginBottom: "6px",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {model.id}
-    </div>
-    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-      <ModelStatBadge
-        label="Context"
-        value={formatContextLength(model.context_length)}
-        color={getContextColor(model.context_length)}
-      />
-      <ModelStatBadge
-        label="Prompt"
-        value={formatPrice(model.pricing?.prompt)}
-        color={getPriceColor(model.pricing?.prompt)}
-      />
-      <ModelStatBadge
-        label="Completion"
-        value={formatPrice(model.pricing?.completion)}
-        color={getPriceColor(model.pricing?.completion)}
-      />
-      {requestSettings?.reasoning?.effort && (
-        <ModelStatBadge
-          label="Reasoning"
-          value={requestSettings.reasoning.effort}
-          color="#93c5fd"
-        />
-      )}
-      {hasOpenRouterRequestSettings(requestSettings) && (
-        <ModelStatBadge label="Advanced" value="Set" color="#bfdbfe" />
-      )}
-    </div>
-    {allowAdvancedSettings && isAdvancedOpen && (
-      <AdvancedSettingsPanel
-        model={model}
-        settings={requestSettings}
-        onChange={(settings) => onRequestSettingsChange(model.id, settings)}
-        onSavePreset={(name) => onSavePreset(model, name)}
-      />
-    )}
-  </div>
-);
-
-const GroupHeader: React.FC<{ label: string }> = ({ label }) => (
-  <div
-    style={{
-      padding: "4px 8px",
-      backgroundColor: "rgba(24, 24, 28, 0.98)",
-    }}
-  >
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 10px",
-        fontSize: "11px",
-        fontWeight: 600,
-        color: "#ccc",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-        backgroundColor: "rgba(255, 255, 255, 0.08)",
-        borderRadius: "999px",
-        border: "1px solid rgba(255, 255, 255, 0.12)",
-      }}
-    >
-      {label}
-    </span>
-  </div>
-);
-
-const SavedPresets: React.FC<{
-  presets: ModelPreset[];
-  models: OpenRouterModel[];
-  onSelect: (preset: ModelPreset) => void;
-  onDelete: (presetId: string) => void;
-}> = ({ presets, models, onSelect, onDelete }) => {
-  if (presets.length === 0) return null;
-
-  const modelNames = new Map(models.map((model) => [model.id, model.name]));
-
-  return (
-    <div
-      style={{
-        padding: "0 20px 12px",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <div
-        style={{
-          color: "#aaa",
-          fontSize: "11px",
-          fontWeight: 600,
-          letterSpacing: "0.5px",
-          marginBottom: "7px",
-          textTransform: "uppercase",
-        }}
-      >
-        Saved presets
-      </div>
-      <div style={{ display: "flex", gap: "7px", overflowX: "auto" }}>
-        {presets.map((preset) => (
-          <div
-            key={preset.id}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(90px, 1fr) auto",
-              alignItems: "center",
-              minWidth: "170px",
-              background: "rgba(147,197,253,0.08)",
-              border: "1px solid rgba(147,197,253,0.2)",
-              borderRadius: "6px",
-              overflow: "hidden",
-            }}
-          >
-            <button
-              type="button"
-              aria-label={`Use preset ${preset.name}`}
-              onClick={() => onSelect(preset)}
-              style={{
-                minWidth: 0,
-                padding: "7px 4px 7px 10px",
-                background: "transparent",
-                border: 0,
-                color: "#fff",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              <span
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {preset.name}
-              </span>
-              <span
-                style={{
-                  display: "block",
-                  color: "#92929d",
-                  fontSize: "10px",
-                  marginTop: "2px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {modelNames.get(preset.modelId) ?? preset.modelId}
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-label={`Delete preset ${preset.name}`}
-              onClick={() => onDelete(preset.id)}
-              style={{
-                color: "#92929d",
-                fontSize: "13px",
-                lineHeight: 1,
-                padding: "9px 8px",
-                background: "transparent",
-                border: 0,
-                cursor: "pointer",
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// --- Main Component ---
 
 interface ModelSelectorModalProps {
   isOpen: boolean;
@@ -903,6 +193,319 @@ interface ModelSelectorModalProps {
   ) => void;
 }
 
+const formatContextLength = (contextLength?: number): string => {
+  if (!contextLength) return "Unknown context";
+  if (contextLength >= 1_000_000) {
+    return `${(contextLength / 1_000_000).toFixed(1)}M context`;
+  }
+  if (contextLength >= 1_000) {
+    return `${Math.round(contextLength / 1_000)}K context`;
+  }
+  return `${contextLength} context`;
+};
+
+const formatPrice = (price?: string): string => {
+  if (!price) return "—";
+  const perMillion = Number(price) * 1_000_000;
+  if (!Number.isFinite(perMillion)) return "—";
+  if (perMillion < 0.01) return "Free";
+  return `$${perMillion.toFixed(2)}`;
+};
+
+const matchesSearch = (model: OpenRouterModel, query: string): boolean => {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  return (
+    model.name.toLowerCase().includes(normalizedQuery) ||
+    model.id.toLowerCase().includes(normalizedQuery) ||
+    (model.description?.toLowerCase().includes(normalizedQuery) ?? false)
+  );
+};
+
+const deduplicateModels = (models: OpenRouterModel[]): OpenRouterModel[] => {
+  const seenIds = new Set<string>();
+  return models.filter((model) => {
+    if (!model.id || !model.name || seenIds.has(model.id)) return false;
+    seenIds.add(model.id);
+    return true;
+  });
+};
+
+const updateRequestSetting = (
+  settings: OpenRouterRequestSettings | undefined,
+  key: keyof OpenRouterRequestSettings,
+  value: OpenRouterRequestSettings[keyof OpenRouterRequestSettings],
+): OpenRouterRequestSettings | undefined => {
+  const updatedSettings = { ...(settings ?? {}) };
+  if (value === undefined) {
+    delete updatedSettings[key];
+  } else {
+    (updatedSettings as Record<string, unknown>)[key] = value;
+  }
+  return Object.keys(updatedSettings).length > 0 ? updatedSettings : undefined;
+};
+
+const ModelListItem: React.FC<{
+  model: OpenRouterModel;
+  label?: string;
+  active?: boolean;
+  configured?: boolean;
+  onClick: () => void;
+  onDelete?: () => void;
+}> = ({ model, label, active, configured, onClick, onDelete }) => (
+  <Paper
+    component="div"
+    withBorder
+    onClick={onClick}
+    onKeyDown={(event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      onClick();
+    }}
+    role="button"
+    tabIndex={0}
+    p="sm"
+    w="100%"
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      minHeight: 68,
+      borderColor: active
+        ? "rgba(109, 142, 245, 0.5)"
+        : "rgba(255,255,255,0.1)",
+      background: active
+        ? "rgba(109, 142, 245, 0.14)"
+        : "rgba(255,255,255,0.025)",
+      color: "inherit",
+      cursor: "pointer",
+      textAlign: "left",
+    }}
+  >
+    <Box
+      style={{
+        display: "grid",
+        placeItems: "center",
+        width: 38,
+        height: 38,
+        flex: "0 0 38px",
+        borderRadius: 10,
+        background: "rgba(255,255,255,0.06)",
+        color: "#90acff",
+      }}
+    >
+      <RiRobot2Line size={18} />
+    </Box>
+    <Box style={{ flex: 1, minWidth: 0 }}>
+      <Group gap={6} wrap="nowrap">
+        <Text size="sm" fw={650} truncate>
+          {label ?? model.name}
+        </Text>
+        {active && (
+          <Badge size="xs" color="teal" variant="light">
+            Active
+          </Badge>
+        )}
+      </Group>
+      <Text size="xs" c="dimmed" truncate mt={2}>
+        {label ? model.name : model.id}
+        {configured ? " · Customized" : ""}
+      </Text>
+    </Box>
+    {onDelete && (
+      <ActionIcon
+        variant="subtle"
+        color="gray"
+        aria-label={`Delete preset ${label}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete();
+        }}
+      >
+        <RiDeleteBinLine />
+      </ActionIcon>
+    )}
+    <RiArrowRightSLine size={20} color="#707583" />
+  </Paper>
+);
+
+const EmptySetups: React.FC<{ onBrowse: () => void }> = ({ onBrowse }) => (
+  <Paper withBorder p="xl" ta="center">
+    <Stack align="center" gap="xs">
+      <RiRobot2Line size={28} color="#90acff" />
+      <Text fw={650}>No model setups yet</Text>
+      <Text size="sm" c="dimmed">
+        Choose a model, tune it if needed, and save it for quick reuse.
+      </Text>
+      <Button variant="light" mt="xs" onClick={onBrowse}>
+        Browse models
+      </Button>
+    </Stack>
+  </Paper>
+);
+
+const RequestSettingsForm: React.FC<{
+  model: OpenRouterModel;
+  settings?: OpenRouterRequestSettings;
+  onChange: (settings: OpenRouterRequestSettings | undefined) => void;
+}> = ({ model, settings, onChange }) => {
+  const changeSetting = (
+    key: keyof OpenRouterRequestSettings,
+    value: OpenRouterRequestSettings[keyof OpenRouterRequestSettings],
+  ) => onChange(updateRequestSetting(settings, key, value));
+
+  const basicParameters = NUMBER_PARAMETERS.filter(
+    (parameter) =>
+      "basic" in parameter &&
+      parameter.basic &&
+      supportsParameter(model, parameter.key),
+  );
+  const advancedParameters = NUMBER_PARAMETERS.filter(
+    (parameter) =>
+      !("basic" in parameter && parameter.basic) &&
+      supportsParameter(model, parameter.key),
+  );
+
+  const renderNumberInput = (
+    parameter: (typeof NUMBER_PARAMETERS)[number],
+  ) => (
+    <NumberInput
+      key={parameter.key}
+      label={parameter.label}
+      description={parameter.description}
+      aria-label={parameter.label}
+      value={settings?.[parameter.key] ?? ""}
+      min={parameter.min}
+      max={"max" in parameter ? parameter.max : undefined}
+      step={parameter.step}
+      placeholder={parameter.placeholder}
+      onChange={(value) =>
+        changeSetting(
+          parameter.key,
+          value === "" ? undefined : Number(value),
+        )
+      }
+    />
+  );
+
+  return (
+    <Stack gap="md">
+      {supportsParameter(model, "reasoning") && (
+        <Select
+          label="Reasoning effort"
+          description="Higher effort may improve difficult work but costs more time and tokens."
+          aria-label={`Reasoning level for ${model.name}`}
+          value={settings?.reasoning?.effort ?? ""}
+          data={[
+            { value: "", label: "Auto" },
+            ...OPENROUTER_REASONING_EFFORTS.map((effort) => ({
+              value: effort,
+              label: REASONING_LABELS[effort],
+            })),
+          ]}
+          onChange={(value) =>
+            changeSetting(
+              "reasoning",
+              value
+                ? { effort: value as OpenRouterReasoningEffort }
+                : undefined,
+            )
+          }
+        />
+      )}
+      {basicParameters.map(renderNumberInput)}
+
+      <Accordion variant="separated">
+        <Accordion.Item value="advanced">
+          <Accordion.Control
+            aria-label={`Advanced settings for ${model.name}`}
+          >
+            <Group gap="xs">
+              <Text size="sm" fw={650}>
+                Advanced settings
+              </Text>
+              {hasOpenRouterRequestSettings(settings) && (
+                <Badge size="xs" variant="light">
+                  Customized
+                </Badge>
+              )}
+            </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Text size="xs" c="dimmed">
+                  Only settings supported by this model are shown.
+                </Text>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => onChange(undefined)}
+                >
+                  Reset
+                </Button>
+              </Group>
+
+              <Checkbox
+                label="Retry failed requests"
+                description="Retry transient network, timeout, rate-limit, and provider errors."
+                aria-label="Enable retries"
+                checked={settings?.retry !== undefined}
+                onChange={(event) =>
+                  changeSetting(
+                    "retry",
+                    event.currentTarget.checked
+                      ? { ...DEFAULT_RETRY_SETTINGS }
+                      : undefined,
+                  )
+                }
+              />
+              {settings?.retry && (
+                <>
+                  <NumberInput
+                    label="Retry delay in seconds"
+                    description="Use 0 to retry immediately."
+                    value={settings.retry.retryDelaySeconds ?? ""}
+                    min={0}
+                    step={1}
+                    onChange={(value) =>
+                      changeSetting("retry", {
+                        ...settings.retry,
+                        retryDelaySeconds:
+                          value === ""
+                            ? undefined
+                            : Math.max(0, Math.round(Number(value))),
+                      })
+                    }
+                  />
+                  <NumberInput
+                    label="Number of Retries"
+                    description="Additional attempts after the first request fails."
+                    value={settings.retry.numberOfRetries ?? ""}
+                    min={1}
+                    step={1}
+                    onChange={(value) =>
+                      changeSetting("retry", {
+                        ...settings.retry,
+                        numberOfRetries:
+                          value === ""
+                            ? undefined
+                            : Math.max(1, Math.round(Number(value))),
+                      })
+                    }
+                  />
+                </>
+              )}
+              {advancedParameters.map(renderNumberInput)}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+      </Accordion>
+    </Stack>
+  );
+};
+
 export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   isOpen,
   onClose,
@@ -912,319 +515,427 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   onSelect,
 }) => {
   const { models, isLoading } = useOpenRouterModels();
+  const isMobile = useMobileViewport();
   const recentModelsService = useRef(d.RecentModelsService()).current;
   const modelPresetsService = useRef(d.ModelPresetsService()).current;
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [view, setView] = useState<PickerView>("setups");
+  const [screen, setScreen] = useState<PickerScreen>("list");
   const [search, setSearch] = useState("");
-  const [advancedModelId, setAdvancedModelId] = useState<string | null>(null);
   const [presets, setPresets] = useState<ModelPreset[]>([]);
-  const [requestSettingsByModel, setRequestSettingsByModel] = useState<
-    Record<string, OpenRouterRequestSettings | undefined>
-  >({});
+  const [draft, setDraft] = useState<ModelDraft>();
+  const [presetName, setPresetName] = useState("");
 
-  const recentIds = useMemo(
-    () => recentModelsService.getRecentModels(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [models],
+  const uniqueModels = useMemo(() => deduplicateModels(models), [models]);
+  const modelsById = useMemo(
+    () => new Map(uniqueModels.map((model) => [model.id, model])),
+    [uniqueModels],
   );
-
-  const groups = useMemo(
-    () => buildGroups(models, recentIds),
-    [models, recentIds],
+  const selectedModel = selectedModelId
+    ? modelsById.get(selectedModelId)
+    : undefined;
+  const recentModels = useMemo(
+    () =>
+      recentModelsService
+        .getRecentModels()
+        .filter((modelId) => modelId !== selectedModelId)
+        .map((modelId) => modelsById.get(modelId))
+        .filter((model): model is OpenRouterModel => model !== undefined),
+    [modelsById, recentModelsService, selectedModelId],
   );
-
-  const filteredGroups = useMemo(() => {
-    if (!search.trim()) return groups;
-
-    return groups
-      .map((group) => ({
-        ...group,
-        models: group.models.filter((m) => matchesSearch(m, search)),
-      }))
-      .filter((group) => group.models.length > 0);
-  }, [groups, search]);
-
-  const totalResults = useMemo(
-    () => filteredGroups.reduce((sum, g) => sum + g.models.length, 0),
-    [filteredGroups],
+  const recommendedModels = useMemo(
+    () =>
+      uniqueModels.filter((model) => RECOMMENDED_MODEL_IDS.has(model.id)),
+    [uniqueModels],
   );
+  const filteredModels = useMemo(
+    () =>
+      uniqueModels
+        .filter((model) => matchesSearch(model, search))
+        .filter(
+          (model) =>
+            search.trim().length > 0 ||
+            !RECOMMENDED_MODEL_IDS.has(model.id),
+        )
+        .sort((left, right) => left.name.localeCompare(right.name)),
+    [search, uniqueModels],
+  );
+  const draftModel = draft ? modelsById.get(draft.modelId) : undefined;
 
-  useEffect(() => {
-    if (isOpen) {
-      setSearch("");
-      setAdvancedModelId(selectedModelId ?? null);
-      setRequestSettingsByModel(
-        selectedModelId ? { [selectedModelId]: selectedRequestSettings } : {},
-      );
-      // Focus search input after modal opens
-      requestAnimationFrame(() => searchInputRef.current?.focus());
-    }
-  }, [
-    isOpen,
-    modelPresetsService,
-    selectedModelId,
-    selectedRequestSettings,
-  ]);
+  const loadPresets = useCallback(async () => {
+    setPresets(await modelPresetsService.getPresets());
+  }, [modelPresetsService]);
 
   useEffect(() => {
     if (!isOpen) return;
+    setView("setups");
+    setSearch("");
+    setPresetName("");
+    if (selectedModelId) {
+      setDraft({
+        modelId: selectedModelId,
+        name: "Current setup",
+        requestSettings: selectedRequestSettings,
+      });
+      setScreen("detail");
+    } else {
+      setDraft(undefined);
+      setScreen("list");
+    }
+  }, [isOpen, selectedModelId, selectedRequestSettings]);
 
-    let isActive = true;
-    const loadPresets = async () => {
-      const storedPresets = await modelPresetsService.getPresets();
-      if (isActive) setPresets(storedPresets);
-    };
-    const unsubscribe = modelPresetsService.subscribe(() => {
+  useEffect(() => {
+    if (!isOpen) return;
+    void loadPresets();
+    return modelPresetsService.subscribe(() => {
       void loadPresets();
     });
+  }, [isOpen, loadPresets, modelPresetsService]);
 
-    void loadPresets();
-
-    return () => {
-      isActive = false;
-      unsubscribe();
-    };
-  }, [isOpen, modelPresetsService]);
-
-  const handleSelect = useCallback(
-    (model: OpenRouterModel) => {
-      const modelId = model.id;
-      const requestSettings = filterSettingsForModel(
-        requestSettingsByModel[modelId],
-        model,
-      );
-      recentModelsService.trackModel(modelId);
-      if (requestSettings) {
-        onSelect(modelId, requestSettings);
-      } else {
-        onSelect(modelId);
-      }
-      onClose();
-    },
-    [recentModelsService, onSelect, onClose, requestSettingsByModel],
-  );
-
-  const handleRequestSettingsChange = useCallback(
-    (modelId: string, settings: OpenRouterRequestSettings | undefined) => {
-      setRequestSettingsByModel((current) => ({
-        ...current,
-        [modelId]: settings,
-      }));
-    },
-    [],
-  );
-
-  const handleSavePreset = useCallback(
-    async (model: OpenRouterModel, name: string) => {
-      await modelPresetsService.savePreset({
+  const showDraft = useCallback(
+    (
+      modelId: string,
+      name: string,
+      requestSettings?: OpenRouterRequestSettings,
+    ) => {
+      const model = modelsById.get(modelId);
+      setDraft({
+        modelId,
         name,
-        modelId: model.id,
-        requestSettings: filterSettingsForModel(
-          requestSettingsByModel[model.id],
-          model,
-        ),
+        requestSettings: filterSettingsForModel(requestSettings, model),
       });
-      setPresets(await modelPresetsService.getPresets());
+      setPresetName(name === "Current setup" ? "" : name);
+      setScreen("detail");
     },
-    [modelPresetsService, requestSettingsByModel],
+    [modelsById],
   );
 
-  const handlePresetSelect = useCallback(
-    (preset: ModelPreset) => {
-      recentModelsService.trackModel(preset.modelId);
-      onSelect(preset.modelId, preset.requestSettings);
-      onClose();
-    },
-    [onClose, onSelect, recentModelsService],
-  );
+  const applyDraft = useCallback(() => {
+    if (!draft) return;
+    const requestSettings = filterSettingsForModel(
+      draft.requestSettings,
+      draftModel,
+    );
+    recentModelsService.trackModel(draft.modelId);
+    onSelect(draft.modelId, requestSettings);
+    onClose();
+  }, [draft, draftModel, onClose, onSelect, recentModelsService]);
 
-  const handlePresetDelete = useCallback(
+  const saveDraft = useCallback(async () => {
+    if (!draft || !presetName.trim()) return;
+    await modelPresetsService.savePreset({
+      name: presetName,
+      modelId: draft.modelId,
+      requestSettings: filterSettingsForModel(
+        draft.requestSettings,
+        draftModel,
+      ),
+    });
+    await loadPresets();
+  }, [
+    draft,
+    draftModel,
+    loadPresets,
+    modelPresetsService,
+    presetName,
+  ]);
+
+  const deletePreset = useCallback(
     async (presetId: string) => {
       await modelPresetsService.deletePreset(presetId);
-      setPresets(await modelPresetsService.getPresets());
+      await loadPresets();
     },
-    [modelPresetsService],
+    [loadPresets, modelPresetsService],
   );
 
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose],
-  );
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
+  const hasSetups =
+    selectedModel !== undefined ||
+    presets.length > 0 ||
+    recentModels.length > 0;
+  const title = screen === "detail" ? "Configure setup" : "Select model setup";
 
   return (
-    <div
-      onClick={handleBackdropClick}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "rgba(0, 0, 0, 0.75)",
-      }}
-    >
-      <div
-        style={{
-          width: "min(560px, 90vw)",
-          height: "80vh",
-          backgroundColor: "rgba(24, 24, 28, 0.98)",
-          borderRadius: "12px",
-          border: "1px solid rgba(255,255,255,0.1)",
+    <Modal
+      opened={isOpen}
+      onClose={onClose}
+      title={title}
+      fullScreen={isMobile}
+      size="lg"
+      centered={!isMobile}
+      padding={0}
+      scrollAreaComponent={ScrollArea.Autosize}
+      closeButtonProps={{ "aria-label": "Close" }}
+      styles={{
+        header: {
+          minHeight: 60,
+          padding: "12px 16px",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        },
+        title: { fontWeight: 680 },
+        body: {
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: "16px 20px 12px",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ color: "#fff", fontSize: "16px", fontWeight: 600 }}>
-            Select Model
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#888",
-              fontSize: "20px",
-              cursor: "pointer",
-              padding: "4px 8px",
-              lineHeight: 1,
-            }}
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Search */}
-        <div style={{ padding: "12px 20px" }}>
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search models by name, ID, or description..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "10px 14px",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: "8px",
-              color: "#fff",
-              fontSize: "14px",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "rgba(100, 100, 255, 0.4)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
-            }}
-          />
-          <div
-            style={{
-              fontSize: "11px",
-              color: "#888",
-              marginTop: "6px",
-              paddingLeft: "2px",
-            }}
-          >
-            {isLoading
-              ? "Loading models..."
-              : `${totalResults} model${totalResults !== 1 ? "s" : ""} available`}
-          </div>
-        </div>
-
-        <SavedPresets
-          presets={presets}
-          models={models}
-          onSelect={handlePresetSelect}
-          onDelete={handlePresetDelete}
-        />
-
-        {/* Model List */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            padding: "0 12px 12px",
-            overflow: "hidden",
-          }}
-        >
-          {filteredGroups.length === 0 && !isLoading ? (
-            <div
-              style={{
-                textAlign: "center",
-                color: "#888",
-                padding: "32px 0",
-                fontSize: "14px",
+          height: isMobile ? "calc(100dvh - 60px)" : "min(720px, 78vh)",
+        },
+        content: { overflow: "hidden" },
+      }}
+    >
+      {screen === "list" ? (
+        <>
+          <Box p="sm">
+            <SegmentedControl
+              fullWidth
+              value={view}
+              onChange={(value) => {
+                setView(value as PickerView);
+                setSearch("");
               }}
-            >
-              No models found matching &quot;{search}&quot;
-            </div>
-          ) : (
-            <GroupedVirtuoso
-              style={{ height: "100%" }}
-              groupCounts={filteredGroups.map((g) => g.models.length)}
-              groupContent={(index) => (
-                <GroupHeader label={filteredGroups[index].label} />
-              )}
-              itemContent={(index) => {
-                let offset = 0;
-                for (const group of filteredGroups) {
-                  if (index < offset + group.models.length) {
-                    const model = group.models[index - offset];
-                    return (
-                      <ModelItem
-                        model={model}
-                        isSelected={model.id === selectedModelId}
-                        allowAdvancedSettings={allowAdvancedSettings}
-                        requestSettings={filterSettingsForModel(
-                          requestSettingsByModel[model.id],
-                          model,
-                        )}
-                        isAdvancedOpen={advancedModelId === model.id}
-                        onAdvancedChange={(isOpen) =>
-                          setAdvancedModelId(isOpen ? model.id : null)
-                        }
-                        onRequestSettingsChange={handleRequestSettingsChange}
-                        onSavePreset={handleSavePreset}
-                        onClick={() => handleSelect(model)}
-                      />
-                    );
-                  }
-                  offset += group.models.length;
-                }
-                return null;
-              }}
+              data={[
+                { label: "My setups", value: "setups" },
+                { label: "Browse models", value: "browse" },
+              ]}
             />
-          )}
-        </div>
-      </div>
-    </div>
+            {view === "browse" && (
+              <TextInput
+                mt="sm"
+                value={search}
+                onChange={(event) => setSearch(event.currentTarget.value)}
+                placeholder="Search models by name, ID, or description..."
+                aria-label="Search models"
+              />
+            )}
+          </Box>
+          <Divider />
+          <ScrollArea style={{ flex: 1 }} p="sm">
+            {view === "setups" ? (
+              <Stack gap="sm">
+                {!hasSetups && (
+                  <EmptySetups onBrowse={() => setView("browse")} />
+                )}
+                {selectedModel && (
+                  <Stack gap="xs">
+                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                      Current
+                    </Text>
+                    <ModelListItem
+                      model={selectedModel}
+                      label="Current setup"
+                      active
+                      configured={hasOpenRouterRequestSettings(
+                        selectedRequestSettings,
+                      )}
+                      onClick={() =>
+                        showDraft(
+                          selectedModel.id,
+                          "Current setup",
+                          selectedRequestSettings,
+                        )
+                      }
+                    />
+                  </Stack>
+                )}
+                {presets.length > 0 && (
+                  <Stack gap="xs">
+                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                      Saved setups
+                    </Text>
+                    {presets.map((preset) => {
+                      const model = modelsById.get(preset.modelId);
+                      if (!model) return null;
+                      return (
+                        <ModelListItem
+                          key={preset.id}
+                          model={model}
+                          label={preset.name}
+                          configured={hasOpenRouterRequestSettings(
+                            preset.requestSettings,
+                          )}
+                          onClick={() =>
+                            showDraft(
+                              preset.modelId,
+                              preset.name,
+                              preset.requestSettings,
+                            )
+                          }
+                          onDelete={() => void deletePreset(preset.id)}
+                        />
+                      );
+                    })}
+                  </Stack>
+                )}
+                {recentModels.length > 0 && (
+                  <Stack gap="xs">
+                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                      Recently used
+                    </Text>
+                    {recentModels.map((model) => (
+                      <ModelListItem
+                        key={model.id}
+                        model={model}
+                        onClick={() =>
+                          showDraft(model.id, model.name)
+                        }
+                      />
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+            ) : (
+              <Stack gap="md">
+                {isLoading && (
+                  <Group justify="center" p="xl">
+                    <Loader size="sm" />
+                    <Text size="sm" c="dimmed">
+                      Loading models...
+                    </Text>
+                  </Group>
+                )}
+                {!search.trim() && recommendedModels.length > 0 && (
+                  <Stack gap="xs">
+                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                      Recommended
+                    </Text>
+                    {recommendedModels.map((model) => (
+                      <ModelListItem
+                        key={`recommended-${model.id}`}
+                        model={model}
+                        onClick={() =>
+                          showDraft(model.id, model.name)
+                        }
+                      />
+                    ))}
+                  </Stack>
+                )}
+                <Stack gap="xs">
+                  <Group justify="space-between">
+                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                      {!search.trim() && recommendedModels.length > 0
+                        ? "Other models"
+                        : "All models"}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {filteredModels.length} model
+                      {filteredModels.length === 1 ? "" : "s"} available
+                    </Text>
+                  </Group>
+                  {filteredModels.map((model) => (
+                    <ModelListItem
+                      key={model.id}
+                      model={model}
+                      onClick={() => showDraft(model.id, model.name)}
+                    />
+                  ))}
+                  {!isLoading && filteredModels.length === 0 && (
+                    <Text ta="center" c="dimmed" p="xl">
+                      No models found matching &quot;{search}&quot;
+                    </Text>
+                  )}
+                </Stack>
+              </Stack>
+            )}
+          </ScrollArea>
+        </>
+      ) : (
+        <>
+          <Box px="sm" pt="xs">
+            <Button
+              variant="subtle"
+              color="gray"
+              leftSection={<RiArrowLeftLine />}
+              onClick={() => setScreen("list")}
+              aria-label="Back to model setups"
+            >
+              Back
+            </Button>
+          </Box>
+          <ScrollArea style={{ flex: 1 }}>
+            <Stack p="md" gap="lg">
+              <Paper withBorder p="md">
+                <Stack gap="xs">
+                  <Group justify="space-between" align="flex-start">
+                    <Box>
+                      <Title order={3}>{draft?.name}</Title>
+                      <Text size="sm" c="dimmed">
+                        {draftModel?.name ?? draft?.modelId}
+                      </Text>
+                    </Box>
+                    {draft?.modelId === selectedModelId && (
+                      <Badge color="teal" variant="light">
+                        Active
+                      </Badge>
+                    )}
+                  </Group>
+                  {draftModel && (
+                    <Group gap="xs">
+                      <Badge variant="outline" color="gray">
+                        {formatContextLength(draftModel.context_length)}
+                      </Badge>
+                      <Badge variant="outline" color="gray">
+                        Prompt {formatPrice(draftModel.pricing?.prompt)} / M
+                      </Badge>
+                      <Badge variant="outline" color="gray">
+                        Completion{" "}
+                        {formatPrice(draftModel.pricing?.completion)} / M
+                      </Badge>
+                    </Group>
+                  )}
+                </Stack>
+              </Paper>
+
+              {allowAdvancedSettings && draftModel && (
+                <RequestSettingsForm
+                  model={draftModel}
+                  settings={draft?.requestSettings}
+                  onChange={(requestSettings) =>
+                    setDraft((current) =>
+                      current ? { ...current, requestSettings } : current,
+                    )
+                  }
+                />
+              )}
+            </Stack>
+          </ScrollArea>
+          <Paper
+            p="sm"
+            radius={0}
+            style={{
+              borderTop: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(24,24,28,0.98)",
+            }}
+          >
+            <Stack gap="xs">
+              <Group wrap="nowrap" align="flex-end">
+                <TextInput
+                  style={{ flex: 1 }}
+                  label="Setup name"
+                  value={presetName}
+                  onChange={(event) =>
+                    setPresetName(event.currentTarget.value)
+                  }
+                  placeholder="Name this setup"
+                  aria-label={
+                    draftModel
+                      ? `Preset name for ${draftModel.name}`
+                      : "Preset name"
+                  }
+                />
+                <Button
+                  variant="default"
+                  disabled={!presetName.trim()}
+                  onClick={() => void saveDraft()}
+                >
+                  Save as new
+                </Button>
+              </Group>
+              <Text size="xs" c="dimmed">
+                Preview only. Nothing changes until you apply.
+              </Text>
+              <Button fullWidth size="md" onClick={applyDraft}>
+                Use this setup
+              </Button>
+            </Stack>
+          </Paper>
+        </>
+      )}
+    </Modal>
   );
 };

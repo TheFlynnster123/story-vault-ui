@@ -6,6 +6,8 @@ export interface CharacterDescription {
   appearance: string;
   sheetItems: string[];
   sheetSource?: "auto" | "manual";
+  isTracked?: boolean;
+  autoAcceptChanges?: boolean;
   detectedActive: boolean;
   activeOverride?: boolean;
   preferredImage?: PreferredImage;
@@ -38,7 +40,7 @@ export interface LegacyCharacterDescription {
 export type PersistedCharacterDescription =
   CharacterDescription | CharacterDescriptionV2 | LegacyCharacterDescription;
 
-export const CHARACTER_SCHEMA_VERSION = 3;
+export const CHARACTER_SCHEMA_VERSION = 4;
 
 export const createCharacterDescription = (
   name: string,
@@ -51,6 +53,8 @@ export const createCharacterDescription = (
     name,
     appearance,
     sheetItems: [],
+    isTracked: true,
+    autoAcceptChanges: false,
     detectedActive: true,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -64,6 +68,8 @@ export type CharacterDescriptionUpdate = Partial<
     | "appearance"
     | "sheetItems"
     | "sheetSource"
+    | "isTracked"
+    | "autoAcceptChanges"
     | "detectedActive"
     | "activeOverride"
     | "preferredImage"
@@ -87,6 +93,14 @@ export const isCharacterActive = (
   character: Pick<CharacterDescription, "activeOverride" | "detectedActive">,
 ): boolean => character.activeOverride ?? character.detectedActive;
 
+export const isCharacterTracked = (
+  character: Pick<CharacterDescription, "isTracked">,
+): boolean => character.isTracked ?? true;
+
+export const doesCharacterAutoAcceptChanges = (
+  character: Pick<CharacterDescription, "autoAcceptChanges">,
+): boolean => character.autoAcceptChanges ?? false;
+
 export const getCharacterAppearance = (
   character: Partial<CharacterDescription & LegacyCharacterDescription>,
 ): string => character.appearance ?? character.description ?? "";
@@ -109,6 +123,10 @@ export const needsCharacterDataMigration = (
       !Array.isArray(character.sheetItems) ||
       !("detectedActive" in character) ||
       typeof character.detectedActive !== "boolean" ||
+      !("isTracked" in character) ||
+      typeof character.isTracked !== "boolean" ||
+      !("autoAcceptChanges" in character) ||
+      typeof character.autoAcceptChanges !== "boolean" ||
       "description" in character ||
       "sheet" in character,
   );
@@ -126,6 +144,12 @@ const migrateCharacterDescription = (
     appearance: getCharacterAppearance(persisted),
     sheetItems: getPersistedSheetItems(persisted),
     sheetSource: persisted.sheetSource,
+    isTracked:
+      typeof persisted.isTracked === "boolean" ? persisted.isTracked : true,
+    autoAcceptChanges:
+      typeof persisted.autoAcceptChanges === "boolean"
+        ? persisted.autoAcceptChanges
+        : false,
     detectedActive:
       typeof persisted.detectedActive === "boolean"
         ? persisted.detectedActive

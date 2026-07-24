@@ -6,7 +6,10 @@ import {
 } from "../../../../services/Utils/MessageUtils";
 import type { Memory } from "../../../Memories/services/Memory";
 import type { CharacterDescription } from "../../../Characters/services/CharacterDescription";
-import { isCharacterActive } from "../../../Characters/services/CharacterDescription";
+import {
+  isCharacterActive,
+  isCharacterTracked,
+} from "../../../Characters/services/CharacterDescription";
 import { normalizeCharacterSheetTrailingMessageCount } from "../../../Characters/services/CharacterSheetSettings";
 import type { ChatSettings } from "../Chat/ChatSettings";
 import { DEFAULT_REASONING_RETENTION_MESSAGES } from "../Chat/ChatSettings";
@@ -408,6 +411,7 @@ export class LLMMessageContextService {
     return characters
       .filter(
         (character) =>
+          isCharacterTracked(character) &&
           isCharacterActive(character) &&
           character.sheetItems.some((item) => this.isNonEmptyContent(item)),
       )

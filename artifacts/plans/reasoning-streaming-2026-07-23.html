@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reasoning Streaming Implementation Plan</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --page: #0b1020;
+        --panel: #151b31;
+        --panel-strong: #1b2340;
+        --text: #f5f7ff;
+        --muted: #b8c0dc;
+        --accent: #9aa8ff;
+        --line: #5866bb;
+        --success: #78d6ad;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font: 16px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        width: min(1080px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 56px 0 64px;
+      }
+      header { max-width: 780px; margin-bottom: 36px; }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 0.78rem;
+        font-weight: 750;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 8px 0 12px;
+        font-size: clamp(2rem, 6vw, 4.5rem);
+        line-height: 0.98;
+        letter-spacing: -0.045em;
+      }
+      header p, .note p { color: var(--muted); }
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+        margin: 28px 0;
+      }
+      article {
+        position: relative;
+        min-height: 220px;
+        padding: 22px;
+        border: 1px solid #303958;
+        border-radius: 18px;
+        background: var(--panel);
+      }
+      article:not(:last-child)::after {
+        content: "→";
+        position: absolute;
+        z-index: 1;
+        top: 50%;
+        right: -17px;
+        width: 16px;
+        color: var(--accent);
+        font-weight: 800;
+        text-align: center;
+      }
+      .number {
+        display: inline-grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--line);
+        font-weight: 800;
+      }
+      h2 { margin: 18px 0 8px; font-size: 1.12rem; }
+      article p { margin: 0; color: var(--muted); font-size: 0.93rem; }
+      .notes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin-top: 18px;
+      }
+      .note {
+        padding: 22px;
+        border-radius: 18px;
+        background: var(--panel-strong);
+      }
+      .note h2 { margin-top: 0; }
+      ul { margin: 10px 0 0; padding-left: 20px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      .done { color: var(--success); font-weight: 700; }
+      a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+      @media (max-width: 820px) {
+        .flow { grid-template-columns: 1fr 1fr; }
+        article:nth-child(2)::after { display: none; }
+        article:not(:last-child)::after { right: -17px; }
+      }
+      @media (max-width: 560px) {
+        main { width: min(100% - 24px, 1080px); padding-top: 36px; }
+        .flow, .notes { grid-template-columns: 1fr; }
+        article { min-height: 0; }
+        article:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -19px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Implementation flow</div>
+        <h1>Let reasoning arrive while it is written.</h1>
+        <p>
+          Reuse the proven assistant-stream transport, but preserve reasoning’s
+          distinct timeline type, request tracking label, and collapsed final state.
+        </p>
+      </header>
+
+      <section class="flow" aria-label="Reasoning streaming implementation steps">
+        <article>
+          <span class="number">1</span>
+          <h2>Create a transient entry</h2>
+          <p>Add an empty, typed reasoning message to the user projection before the network request begins.</p>
+        </article>
+        <article>
+          <span class="number">2</span>
+          <h2>Stream cumulative text</h2>
+          <p>Call the existing SSE endpoint and replace the transient entry’s content on every received chunk.</p>
+        </article>
+        <article>
+          <span class="number">3</span>
+          <h2>Persist atomically</h2>
+          <p>Save the completed reasoning event, then remove the transient entry. On failure, remove it without saving.</p>
+        </article>
+        <article>
+          <span class="number">4</span>
+          <h2>Shape the UI state</h2>
+          <p>Keep live reasoning expanded so text is visible, then let the persisted message return to the normal collapsed view.</p>
+        </article>
+      </section>
+
+      <section class="notes">
+        <div class="note">
+          <h2>Decisions</h2>
+          <ul>
+            <li>Reasoning remains a separate chat event and message type.</li>
+            <li>The stream is transient and never enters LLM context.</li>
+            <li>Request inspection continues to identify the call as “Reasoning.”</li>
+          </ul>
+        </div>
+        <div class="note">
+          <h2>Completion criteria</h2>
+          <ul>
+            <li class="done">Tokens visibly update before generation completes.</li>
+            <li>No empty or partial reasoning is persisted after failure.</li>
+            <li>Assistant streaming and reasoning-disabled flows remain unchanged.</li>
+            <li>Projection, service, transport, and rendering tests pass.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

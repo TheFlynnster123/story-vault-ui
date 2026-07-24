@@ -15,6 +15,7 @@ import type {
   CharacterUpdateProposal,
 } from "../services/CharacterUpdateProposal";
 import {
+  getCharacterSheetItemDiff,
   proposalChangesActivity,
   proposalChangesSheet,
 } from "../services/CharacterUpdateProposal";
@@ -186,17 +187,23 @@ const ActivityChange: React.FC<{ change: CharacterUpdateChange }> = ({
 
 const SheetChange: React.FC<{ change: CharacterUpdateChange }> = ({
   change,
-}) => (
-  <Stack gap="xs">
-    {change.previousSheetItems.length > 0 && (
-      <SheetItems title="Current sheet" items={change.previousSheetItems} />
-    )}
-    <SheetItems
-      title="Proposed sheet"
-      items={change.proposedSheetItems ?? []}
-    />
-  </Stack>
-);
+}) => {
+  const diff = getCharacterSheetItemDiff(
+    change.previousSheetItems,
+    change.proposedSheetItems ?? [],
+  );
+
+  return (
+    <Stack gap="xs">
+      {diff.removed.length > 0 && (
+        <SheetItems title="Removed" items={diff.removed} />
+      )}
+      {diff.added.length > 0 && (
+        <SheetItems title="Added" items={diff.added} />
+      )}
+    </Stack>
+  );
+};
 
 const SheetItems: React.FC<{ title: string; items: string[] }> = ({
   title,
@@ -206,17 +213,11 @@ const SheetItems: React.FC<{ title: string; items: string[] }> = ({
     <Text size="sm" fw={500}>
       {title}
     </Text>
-    {items.length > 0 ? (
-      <List size="sm">
-        {items.map((item, index) => (
-          <List.Item key={`${index}-${item}`}>{item}</List.Item>
-        ))}
-      </List>
-    ) : (
-      <Text size="sm" c="dimmed" fs="italic">
-        No sheet items
-      </Text>
-    )}
+    <List size="sm">
+      {items.map((item) => (
+        <List.Item key={item}>{item}</List.Item>
+      ))}
+    </List>
   </Stack>
 );
 

@@ -7,6 +7,7 @@ import type {
 import {
   CHARACTER_SCHEMA_VERSION,
   createCharacterDescription,
+  isCharacterTracked,
   migrateCharacterDescriptions,
   needsCharacterDataMigration,
   normalizeSheetItems,
@@ -181,7 +182,9 @@ const findProposalConflicts = (
         : [];
     }
 
-    return !current || current.updatedAt !== change.baseUpdatedAt
+    return !current ||
+      !isCharacterTracked(current) ||
+      current.updatedAt !== change.baseUpdatedAt
       ? [change.characterName]
       : [];
   });
@@ -221,6 +224,8 @@ const createProposedCharacter = (
   appearance: "",
   sheetItems: change.proposedSheetItems ?? [],
   sheetSource: change.proposedSheetItems === undefined ? undefined : "auto",
+  isTracked: true,
+  autoAcceptChanges: false,
   detectedActive: change.proposedDetectedActive ?? true,
   createdAt,
   updatedAt: createdAt,

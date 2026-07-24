@@ -162,8 +162,9 @@ export const CharacterDescriptionsPage: React.FC = () => {
               <div>
                 <Text fw={600}>Characters</Text>
                 <Text size="sm" c="dimmed">
-                  Only approved, active Character Sheets are included in story
-                  context. Appearance remains exclusive to image generation.
+                  Only tracked, approved, active Character Sheets are included
+                  in story context. Appearance remains exclusive to image
+                  generation.
                 </Text>
               </div>
               <Button
@@ -201,6 +202,12 @@ export const CharacterDescriptionsPage: React.FC = () => {
                   })
                 }
                 onAddSheetItem={() => addSheetItem(character.id)}
+                onTrackingChange={(isTracked) =>
+                  updateCharacter(character.id, { isTracked })
+                }
+                onAutoAcceptChangesChange={(autoAcceptChanges) =>
+                  updateCharacter(character.id, { autoAcceptChanges })
+                }
                 onActivityOverrideChange={(activeOverride) =>
                   updateCharacter(character.id, { activeOverride })
                 }
@@ -265,13 +272,25 @@ const CharactersHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
 
 const toGenerationStatus = (result: CharacterMaintenanceResult): string => {
   if (result.status === "proposal-created") {
-    return "Update ready. Return to chat to review and approve it.";
+    const autoApplied =
+      result.autoAppliedChangeCount > 0
+        ? `${result.autoAppliedChangeCount} update ${
+            result.autoAppliedChangeCount === 1 ? "was" : "were"
+          } applied automatically. `
+        : "";
+    return `${autoApplied}Update ready. Return to chat to review and approve it.`;
+  }
+  if (result.status === "auto-applied") {
+    return "The Character Sheet update was applied automatically.";
   }
   if (result.status === "unchanged") {
     return "The model proposed no changes.";
   }
   if (result.reason === "pending-approval") {
     return "Review or discard the pending character proposal first.";
+  }
+  if (result.reason === "tracking-disabled") {
+    return "Turn on Track with AI before generating a Character Sheet.";
   }
   return "The Character Sheet update could not be prepared.";
 };

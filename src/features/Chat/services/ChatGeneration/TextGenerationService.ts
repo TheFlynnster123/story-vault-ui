@@ -150,18 +150,27 @@ export class TextGenerationService extends GenerationOrchestrator {
     this.setStatus("Reasoning...");
 
     const modelOverride = await this.getReasoningModelOverride();
-    const reasoning = await d
-      .OpenRouterChatAPI()
-      .postChat(
+    const projection = d.UserChatProjection(this.chatId);
+    const streamingId = crypto.randomUUID();
+    projection.addStreamingMessage(streamingId, "reasoning");
+
+    try {
+      const reasoning = await d.OpenRouterChatAPI().postChatStream(
         requestMessages,
+        (content) => {
+          projection.updateStreamingMessage(content);
+        },
         modelOverride?.model,
+        modelOverride?.requestSettings,
         "chat",
         "Reasoning",
-        modelOverride?.requestSettings,
       );
 
-    if (reasoning.trim()) {
       await d.ChatService(this.chatId).AddReasoningMessage(reasoning);
+      projection.removeStreamingMessage();
+    } catch (error) {
+      projection.removeStreamingMessage();
+      throw error;
     }
   }
 

@@ -55,13 +55,17 @@ export class UserChatProjection {
   private streamingMessageId: string | null = null;
   private isStreamingNewMessage: boolean = false;
 
-  public addStreamingMessage(id: string): void {
+  public addStreamingMessage(
+    id: string,
+    type: "assistant" | "reasoning" = "assistant",
+  ): void {
     this.streamingMessageId = id;
     this.isStreamingNewMessage = true;
     this.Messages.push({
       id,
-      type: "assistant",
+      type,
       content: "",
+      isStreaming: true,
       hiddenByChapterId: undefined,
       deleted: false,
       hidden: false,
@@ -77,7 +81,7 @@ export class UserChatProjection {
   public startStreamingExistingMessage(id: string): void {
     this.streamingMessageId = id;
     this.isStreamingNewMessage = false;
-    this.replaceMessage(id, { content: "" });
+    this.replaceMessage(id, { content: "", isStreaming: true });
     this.notifySubscribers();
   }
 
@@ -97,6 +101,8 @@ export class UserChatProjection {
       if (index !== -1) {
         this.Messages.splice(index, 1);
       }
+    } else {
+      this.replaceMessage(this.streamingMessageId, { isStreaming: false });
     }
 
     this.streamingMessageId = null;
@@ -232,9 +238,8 @@ export class UserChatProjection {
 
     if (!chapter || !chapter.data.coveredMessageIds) return [];
 
-    return this.Messages.filter((m) =>
-      chapter.data.coveredMessageIds!.includes(m.id),
-    );
+    const coveredMessageIds = new Set(chapter.data.coveredMessageIds);
+    return this.Messages.filter((message) => coveredMessageIds.has(message.id));
   }
 
   public getBookChapters(bookId: string): UserChatMessage[] {
@@ -244,9 +249,8 @@ export class UserChatProjection {
 
     if (!book || !book.data.coveredChapterIds) return [];
 
-    return this.Messages.filter((m) =>
-      book.data.coveredChapterIds!.includes(m.id),
-    );
+    const coveredChapterIds = new Set(book.data.coveredChapterIds);
+    return this.Messages.filter((message) => coveredChapterIds.has(message.id));
   }
 
   // ---- Event Handlers ----
@@ -665,6 +669,8 @@ export interface UserChatMessage {
     | "agent-clarification";
 
   content?: string; // Text-based content of the message
+
+  isStreaming?: boolean;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any; // Data specific to message type

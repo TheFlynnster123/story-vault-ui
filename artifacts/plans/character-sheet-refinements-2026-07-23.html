@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Character Sheet Refinements — Three Implementation Plans</title>
+  <style>
+    :root {
+      --bg: #0f1318;
+      --surface: #171d24;
+      --surface-2: #1d252e;
+      --line: #34404c;
+      --text: #edf2f6;
+      --muted: #aab6c2;
+      --accent: #72d3bb;
+      --accent-2: #f0bd67;
+      --danger: #ef8f8f;
+      --max: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(114, 211, 187, 0.10), transparent 28rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--accent);
+      text-underline-offset: 0.2em;
+    }
+
+    a:focus-visible {
+      outline: 3px solid var(--accent-2);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+
+    code {
+      color: #d9f6ef;
+      background: rgba(114, 211, 187, 0.09);
+      border: 1px solid rgba(114, 211, 187, 0.18);
+      border-radius: 0.35rem;
+      padding: 0.08rem 0.32rem;
+      font-size: 0.88em;
+      overflow-wrap: anywhere;
+    }
+
+    .page {
+      width: min(var(--max), calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 3.5rem 0 5rem;
+    }
+
+    .eyebrow,
+    .kicker,
+    .step-number {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow { color: var(--accent); }
+
+    h1 {
+      max-width: 850px;
+      margin: 0.45rem 0 0.85rem;
+      font-size: clamp(2.15rem, 5vw, 4.6rem);
+      line-height: 0.98;
+      letter-spacing: -0.045em;
+    }
+
+    .lede {
+      max-width: 780px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.24rem);
+    }
+
+    .strategy {
+      margin-top: 1.4rem;
+      padding: 1rem 1.1rem;
+      border-left: 4px solid var(--accent);
+      background: rgba(114, 211, 187, 0.07);
+      color: #d7e7e3;
+    }
+
+    nav {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+      margin: 2.4rem 0 3.5rem;
+    }
+
+    nav a {
+      display: block;
+      min-height: 100%;
+      padding: 1rem;
+      color: var(--text);
+      text-decoration: none;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+    }
+
+    nav a:hover { border-color: var(--accent); }
+
+    nav b {
+      display: block;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+
+    nav span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .shared-map {
+      margin-bottom: 4rem;
+      padding: 1.3rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+    }
+
+    .shared-map h2,
+    .plan h2 {
+      margin: 0;
+      letter-spacing: -0.025em;
+    }
+
+    .shared-map h2 { font-size: 1.15rem; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1.8rem;
+      margin-top: 1.2rem;
+    }
+
+    .node {
+      position: relative;
+      padding: 0.9rem;
+      min-height: 6.2rem;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 0.7rem;
+    }
+
+    .node:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -1.4rem;
+      top: 50%;
+      color: var(--accent-2);
+      font-size: 1.2rem;
+      transform: translateY(-50%);
+    }
+
+    .node strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .node small { color: var(--muted); }
+
+    .plan {
+      scroll-margin-top: 1.5rem;
+      margin-top: 4.8rem;
+      padding-top: 0.3rem;
+    }
+
+    .plan-heading {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .plan h2 {
+      font-size: clamp(1.7rem, 3vw, 2.7rem);
+      line-height: 1.05;
+    }
+
+    .plan-outcome {
+      max-width: 770px;
+      margin: 0.55rem 0 0;
+      color: var(--muted);
+    }
+
+    .scope-tag {
+      white-space: nowrap;
+      padding: 0.35rem 0.65rem;
+      color: var(--accent);
+      border: 1px solid rgba(114, 211, 187, 0.42);
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin: 1.2rem 0;
+    }
+
+    .step {
+      position: relative;
+      padding: 1.1rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+    }
+
+    .step-number {
+      color: var(--accent-2);
+      margin-bottom: 0.6rem;
+    }
+
+    .step h3 {
+      margin: 0 0 0.45rem;
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .step + .step::before {
+      content: "";
+      position: absolute;
+      width: 0.9rem;
+      height: 2px;
+      top: 2rem;
+      left: -0.91rem;
+      background: var(--accent-2);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 0.9rem;
+    }
+
+    .panel {
+      padding: 1.1rem;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+    }
+
+    .panel h3 {
+      margin: 0 0 0.65rem;
+      font-size: 0.92rem;
+      letter-spacing: 0.02em;
+    }
+
+    .panel ul {
+      margin: 0;
+      padding-left: 1.15rem;
+    }
+
+    .panel li {
+      margin: 0.38rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .decision {
+      border-color: rgba(240, 189, 103, 0.48);
+    }
+
+    .decision h3 { color: var(--accent-2); }
+
+    .risk {
+      margin-top: 0.9rem;
+      padding: 0.8rem 1rem;
+      border-left: 3px solid var(--danger);
+      background: rgba(239, 143, 143, 0.06);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .files {
+      margin-top: 0.9rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .files strong { color: var(--text); }
+
+    .done {
+      margin-top: 1.1rem;
+      padding: 1rem;
+      background: rgba(114, 211, 187, 0.075);
+      border: 1px solid rgba(114, 211, 187, 0.30);
+      border-radius: 0.8rem;
+    }
+
+    .done strong {
+      display: block;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+
+    .done span {
+      color: #c7d9d4;
+      font-size: 0.92rem;
+    }
+
+    footer {
+      margin-top: 4.8rem;
+      padding-top: 1.2rem;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 900px) {
+      nav,
+      .flow,
+      .steps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .node::after,
+      .step + .step::before {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 1.2rem, var(--max));
+        padding-top: 2rem;
+      }
+
+      nav,
+      .flow,
+      .steps,
+      .detail-grid,
+      .plan-heading {
+        grid-template-columns: 1fr;
+      }
+
+      .scope-tag { justify-self: start; }
+      .plan { margin-top: 3.8rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+
+    @media print {
+      :root { color-scheme: light; }
+      body { background: white; color: #15202a; }
+      .page { width: 100%; padding: 0; }
+      nav { display: none; }
+      .shared-map, .step, .panel, .done { break-inside: avoid; }
+      .plan { break-before: page; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="eyebrow">Story Vault UI · implementation planning</div>
+      <h1>Character sheets with less noise and more control.</h1>
+      <p class="lede">
+        Three separate plans refine review diffs, add a deterministic “do not track”
+        record state, and allow trusted characters to accept AI changes automatically.
+      </p>
+      <div class="strategy">
+        <strong>Strategy:</strong> keep the LLM contracts strict, then enforce user policy
+        and change detection in deterministic application services before anything reaches
+        persistence or story context.
+      </div>
+    </header>
+
+    <nav aria-label="Plan sections">
+      <a href="#plan-diffs">
+        <b>Plan 1 · Diff-only review</b>
+        <span>Match stable items regardless of index and render only additions/removals.</span>
+      </a>
+      <a href="#plan-tracking">
+        <b>Plan 2 · Tracking opt-out</b>
+        <span>Keep a name record while excluding it from every AI-managed character path.</span>
+      </a>
+      <a href="#plan-auto-accept">
+        <b>Plan 3 · Auto-accept</b>
+        <span>Apply trusted existing-character changes and retain the remainder for review.</span>
+      </a>
+    </nav>
+
+    <section class="shared-map" aria-labelledby="shared-map-title">
+      <h2 id="shared-map-title">Shared implementation seam</h2>
+      <div class="flow" aria-label="Character update pipeline">
+        <div class="node">
+          <strong>Character record</strong>
+          <small>Persisted identity, sheet, activity, and per-character policy.</small>
+        </div>
+        <div class="node">
+          <strong>Selection + sync</strong>
+          <small>Strict structured LLM responses remain complete and validated.</small>
+        </div>
+        <div class="node">
+          <strong>Maintenance policy</strong>
+          <small>Filters tracking, computes real changes, and routes acceptance.</small>
+        </div>
+        <div class="node">
+          <strong>Persistence + context</strong>
+          <small>Only eligible approved data reaches text or image generation.</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="plan" id="plan-diffs" aria-labelledby="diffs-title">
+      <div class="plan-heading">
+        <div>
+          <div class="kicker">Plan 1</div>
+          <h2 id="diffs-title">Show only meaningful sheet diffs</h2>
+          <p class="plan-outcome">
+            Review cards display only added and removed facts. An unchanged fact is matched
+            by normalized text, even when the LLM returns it at another index; reorder-only
+            responses create no sheet change.
+          </p>
+        </div>
+        <div class="scope-tag">No schema change</div>
+      </div>
+
+      <div class="steps">
+        <article class="step">
+          <div class="step-number">Step 1</div>
+          <h3>Create one domain diff helper</h3>
+          <p>
+            Compare normalized, deduplicated item text without using array indexes.
+            Return <code>added</code> and <code>removed</code> while preserving each source
+            list’s display order.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 2</div>
+          <h3>Use the helper for change detection</h3>
+          <p>
+            Replace the order-sensitive <code>areSheetItemsEqual</code> check in
+            <code>CharacterMaintenanceService</code>. Do not create sheet proposals when
+            both diff lists are empty.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 3</div>
+          <h3>Render additions and removals</h3>
+          <p>
+            Replace “Current sheet / Proposed sheet” in the review modal with compact
+            “Added” and “Removed” groups. Keep activity changes visible beside the sheet diff.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 4</div>
+          <h3>Lock behavior with tests</h3>
+          <p>
+            Cover insert, delete, replacement, empty lists, reordered matches, mixed activity,
+            and a fact moving from index 0 to index N.
+          </p>
+        </article>
+      </div>
+
+      <div class="detail-grid">
+        <aside class="panel decision">
+          <h3>Decision · exact normalized matching</h3>
+          <ul>
+            <li>Trim and deduplicate through the existing <code>normalizeSheetItems</code> rules.</li>
+            <li>Match case-sensitively by value, not position; wording or capitalization edits remain visible.</li>
+            <li>Keep the LLM’s complete-replacement response contract for one-to-one validation and safe apply.</li>
+          </ul>
+        </aside>
+        <aside class="panel">
+          <h3>Verification</h3>
+          <ul>
+            <li>A pure reorder produces no proposal.</li>
+            <li>Unchanged items never appear in the modal.</li>
+            <li>Applying still writes the full proposed replacement list.</li>
+            <li>Activity-only changes still render and can be decided.</li>
+          </ul>
+        </aside>
+      </div>
+
+      <div class="files">
+        <strong>Primary files:</strong>
+        <code>CharacterUpdateProposal.ts</code>,
+        <code>CharacterMaintenanceService.ts</code>,
+        <code>CharacterUpdateReviewModal.tsx</code>, and their focused tests.
+      </div>
+
+      <div class="done">
+        <strong>Done when</strong>
+        <span>
+          Mara’s unchanged “Navigator” fact is absent from review even if it moved,
+          while only “Removed: Carries the map” and “Added: Carries the brass key” remain.
+        </span>
+      </div>
+    </section>
+
+    <section class="plan" id="plan-tracking" aria-labelledby="tracking-title">
+      <div class="plan-heading">
+        <div>
+          <div class="kicker">Plan 2</div>
+          <h2 id="tracking-title">Add a deterministic tracking opt-out</h2>
+          <p class="plan-outcome">
+            A character can remain in the roster as a name-bearing record while being excluded
+            from AI activity detection, sheet synchronization, durable text context, and image
+            appearance injection. Manual editing remains available.
+          </p>
+        </div>
+        <div class="scope-tag">Record + pipeline</div>
+      </div>
+
+      <div class="steps">
+        <article class="step">
+          <div class="step-number">Step 1</div>
+          <h3>Persist the policy</h3>
+          <p>
+            Add <code>isTracked</code> to <code>CharacterDescription</code>, default it to
+            <code>true</code>, migrate missing values to true, and bump the character schema.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 2</div>
+          <h3>Expose “Track with AI”</h3>
+          <p>
+            Add a per-character switch and an “Not AI tracked” badge. When off, disable
+            Generate/Update Sheet and explain that the record is retained as an exclusion rule.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 3</div>
+          <h3>Enforce at every LLM boundary</h3>
+          <p>
+            Keep all names in the known roster, but discard selections matching untracked
+            records. Never send them to sheet sync, never change their detected activity, and
+            reject stale proposals targeting them.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 4</div>
+          <h3>Filter all generated context</h3>
+          <p>
+            Exclude untracked sheets in <code>LLMMessageContextService</code> and return no
+            appearance context from both current and legacy image-generation lookup paths.
+          </p>
+        </article>
+      </div>
+
+      <div class="detail-grid">
+        <aside class="panel decision">
+          <h3>Deterministic guardrails</h3>
+          <ul>
+            <li>The name stays in <code>knownCharacters</code>, labeled as untracked for the prompt.</li>
+            <li>Response normalization checks the stored record and drops its ID/name regardless of model output.</li>
+            <li>The proposal apply service rechecks current tracking state, protecting against old pending proposals.</li>
+            <li>Turning tracking off updates <code>updatedAt</code>, so already-prepared changes become stale.</li>
+          </ul>
+        </aside>
+        <aside class="panel">
+          <h3>Verification</h3>
+          <ul>
+            <li>Legacy records migrate as tracked and preserve existing behavior.</li>
+            <li>A POV name returned by the model is neither updated nor recreated as a duplicate.</li>
+            <li>No POV sheet or appearance appears in text/image LLM inputs.</li>
+            <li>Manual name, sheet, appearance, and image-model edits still save.</li>
+          </ul>
+        </aside>
+      </div>
+
+      <div class="risk">
+        <strong>Risk to handle:</strong> simply filtering the record before active-character
+        selection would let the LLM rediscover the same name as “new.” The full roster must be
+        retained for matching, with eligibility filtered after matching.
+      </div>
+
+      <div class="files">
+        <strong>Primary files:</strong>
+        <code>CharacterDescription.ts</code>,
+        <code>CharacterDescriptionsService.ts</code>,
+        <code>CharacterCard.tsx</code>,
+        <code>CharacterDescriptionsPage.tsx</code>,
+        <code>ActiveCharacterSelectionService.ts</code>,
+        <code>CharacterMaintenanceService.ts</code>,
+        <code>LLMMessageContextService.ts</code>,
+        <code>ImageGenerator.ts</code>, and <code>ImageGenerationService.ts</code>.
+      </div>
+
+      <div class="done">
+        <strong>Done when</strong>
+        <span>
+          An untracked POV character remains visible and manually editable in Characters, but
+          repeated automatic runs cannot select, update, inject, or recreate that character.
+        </span>
+      </div>
+    </section>
+
+    <section class="plan" id="plan-auto-accept" aria-labelledby="auto-title">
+      <div class="plan-heading">
+        <div>
+          <div class="kicker">Plan 3</div>
+          <h2 id="auto-title">Auto-accept changes for trusted characters</h2>
+          <p class="plan-outcome">
+            Existing tracked characters can opt into automatic acceptance. Mixed batches apply
+            opted-in changes through the same conflict-checked service and leave all other
+            changes in the existing review flow.
+          </p>
+        </div>
+        <div class="scope-tag">Per-character policy</div>
+      </div>
+
+      <div class="steps">
+        <article class="step">
+          <div class="step-number">Step 1</div>
+          <h3>Persist an opt-in flag</h3>
+          <p>
+            Add <code>autoAcceptChanges</code>, default false. If Plan 2 ships in the same
+            change set, migrate both flags in one schema bump; otherwise use the next version.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 2</div>
+          <h3>Add the character toggle</h3>
+          <p>
+            Show “Automatically accept AI changes” on each card with an opt-in badge. Disable
+            it while AI tracking is off because an untracked record cannot receive AI changes.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 3</div>
+          <h3>Partition prepared changes</h3>
+          <p>
+            In the maintenance policy, split changes by current stored character preference.
+            Existing opted-in records auto-apply; new characters and opted-out records remain
+            reviewable.
+          </p>
+        </article>
+        <article class="step">
+          <div class="step-number">Step 4</div>
+          <h3>Reuse safe apply semantics</h3>
+          <p>
+            Route the automatic subset through <code>applyUpdateProposal</code> so
+            <code>updatedAt</code> conflicts, normalization, one-save behavior, and sheet-source
+            metadata remain identical to manual approval.
+          </p>
+        </article>
+      </div>
+
+      <div class="detail-grid">
+        <aside class="panel decision">
+          <h3>Acceptance policy</h3>
+          <ul>
+            <li>Opt-in applies to both scheduled and manually requested AI sheet/activity changes.</li>
+            <li>New characters always require review because no persisted record owns the preference yet.</li>
+            <li>Tracking off takes precedence over auto-accept.</li>
+            <li>A mixed batch may return “auto-applied N; M ready for review” for clear feedback.</li>
+          </ul>
+        </aside>
+        <aside class="panel">
+          <h3>Verification</h3>
+          <ul>
+            <li>All opted-in changes apply with no pending proposal.</li>
+            <li>Mixed batches apply only opted-in IDs and persist the remainder.</li>
+            <li>Conflicts fall back to review; no partial conflicted write occurs.</li>
+            <li>One character’s toggle cannot accept another character’s change.</li>
+          </ul>
+        </aside>
+      </div>
+
+      <div class="risk">
+        <strong>Risk to handle:</strong> character records and pending proposals use separate
+        managed blobs. Centralize the partition/apply/save sequence in one service, preserve the
+        full proposal on an apply conflict, and test failure ordering so reviewable changes are
+        not silently lost.
+      </div>
+
+      <div class="files">
+        <strong>Primary files:</strong>
+        <code>CharacterDescription.ts</code>,
+        <code>CharacterDescriptionsService.ts</code>,
+        <code>CharacterCard.tsx</code>,
+        <code>CharacterDescriptionsPage.tsx</code>,
+        <code>CharacterMaintenanceService.ts</code>,
+        <code>CharacterUpdateProposalService.ts</code>, settings/status copy, and focused tests.
+      </div>
+
+      <div class="done">
+        <strong>Done when</strong>
+        <span>
+          A batch for auto-accept Mara and review-required Ivo immediately updates Mara,
+          leaves only Ivo in the review control, and keeps new-character proposals manual.
+        </span>
+      </div>
+    </section>
+
+    <footer>
+      Grounded in the current schema-v3 character record, complete-replacement sheet sync,
+      proposal review flow, and centralized text/image context builders. Recommended delivery
+      order: Plan 1 first; Plans 2 and 3 together if convenient, sharing one schema migration.
+    </footer>
+  </main>
+</body>
+</html>

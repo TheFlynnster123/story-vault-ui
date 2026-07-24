@@ -21,23 +21,43 @@ export const ReasoningMessage: React.FC<ReasoningMessageProps> = ({
   message,
   isLastMessage,
 }) => {
-  const [expanded, setExpanded] = useState(false);
+  const isStreaming = message.isStreaming === true;
+  const [expanded, setExpanded] = useState(isStreaming);
   const [showButtons, setShowButtons] = useState(false);
   const disabled = message.data?.disabled ?? false;
 
   const toggleExpand = () => setExpanded(!expanded);
-  const toggleButtons = () => setShowButtons(!showButtons);
+  const toggleButtons = () => {
+    if (!isStreaming) setShowButtons(!showButtons);
+  };
 
   return (
     <MessageItem $type="system">
       <MessageContentWrapper $fitContent>
         <ReasoningMessageText className="message-text" $disabled={disabled}>
-          <ReasoningMessageHeader onClick={toggleExpand}>
-            Reasoning{disabled ? " disabled" : ""} {expanded ? "▾" : "▸"}
+          <ReasoningMessageHeader
+            aria-expanded={expanded}
+            aria-busy={isStreaming}
+            onClick={toggleExpand}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggleExpand();
+              }
+            }}
+          >
+            Reasoning{isStreaming ? "…" : disabled ? " disabled" : ""}{" "}
+            {expanded ? "▾" : "▸"}
           </ReasoningMessageHeader>
 
           {expanded && (
-            <div className="clickable" onClick={toggleButtons}>
+            <div
+              aria-live={isStreaming ? "polite" : undefined}
+              className={isStreaming ? undefined : "clickable"}
+              onClick={toggleButtons}
+            >
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
           )}

@@ -16,7 +16,11 @@ import type {
   CharacterDescription,
   PreferredImage,
 } from "../services/CharacterDescription";
-import { isCharacterActive } from "../services/CharacterDescription";
+import {
+  doesCharacterAutoAcceptChanges,
+  isCharacterActive,
+  isCharacterTracked,
+} from "../services/CharacterDescription";
 import { CharacterSheetItemsEditor } from "./CharacterSheetItemsEditor";
 
 interface CharacterCardProps {
@@ -28,6 +32,8 @@ interface CharacterCardProps {
   onAppearanceChange: (appearance: string) => void;
   onSheetItemsChange: (items: string[]) => void;
   onAddSheetItem: () => void;
+  onTrackingChange: (isTracked: boolean) => void;
+  onAutoAcceptChangesChange: (autoAcceptChanges: boolean) => void;
   onActivityOverrideChange: (active: boolean) => void;
   onUseAutomaticActivity: () => void;
   onGenerateOrUpdate: () => void;
@@ -44,6 +50,8 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   onAppearanceChange,
   onSheetItemsChange,
   onAddSheetItem,
+  onTrackingChange,
+  onAutoAcceptChangesChange,
   onActivityOverrideChange,
   onUseAutomaticActivity,
   onGenerateOrUpdate,
@@ -51,6 +59,8 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   onDelete,
 }) => {
   const active = isCharacterActive(character);
+  const tracked = isCharacterTracked(character);
+  const autoAcceptChanges = doesCharacterAutoAcceptChanges(character);
   const hasSheet = character.sheetItems.some((item) => item.trim());
   const hasBlankSheetItem = character.sheetItems.some((item) => !item.trim());
 
@@ -98,12 +108,42 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
             User override
           </Badge>
         )}
+        {!tracked && (
+          <Badge color="orange" variant="light">
+            Not AI tracked
+          </Badge>
+        )}
+        {tracked && autoAcceptChanges && (
+          <Badge color="teal" variant="light">
+            Auto-accepts AI changes
+          </Badge>
+        )}
         {character.sheetSource && (
           <Badge color="gray" variant="outline">
             Sheet last updated{" "}
             {character.sheetSource === "auto" ? "by AI" : "manually"}
           </Badge>
         )}
+      </Group>
+
+      <Group align="flex-start" gap="xl">
+        <Switch
+          label="Track with AI"
+          description="Allow AI activity detection, sheet updates, and generated context."
+          checked={tracked}
+          onChange={(event) =>
+            onTrackingChange(event.currentTarget.checked)
+          }
+        />
+        <Switch
+          label="Automatically accept AI changes"
+          description="Apply this existing character's AI updates without review."
+          checked={autoAcceptChanges}
+          disabled={!tracked}
+          onChange={(event) =>
+            onAutoAcceptChangesChange(event.currentTarget.checked)
+          }
+        />
       </Group>
 
       <CharacterSheetItemsEditor
@@ -118,6 +158,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
           loading={isGenerating}
           disabled={
             hasPendingProposal ||
+            !tracked ||
             !character.name.trim() ||
             hasBlankSheetItem ||
             isGenerating

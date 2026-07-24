@@ -186,6 +186,17 @@ describe("LLMMessageContextService", () => {
           createdAt: "2026-01-01",
           updatedAt: "2026-01-01",
         },
+        {
+          id: "untracked",
+          name: "POV",
+          appearance: "must not enter image context",
+          sheetItems: ["Must not enter text context"],
+          isTracked: false,
+          detectedActive: true,
+          activeOverride: true,
+          createdAt: "2026-01-01",
+          updatedAt: "2026-01-01",
+        },
       ]);
 
       const result = await new LLMMessageContextService(
@@ -200,6 +211,7 @@ describe("LLMMessageContextService", () => {
       expect(sheetMessage?.content).toContain("- Carries the brass key");
       expect(sheetMessage?.content).toContain("## Nell");
       expect(sheetMessage?.content).not.toContain("## Ivo");
+      expect(sheetMessage?.content).not.toContain("## POV");
       expect(sheetMessage?.content).not.toContain(
         "must not enter text context",
       );

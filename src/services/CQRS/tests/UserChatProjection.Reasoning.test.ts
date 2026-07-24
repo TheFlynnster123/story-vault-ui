@@ -114,6 +114,25 @@ describe("UserChatProjection - Reasoning Events", () => {
     );
   });
 
+  it("streams reasoning as a transient reasoning message", () => {
+    projection.process(MessageCreatedEventUtil.Create("user", "What next?"));
+
+    projection.addStreamingMessage("streaming-reasoning", "reasoning");
+    projection.updateStreamingMessage("Follow the clue");
+
+    expect(projection.GetMessages()[1]).toMatchObject({
+      id: "streaming-reasoning",
+      type: "reasoning",
+      content: "Follow the clue",
+      isStreaming: true,
+    });
+    expect(projection.GetLastPersistedTextMessage()?.type).toBe("user-message");
+
+    projection.removeStreamingMessage();
+
+    expect(projection.GetMessages()).toHaveLength(1);
+  });
+
   it("ignores an assistant message while it is being regenerated", () => {
     const reasoning = ReasoningCreatedEventUtil.Create("Keep this reasoning.");
     const assistant = MessageCreatedEventUtil.Create("assistant", "Response");

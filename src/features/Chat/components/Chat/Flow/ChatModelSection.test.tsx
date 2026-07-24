@@ -185,7 +185,7 @@ describe("ChatModelSection", () => {
     await user.click(screen.getByText("Chat Model"));
 
     await waitFor(() => {
-      expect(screen.getByText("Select Model")).toBeInTheDocument();
+      expect(screen.getByText("Select model setup")).toBeInTheDocument();
     });
   });
 

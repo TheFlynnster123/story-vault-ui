@@ -13,11 +13,32 @@ describe("TextGenerationService reasoning", () => {
   ];
   const getLastPersistedTextMessage = vi.fn();
   const addUserMessage = vi.fn();
+  const addStreamingMessage = vi.fn();
+  const updateStreamingMessage = vi.fn();
+  const removeStreamingMessage = vi.fn();
+  const postChatStream = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     getLastPersistedTextMessage.mockReturnValue(undefined);
     addUserMessage.mockResolvedValue(undefined);
+    postChatStream.mockImplementation(
+      (
+        _messages,
+        onToken: (content: string) => void,
+        _model,
+        _requestSettings,
+        _requestType,
+        requestLabel,
+      ) => {
+        const content =
+          requestLabel === "Reasoning"
+            ? "Reasoning output"
+            : "Assistant output";
+        onToken(content);
+        return Promise.resolve(content);
+      },
+    );
 
     vi.mocked(d.PlanGenerationService).mockReturnValue({
       onMessageSent: vi.fn(),
@@ -38,14 +59,14 @@ describe("TextGenerationService reasoning", () => {
 
     vi.mocked(d.UserChatProjection).mockReturnValue({
       GetLastPersistedTextMessage: getLastPersistedTextMessage,
-      addStreamingMessage: vi.fn(),
-      updateStreamingMessage: vi.fn(),
-      removeStreamingMessage: vi.fn(),
+      addStreamingMessage,
+      updateStreamingMessage,
+      removeStreamingMessage,
     } as unknown as ReturnType<typeof d.UserChatProjection>);
 
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue({
-      postChat: vi.fn().mockResolvedValue("Reasoning output"),
-      postChatStream: vi.fn().mockResolvedValue("Assistant output"),
+      postChat: vi.fn(),
+      postChatStream,
     } as unknown as ReturnType<typeof d.OpenRouterChatAPI>);
 
     vi.mocked(d.ChatService).mockReturnValue({
@@ -77,17 +98,26 @@ describe("TextGenerationService reasoning", () => {
     expect(
       d.LLMMessageContextService(CHAT_ID).buildReasoningRequestMessages,
     ).toHaveBeenCalled();
-    expect(d.OpenRouterChatAPI().postChat).toHaveBeenCalledWith(
+    expect(postChatStream).toHaveBeenNthCalledWith(
+      1,
       mockReasoningMessages,
+      expect.any(Function),
+      undefined,
       undefined,
       "chat",
       "Reasoning",
-      undefined,
     );
+    expect(addStreamingMessage).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      "reasoning",
+    );
+    expect(updateStreamingMessage).toHaveBeenCalledWith("Reasoning output");
     expect(d.ChatService(CHAT_ID).AddReasoningMessage).toHaveBeenCalledWith(
       "Reasoning output",
     );
-    expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
+    expect(removeStreamingMessage).toHaveBeenCalledTimes(2);
+    expect(postChatStream).toHaveBeenCalledTimes(2);
   });
 
   it("uses reasoning model override for reasoning and chat model override for response", async () => {
@@ -106,14 +136,17 @@ describe("TextGenerationService reasoning", () => {
 
     await service.generateResponse();
 
-    expect(d.OpenRouterChatAPI().postChat).toHaveBeenCalledWith(
+    expect(postChatStream).toHaveBeenNthCalledWith(
+      1,
       mockReasoningMessages,
+      expect.any(Function),
       "anthropic/claude-4-sonnet",
+      { reasoning: { effort: "high" } },
       "chat",
       "Reasoning",
-      { reasoning: { effort: "high" } },
     );
-    expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalledWith(
+    expect(postChatStream).toHaveBeenNthCalledWith(
+      2,
       mockRequestMessages,
       expect.any(Function),
       "openai/gpt-4.1",
@@ -134,7 +167,7 @@ describe("TextGenerationService reasoning", () => {
     ).not.toHaveBeenCalled();
     expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
     expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
-    expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
+    expect(postChatStream).toHaveBeenCalledOnce();
   });
 
   it("skips reasoning for an empty continuation after a reasoning message", async () => {
@@ -151,7 +184,7 @@ describe("TextGenerationService reasoning", () => {
     ).not.toHaveBeenCalled();
     expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
     expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
-    expect(d.OpenRouterChatAPI().postChatStream).toHaveBeenCalled();
+    expect(postChatStream).toHaveBeenCalledOnce();
   });
 
   it("captures the prior message before saving new user input", async () => {
@@ -169,6 +202,20 @@ describe("TextGenerationService reasoning", () => {
       addUserMessage.mock.invocationCallOrder[0],
     );
     expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
+  });
+
+  it("removes partial reasoning without saving when the stream fails", async () => {
+    postChatStream.mockRejectedValueOnce(new Error("Stream failed"));
+    const service = new TextGenerationService(CHAT_ID);
+
+    await expect(service.generateResponse()).rejects.toThrow("Stream failed");
+
+    expect(addStreamingMessage).toHaveBeenCalledWith(
+      expect.any(String),
+      "reasoning",
+    );
+    expect(removeStreamingMessage).toHaveBeenCalledOnce();
+    expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
   });
 
   it("runs post-user-message tasks after saving non-empty input", async () => {

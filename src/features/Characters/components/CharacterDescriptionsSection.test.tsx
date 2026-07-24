@@ -13,6 +13,7 @@ describe("CharacterDescriptionsSection", () => {
         createCharacter("Mara", true),
         createCharacter("Ivo", false),
         { ...createCharacter("Nell", false), activeOverride: true },
+        { ...createCharacter("POV", true), isTracked: false },
       ],
     });
 
@@ -21,7 +22,7 @@ describe("CharacterDescriptionsSection", () => {
     );
 
     expect(screen.getByText("Characters")).toBeInTheDocument();
-    expect(screen.getByText("2 active / 3 total")).toBeInTheDocument();
+    expect(screen.getByText("2 active / 4 total")).toBeInTheDocument();
     expect(screen.queryByText("Mara")).not.toBeInTheDocument();
   });
 

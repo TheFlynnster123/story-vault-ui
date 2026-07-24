@@ -178,7 +178,7 @@ describe("ModelSelect with ModelSelectorModal", () => {
     await user.click(screen.getByLabelText("Model"));
 
     await waitFor(() => {
-      expect(screen.getByText("Select Model")).toBeInTheDocument();
+      expect(screen.getByText("Select model setup")).toBeInTheDocument();
     });
   });
 
