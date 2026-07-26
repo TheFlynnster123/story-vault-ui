@@ -11,9 +11,11 @@ import {
 import { RiFileCopyLine } from "react-icons/ri";
 import { useState } from "react";
 import type {
+  TrackedContextTrace,
   TrackedMessage,
   TrackedRequest,
 } from "../services/RequestTracker";
+import { summarizeContextTrace } from "./contextTrace";
 import {
   DEFAULT_VISIBLE_MESSAGE_COUNT,
   getRecentMessages,
@@ -82,6 +84,10 @@ export const RequestInspection = ({
         </Accordion.Panel>
       </Accordion.Item>
 
+      {request.contextTrace && (
+        <ContextAssemblyTrace trace={request.contextTrace} />
+      )}
+
       <Accordion.Item value="response">
         <Accordion.Control>
           Response{request.httpStatus ? ` · HTTP ${request.httpStatus}` : ""}
@@ -93,6 +99,64 @@ export const RequestInspection = ({
     </Accordion>
   </Stack>
 );
+
+const ContextAssemblyTrace = ({
+  trace,
+}: {
+  trace: TrackedContextTrace;
+}) => {
+  const summary = summarizeContextTrace(trace);
+  const excludedEntries = trace.projection.filter((entry) => !entry.included);
+
+  return (
+    <Accordion.Item value="context-assembly">
+      <Accordion.Control>
+        Context assembly ({summary.includedCount} projected ·{" "}
+        {summary.excludedCount} excluded)
+      </Accordion.Control>
+      <Accordion.Panel>
+        <Stack gap="sm">
+          <Group gap="xs">
+            {trace.sections.map((section) => (
+              <Badge key={section.source} variant="light">
+                {section.source}: {section.messageCount}
+              </Badge>
+            ))}
+          </Group>
+
+          {trace.appendedSources.length > 0 && (
+            <Text size="xs">
+              Appended after context: {trace.appendedSources.join(", ")}
+            </Text>
+          )}
+
+          {summary.bufferedCount > 0 && (
+            <Text size="xs">
+              Restored by trailing-chapter buffer: {summary.bufferedCount}
+            </Text>
+          )}
+
+          <DebugText
+            value={JSON.stringify(
+              {
+                sections: trace.sections,
+                excluded: excludedEntries.map(
+                  ({ id, type, exclusionReason }) => ({
+                    id,
+                    type,
+                    reason: exclusionReason,
+                  }),
+                ),
+              },
+              null,
+              2,
+            )}
+          />
+        </Stack>
+      </Accordion.Panel>
+    </Accordion.Item>
+  );
+};
 
 const RecentMessageContext = ({
   messages,

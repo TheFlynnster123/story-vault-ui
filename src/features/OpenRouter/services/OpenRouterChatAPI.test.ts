@@ -258,6 +258,52 @@ describe("OpenRouterChatAPI", () => {
       );
     });
 
+    it("records the supplied context assembly trace", async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: "Done"\n'));
+          controller.close();
+        },
+      });
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(stream, { status: 200 }),
+      );
+      const contextTrace = {
+        projection: [
+          {
+            id: "expired-note",
+            type: "note",
+            included: false,
+            buffered: false,
+            exclusionReason: "expired-note",
+          },
+        ],
+        sections: [
+          {
+            source: "recent-history",
+            messageCount: 1,
+            messageIds: ["message-1"],
+          },
+        ],
+        appendedSources: ["response-prompt"],
+      };
+
+      await api.postChatStream(
+        [{ role: "user", content: "Continue" }],
+        vi.fn(),
+        undefined,
+        undefined,
+        "chat",
+        "Chat",
+        contextTrace,
+      );
+
+      expect(d.RequestTracker().record).toHaveBeenCalledWith(
+        expect.objectContaining({ contextTrace }),
+      );
+    });
+
     it("should retry a transient request once immediately by default when enabled", async () => {
       vi.mocked(d.SystemSettingsService).mockReturnValue({
         Get: vi.fn().mockResolvedValue({

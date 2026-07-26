@@ -4,7 +4,11 @@ import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { SystemSettings } from "../../SystemSettings/services/SystemSettings";
 import { OpenRouterError, parseOpenRouterError } from "./OpenRouterError";
 import { getOpenRouterCreditsQueryKey } from "./OpenRouterCreditsAPI";
-import type { RequestType, TrackedRequest } from "./RequestTracker";
+import type {
+  RequestType,
+  TrackedContextTrace,
+  TrackedRequest,
+} from "./RequestTracker";
 import { normalizeTrackedRequestLimit } from "./RequestTracker";
 import type {
   OpenRouterRequestSettings,
@@ -56,6 +60,7 @@ export class OpenRouterChatAPI {
     requestType: RequestType = "chat",
     requestLabel: string = "LLM",
     requestSettingsOverride?: OpenRouterRequestSettings,
+    contextTrace?: TrackedContextTrace,
   ): Promise<string> {
     const startedAt = nowMs();
     const openRouterEncryptionKey = await d
@@ -98,6 +103,7 @@ export class OpenRouterChatAPI {
           requestLabel,
           requestType,
           startedAt,
+          contextTrace,
         ),
         status: "success",
         responseCharCount: response.reply.length,
@@ -117,6 +123,7 @@ export class OpenRouterChatAPI {
           requestLabel,
           requestType,
           startedAt,
+          contextTrace,
         ),
         ...buildTrackedFailure(error),
       });
@@ -216,6 +223,7 @@ export class OpenRouterChatAPI {
     requestSettingsOverride?: OpenRouterRequestSettings,
     requestType: RequestType = "chat",
     requestLabel: string = "Chat",
+    contextTrace?: TrackedContextTrace,
   ): Promise<string> {
     const openRouterEncryptionKey = await d
       .EncryptionManager()
@@ -248,6 +256,7 @@ export class OpenRouterChatAPI {
             openRouterEncryptionKey,
             requestType,
             requestLabel,
+            contextTrace,
           ),
         retrySettings,
       );
@@ -275,6 +284,7 @@ export class OpenRouterChatAPI {
     openRouterEncryptionKey: string,
     requestType: RequestType,
     requestLabel: string,
+    contextTrace?: TrackedContextTrace,
   ): Promise<string> {
     const startedAt = nowMs();
     let timeToFirstTokenMs: number | undefined;
@@ -350,6 +360,7 @@ export class OpenRouterChatAPI {
           requestLabel,
           requestType,
           startedAt,
+          contextTrace,
         ),
         status: "success",
         timeToFirstTokenMs,
@@ -370,6 +381,7 @@ export class OpenRouterChatAPI {
           requestLabel,
           requestType,
           startedAt,
+          contextTrace,
         ),
         timeToFirstTokenMs,
         ...buildTrackedFailure(error),
@@ -476,6 +488,7 @@ const buildTrackedBase = (
   label: string,
   type: RequestType,
   startedAt: number,
+  contextTrace?: TrackedContextTrace,
 ): Omit<
   TrackedRequest,
   | "id"
@@ -499,6 +512,7 @@ const buildTrackedBase = (
   inputCharCount: sumMessageChars(messages),
   inputMessages: cleanMessages(messages),
   requestSettings: summarizeRequestSettings(requestBody),
+  ...(contextTrace ? { contextTrace } : {}),
 });
 
 const buildTrackedFailure = (

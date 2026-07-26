@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { LLMChatProjection } from "../LLMChatProjection";
+import {
+  LLMChatProjection,
+  type LLMMessage,
+} from "../LLMChatProjection";
 import {
   PlanCreatedEventUtil,
   PlanHiddenEventUtil,
@@ -52,8 +55,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      // Access internal state via cast since GetMessage returns LLMMessage
-      const message = projection.GetMessage(event.messageId) as any;
+      const message = getPlanState(projection, event.messageId);
       expect(message?.data?.planDefinitionId).toBe("def-42");
     });
 
@@ -62,7 +64,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.messageId) as any;
+      const message = getPlanState(projection, event.messageId);
       expect(message?.data?.planName).toBe("Character Arc");
     });
 
@@ -71,7 +73,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.messageId) as any;
+      const message = getPlanState(projection, event.messageId);
       expect(message?.data?.rawContent).toBe("Raw plan content");
     });
 
@@ -89,7 +91,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.messageId) as any;
+      const message = getPlanState(projection, event.messageId);
       expect(message?.hidden).toBe(false);
     });
 
@@ -98,7 +100,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(event);
 
-      const message = projection.GetMessage(event.messageId) as any;
+      const message = getPlanState(projection, event.messageId);
       expect(message?.deleted).toBe(false);
     });
   });
@@ -157,7 +159,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       projection.process(PlanHiddenEventUtil.Create("def-1"));
 
-      const message = projection.GetMessage(planEvent.messageId) as any;
+      const message = getPlanState(projection, planEvent.messageId);
       expect(message?.hidden).toBe(true);
       expect(message?.deleted).toBe(false);
     });
@@ -521,3 +523,19 @@ const createPlanEvent = (
   planName: string,
   content: string,
 ) => PlanCreatedEventUtil.Create(planDefinitionId, planName, content);
+
+interface InternalPlanState extends LLMMessage {
+  hidden: boolean;
+  deleted: boolean;
+  data?: {
+    planDefinitionId?: string;
+    planName?: string;
+    rawContent?: string;
+  };
+}
+
+const getPlanState = (
+  projection: LLMChatProjection,
+  messageId: string,
+): InternalPlanState | null =>
+  projection.GetMessage(messageId) as InternalPlanState | null;

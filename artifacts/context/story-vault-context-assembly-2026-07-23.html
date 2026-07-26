@@ -638,6 +638,11 @@
       background: var(--rose-soft);
     }
 
+    .finding.resolved {
+      border-color: #8bb8b4;
+      background: var(--teal-soft);
+    }
+
     .finding .priority,
     .roadmap-step .priority {
       display: inline-block;
@@ -656,10 +661,18 @@
       background: rgba(255, 255, 255, 0.48);
     }
 
+    .finding.resolved .priority {
+      color: var(--teal);
+    }
+
     .finding p {
       margin-bottom: 0;
       color: #66414b;
       font-size: 0.82rem;
+    }
+
+    .finding.resolved p {
+      color: #315c5a;
     }
 
     .roadmap {
@@ -952,7 +965,7 @@
 <body>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">Story Vault · context assembly map · 23 July 2026</p>
+      <p class="eyebrow">Story Vault · implemented context architecture · 26 July 2026</p>
       <h1>What the model actually sees</h1>
       <p class="lede">
         Text reaches the model in two passes: the event history is first compressed into a
@@ -1357,39 +1370,39 @@
     <section class="section" aria-labelledby="refactor-heading">
       <div class="section-head">
         <div>
-          <p class="section-kicker">Recommended cleanup · correctness first</p>
-          <h2 id="refactor-heading">Refactor toward one explicit context document</h2>
+          <p class="section-kicker">Refactor implemented · correctness first</p>
+          <h2 id="refactor-heading">One explicit context document now drives requests</h2>
         </div>
         <p>
-          Preserve the event format and external behavior while separating event reduction,
-          selection policy, durable-context composition, and request rendering.
+          Persisted events and output order remain compatible, while event reduction, immutable
+          selection policy, durable-context composition, and request rendering are now separate.
         </p>
       </div>
 
-      <div class="finding-grid" aria-label="Correctness issues to address first">
-        <article class="finding">
-          <span class="priority">Fix before extraction</span>
-          <h3>Deleted chapters can still be “latest”</h3>
+      <div class="finding-grid" aria-label="Resolved correctness issues">
+        <article class="finding resolved">
+          <span class="priority">Resolved</span>
+          <h3>Deleted chapters no longer become “latest”</h3>
           <p>
-            <code>getLastChapter()</code> ignores the deleted flag. Existing tests acknowledge
-            that deleting a chapter can duplicate restored messages through the trailing buffer.
+            The selector chooses the latest visible, non-deleted chapter. Deleting a chapter
+            restores its messages without replaying them through the trailing buffer.
           </p>
         </article>
-        <article class="finding">
-          <span class="priority">Fix before extraction</span>
-          <h3>The trailing buffer can duplicate visible items</h3>
+        <article class="finding resolved">
+          <span class="priority">Resolved</span>
+          <h3>The trailing buffer cannot duplicate visible items</h3>
           <p>
-            It rehydrates covered IDs without restricting them to chapter-hidden message/reasoning
-            types or deduplicating against the visible list. A covered Plan can therefore appear twice.
+            Only message/reasoning items hidden by that exact chapter are eligible, deleted and
+            already-visible IDs are excluded, and stable unique ordering is enforced.
           </p>
         </article>
       </div>
 
-      <div class="panel roadmap" aria-label="Prioritized refactoring roadmap">
+      <div class="panel roadmap" aria-label="Completed refactoring roadmap">
         <article class="roadmap-step">
           <div class="roadmap-index" aria-hidden="true">P0</div>
           <div>
-            <span class="priority">Correctness</span>
+            <span class="priority">Implemented · correctness</span>
             <h3>Make chapter buffering safe</h3>
             <p>
               Select the latest non-deleted chapter, buffer only items actually hidden by that
@@ -1397,52 +1410,51 @@
             </p>
           </div>
           <ul>
-            <li>Turn the acknowledged deletion behavior into a failing regression test.</li>
-            <li>Add invariants for stable order and no duplicate IDs.</li>
-            <li>Cover Plans, Notes, Clarifications, deleted items, and a book-hidden latest chapter.</li>
+            <li>Exact deletion regression replaces the acknowledged-bug expectation.</li>
+            <li>Stable ordering and unique-ID invariants are covered.</li>
+            <li>Plans, Notes, deleted items, and book-hidden chapters are protected.</li>
           </ul>
         </article>
 
         <article class="roadmap-step">
           <div class="roadmap-index" aria-hidden="true">P1</div>
           <div>
-            <span class="priority">Clarity</span>
+            <span class="priority">Implemented · clarity</span>
             <h3>Fix vocabulary and delete dead branches</h3>
             <p>
-              Rename private “story prompt” APIs to “response prompt”; the actual Story is the
-              <code># Story</code> event. Give Story its own item type instead of representing it
-              as a generic message.
+              Private “story prompt” vocabulary is now “response prompt”; the actual Story is the
+              <code># Story</code> event and has its own semantic item type.
             </p>
           </div>
           <ul>
-            <li>Carry <code>includeResponsePrompt</code> consistently through private methods.</li>
-            <li>Merge identical book-summary and book-title assemblers.</li>
-            <li>Remove identical “full/simple” chapter formatting and runtime-unused helpers.</li>
+            <li><code>includeResponsePrompt</code> is consistent through request builders.</li>
+            <li>Book-summary and book-title assembly share one implementation.</li>
+            <li>Identical chapter formats and unused mutable helpers are removed.</li>
           </ul>
         </article>
 
         <article class="roadmap-step">
           <div class="roadmap-index" aria-hidden="true">P2</div>
           <div>
-            <span class="priority">Isolation</span>
+            <span class="priority">Implemented · isolation</span>
             <h3>Replace mutable setters with a pure projection policy</h3>
             <p>
-              The cached projection currently receives request-time settings through
-              <code>SetPreviousChapterMessageBuffer</code> and <code>SetReasoningRetention</code>.
-              Pass an immutable policy to selection instead.
+              Each projection read receives an immutable
+              <code>LLMContextProjectionPolicy</code>; cached projection state is never changed by
+              request-time buffer, retention, or Plan-selection options.
             </p>
           </div>
           <ul>
-            <li>Use <code>selectMessages(state, policy)</code> with no projection mutation.</li>
-            <li>Normalize defaults once into a typed <code>ContextPolicy</code>.</li>
-            <li>Make the counting basis explicit: visible items, regular messages, or user turns.</li>
+            <li>Concurrent callers can use different policies without leaking settings.</li>
+            <li>Defaults normalize at the projection boundary.</li>
+            <li>Chapter and reasoning counts have explicit, tested semantics.</li>
           </ul>
         </article>
 
         <article class="roadmap-step">
           <div class="roadmap-index" aria-hidden="true">P3</div>
           <div>
-            <span class="priority">Consolidation</span>
+            <span class="priority">Implemented · consolidation</span>
             <h3>Build one snapshot, then render each request</h3>
             <p>
               Load settings, prompts, Memories, and Character Sheets once per request. Compose a
@@ -1451,26 +1463,26 @@
             </p>
           </div>
           <ul>
-            <li>Share one durable split instead of rebuilding it for consolidated reasoning.</li>
-            <li>Avoid fetching chat settings twice when resolving the reasoning prompt.</li>
-            <li>Fetch independent sources in parallel and freeze them for the request.</li>
+            <li>Normal and consolidated reasoning share the same durable split.</li>
+            <li>Settings and prompts are fetched once per request.</li>
+            <li>Independent sources load in parallel into defensive snapshots.</li>
           </ul>
         </article>
 
         <article class="roadmap-step">
           <div class="roadmap-index" aria-hidden="true">P4</div>
           <div>
-            <span class="priority">Confidence</span>
+            <span class="priority">Implemented · confidence</span>
             <h3>Add traces, parity fixtures, and linear-time filters</h3>
             <p>
-              Every included item should retain its source and every excluded item should have a
-              reason. Use those traces for Request Inspection and exact old-vs-new parity tests.
+              Included, buffered, and excluded projection items now carry trace metadata; Request
+              Inspection displays section order and exclusion reasons for real model calls.
             </p>
           </div>
           <ul>
-            <li>Golden fixtures for response, reasoning, regeneration, chapter, and book paths.</li>
-            <li>One reverse pass for note/reasoning age instead of repeated slices and scans.</li>
-            <li>Index message state by ID if stress measurements justify it.</li>
+            <li>Exact ordering and renderer-parity fixtures protect every request family.</li>
+            <li>Note/reasoning age filters use linear reverse passes.</li>
+            <li>Message state is indexed by ID; all 1,416 tests and stress suites pass.</li>
           </ul>
         </article>
       </div>
@@ -1479,7 +1491,7 @@
     <section class="section" aria-labelledby="architecture-heading">
       <div class="section-head">
         <div>
-          <p class="section-kicker">Target shape</p>
+          <p class="section-kicker">Implemented shape</p>
           <h2 id="architecture-heading">Facts in; policy applied once; renderers out</h2>
         </div>
         <p>
@@ -1488,7 +1500,7 @@
         </p>
       </div>
 
-      <div class="panel architecture" aria-label="Proposed context architecture">
+      <div class="panel architecture" aria-label="Implemented context architecture">
         <div class="architecture-card">
           <strong>Chat events</strong>
           <span>Persisted facts and lifecycle events. No request settings.</span>
@@ -1520,8 +1532,8 @@
 
       <div class="guardrails" aria-label="Refactoring guardrails">
         <div class="guardrail">
-          <strong>No event migration in the first pass</strong>
-          <span>Change read-side composition first; preserve persisted ChatEvent compatibility.</span>
+          <strong>No event migration required</strong>
+          <span>The read-side refactor preserves persisted ChatEvent compatibility.</span>
         </div>
         <div class="guardrail">
           <strong>Exact message-array parity</strong>
@@ -1538,8 +1550,9 @@
       <div>
         Derived from the current working tree, principally
         <code>LLMChatProjection.ts</code>,
+        <code>ContextDocument.ts</code>,
         <code>LLMMessageContextService.ts</code>, and
-        <code>TextGenerationService.ts</code>.
+        <code>TextGenerationService.ts</code>. Production build and all 1,416 tests pass.
       </div>
       <div>Defaults shown: chapter buffer 6 · Character Sheet trailing split 5 · reasoning retention 4</div>
     </footer>

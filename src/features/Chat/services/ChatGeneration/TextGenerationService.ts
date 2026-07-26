@@ -75,9 +75,9 @@ export class TextGenerationService extends GenerationOrchestrator {
         await this.generateReasoning(guidance);
       }
 
-      const requestMessages = await d
+      const request = await d
         .LLMMessageContextService(this.chatId)
-        .buildGenerationRequestMessages(true, guidance);
+        .buildGenerationRequestWithTrace(true, guidance);
 
       this.setStatus("Generating response...");
 
@@ -88,12 +88,15 @@ export class TextGenerationService extends GenerationOrchestrator {
 
       try {
         const response = await d.OpenRouterChatAPI().postChatStream(
-          requestMessages,
+          request.messages,
           (content) => {
             projection.updateStreamingMessage(content);
           },
           modelOverride?.model,
           modelOverride?.requestSettings,
+          "chat",
+          "Chat",
+          request.trace,
         );
 
         this.setStatus("Saving...");
@@ -143,9 +146,9 @@ export class TextGenerationService extends GenerationOrchestrator {
   }
 
   private async generateReasoning(guidance?: string): Promise<void> {
-    const requestMessages = await d
+    const request = await d
       .LLMMessageContextService(this.chatId)
-      .buildReasoningRequestMessages(guidance);
+      .buildReasoningRequestWithTrace(guidance);
 
     this.setStatus("Reasoning...");
 
@@ -156,7 +159,7 @@ export class TextGenerationService extends GenerationOrchestrator {
 
     try {
       const reasoning = await d.OpenRouterChatAPI().postChatStream(
-        requestMessages,
+        request.messages,
         (content) => {
           projection.updateStreamingMessage(content);
         },
@@ -164,6 +167,7 @@ export class TextGenerationService extends GenerationOrchestrator {
         modelOverride?.requestSettings,
         "chat",
         "Reasoning",
+        request.trace,
       );
 
       await d.ChatService(this.chatId).AddReasoningMessage(reasoning);
@@ -190,9 +194,13 @@ export class TextGenerationService extends GenerationOrchestrator {
 
       d.PlanGenerationService(this.chatId).onMessageSent();
 
-      const requestMessages = await d
+      const request = await d
         .LLMMessageContextService(this.chatId)
-        .buildRegenerationRequestMessages(messageId, originalContent, feedback);
+        .buildRegenerationRequestWithTrace(
+          messageId,
+          originalContent,
+          feedback,
+        );
 
       this.setStatus("Generating response...");
 
@@ -202,12 +210,15 @@ export class TextGenerationService extends GenerationOrchestrator {
 
       try {
         const response = await d.OpenRouterChatAPI().postChatStream(
-          requestMessages,
+          request.messages,
           (content) => {
             projection.updateStreamingMessage(content);
           },
           modelOverride?.model,
           modelOverride?.requestSettings,
+          "chat",
+          "Chat",
+          request.trace,
         );
 
         this.setStatus("Saving....");

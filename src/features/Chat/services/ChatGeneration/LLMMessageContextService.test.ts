@@ -12,6 +12,7 @@ import type { Memory } from "../../../Memories/services/Memory";
 import type { MemoriesService } from "../../../Memories/services/MemoriesService";
 import type { ChatSettingsService } from "../Chat/ChatSettingsService";
 import type {
+  LLMContextProjectionPolicy,
   LLMChatProjection,
   LLMMessage,
 } from "../../../../services/CQRS/LLMChatProjection";
@@ -40,8 +41,15 @@ describe("LLMMessageContextService", () => {
       Get: vi.fn().mockResolvedValue(createDefaultChatSettings()),
     } as unknown as Mocked<ChatSettingsService>;
 
+    const getMessages = vi.fn().mockReturnValue(createMockChatMessages());
     LLMChatProjection = {
-      GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
+      GetMessages: getMessages,
+      GetContext: vi.fn().mockImplementation(
+        (policy: LLMContextProjectionPolicy) => ({
+        messages: getMessages(policy),
+        trace: [],
+        }),
+      ),
     } as unknown as Mocked<LLMChatProjection>;
 
     MemoriesService = {
@@ -327,6 +335,7 @@ describe("LLMMessageContextService", () => {
           messageIds: ["msg-1", "msg-2"],
         },
       ]);
+      expect(request.trace.projection).toEqual([]);
       expect(request.trace.appendedSources).toEqual([
         "response-prompt",
         "guidance",

@@ -1,6 +1,7 @@
 import {
   filterReasoningMessagesByRetention,
   type LLMContextProjectionPolicy,
+  type LLMContextProjectionTraceEntry,
   type LLMMessage,
 } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
@@ -40,9 +41,16 @@ export const getLLMMessageContextServiceInstance = createInstanceCache(
 );
 
 export interface ContextRequestTrace {
+  projection: LLMContextProjectionTraceEntry[];
   sections: ContextSectionTrace[];
-  appendedSources: Array<"response-prompt" | "guidance">;
+  appendedSources: ContextAppendedSource[];
 }
+
+export type ContextAppendedSource =
+  | "response-prompt"
+  | "reasoning-prompt"
+  | "guidance"
+  | "regeneration-feedback";
 
 export interface ContextRequest {
   messages: LLMMessage[];
@@ -59,6 +67,7 @@ interface ContextSources {
 
 interface ChatContextSnapshot extends ContextSources {
   projectedHistory: LLMMessage[];
+  projectionTrace: LLMContextProjectionTraceEntry[];
 }
 
 export class LLMMessageContextService {
@@ -100,6 +109,7 @@ export class LLMMessageContextService {
     return {
       messages,
       trace: {
+        projection: snapshot.projectionTrace,
         sections: traceContextDocument(document),
         appendedSources,
       },
@@ -109,6 +119,13 @@ export class LLMMessageContextService {
   async buildReasoningRequestMessages(
     guidance?: string,
   ): Promise<LLMMessage[]> {
+    const request = await this.buildReasoningRequestWithTrace(guidance);
+    return request.messages;
+  }
+
+  async buildReasoningRequestWithTrace(
+    guidance?: string,
+  ): Promise<ContextRequest> {
     const snapshot = await this.loadChatContextSnapshot(true);
     const document = this.createDurableContextDocument(snapshot);
     const reasoningPrompt = this.resolveReasoningPrompt(snapshot);
@@ -125,7 +142,17 @@ export class LLMMessageContextService {
           toSystemMessage(reasoningPrompt),
         ];
 
-    return this.appendGuidanceMessage(messages, guidance);
+    const requestMessages = this.appendGuidanceMessage(messages, guidance);
+    return {
+      messages: requestMessages,
+      trace: {
+        projection: snapshot.projectionTrace,
+        sections: traceContextDocument(document),
+        appendedSources: this.hasText(guidance)
+          ? ["reasoning-prompt", "guidance"]
+          : ["reasoning-prompt"],
+      },
+    };
   }
 
   async buildRegenerationRequestMessages(
@@ -133,6 +160,19 @@ export class LLMMessageContextService {
     originalContent: string,
     feedback?: string,
   ): Promise<LLMMessage[]> {
+    const request = await this.buildRegenerationRequestWithTrace(
+      messageId,
+      originalContent,
+      feedback,
+    );
+    return request.messages;
+  }
+
+  async buildRegenerationRequestWithTrace(
+    messageId: string,
+    originalContent: string,
+    feedback?: string,
+  ): Promise<ContextRequest> {
     const snapshot = await this.loadChatContextSnapshot();
     const truncatedSnapshot = {
       ...snapshot,
@@ -141,10 +181,22 @@ export class LLMMessageContextService {
         messageId,
       ),
     };
-    const messages = renderContextDocumentMessages(
-      this.createDurableContextDocument(truncatedSnapshot),
+    const document = this.createDurableContextDocument(truncatedSnapshot);
+    const messages = this.appendFeedbackMessage(
+      renderContextDocumentMessages(document),
+      originalContent,
+      feedback,
     );
-    return this.appendFeedbackMessage(messages, originalContent, feedback);
+    return {
+      messages,
+      trace: {
+        projection: snapshot.projectionTrace,
+        sections: traceContextDocument(document),
+        appendedSources: this.hasText(feedback)
+          ? ["regeneration-feedback"]
+          : [],
+      },
+    };
   }
 
   async buildChapterDraftRequestMessages(
@@ -242,11 +294,13 @@ export class LLMMessageContextService {
       true,
     );
     const policy = this.createProjectionPolicy(sources);
-    const projectedHistory = d
-      .LLMChatProjection(this.chatId)
-      .GetMessages(policy);
+    const projection = d.LLMChatProjection(this.chatId).GetContext(policy);
 
-    return { ...sources, projectedHistory };
+    return {
+      ...sources,
+      projectedHistory: projection.messages,
+      projectionTrace: projection.trace,
+    };
   }
 
   private async loadContextSources(

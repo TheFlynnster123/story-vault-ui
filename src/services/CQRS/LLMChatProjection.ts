@@ -69,6 +69,7 @@ export const DEFAULT_LLM_CONTEXT_PROJECTION_POLICY = {
 // ---- LLM Chat Projection ----
 export class LLMChatProjection {
   private messages: MessageState[] = [];
+  private readonly messagesById = new Map<string, MessageState>();
 
   private subscribers = new Set<() => void>();
 
@@ -558,14 +559,16 @@ export class LLMChatProjection {
     return counts;
   }
 
-  getMessage = (id: string): MessageState | undefined =>
-    this.messages.find((m) => m.id === id);
+  private getMessage(id: string): MessageState | undefined {
+    return this.messagesById.get(id);
+  }
 
-  getVisibleMessages = (): MessageState[] =>
-    this.messages.filter(
+  private getVisibleMessages(): MessageState[] {
+    return this.messages.filter(
       (m) =>
         !m.hiddenByChapterId && !m.hiddenByBookId && !m.deleted && !m.hidden,
     );
+  }
 
   private addLatestChapterBuffer(
     visibleMessages: MessageState[],
@@ -667,14 +670,14 @@ export class LLMChatProjection {
       summary ?? ""
     }\n[End of Chapter Summary]`;
 
-  createMessageState(
+  private createMessageState(
     id: string,
     type: LLMContextItemType,
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[],
   ): MessageState {
-    return {
+    const message: MessageState = {
       id,
       type,
       role,
@@ -685,6 +688,8 @@ export class LLMChatProjection {
       hidden: false,
       coveredMessageIds,
     };
+    this.messagesById.set(id, message);
+    return message;
   }
 }
 
