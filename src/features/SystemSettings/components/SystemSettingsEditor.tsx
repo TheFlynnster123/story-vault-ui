@@ -6,10 +6,17 @@ import {
   NumberInput,
   Paper,
   Stack,
+  Switch,
   Text,
 } from "@mantine/core";
 import type { ChatGenerationSettings } from "../services/SystemSettings";
-import { DEFAULT_TRAILING_CHAPTER_MESSAGES } from "../services/SystemSettings";
+import {
+  DEFAULT_MESSAGE_COMPRESSION_AFTER_MESSAGES,
+  DEFAULT_MESSAGE_COMPRESSION_MINIMUM_CHARACTERS,
+  DEFAULT_TRAILING_CHAPTER_MESSAGES,
+  normalizeMessageCompressionAfterMessages,
+  normalizeMessageCompressionMinimumCharacters,
+} from "../services/SystemSettings";
 import { d } from "../../../services/Dependencies";
 import { ModelSelect } from "../../../features/AI/components/ModelSelect";
 import {
@@ -27,6 +34,14 @@ export const SystemSettingsEditor: React.FC = () => {
   const [trailingChapterMessages, setTrailingChapterMessages] = useState(
     DEFAULT_TRAILING_CHAPTER_MESSAGES,
   );
+  const [messageCompressionEnabled, setMessageCompressionEnabled] =
+    useState(false);
+  const [messageCompressionAfterMessages, setMessageCompressionAfterMessages] =
+    useState(DEFAULT_MESSAGE_COMPRESSION_AFTER_MESSAGES);
+  const [
+    messageCompressionMinimumCharacters,
+    setMessageCompressionMinimumCharacters,
+  ] = useState(DEFAULT_MESSAGE_COMPRESSION_MINIMUM_CHARACTERS);
 
   useEffect(() => {
     if (systemSettings?.chatGenerationSettings) {
@@ -42,6 +57,19 @@ export const SystemSettingsEditor: React.FC = () => {
     setTrailingChapterMessages(
       systemSettings?.chapterCompressionSettings?.trailingChapterMessages ??
         DEFAULT_TRAILING_CHAPTER_MESSAGES,
+    );
+    setMessageCompressionEnabled(
+      systemSettings?.messageCompressionSettings?.enabled ?? false,
+    );
+    setMessageCompressionAfterMessages(
+      normalizeMessageCompressionAfterMessages(
+        systemSettings?.messageCompressionSettings?.afterMessages,
+      ),
+    );
+    setMessageCompressionMinimumCharacters(
+      normalizeMessageCompressionMinimumCharacters(
+        systemSettings?.messageCompressionSettings?.minimumCharacters,
+      ),
     );
   }, [systemSettings]);
 
@@ -90,6 +118,32 @@ export const SystemSettingsEditor: React.FC = () => {
       chapterCompressionSettings: {
         ...systemSettings?.chapterCompressionSettings,
         trailingChapterMessages: nextValue,
+      },
+    });
+  };
+
+  const handleMessageCompressionChange = (
+    settings: Partial<{
+      enabled: boolean;
+      afterMessages: number;
+      minimumCharacters: number;
+    }>,
+  ) => {
+    if (settings.enabled !== undefined) {
+      setMessageCompressionEnabled(settings.enabled);
+    }
+    if (settings.afterMessages !== undefined) {
+      setMessageCompressionAfterMessages(settings.afterMessages);
+    }
+    if (settings.minimumCharacters !== undefined) {
+      setMessageCompressionMinimumCharacters(settings.minimumCharacters);
+    }
+
+    d.SystemSettingsService().SaveDebounced({
+      ...systemSettings,
+      messageCompressionSettings: {
+        ...systemSettings?.messageCompressionSettings,
+        ...settings,
       },
     });
   };
@@ -161,6 +215,59 @@ export const SystemSettingsEditor: React.FC = () => {
             onChange={handleChapterCompressionChange}
             style={{ width: "100%", maxWidth: 360 }}
           />
+        </Stack>
+      </Paper>
+
+      <Paper p="md" withBorder>
+        <Stack gap="sm">
+          <Text fw={600}>Message Compression</Text>
+          <Switch
+            label="Automatically compress older text messages"
+            description="The full transcript remains visible. Turning this off hides saved compressions and sends original messages to every LLM context; turning it back on restores them."
+            checked={messageCompressionEnabled}
+            onChange={(event) =>
+              handleMessageCompressionChange({
+                enabled: event.currentTarget.checked,
+              })
+            }
+          />
+          <Group grow align="start" wrap="wrap">
+            <NumberInput
+              label="Newer messages before compression"
+              description="Reasoning, images, chapters, plans, and notes do not count."
+              value={messageCompressionAfterMessages}
+              min={0}
+              max={100}
+              step={1}
+              disabled={!messageCompressionEnabled}
+              onChange={(value) =>
+                handleMessageCompressionChange({
+                  afterMessages: normalizeMessageCompressionAfterMessages(
+                    Number(value),
+                  ),
+                })
+              }
+              style={{ minWidth: 220 }}
+            />
+            <NumberInput
+              label="Minimum original characters"
+              description="Shorter messages remain uncompressed."
+              value={messageCompressionMinimumCharacters}
+              min={0}
+              max={100000}
+              step={50}
+              disabled={!messageCompressionEnabled}
+              onChange={(value) =>
+                handleMessageCompressionChange({
+                  minimumCharacters:
+                    normalizeMessageCompressionMinimumCharacters(
+                      Number(value),
+                    ),
+                })
+              }
+              style={{ minWidth: 220 }}
+            />
+          </Group>
         </Stack>
       </Paper>
     </Stack>

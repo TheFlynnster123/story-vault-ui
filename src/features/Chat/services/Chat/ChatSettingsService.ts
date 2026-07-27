@@ -117,7 +117,9 @@ export class ChatSettingsService {
   ): Promise<void> {
     await this.update({
       reasoningModelOverride: modelId,
-      reasoningModelRequestSettingsOverride: modelId ? requestSettings : undefined,
+      reasoningModelRequestSettingsOverride: modelId
+        ? requestSettings
+        : undefined,
     });
   }
 

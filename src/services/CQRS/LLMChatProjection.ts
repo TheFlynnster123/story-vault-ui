@@ -3,6 +3,8 @@ import type {
   MessageCreatedEvent,
   ReasoningCreatedEvent,
   MessageEditedEvent,
+  MessageCompressionCreatedEvent,
+  MessageCompressionEditedEvent,
   MessageDeletedEvent,
   MessagesDeletedEvent,
   ChapterCreatedEvent,
@@ -19,6 +21,7 @@ import type {
   NoteEditedEvent,
   AgentClarificationCreatedEvent,
 } from "./events/ChatEvent";
+import { createMessageContentFingerprint } from "./events/MessageCompressionEventUtils";
 import { normalizeChatEvent } from "./events/normalizeChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
@@ -30,6 +33,7 @@ export const getLLMChatProjectionInstance = createInstanceCache(
 export interface LLMContextProjectionPolicy {
   trailingChapterMessages?: number;
   reasoningRetentionMessages?: number | null;
+  messageCompressionAfterMessages?: number | null;
   planSelection?: PlanContextSelection;
 }
 
@@ -53,6 +57,9 @@ export interface LLMContextProjectionTraceEntry {
   included: boolean;
   buffered: boolean;
   exclusionReason?: LLMContextExclusionReason;
+  contentRepresentation?: "original" | "message-compression";
+  originalCharacterCount?: number;
+  contextCharacterCount?: number;
 }
 
 export interface LLMContextProjectionResult {
@@ -63,12 +70,14 @@ export interface LLMContextProjectionResult {
 export const DEFAULT_LLM_CONTEXT_PROJECTION_POLICY = {
   trailingChapterMessages: 6,
   reasoningRetentionMessages: null,
+  messageCompressionAfterMessages: null,
   planSelection: { mode: "include" },
 } as const satisfies Required<LLMContextProjectionPolicy>;
 
 // ---- LLM Chat Projection ----
 export class LLMChatProjection {
   private messages: MessageState[] = [];
+  private readonly messagesById = new Map<string, MessageState>();
 
   private subscribers = new Set<() => void>();
 
@@ -114,6 +123,12 @@ export class LLMChatProjection {
         break;
       case "MessageEdited":
         this.processMessageEdited(event);
+        break;
+      case "MessageCompressionCreated":
+        this.processMessageCompressionCreated(event);
+        break;
+      case "MessageCompressionEdited":
+        this.processMessageCompressionEdited(event);
         break;
       case "MessageDeleted":
         this.processMessageDeleted(event);
@@ -185,15 +200,20 @@ export class LLMChatProjection {
       messagesWithRetainedReasoning,
       resolvedPolicy.planSelection,
     );
+    const materializedMessages = this.materializeMessageCompressions(
+      selectedMessages,
+      resolvedPolicy.messageCompressionAfterMessages,
+    );
 
     return {
-      messages: selectedMessages,
+      messages: materializedMessages,
       trace: this.createProjectionTrace({
         visibleMessages,
         bufferedMessages,
         messagesWithActiveNotes,
         messagesWithRetainedReasoning,
         selectedMessages,
+        materializedMessages,
       }),
     };
   }
@@ -275,7 +295,46 @@ export class LLMChatProjection {
 
   processMessageEdited(event: MessageEditedEvent) {
     const msg = this.getMessage(event.messageId);
-    if (msg && !msg.deleted) msg.content = event.newContent;
+    if (msg && !msg.deleted) {
+      msg.content = event.newContent;
+      msg.compression = undefined;
+    }
+  }
+
+  processMessageCompressionCreated(event: MessageCompressionCreatedEvent) {
+    const message = this.getMessage(event.messageId);
+    if (
+      !message ||
+      message.deleted ||
+      message.type !== "message" ||
+      createMessageContentFingerprint(message.content) !==
+        event.sourceContentFingerprint
+    ) {
+      return;
+    }
+
+    message.compression = {
+      content: event.compressedContent,
+      sourceContentFingerprint: event.sourceContentFingerprint,
+      userEdited: false,
+    };
+  }
+
+  processMessageCompressionEdited(event: MessageCompressionEditedEvent) {
+    const message = this.getMessage(event.messageId);
+    if (
+      !message?.compression ||
+      message.deleted ||
+      message.type !== "message"
+    ) {
+      return;
+    }
+
+    message.compression = {
+      ...message.compression,
+      content: event.compressedContent,
+      userEdited: true,
+    };
   }
 
   processMessageDeleted(event: MessageDeletedEvent) {
@@ -558,14 +617,16 @@ export class LLMChatProjection {
     return counts;
   }
 
-  getMessage = (id: string): MessageState | undefined =>
-    this.messages.find((m) => m.id === id);
+  private getMessage(id: string): MessageState | undefined {
+    return this.messagesById.get(id);
+  }
 
-  getVisibleMessages = (): MessageState[] =>
-    this.messages.filter(
+  private getVisibleMessages(): MessageState[] {
+    return this.messages.filter(
       (m) =>
         !m.hiddenByChapterId && !m.hiddenByBookId && !m.deleted && !m.hidden,
     );
+  }
 
   private addLatestChapterBuffer(
     visibleMessages: MessageState[],
@@ -610,6 +671,7 @@ export class LLMChatProjection {
     messagesWithActiveNotes: MessageState[];
     messagesWithRetainedReasoning: MessageState[];
     selectedMessages: MessageState[];
+    materializedMessages: LLMMessage[];
   }): LLMContextProjectionTraceEntry[] {
     const visibleIds = createIdSet(stages.visibleMessages);
     const bufferedIds = createIdSet(stages.bufferedMessages);
@@ -618,14 +680,35 @@ export class LLMChatProjection {
       stages.messagesWithRetainedReasoning,
     );
     const selectedIds = createIdSet(stages.selectedMessages);
+    const materializedById = new Map(
+      stages.materializedMessages
+        .filter((message) => message.id !== undefined)
+        .map((message) => [message.id!, message]),
+    );
 
     return this.messages.map((message) => {
       const included = selectedIds.has(message.id);
+      const materializedMessage = materializedById.get(message.id);
+      const tracesMessageRepresentation =
+        included && message.type === "message";
+      const compressed =
+        tracesMessageRepresentation &&
+        materializedMessage !== undefined &&
+        materializedMessage.content !== message.content;
       return {
         id: message.id,
         type: message.type,
         included,
         buffered: included && !visibleIds.has(message.id),
+        ...(tracesMessageRepresentation
+          ? {
+              contentRepresentation: compressed
+                ? ("message-compression" as const)
+                : ("original" as const),
+              originalCharacterCount: message.content.length,
+              contextCharacterCount: materializedMessage?.content.length,
+            }
+          : {}),
         exclusionReason: included
           ? undefined
           : this.getExclusionReason(
@@ -636,6 +719,40 @@ export class LLMChatProjection {
             ),
       };
     });
+  }
+
+  private materializeMessageCompressions(
+    messages: MessageState[],
+    afterMessages: number | null,
+  ): LLMMessage[] {
+    if (afterMessages === null) return messages;
+
+    const materializedMessages: LLMMessage[] = [];
+    let regularMessagesAfter = 0;
+
+    for (let index = messages.length - 1; index >= 0; index--) {
+      const message = messages[index];
+      const compression = message.compression;
+      const useCompression =
+        message.type === "message" &&
+        compression !== undefined &&
+        regularMessagesAfter >= afterMessages;
+
+      if (useCompression && compression) {
+        materializedMessages.push({
+          id: message.id,
+          type: message.type,
+          role: message.role,
+          content: formatMessageCompression(compression.content),
+        });
+      } else {
+        materializedMessages.push(message);
+      }
+
+      if (message.type === "message") regularMessagesAfter++;
+    }
+
+    return materializedMessages.reverse();
   }
 
   private getExclusionReason(
@@ -667,14 +784,14 @@ export class LLMChatProjection {
       summary ?? ""
     }\n[End of Chapter Summary]`;
 
-  createMessageState(
+  private createMessageState(
     id: string,
     type: LLMContextItemType,
     role: "user" | "assistant" | "system",
     content: string,
     coveredMessageIds?: string[],
   ): MessageState {
-    return {
+    const message: MessageState = {
       id,
       type,
       role,
@@ -685,6 +802,8 @@ export class LLMChatProjection {
       hidden: false,
       coveredMessageIds,
     };
+    this.messagesById.set(id, message);
+    return message;
   }
 }
 
@@ -715,6 +834,7 @@ interface MessageState {
    */
   hidden: boolean;
   coveredMessageIds?: string[] | null;
+  compression?: MessageCompressionState;
   // Store chapter/plan/book/note metadata
   data?: {
     title?: string;
@@ -726,6 +846,12 @@ interface MessageState {
     question?: string;
     answer?: string;
   };
+}
+
+interface MessageCompressionState {
+  content: string;
+  sourceContentFingerprint: string;
+  userEdited: boolean;
 }
 
 export interface LLMMessage {
@@ -771,6 +897,14 @@ const resolveProjectionPolicy = (
           policy.reasoningRetentionMessages,
           DEFAULT_LLM_CONTEXT_PROJECTION_POLICY.reasoningRetentionMessages,
         ),
+  messageCompressionAfterMessages:
+    policy.messageCompressionAfterMessages === null ||
+    policy.messageCompressionAfterMessages === undefined
+      ? DEFAULT_LLM_CONTEXT_PROJECTION_POLICY.messageCompressionAfterMessages
+      : normalizeNonNegativeInteger(
+          policy.messageCompressionAfterMessages,
+          DEFAULT_LLM_CONTEXT_PROJECTION_POLICY.messageCompressionAfterMessages,
+        ),
   planSelection:
     policy.planSelection ??
     DEFAULT_LLM_CONTEXT_PROJECTION_POLICY.planSelection,
@@ -811,3 +945,6 @@ const filterPlans = <T extends MessageState>(
 
 const createIdSet = (messages: MessageState[]): Set<string> =>
   new Set(messages.map((message) => message.id));
+
+const formatMessageCompression = (content: string): string =>
+  `[Compressed Earlier Message]\n${content}\n[End of Compressed Earlier Message]`;

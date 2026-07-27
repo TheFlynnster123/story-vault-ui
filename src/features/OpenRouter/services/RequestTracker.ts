@@ -4,11 +4,33 @@ export type RequestType =
   | "chat"
   | "image-prompt"
   | "agent-intent"
-  | "plan-suggestion";
+  | "plan-suggestion"
+  | "message-compression"
+  | "history-refresh"
+  | "history-selection";
 
 export interface TrackedMessage {
   role: string;
   content: string;
+}
+
+export interface TrackedContextTrace {
+  projection: Array<{
+    id: string;
+    type: string;
+    included: boolean;
+    buffered: boolean;
+    exclusionReason?: string;
+    contentRepresentation?: "original" | "message-compression";
+    originalCharacterCount?: number;
+    contextCharacterCount?: number;
+  }>;
+  sections: Array<{
+    source: string;
+    messageCount: number;
+    messageIds: string[];
+  }>;
+  appendedSources: string[];
 }
 
 export interface TrackedRequest {
@@ -25,6 +47,7 @@ export interface TrackedRequest {
   inputCharCount: number;
   responseCharCount: number;
   inputMessages: TrackedMessage[];
+  contextTrace?: TrackedContextTrace;
   responseContent: string;
   requestSettings?: Record<string, unknown>;
   httpStatus?: number;

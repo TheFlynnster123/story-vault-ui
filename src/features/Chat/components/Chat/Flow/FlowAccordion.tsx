@@ -14,6 +14,7 @@ import { TransparencySlider } from "./TransparencySlider";
 import { CreditsSection } from "./CreditsSection";
 import { AgentFlowSection } from "./AgentFlowSection";
 import { ReasoningSection } from "./ReasoningSection";
+import { ContinuityHistoriesSection } from "../../../../Histories/components/ContinuityHistoriesSection";
 
 interface FlowAccordionProps {
   chatId: string;
@@ -27,6 +28,7 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
   const navigateToPlan = () => navigate(`/chat/${chatId}/plan`);
   const navigateToMemories = () => navigate(`/chat/${chatId}/memories`);
   const navigateToCharacters = () => navigate(`/chat/${chatId}/characters`);
+  const navigateToHistories = () => navigate(`/chat/${chatId}/histories`);
   const navigateToChatImageModels = () =>
     navigate(`/chat/${chatId}/image-variants`);
   const navigateToAgentFlowSettings = () =>
@@ -79,6 +81,10 @@ export const FlowAccordion: React.FC<FlowAccordionProps> = ({ chatId }) => {
               <CharacterDescriptionsSection
                 chatId={chatId}
                 onNavigate={navigateToCharacters}
+              />
+              <ContinuityHistoriesSection
+                chatId={chatId}
+                onNavigate={navigateToHistories}
               />
             </Stack>
           </Accordion.Panel>

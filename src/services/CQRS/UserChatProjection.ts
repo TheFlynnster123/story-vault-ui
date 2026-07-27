@@ -3,6 +3,8 @@ import type {
   MessageCreatedEvent,
   ReasoningCreatedEvent,
   MessageEditedEvent,
+  MessageCompressionCreatedEvent,
+  MessageCompressionEditedEvent,
   MessageDeletedEvent,
   MessagesDeletedEvent,
   ChapterCreatedEvent,
@@ -21,6 +23,7 @@ import type {
   NoteEditedEvent,
   AgentClarificationCreatedEvent,
 } from "./events/ChatEvent";
+import { createMessageContentFingerprint } from "./events/MessageCompressionEventUtils";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
 import { normalizeChatEvent } from "./events/normalizeChatEvent";
@@ -31,6 +34,7 @@ export const getUserChatProjectionInstance = createInstanceCache(
 
 export class UserChatProjection {
   public Messages: UserChatMessage[] = [];
+  private readonly messageIndexesById = new Map<string, number>();
 
   private static readonly TEXT_MESSAGE_TYPES = new Set<
     UserChatMessage["type"]
@@ -70,6 +74,7 @@ export class UserChatProjection {
       deleted: false,
       hidden: false,
     });
+    this.messageIndexesById.set(id, this.Messages.length - 1);
     this.notifySubscribers();
   }
 
@@ -100,6 +105,7 @@ export class UserChatProjection {
       );
       if (index !== -1) {
         this.Messages.splice(index, 1);
+        this.messageIndexesById.clear();
       }
     } else {
       this.replaceMessage(this.streamingMessageId, { isStreaming: false });
@@ -139,6 +145,12 @@ export class UserChatProjection {
         break;
       case "MessageEdited":
         this.processMessageEdited(event);
+        break;
+      case "MessageCompressionCreated":
+        this.processMessageCompressionCreated(event);
+        break;
+      case "MessageCompressionEdited":
+        this.processMessageCompressionEdited(event);
         break;
       case "MessageDeleted":
         this.processMessageDeleted(event);
@@ -263,6 +275,7 @@ export class UserChatProjection {
       deleted: false,
       hidden: false,
     });
+    this.messageIndexesById.clear();
   }
 
   private processStoryEdited(event: StoryEditedEvent) {
@@ -278,6 +291,10 @@ export class UserChatProjection {
       deleted: false,
       hidden: false,
     });
+    this.messageIndexesById.set(
+      event.messageId,
+      this.Messages.length - 1,
+    );
   }
 
   private processReasoningCreated(event: ReasoningCreatedEvent) {
@@ -289,10 +306,60 @@ export class UserChatProjection {
       deleted: false,
       hidden: false,
     });
+    this.messageIndexesById.set(
+      event.messageId,
+      this.Messages.length - 1,
+    );
   }
 
   private processMessageEdited(event: MessageEditedEvent) {
-    this.replaceMessage(event.messageId, { content: event.newContent });
+    this.replaceMessage(event.messageId, {
+      content: event.newContent,
+      compression: undefined,
+    });
+  }
+
+  private processMessageCompressionCreated(
+    event: MessageCompressionCreatedEvent,
+  ) {
+    const message = this.GetMessage(event.messageId);
+    if (
+      message?.content === undefined ||
+      message.deleted ||
+      !UserChatProjection.COMPRESSIBLE_MESSAGE_TYPES.has(message.type) ||
+      createMessageContentFingerprint(message.content) !==
+        event.sourceContentFingerprint
+    ) {
+      return;
+    }
+
+    this.replaceMessage(event.messageId, {
+      compression: {
+        content: event.compressedContent,
+        sourceContentFingerprint: event.sourceContentFingerprint,
+        userEdited: false,
+      },
+    });
+  }
+
+  private processMessageCompressionEdited(
+    event: MessageCompressionEditedEvent,
+  ) {
+    const message = this.GetMessage(event.messageId);
+    if (
+      !message?.compression ||
+      !UserChatProjection.COMPRESSIBLE_MESSAGE_TYPES.has(message.type)
+    ) {
+      return;
+    }
+
+    this.replaceMessage(event.messageId, {
+      compression: {
+        ...message.compression,
+        content: event.compressedContent,
+        userEdited: true,
+      },
+    });
   }
 
   private processMessageDeleted(event: MessageDeletedEvent) {
@@ -408,6 +475,7 @@ export class UserChatProjection {
 
     if (firstChapterIndex !== -1) {
       this.Messages.splice(firstChapterIndex, 0, bookMessage);
+      this.messageIndexesById.clear();
     } else {
       this.Messages.push(bookMessage);
     }
@@ -595,6 +663,10 @@ export class UserChatProjection {
     "story",
   ]);
 
+  private static COMPRESSIBLE_MESSAGE_TYPES: ReadonlySet<
+    UserChatMessage["type"]
+  > = new Set(["user-message", "system-message", "assistant"]);
+
   /** Message types that count toward note expiration */
   private static NOTE_EXPIRATION_TYPES: ReadonlySet<string> = new Set([
     "user-message",
@@ -656,9 +728,12 @@ export class UserChatProjection {
    * Creates a new object reference so React.memo detects the change.
    */
   private replaceMessage(id: string, updates: Partial<UserChatMessage>): void {
-    const index = this.Messages.findIndex((m) => m.id === id);
+    const index =
+      this.messageIndexesById.get(id) ??
+      this.Messages.findIndex((message) => message.id === id);
     if (index !== -1) {
       this.Messages[index] = { ...this.Messages[index], ...updates };
+      this.messageIndexesById.set(id, index);
     }
   }
 }
@@ -683,6 +758,8 @@ export interface UserChatMessage {
 
   isStreaming?: boolean;
 
+  compression?: MessageCompressionState;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any; // Data specific to message type
 
@@ -701,6 +778,12 @@ export interface UserChatMessage {
    * (chapter-based covering of older messages).
    */
   hidden: boolean;
+}
+
+export interface MessageCompressionState {
+  content: string;
+  sourceContentFingerprint: string;
+  userEdited: boolean;
 }
 
 export interface CivitWorkflowChatMessage extends UserChatMessage {

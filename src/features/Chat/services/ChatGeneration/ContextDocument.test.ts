@@ -64,6 +64,41 @@ describe("ContextDocument", () => {
     ]);
   });
 
+  it("places Histories at their own offset without moving Character Sheets", () => {
+    const document = createContextDocument({
+      projectedHistory: createHistory(6),
+      memoryMessages: [systemMessage("# Memories\r\nFact")],
+      characterSheetMessages: [
+        systemMessage("# Character Sheets\r\nSheet"),
+      ],
+      continuityHistoryMessages: [
+        systemMessage("# Relevant Continuity Histories\r\nHistory"),
+      ],
+      selectedContinuityHistories: [
+        {
+          historyId: "history-1",
+          revisionId: "revision-1",
+          title: "The Key",
+          reason: "The key is present.",
+        },
+      ],
+      recentMessageCount: 2,
+      continuityHistoryRecentMessageCount: 4,
+    });
+
+    expect(renderContextDocumentMessages(document).map(getContent)).toEqual([
+      "Message 1",
+      "Message 2",
+      "# Relevant Continuity Histories\r\nHistory",
+      "Message 3",
+      "Message 4",
+      "# Memories\r\nFact",
+      "# Character Sheets\r\nSheet",
+      "Message 5",
+      "Message 6",
+    ]);
+  });
+
   it("renders consolidated reasoning with parity to the prior section format", () => {
     const document = createContextDocument({
       projectedHistory: [
@@ -109,6 +144,13 @@ describe("ContextDocument", () => {
       },
       { source: "memories", messageCount: 1, messageIds: [] },
       { source: "character-sheets", messageCount: 0, messageIds: [] },
+      {
+        source: "continuity-histories",
+        messageCount: 0,
+        messageIds: [],
+        itemIds: [],
+        selections: [],
+      },
       {
         source: "recent-history",
         messageCount: 1,

@@ -12,6 +12,7 @@ import type { Memory } from "../../../Memories/services/Memory";
 import type { MemoriesService } from "../../../Memories/services/MemoriesService";
 import type { ChatSettingsService } from "../Chat/ChatSettingsService";
 import type {
+  LLMContextProjectionPolicy,
   LLMChatProjection,
   LLMMessage,
 } from "../../../../services/CQRS/LLMChatProjection";
@@ -34,14 +35,24 @@ describe("LLMMessageContextService", () => {
   let SystemPromptsService: Mocked<SystemPromptsService>;
   let SystemSettingsService: Mocked<SystemSettingsService>;
   let CharacterDescriptionsService: Mocked<CharacterDescriptionsService>;
+  const ContinuityHistoryContextService = {
+    buildContext: vi.fn(),
+  };
 
   beforeEach(() => {
     ChatSettingsService = {
       Get: vi.fn().mockResolvedValue(createDefaultChatSettings()),
     } as unknown as Mocked<ChatSettingsService>;
 
+    const getMessages = vi.fn().mockReturnValue(createMockChatMessages());
     LLMChatProjection = {
-      GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
+      GetMessages: getMessages,
+      GetContext: vi
+        .fn()
+        .mockImplementation((policy: LLMContextProjectionPolicy) => ({
+          messages: getMessages(policy),
+          trace: [],
+        })),
     } as unknown as Mocked<LLMChatProjection>;
 
     MemoriesService = {
@@ -59,6 +70,11 @@ describe("LLMMessageContextService", () => {
     CharacterDescriptionsService = {
       get: vi.fn().mockResolvedValue([]),
     } as unknown as Mocked<CharacterDescriptionsService>;
+    ContinuityHistoryContextService.buildContext.mockResolvedValue({
+      messages: [],
+      selections: [],
+      trailingMessageCount: 5,
+    });
 
     vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
     vi.mocked(d.LLMChatProjection).mockReturnValue(LLMChatProjection);
@@ -67,6 +83,9 @@ describe("LLMMessageContextService", () => {
     vi.mocked(d.SystemSettingsService).mockReturnValue(SystemSettingsService);
     vi.mocked(d.CharacterDescriptionsService).mockReturnValue(
       CharacterDescriptionsService,
+    );
+    vi.mocked(d.ContinuityHistoryContextService).mockReturnValue(
+      ContinuityHistoryContextService as never,
     );
   });
 
@@ -259,6 +278,33 @@ describe("LLMMessageContextService", () => {
       );
     });
 
+    it("enables message compression in projection policy from system settings", async () => {
+      SystemSettingsService.Get.mockResolvedValue({
+        messageCompressionSettings: {
+          enabled: true,
+          afterMessages: 5,
+        },
+      });
+
+      await new LLMMessageContextService(
+        testChatId,
+      ).buildGenerationRequestMessages();
+
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ messageCompressionAfterMessages: 5 }),
+      );
+    });
+
+    it("disables message compression in projection policy by default", async () => {
+      await new LLMMessageContextService(
+        testChatId,
+      ).buildGenerationRequestMessages();
+
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ messageCompressionAfterMessages: null }),
+      );
+    });
+
     it("should fetch memories", async () => {
       const service = new LLMMessageContextService(testChatId);
 
@@ -283,9 +329,7 @@ describe("LLMMessageContextService", () => {
 
       const result = await service.buildGenerationRequestMessages(false);
 
-      const hasResponsePrompt = result.some(
-        (m) => m.content === "Test prompt",
-      );
+      const hasResponsePrompt = result.some((m) => m.content === "Test prompt");
       expect(hasResponsePrompt).toBe(false);
     });
 
@@ -298,6 +342,50 @@ describe("LLMMessageContextService", () => {
       expectMessagesContainChatMessages(result);
       expectMessagesContainMemories(result);
       expectResponsePromptIsLast(result);
+    });
+
+    it("inserts selected continuity histories at their independent trailing-message offset", async () => {
+      ContinuityHistoryContextService.buildContext.mockResolvedValue({
+        messages: [
+          {
+            role: "system",
+            content:
+              "# Relevant Continuity Histories\n\n## The Brass Key\nThe key is now held by Mara.",
+          },
+        ],
+        selections: [
+          {
+            historyId: "history-1",
+            revisionId: "revision-2",
+            title: "The Brass Key",
+            reason: "The latest turn mentions the vault.",
+          },
+        ],
+        trailingMessageCount: 1,
+      });
+
+      const request = await new LLMMessageContextService(
+        testChatId,
+      ).buildGenerationRequestWithTrace();
+
+      expect(request.messages[0].id).toBe("msg-1");
+      expect(request.messages[1].content).toContain(
+        "# Relevant Continuity Histories",
+      );
+      expect(request.messages[2].id).toBe("msg-2");
+      expect(request.messages[3].content).toBe("Test prompt");
+      expect(request.trace.sections[3]).toEqual({
+        source: "continuity-histories",
+        messageCount: 1,
+        messageIds: [],
+        itemIds: ["history-1"],
+        selections: [
+          expect.objectContaining({
+            historyId: "history-1",
+            revisionId: "revision-2",
+          }),
+        ],
+      });
     });
 
     it("returns a source trace for durable context and appended instructions", async () => {
@@ -322,11 +410,19 @@ describe("LLMMessageContextService", () => {
         },
         { source: "character-sheets", messageCount: 0, messageIds: [] },
         {
+          source: "continuity-histories",
+          messageCount: 0,
+          messageIds: [],
+          itemIds: [],
+          selections: [],
+        },
+        {
           source: "recent-history",
           messageCount: 2,
           messageIds: ["msg-1", "msg-2"],
         },
       ]);
+      expect(request.trace.projection).toEqual([]);
       expect(request.trace.appendedSources).toEqual([
         "response-prompt",
         "guidance",
@@ -550,9 +646,7 @@ describe("LLMMessageContextService", () => {
         "Feedback",
       );
 
-      const hasResponsePrompt = result.some(
-        (m) => m.content === "Test prompt",
-      );
+      const hasResponsePrompt = result.some((m) => m.content === "Test prompt");
       expect(hasResponsePrompt).toBe(false);
     });
 
@@ -668,6 +762,67 @@ describe("LLMMessageContextService", () => {
       );
       expect(lastMessage.content).toContain(
         DEFAULT_SYSTEM_PROMPTS.chapterTitlePrompt,
+      );
+    });
+  });
+
+  describe("buildChapterGenerationSnapshot", () => {
+    it("uses saved compressions when both the chat and global settings enable them", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        chapterGenerationUseCompressedMessages: true,
+      });
+      SystemSettingsService.Get.mockResolvedValue({
+        messageCompressionSettings: {
+          enabled: true,
+          afterMessages: 5,
+        },
+      });
+
+      await new LLMMessageContextService(
+        testChatId,
+      ).buildChapterGenerationSnapshot();
+
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ messageCompressionAfterMessages: 5 }),
+      );
+    });
+
+    it("uses originals by default even when global compression is enabled", async () => {
+      SystemSettingsService.Get.mockResolvedValue({
+        messageCompressionSettings: {
+          enabled: true,
+          afterMessages: 5,
+        },
+      });
+
+      await new LLMMessageContextService(
+        testChatId,
+      ).buildChapterGenerationSnapshot();
+
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ messageCompressionAfterMessages: null }),
+      );
+    });
+
+    it("uses originals when global compression is disabled despite the chat setting", async () => {
+      ChatSettingsService.Get.mockResolvedValue({
+        ...createDefaultChatSettings(),
+        chapterGenerationUseCompressedMessages: true,
+      });
+      SystemSettingsService.Get.mockResolvedValue({
+        messageCompressionSettings: {
+          enabled: false,
+          afterMessages: 5,
+        },
+      });
+
+      await new LLMMessageContextService(
+        testChatId,
+      ).buildChapterGenerationSnapshot();
+
+      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ messageCompressionAfterMessages: null }),
       );
     });
   });

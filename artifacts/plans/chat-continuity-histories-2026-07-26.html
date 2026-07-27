@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A system proposal for LLM-maintained, selectively recalled continuity histories across a Story Vault chat."
+    />
+    <title>Continuity Histories for Story Vault</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #192526;
+        --muted: #586769;
+        --paper: #f2efe7;
+        --card: #fffdf8;
+        --line: #c9c5ba;
+        --navy: #203f55;
+        --navy-soft: #dae6ec;
+        --green: #2f6b57;
+        --green-soft: #dce9df;
+        --amber: #98631c;
+        --amber-soft: #f3e5c9;
+        --plum: #704b68;
+        --plum-soft: #eadde6;
+        --red: #954b3d;
+        --red-soft: #f1ddd8;
+        --shadow: 0 12px 34px rgba(28, 38, 39, 0.09);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 12% 8%, rgba(47, 107, 87, 0.08), transparent 27rem),
+          var(--paper);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 64px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: clamp(30px, 6vw, 68px);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .hero::before,
+      .hero::after {
+        position: absolute;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        content: "";
+      }
+
+      .hero::before {
+        top: -115px;
+        right: -70px;
+        width: 290px;
+        height: 290px;
+        background: var(--navy-soft);
+      }
+
+      .hero::after {
+        top: -58px;
+        right: -22px;
+        width: 150px;
+        height: 150px;
+        background: var(--card);
+      }
+
+      .eyebrow {
+        position: relative;
+        z-index: 1;
+        margin: 0 0 12px;
+        color: var(--green);
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.15;
+        text-wrap: balance;
+      }
+
+      h1 {
+        position: relative;
+        z-index: 1;
+        max-width: 930px;
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2.45rem, 7vw, 5.8rem);
+        font-weight: 500;
+        letter-spacing: -0.045em;
+      }
+
+      .lede {
+        position: relative;
+        z-index: 1;
+        max-width: 800px;
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: clamp(1.05rem, 2vw, 1.28rem);
+      }
+
+      .correction {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 14px;
+        align-items: start;
+        max-width: 910px;
+        margin-top: 28px;
+        padding: 18px 20px;
+        border-left: 5px solid var(--green);
+        background: var(--green-soft);
+      }
+
+      .correction-mark,
+      .flow-number,
+      .phase-number {
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        color: white;
+        font-weight: 850;
+      }
+
+      .correction-mark {
+        width: 32px;
+        height: 32px;
+        background: var(--green);
+      }
+
+      .correction p {
+        margin: 0;
+      }
+
+      section {
+        margin-top: 54px;
+      }
+
+      .section-head {
+        display: grid;
+        grid-template-columns: minmax(0, 0.88fr) minmax(300px, 1.12fr);
+        gap: 36px;
+        align-items: end;
+        margin-bottom: 22px;
+      }
+
+      h2 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(1.75rem, 4vw, 2.8rem);
+        font-weight: 500;
+        letter-spacing: -0.025em;
+      }
+
+      .section-head p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .source-map {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+      }
+
+      .source-card {
+        min-width: 0;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-top: 5px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+      }
+
+      .source-card.existing {
+        border-top-color: var(--navy);
+      }
+
+      .source-card.new {
+        border-color: var(--green);
+        border-top-color: var(--green);
+        background: var(--green-soft);
+        box-shadow: var(--shadow);
+      }
+
+      .source-card small {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--muted);
+        font-size: 0.68rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .source-card h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+
+      .source-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .gap-line {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 14px;
+        align-items: center;
+        margin-top: 14px;
+        padding: 16px 18px;
+        border: 1px dashed var(--green);
+        border-radius: 12px;
+        color: #2d5447;
+        background: rgba(220, 233, 223, 0.55);
+      }
+
+      .gap-line strong {
+        white-space: nowrap;
+      }
+
+      .history-examples {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+
+      .history-card {
+        min-width: 0;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .history-card:nth-child(2) {
+        background: var(--navy-soft);
+      }
+
+      .history-card:nth-child(4) {
+        background: var(--amber-soft);
+      }
+
+      .history-card:nth-child(6) {
+        background: var(--plum-soft);
+      }
+
+      .history-icon {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        margin-bottom: 14px;
+        place-items: center;
+        border: 1px solid currentColor;
+        border-radius: 10px;
+        color: var(--navy);
+        font-weight: 900;
+      }
+
+      .history-card h3 {
+        margin: 0 0 8px;
+        font-size: 1.02rem;
+      }
+
+      .history-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .history-card .sample {
+        display: block;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px dashed rgba(25, 37, 38, 0.25);
+        color: var(--ink);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 0.93rem;
+        font-style: italic;
+      }
+
+      .lifecycle {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+      }
+
+      .flow-step {
+        position: relative;
+        min-width: 0;
+        padding: 22px 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+      }
+
+      .flow-step:not(:last-child)::after {
+        position: absolute;
+        z-index: 2;
+        top: 34px;
+        right: -20px;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        background: var(--paper);
+        color: var(--green);
+        content: "→";
+        font-weight: 900;
+      }
+
+      .flow-number {
+        width: 34px;
+        height: 34px;
+        margin-bottom: 14px;
+        background: var(--green);
+        font-size: 0.82rem;
+      }
+
+      .flow-step h3 {
+        margin: 0 0 8px;
+        font-size: 0.98rem;
+      }
+
+      .flow-step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.87rem;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .panel {
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--card);
+      }
+
+      .panel.write {
+        border-top: 5px solid var(--plum);
+      }
+
+      .panel.read {
+        border-top: 5px solid var(--green);
+      }
+
+      .panel > p {
+        margin: 0 0 18px;
+        color: var(--muted);
+      }
+
+      .mini-flow {
+        display: grid;
+        gap: 9px;
+      }
+
+      .mini-flow div {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 11px;
+        align-items: start;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--paper);
+      }
+
+      .mini-flow b {
+        color: var(--green);
+      }
+
+      .mini-flow span {
+        color: var(--muted);
+        font-size: 0.89rem;
+      }
+
+      .context-stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      .context-stack div {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 11px 13px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--paper);
+        font-size: 0.87rem;
+        font-weight: 750;
+      }
+
+      .context-stack .selected {
+        border-color: var(--green);
+        background: var(--green-soft);
+      }
+
+      .context-stack em {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-style: normal;
+        font-weight: 750;
+      }
+
+      .contract-grid {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 18px;
+      }
+
+      .contract {
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--card);
+      }
+
+      .contract header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 15px;
+      }
+
+      .contract h3 {
+        margin: 0;
+      }
+
+      .badge {
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: var(--navy-soft);
+        color: var(--navy);
+        font-size: 0.68rem;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      .fields {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+      }
+
+      .fields div {
+        display: grid;
+        grid-template-columns: minmax(125px, 0.7fr) minmax(0, 1.3fr);
+        gap: 12px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--line);
+      }
+
+      .fields dt {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.79rem;
+        font-weight: 800;
+      }
+
+      .fields dd {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.87rem;
+      }
+
+      .rules {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 13px;
+      }
+
+      .rule {
+        min-width: 0;
+        padding: 19px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: var(--card);
+      }
+
+      .rule::before {
+        display: block;
+        width: 26px;
+        height: 4px;
+        margin-bottom: 13px;
+        border-radius: 999px;
+        background: var(--green);
+        content: "";
+      }
+
+      .rule.danger::before {
+        background: var(--red);
+      }
+
+      .rule h3 {
+        margin: 0 0 7px;
+        font-size: 0.98rem;
+      }
+
+      .rule p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .timeline {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+
+      .timeline::before {
+        position: absolute;
+        top: 23px;
+        right: 6%;
+        left: 6%;
+        height: 2px;
+        background: var(--line);
+        content: "";
+      }
+
+      .phase {
+        position: relative;
+        min-width: 0;
+      }
+
+      .phase-number {
+        position: relative;
+        z-index: 1;
+        width: 46px;
+        height: 46px;
+        margin-bottom: 14px;
+        border: 5px solid var(--paper);
+        background: var(--navy);
+      }
+
+      .phase-card {
+        height: calc(100% - 60px);
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+      }
+
+      .phase-card h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+
+      .phase-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .validation {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .callout {
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-left: 5px solid var(--green);
+        border-radius: var(--radius);
+        background: var(--card);
+      }
+
+      .callout.risk {
+        border-left-color: var(--red);
+      }
+
+      .callout h3 {
+        margin: 0;
+      }
+
+      .callout ul {
+        margin: 12px 0 0;
+        padding-left: 1.15rem;
+        color: var(--muted);
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .bottom-line {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 18px;
+        align-items: center;
+        margin-top: 46px;
+        padding: 24px;
+        border: 1px solid var(--green);
+        border-radius: var(--radius);
+        background: var(--green-soft);
+      }
+
+      .bottom-icon {
+        display: grid;
+        width: 52px;
+        height: 52px;
+        place-items: center;
+        border-radius: 13px;
+        background: var(--green);
+        color: white;
+        font-weight: 900;
+      }
+
+      .bottom-line h2 {
+        font-size: clamp(1.4rem, 3vw, 2.05rem);
+      }
+
+      .bottom-line p {
+        margin: 7px 0 0;
+        color: #315849;
+      }
+
+      footer {
+        margin-top: 34px;
+        color: var(--muted);
+        font-size: 0.81rem;
+        text-align: center;
+      }
+
+      @media (max-width: 980px) {
+        .source-map {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .source-card.new {
+          grid-column: 1 / -1;
+        }
+
+        .lifecycle {
+          grid-template-columns: 1fr;
+        }
+
+        .flow-step {
+          display: grid;
+          grid-template-columns: 44px 1fr;
+          gap: 12px;
+        }
+
+        .flow-step:not(:last-child)::after {
+          right: auto;
+          bottom: -20px;
+          left: 21px;
+          top: auto;
+          content: "↓";
+        }
+
+        .flow-number {
+          margin: 0;
+        }
+
+        .rules {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .section-head,
+        .split,
+        .contract-grid,
+        .validation {
+          grid-template-columns: 1fr;
+        }
+
+        .section-head {
+          gap: 12px;
+        }
+
+        .history-examples {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .timeline {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .timeline::before {
+          top: 20px;
+          bottom: 20px;
+          left: 22px;
+          width: 2px;
+          height: auto;
+        }
+
+        .phase {
+          display: grid;
+          grid-template-columns: 46px 1fr;
+          gap: 14px;
+        }
+
+        .phase-number {
+          margin: 0;
+        }
+
+        .phase-card {
+          height: auto;
+        }
+      }
+
+      @media (max-width: 540px) {
+        .page {
+          width: min(100% - 20px, 1180px);
+          padding-top: 10px;
+        }
+
+        .hero {
+          padding: 26px 20px;
+          border-radius: 18px;
+        }
+
+        .hero::before,
+        .hero::after {
+          display: none;
+        }
+
+        .source-map,
+        .history-examples,
+        .rules {
+          grid-template-columns: 1fr;
+        }
+
+        .source-card.new {
+          grid-column: auto;
+        }
+
+        .gap-line,
+        .bottom-line {
+          grid-template-columns: 1fr;
+        }
+
+        .gap-line strong {
+          white-space: normal;
+        }
+
+        .fields div {
+          grid-template-columns: 1fr;
+          gap: 2px;
+        }
+
+        .correction {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: white;
+        }
+
+        .page {
+          width: 100%;
+          padding: 0;
+        }
+
+        .hero,
+        .history-card,
+        .source-card {
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">Story Vault · General continuity architecture</p>
+        <h1>Give the whole story a set of living histories.</h1>
+        <p class="lede">
+          Histories are LLM-maintained, topical views of what has changed across
+          a chat. Each one follows a subject over time and is recalled only when
+          the current request needs it.
+        </p>
+        <div class="correction" role="note" aria-label="Scope clarification">
+          <span class="correction-mark" aria-hidden="true">✓</span>
+          <p>
+            <strong>Character Sheets remain as they are.</strong> They are one
+            specialized source of character context. Histories fill the broader
+            continuity gap around plot threads, places, objects, factions,
+            relationships, mysteries, promises, and world state.
+          </p>
+        </div>
+      </header>
+
+      <section aria-labelledby="landscape-heading">
+        <div class="section-head">
+          <h2 id="landscape-heading">A missing context layer</h2>
+          <p>
+            Story Vault already has several distinct ways to preserve context.
+            Histories should join them—not absorb them.
+          </p>
+        </div>
+        <div class="source-map" aria-label="Existing and proposed context sources">
+          <article class="source-card existing">
+            <small>Existing</small>
+            <h3>Chapters &amp; Books</h3>
+            <p>Compress contiguous stretches of what happened.</p>
+          </article>
+          <article class="source-card existing">
+            <small>Existing</small>
+            <h3>Memories</h3>
+            <p>User-pinned truths and durable instructions.</p>
+          </article>
+          <article class="source-card existing">
+            <small>Existing</small>
+            <h3>Character Sheets</h3>
+            <p>Who active characters are and what defines them.</p>
+          </article>
+          <article class="source-card existing">
+            <small>Existing</small>
+            <h3>Plans</h3>
+            <p>What should happen next—the intended future.</p>
+          </article>
+          <article class="source-card new">
+            <small>Proposed</small>
+            <h3>Continuity Histories</h3>
+            <p>How a particular subject changed and what is true now.</p>
+          </article>
+        </div>
+        <div class="gap-line">
+          <strong>The gap:</strong>
+          <span>
+            “What happened to this thing across many scenes, and which parts of
+            that past matter right now?” No current source answers that
+            selectively.
+          </span>
+        </div>
+      </section>
+
+      <section aria-labelledby="examples-heading">
+        <div class="section-head">
+          <h2 id="examples-heading">Many small histories, not one master summary</h2>
+          <p>
+            A History is a living document with a narrow responsibility.
+            Subjects can be discovered by the LLM, created manually, or started
+            from templates.
+          </p>
+        </div>
+        <div class="history-examples">
+          <article class="history-card">
+            <span class="history-icon" aria-hidden="true">↗</span>
+            <h3>Plot thread</h3>
+            <p>Tracks clues, turns, unresolved questions, and current status.</p>
+            <span class="sample">“The Missing Cartographer”</span>
+          </article>
+          <article class="history-card">
+            <span class="history-icon" aria-hidden="true">⌂</span>
+            <h3>Place</h3>
+            <p>Tracks visits, damage, access, occupants, and local changes.</p>
+            <span class="sample">“The Glass Lighthouse”</span>
+          </article>
+          <article class="history-card">
+            <span class="history-icon" aria-hidden="true">◇</span>
+            <h3>Object</h3>
+            <p>Tracks origin, ownership, use, condition, and significance.</p>
+            <span class="sample">“The Brass Key”</span>
+          </article>
+          <article class="history-card">
+            <span class="history-icon" aria-hidden="true">♜</span>
+            <h3>Faction or world state</h3>
+            <p>Tracks alliances, rules, power shifts, and consequences.</p>
+            <span class="sample">“Politics of Greyhaven”</span>
+          </article>
+          <article class="history-card">
+            <span class="history-icon" aria-hidden="true">⇄</span>
+            <h3>Relationship</h3>
+            <p>Tracks shared events, trust, conflict, obligations, and secrets.</p>
+            <span class="sample">“Mara &amp; Ivo”</span>
+          </article>
+          <article class="history-card">
+            <span class="history-icon" aria-hidden="true">!</span>
+            <h3>Promise or constraint</h3>
+            <p>Tracks bargains, rules, debts, deadlines, and their fulfillment.</p>
+            <span class="sample">“The Winter Oath”</span>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="lifecycle-heading">
+        <div class="section-head">
+          <h2 id="lifecycle-heading">The lifecycle: notice, update, select, recall</h2>
+          <p>
+            Generation happens when the story changes. Inclusion happens when a
+            request is assembled. Those are related decisions, but they should
+            not be the same operation.
+          </p>
+        </div>
+        <div class="lifecycle" aria-label="History lifecycle">
+          <article class="flow-step">
+            <span class="flow-number">1</span>
+            <div>
+              <h3>Observe the delta</h3>
+              <p>Use only the turns since the last continuity pass.</p>
+            </div>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">2</span>
+            <div>
+              <h3>Route changes</h3>
+              <p>Identify affected histories and propose new ones when warranted.</p>
+            </div>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">3</span>
+            <div>
+              <h3>Write revisions</h3>
+              <p>Update only affected documents and retain their prior versions.</p>
+            </div>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">4</span>
+            <div>
+              <h3>Select for a request</h3>
+              <p>Choose histories from recent subjects, intent, metadata, and pins.</p>
+            </div>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">5</span>
+            <div>
+              <h3>Render and trace</h3>
+              <p>Insert chosen revisions before the recent tail and record why.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="two-loops-heading">
+        <div class="section-head">
+          <h2 id="two-loops-heading">Two loops, with different jobs</h2>
+          <p>
+            The write loop can resemble the current periodic Plan refresh. The
+            read loop belongs in request context assembly and runs against each
+            request’s temporal boundary.
+          </p>
+        </div>
+        <div class="split">
+          <article class="panel write">
+            <p class="eyebrow">Background or periodic · write loop</p>
+            <h3>Maintain histories with an LLM</h3>
+            <p>
+              The model receives the old revision, new messages, and the
+              History’s tracking instructions—not the entire chat by default.
+            </p>
+            <div class="mini-flow">
+              <div>
+                <b>1</b>
+                <span>Detect material changes and affected subjects.</span>
+              </div>
+              <div>
+                <b>2</b>
+                <span>Return structured update proposals with source message IDs.</span>
+              </div>
+              <div>
+                <b>3</b>
+                <span>Accept automatically, review, or edit by History preference.</span>
+              </div>
+              <div>
+                <b>4</b>
+                <span>Save a new revision with an “updated through” boundary.</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel read">
+            <p class="eyebrow">Every generation · read loop</p>
+            <h3>Recall only relevant histories</h3>
+            <p>
+              First select from names, descriptions, entities, and routing hints;
+              load full content only after selection.
+            </p>
+            <div class="context-stack" aria-label="Proposed context ordering">
+              <div><span>Story + projected/compressed history</span><em>existing</em></div>
+              <div><span>Memories</span><em>existing</em></div>
+              <div><span>Character Sheets</span><em>existing</em></div>
+              <div class="selected">
+                <span>Selected Continuity Histories</span><em>new</em>
+              </div>
+              <div><span>Recent message tail</span><em>existing</em></div>
+              <div><span>Request instruction</span><em>existing</em></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="contracts-heading">
+        <div class="section-head">
+          <h2 id="contracts-heading">A definition and versioned revisions</h2>
+          <p>
+            Separate what a History is supposed to track from the content it
+            currently contains. This mirrors the useful definition/instance
+            distinction already present in Plans.
+          </p>
+        </div>
+        <div class="contract-grid">
+          <article class="contract">
+            <header>
+              <h3>HistoryDefinition</h3>
+              <span class="badge">Routing contract</span>
+            </header>
+            <dl class="fields">
+              <div>
+                <dt>id / title</dt>
+                <dd>Stable identity and a readable name.</dd>
+              </div>
+              <div>
+                <dt>description</dt>
+                <dd>What belongs in this History—and what does not.</dd>
+              </div>
+              <div>
+                <dt>kind / subjects</dt>
+                <dd>Plot, place, object, faction, relationship, constraint, or custom.</dd>
+              </div>
+              <div>
+                <dt>routingHints</dt>
+                <dd>Aliases, entities, themes, and situations that make it relevant.</dd>
+              </div>
+              <div>
+                <dt>refreshPolicy</dt>
+                <dd>Manual, interval-based, or change-triggered.</dd>
+              </div>
+              <div>
+                <dt>inclusionPolicy</dt>
+                <dd>Automatic, manual-only, or always included.</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="contract">
+            <header>
+              <h3>HistoryRevision</h3>
+              <span class="badge">Temporal content</span>
+            </header>
+            <dl class="fields">
+              <div>
+                <dt>historyId</dt>
+                <dd>Links the revision to its definition.</dd>
+              </div>
+              <div>
+                <dt>currentState</dt>
+                <dd>The concise present truth about this subject.</dd>
+              </div>
+              <div>
+                <dt>keyDevelopments</dt>
+                <dd>Only the prior changes needed to explain that current state.</dd>
+              </div>
+              <div>
+                <dt>openContinuity</dt>
+                <dd>Unresolved consequences, clues, promises, or constraints.</dd>
+              </div>
+              <div>
+                <dt>sourceMessageIds</dt>
+                <dd>Evidence for review, regeneration, and correction.</dd>
+              </div>
+              <div>
+                <dt>coveredThroughId</dt>
+                <dd>The hard temporal boundary for safe historical regeneration.</dd>
+              </div>
+              <div>
+                <dt>revision / origin</dt>
+                <dd>Preserves earlier versions and distinguishes user from model edits.</dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="selection-heading">
+        <div class="section-head">
+          <h2 id="selection-heading">“Only when necessary” needs explicit rules</h2>
+          <p>
+            Relevance should be observable. A selector may use an LLM, but it
+            should return History IDs and reasons—not rewrite the histories while
+            choosing them.
+          </p>
+        </div>
+        <div class="rules">
+          <article class="rule">
+            <h3>Manual inclusion wins</h3>
+            <p>Always-included or explicitly requested Histories bypass ranking.</p>
+          </article>
+          <article class="rule">
+            <h3>Metadata first</h3>
+            <p>Select from title, scope, aliases, subjects, and routing hints before loading bodies.</p>
+          </article>
+          <article class="rule">
+            <h3>Request-aware recall</h3>
+            <p>A story reply, chapter summary, image prompt, and regeneration can select differently.</p>
+          </article>
+          <article class="rule danger">
+            <h3>Time cutoff is absolute</h3>
+            <p>A request at message N can only use a revision whose coverage ends at or before N.</p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="roadmap-heading">
+        <div class="section-head">
+          <h2 id="roadmap-heading">A focused first implementation</h2>
+          <p>
+            Start with user-created Histories and transparent selection. Let
+            automatic discovery follow once the document lifecycle is reliable.
+          </p>
+        </div>
+        <div class="timeline" aria-label="Implementation roadmap">
+          <article class="phase">
+            <span class="phase-number">1</span>
+            <div class="phase-card">
+              <h3>Definitions + revisions</h3>
+              <p>
+                Add managed storage, manual CRUD, a prompt, refresh interval,
+                revision history, and source-message boundaries.
+              </p>
+            </div>
+          </article>
+          <article class="phase">
+            <span class="phase-number">2</span>
+            <div class="phase-card">
+              <h3>LLM maintenance</h3>
+              <p>
+                Generate or update one History from its prior revision and the
+                messages since it was last updated.
+              </p>
+            </div>
+          </article>
+          <article class="phase">
+            <span class="phase-number">3</span>
+            <div class="phase-card">
+              <h3>Selective context</h3>
+              <p>
+                Add manual/automatic inclusion and a structured selector that
+                returns IDs, reasons, and temporal-safe revisions.
+              </p>
+            </div>
+          </article>
+          <article class="phase">
+            <span class="phase-number">4</span>
+            <div class="phase-card">
+              <h3>Discovery + compaction</h3>
+              <p>
+                Suggest new Histories from recurring subjects; merge or archive
+                stale ones only after real usage reveals the need.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="validation-heading">
+        <div class="section-head">
+          <h2 id="validation-heading">The important failure modes</h2>
+          <p>
+            A History system is useful only if it recalls less context without
+            making continuity less trustworthy.
+          </p>
+        </div>
+        <div class="validation">
+          <article class="callout risk">
+            <h3>Watch for</h3>
+            <ul>
+              <li>Too many overlapping Histories restating the same events.</li>
+              <li>Updates drifting from source material over repeated revisions.</li>
+              <li>Plans or speculation being recorded as things that happened.</li>
+              <li>Later knowledge leaking into regeneration of an earlier scene.</li>
+              <li>Selection latency becoming larger than its token savings.</li>
+            </ul>
+          </article>
+          <article class="callout">
+            <h3>Prove it with</h3>
+            <ul>
+              <li>Source IDs and “updated through” shown on every revision.</li>
+              <li>A context inspector listing selected Histories and reasons.</li>
+              <li>Golden scenarios for relevant inclusion and irrelevant exclusion.</li>
+              <li>Temporal tests for regeneration before and after each revision.</li>
+              <li>Token and latency comparisons against the current context bundle.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <aside class="bottom-line" aria-labelledby="bottom-heading">
+        <div class="bottom-icon" aria-hidden="true">→</div>
+        <div>
+          <h2 id="bottom-heading">The useful abstraction is a “living context lens.”</h2>
+          <p>
+            Each History answers one durable question about the story across
+            time. The LLM maintains it; metadata routes it; the context assembler
+            recalls it. Existing features keep their current responsibilities.
+          </p>
+        </div>
+      </aside>
+
+      <footer>
+        Grounded in Story Vault’s current Chapters/Books, Memories, Character
+        Sheets, Plans, ContextDocument ordering, and projection tracing · July
+        26, 2026
+      </footer>
+    </main>
+  </body>
+</html>

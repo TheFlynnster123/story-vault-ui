@@ -14,12 +14,14 @@ interface SystemMessageProps {
   chatId: string;
   message: UserChatMessage;
   isLastMessage: boolean;
+  messageCompressionEnabled?: boolean;
 }
 
 export const SystemMessage: React.FC<SystemMessageProps> = ({
   chatId,
   message,
   isLastMessage,
+  messageCompressionEnabled = false,
 }) => {
   const [showButtons, setShowButtons] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -57,6 +59,9 @@ export const SystemMessage: React.FC<SystemMessageProps> = ({
             isLastMessage={isLastMessage}
             showRegenerate
             onRegenerate={handleRegenerate}
+            hasCompression={
+              messageCompressionEnabled && message.compression !== undefined
+            }
           />
         </MessageOverlay>
       </MessageContentWrapper>

@@ -21,6 +21,8 @@ export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
   const trailingChapterMessages =
     systemSettings?.chapterCompressionSettings?.trailingChapterMessages ??
     DEFAULT_TRAILING_CHAPTER_MESSAGES;
+  const messageCompressionEnabled =
+    systemSettings?.messageCompressionSettings?.enabled ?? false;
   const trailingCue = getTrailingChapterCue(messages, trailingChapterMessages);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
@@ -39,6 +41,7 @@ export const ChatEntriesList: React.FC<IChatEntriesList> = ({ chatId }) => {
             chatId={chatId}
             message={msg}
             isLastMessage={index === messages.length - 1}
+            messageCompressionEnabled={messageCompressionEnabled}
             trailingChapterMessageCount={
               trailingCue?.chapterId === msg.id ? trailingCue.count : undefined
             }
@@ -129,6 +132,6 @@ const MoreBelowIndicator = styled.div<{ $isVisible: boolean }>`
     transform 220ms ease-out,
     visibility 220ms linear;
   animation: ${({ $isVisible }) =>
-      $isVisible ? moreBelowIndicatorAnimation : "none"}
+    $isVisible ? moreBelowIndicatorAnimation : "none"}
     1.8s ease-in-out infinite;
 `;

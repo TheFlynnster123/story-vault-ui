@@ -128,6 +128,16 @@ export const Theme = {
     backgroundSecondary: "rgba(67, 56, 202, 0.3)",
   },
 
+  /** Colors for continuity history UI elements - Green theme */
+  history: {
+    primary: "rgba(52, 211, 153, 1)",
+    secondary: "rgba(5, 150, 105, 1)",
+    border: "rgba(52, 211, 153, 0.45)",
+    headerText: "rgba(255, 255, 255, 1)",
+    backgroundPrimary: "rgba(16, 185, 129, 0.16)",
+    backgroundSecondary: "rgba(5, 150, 105, 0.24)",
+  },
+
   /** Colors for system prompts UI elements - Orange/Amber theme */
   systemPrompts: {
     /** Primary orange color */

@@ -149,6 +149,7 @@ const getRequestIcon = (request: TrackedRequest): React.ReactNode => {
 
 const getRequestBadgeColor = (request: TrackedRequest): string => {
   if (request.type === "image-prompt") return "lime";
+  if (request.type === "message-compression") return "teal";
   if (request.label === "Chat") return "yellow";
   return "gray";
 };
@@ -363,7 +364,7 @@ const MonitoringSummary: React.FC<MonitoringSummaryProps> = ({
       <SummaryCard
         label="Mix"
         value={`${summary.typeCounts.chat} chat`}
-        detail={`${summary.typeCounts["agent-intent"]} agent / ${summary.typeCounts["image-prompt"]} image`}
+        detail={`${summary.typeCounts["agent-intent"]} agent / ${summary.typeCounts["image-prompt"]} image / ${summary.typeCounts["message-compression"]} compressed`}
       />
       <SummaryCard
         label="Top Cost"
@@ -426,6 +427,9 @@ const summarizeRequests = (requests: TrackedRequest[]) => {
       chat: requests.filter((r) => r.type === "chat").length,
       "agent-intent": requests.filter((r) => r.type === "agent-intent").length,
       "image-prompt": requests.filter((r) => r.type === "image-prompt").length,
+      "message-compression": requests.filter(
+        (r) => r.type === "message-compression",
+      ).length,
     },
     hasEstimatedCost: requests.some((r) => r.actualCost === undefined),
     averageCost: requestCount > 0 ? totalCost / requestCount : 0,
@@ -512,6 +516,7 @@ const MonitoringControls: React.FC<MonitoringControlsProps> = ({
           { value: "chat", label: "Chat" },
           { value: "agent-intent", label: "Agent Intent" },
           { value: "image-prompt", label: "Image Prompt" },
+          { value: "message-compression", label: "Message Compression" },
         ]}
       />
       <Select

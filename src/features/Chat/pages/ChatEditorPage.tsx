@@ -9,6 +9,7 @@ import {
   ActionIcon,
   Stack,
   Divider,
+  Switch,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { UseFormReturnType } from "@mantine/form";
@@ -113,6 +114,7 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
       backgroundPhotoWorkflowId: undefined as string | undefined,
       backgroundPhotoCivitJobId: undefined as string | undefined,
       prompt: "",
+      chapterGenerationUseCompressedMessages: false,
     },
     validate: {
       chatTitle: (value: string) =>
@@ -141,6 +143,8 @@ const useChatEditor = (chatIdFromParams: string | undefined) => {
           chatSettings.backgroundPhotoWorkflowId ??
           chatSettings.backgroundPhotoCivitJobId,
         prompt: chatSettings.prompt || "",
+        chapterGenerationUseCompressedMessages:
+          chatSettings.chapterGenerationUseCompressedMessages ?? false,
       };
       form.setInitialValues(values);
       form.reset();
@@ -341,6 +345,19 @@ const ChatFormFields: React.FC<ChatFormFieldsProps> = ({
         }
         onPresetSaved={onPresetSaved}
         onPresetDeleted={onPresetDeleted}
+      />
+
+      <Switch
+        checked={form.values.chapterGenerationUseCompressedMessages ?? false}
+        onChange={(event) => {
+          const enabled = event.currentTarget.checked;
+          form.setFieldValue("chapterGenerationUseCompressedMessages", enabled);
+          onFormUpdated({
+            chapterGenerationUseCompressedMessages: enabled,
+          });
+        }}
+        label="Use compressed messages for chapter generation"
+        description="When enabled, chapter drafts use eligible saved message compressions while global message compression is on. Turning global compression off always restores the full original messages."
       />
     </Stack>
   );

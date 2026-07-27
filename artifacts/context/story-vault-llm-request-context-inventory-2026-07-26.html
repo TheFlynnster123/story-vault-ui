@@ -1,0 +1,1651 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Story Vault — LLM request inventory and pipeline-owned context allowlists</title>
+  <style>
+    :root {
+      --ink: #182429;
+      --muted: #617077;
+      --paper: #f4f0e7;
+      --surface: #fffdf8;
+      --line: #c9c1b3;
+      --line-strong: #918778;
+      --teal: #176d69;
+      --teal-soft: #dcecea;
+      --amber: #a95b22;
+      --amber-soft: #f4e0cb;
+      --rose: #98465a;
+      --rose-soft: #f1dde2;
+      --blue: #3d6786;
+      --blue-soft: #dfe9f0;
+      --gray-soft: #eceae4;
+      --shadow: 0 15px 34px rgba(38, 48, 47, 0.09);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 7% 3%, rgba(23, 109, 105, 0.08), transparent 27rem),
+        radial-gradient(circle at 95% 15%, rgba(169, 91, 34, 0.08), transparent 24rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    code,
+    .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    a {
+      color: var(--teal);
+    }
+
+    a:focus-visible {
+      outline: 3px solid var(--amber);
+      outline-offset: 4px;
+      border-radius: 5px;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 72px;
+    }
+
+    .hero,
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(28px, 5vw, 57px);
+      border-radius: 26px;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      top: -95px;
+      right: -60px;
+      width: 275px;
+      height: 275px;
+      border: 48px solid var(--teal-soft);
+      border-radius: 50%;
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .eyebrow,
+    .kicker {
+      margin: 0 0 9px;
+      color: var(--teal);
+      font-size: 0.73rem;
+      font-weight: 850;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1,
+    h2 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: -0.04em;
+    }
+
+    h1 {
+      position: relative;
+      z-index: 1;
+      max-width: 820px;
+      margin-bottom: 15px;
+      font-size: clamp(2.45rem, 6vw, 5.2rem);
+      line-height: 0.97;
+    }
+
+    h2 {
+      margin-bottom: 9px;
+      font-size: clamp(1.72rem, 3vw, 2.55rem);
+      line-height: 1.08;
+    }
+
+    h3 {
+      margin-bottom: 7px;
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .lede {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin-bottom: 27px;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.18rem);
+    }
+
+    .hero-metrics {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 11px;
+    }
+
+    .metric {
+      padding: 14px 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--teal);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .section {
+      margin-top: 50px;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(250px, 0.78fr);
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .section-head > p {
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .policy-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+    }
+
+    .policy {
+      padding: 19px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+    }
+
+    .policy.configured {
+      border-top: 5px solid var(--teal);
+    }
+
+    .policy.default {
+      border-top: 5px solid var(--amber);
+    }
+
+    .policy p {
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 0.81rem;
+    }
+
+    .policy ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 0.77rem;
+    }
+
+    .policy li + li {
+      margin-top: 5px;
+    }
+
+    .bundle {
+      margin-top: 13px;
+      padding: 17px;
+      border-radius: 14px;
+      background: var(--blue-soft);
+      border: 1px solid #9eb9cb;
+    }
+
+    .bundle strong {
+      display: block;
+      margin-bottom: 7px;
+      color: #31546d;
+      font-size: 0.86rem;
+    }
+
+    .bundle p {
+      margin: 0;
+      color: #3d596b;
+      font-size: 0.76rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 4px 8px;
+      border: 1px solid #abc0cd;
+      border-radius: 999px;
+      color: #3d596b;
+      background: rgba(255, 255, 255, 0.7);
+      font-size: 0.68rem;
+      font-weight: 760;
+    }
+
+    .verdict {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.7fr);
+      gap: 24px;
+      align-items: center;
+      padding: clamp(22px, 4vw, 36px);
+      border: 1px solid #7ca9a4;
+      border-left: 7px solid var(--teal);
+      border-radius: var(--radius);
+      background: linear-gradient(115deg, #fff 0%, #f3faf8 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .verdict h2 {
+      max-width: 760px;
+    }
+
+    .verdict p {
+      max-width: 790px;
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .verdict-rule {
+      padding: 17px;
+      border: 1px solid #9bc0bc;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.85);
+    }
+
+    .verdict-rule strong,
+    .verdict-rule span {
+      display: block;
+    }
+
+    .verdict-rule strong {
+      margin-bottom: 5px;
+      color: var(--teal);
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .verdict-rule span {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .architecture-flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 26px;
+      margin-top: 15px;
+    }
+
+    .flow-step {
+      position: relative;
+      min-height: 158px;
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -21px;
+      color: var(--amber);
+      font-size: 1.45rem;
+      font-weight: 800;
+      transform: translateY(-55%);
+    }
+
+    .step-number {
+      display: inline-grid;
+      place-items: center;
+      width: 27px;
+      height: 27px;
+      margin-bottom: 11px;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--teal);
+      font-size: 0.76rem;
+      font-weight: 850;
+    }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.87rem;
+    }
+
+    .flow-step p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .code-shell {
+      overflow: hidden;
+      border: 1px solid #32454b;
+      border-radius: 16px;
+      background: #17262b;
+      box-shadow: var(--shadow);
+    }
+
+    .code-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #3b5056;
+      color: #c6d6d8;
+      background: #203238;
+      font-size: 0.72rem;
+    }
+
+    .code-title strong {
+      color: #f8e5c9;
+    }
+
+    .code-shell pre {
+      overflow-x: auto;
+      margin: 0;
+      padding: 20px;
+      color: #e7efef;
+      font-size: 0.73rem;
+      line-height: 1.62;
+      tab-size: 2;
+    }
+
+    .code-shell code {
+      font: inherit;
+    }
+
+    .code-key { color: #85d6ca; }
+    .code-type { color: #f2bd80; }
+    .code-string { color: #bdd99a; }
+    .code-comment { color: #8ca2a6; }
+
+    .object-notes {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .object-note {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .object-note strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--teal);
+      font-size: 0.77rem;
+    }
+
+    .object-note p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.71rem;
+    }
+
+    .guardrail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .guardrail {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .guardrail strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.82rem;
+    }
+
+    .guardrail p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .migration {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      counter-reset: migration;
+    }
+
+    .migration-step {
+      position: relative;
+      padding: 43px 15px 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      counter-increment: migration;
+    }
+
+    .migration-step::before {
+      content: counter(migration);
+      position: absolute;
+      top: 13px;
+      left: 15px;
+      color: var(--amber);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .migration-step strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.8rem;
+    }
+
+    .migration-step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.71rem;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 7px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      font-size: 0.63rem;
+      font-weight: 850;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+
+    .yes {
+      color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .partial {
+      color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .no {
+      color: #687176;
+      background: var(--gray-soft);
+    }
+
+    .warning {
+      color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .family {
+      margin-top: 16px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .family-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.65fr);
+      gap: 18px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #f8f5ef;
+    }
+
+    .family-head h3 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .family-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .request-header,
+    .request {
+      display: grid;
+      grid-template-columns:
+        minmax(135px, 1.05fr)
+        minmax(128px, 0.9fr)
+        78px
+        92px
+        minmax(160px, 1.25fr)
+        minmax(190px, 1.45fr);
+      gap: 12px;
+    }
+
+    .request-header {
+      padding: 10px 16px;
+      color: var(--muted);
+      background: #fbfaf6;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.63rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .request {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      align-items: start;
+    }
+
+    .request:last-child {
+      border-bottom: 0;
+    }
+
+    .request > div {
+      min-width: 0;
+    }
+
+    .request-name strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 0.81rem;
+    }
+
+    .request-name small,
+    .cell {
+      color: var(--muted);
+      font-size: 0.71rem;
+      line-height: 1.42;
+    }
+
+    .history strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.73rem;
+    }
+
+    .cell em {
+      color: var(--ink);
+      font-style: normal;
+      font-weight: 720;
+    }
+
+    .note {
+      padding: 13px 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      background: #fbfaf6;
+      font-size: 0.73rem;
+    }
+
+    .discussion-scopes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 11px;
+      margin-top: 13px;
+    }
+
+    .scope {
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .scope strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.82rem;
+    }
+
+    .scope p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+
+    .findings {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .finding {
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .finding.review {
+      border-left: 5px solid var(--rose);
+    }
+
+    .finding.intentional {
+      border-left: 5px solid var(--teal);
+    }
+
+    .finding p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .label-map {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 13px;
+    }
+
+    .label-card {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .label-card strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--teal);
+      font-size: 0.76rem;
+    }
+
+    .label-card span {
+      color: var(--muted);
+      font-size: 0.69rem;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin-top: 44px;
+      padding-top: 17px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.69rem;
+    }
+
+    @media (max-width: 980px) {
+      .hero-metrics,
+      .label-map,
+      .object-notes,
+      .migration {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .architecture-flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .flow-step:nth-child(2)::after {
+        display: none;
+      }
+
+      .request-header {
+        display: none;
+      }
+
+      .request {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 11px 18px;
+      }
+
+      .request > div::before {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 0.58rem;
+        font-weight: 850;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .request-name::before { content: "Request"; }
+      .history::before { content: "History"; }
+      .memory::before { content: "Memories"; }
+      .sheets::before { content: "Character sheets"; }
+      .special::before { content: "Special input / prompt"; }
+      .missing::before { content: "Missing or limited"; }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100% - 18px, 1180px);
+        padding-top: 9px;
+      }
+
+      .hero {
+        padding: 24px 18px;
+        border-radius: 18px;
+      }
+
+      .hero::after {
+        top: -72px;
+        right: -95px;
+        width: 210px;
+        height: 210px;
+        border-width: 34px;
+      }
+
+      .section {
+        margin-top: 39px;
+      }
+
+      .section-head,
+      .policy-grid,
+      .family-head,
+      .discussion-scopes,
+      .findings,
+      .verdict,
+      .architecture-flow,
+      .object-notes,
+      .guardrail-grid,
+      .migration {
+        grid-template-columns: 1fr;
+      }
+
+      .architecture-flow {
+        gap: 10px;
+      }
+
+      .flow-step {
+        min-height: 0;
+      }
+
+      .flow-step::after {
+        display: none;
+      }
+
+      .code-title {
+        display: block;
+      }
+
+      .code-title span {
+        display: block;
+        margin-top: 4px;
+      }
+
+      .section-head {
+        gap: 4px;
+      }
+
+      .hero-metrics,
+      .label-map {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .request {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+
+      .request-name strong {
+        font-size: 0.9rem;
+      }
+
+      .footer {
+        display: block;
+      }
+
+      .footer div + div {
+        margin-top: 8px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .page {
+        width: 100%;
+        padding: 0;
+      }
+
+      .hero,
+      .panel,
+      .family {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Story Vault · LLM request inventory · 26 July 2026</p>
+      <h1>What every LLM request can see—and what it cannot</h1>
+      <p class="lede">
+        This code-derived inventory now includes the smallest standardization proposal: one context
+        builder, five optional allowlist flags chosen locally by each pipeline, and the existing
+        task-specific prompts left where they are.
+      </p>
+      <div class="hero-metrics" aria-label="Request inventory totals">
+        <div class="metric"><strong>25</strong><span>direct API call sites</span></div>
+        <div class="metric"><strong>18</strong><span>plain text requests</span></div>
+        <div class="metric"><strong>3</strong><span>streaming requests</span></div>
+        <div class="metric"><strong>4</strong><span>structured JSON requests</span></div>
+      </div>
+    </header>
+
+    <section class="section" aria-labelledby="proposal-heading">
+      <div class="verdict">
+        <div>
+          <p class="kicker">Recommendation</p>
+          <h2 id="proposal-heading">The builder owns mechanics; each pipeline owns policy</h2>
+          <p>
+            Standardize only the reusable base context. The builder returns context messages; each
+            existing pipeline names only the sources it wants and still appends its own prompt,
+            target content, guidance, schema, and transport settings. Every omitted source defaults
+            to false; there is no central object naming or grouping the pipelines.
+          </p>
+        </div>
+        <aside class="verdict-rule" aria-label="Design rule">
+          <strong>The design rule</strong>
+          <span>
+            The shared service knows “history” and “Memories.” It never knows “Chat response,”
+            “Plan work,” “Book summary,” or any other caller identity.
+          </span>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="flow-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Smallest useful boundary</p>
+          <h2 id="flow-heading">Build base context, then append the task</h2>
+        </div>
+        <p>
+          The shared code does not know about prompts, models, schemas, discussions, or output
+          parsing. It only answers: “Which reusable Story Vault context should precede this task?”
+        </p>
+      </div>
+
+      <div class="architecture-flow" aria-label="Proposed request assembly flow">
+        <article class="flow-step">
+          <span class="step-number">1</span>
+          <strong>Name only wanted sources</strong>
+          <p>
+            An omitted flag is false. A present flag can only be <code>true</code>.
+          </p>
+        </article>
+        <article class="flow-step">
+          <span class="step-number">2</span>
+          <strong>Build context once</strong>
+          <p>
+            One service fetches only selected sources. For history it uses configured retention,
+            optionally includes Plans or the recent scene, then inserts selected durable context.
+          </p>
+        </article>
+        <article class="flow-step">
+          <span class="step-number">3</span>
+          <strong>Append existing task messages</strong>
+          <p>
+            The feature service adds its current prompt, target entity, summaries, feedback,
+            discussion transcript, or character metadata exactly as it does today.
+          </p>
+        </article>
+        <article class="flow-step">
+          <span class="step-number">4</span>
+          <strong>Call the existing API</strong>
+          <p>
+            Text, stream, structured output, model selection, request settings, and labels remain
+            unchanged and outside this refactor.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="shape-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">The whole shared API</p>
+          <h2 id="shape-heading">An additive allowlist with safe defaults</h2>
+        </div>
+        <p>
+          The interface names available sources, not request types. The <code>?: true</code> form
+          prevents noisy <code>false</code> declarations and makes every call read as “include these.”
+        </p>
+      </div>
+
+      <div class="code-shell">
+        <div class="code-title">
+          <strong>Proposed context builder</strong>
+          <span>No shared presets, request registry, transport abstraction, or contributor pipeline.</span>
+        </div>
+        <pre><code><span class="code-key">interface</span> <span class="code-type">LLMContextSelection</span> {
+  history?: true;
+  memories?: true;
+  characterSheets?: true;
+  plans?: true;
+  recentHistoryOnly?: true; <span class="code-comment">// fixed last 12 projected messages</span>
+}
+
+<span class="code-key">interface</span> <span class="code-type">LLMContextInput</span> {
+  beforeMessageId?: string;  <span class="code-comment">// regeneration only</span>
+  historyOverride?: readonly LLMMessage[]; <span class="code-comment">// frozen Chapter snapshot only</span>
+}
+
+<span class="code-key">async function</span> buildLLMContext(
+  chatId: string,
+  selection: LLMContextSelection = {},
+  input: LLMContextInput = {},
+): Promise&lt;LLMMessage[]&gt;;
+
+<span class="code-key">const</span> messages = [
+  ...await buildLLMContext(chatId, {
+    history: true,
+    memories: true,
+    characterSheets: true,
+    plans: true,
+  }),
+  system(chatSettings.prompt),
+  ...optionalGuidance(guidance),
+];
+
+<span class="code-key">return</span> openRouter.postChatStream(
+  messages,
+  model,
+  <span class="code-string">"chat"</span>,
+  <span class="code-string">"Chat"</span>,
+  requestSettings,
+);</code></pre>
+      </div>
+
+      <div class="object-notes" aria-label="Meaning of the five optional context flags">
+        <article class="object-note">
+          <strong>history</strong>
+          <p>
+            Include projected Story, Books, Chapters, chat messages, Notes, reasoning, and
+            clarifications. Always use current system/chat settings.
+          </p>
+        </article>
+        <article class="object-note">
+          <strong>memories</strong>
+          <p>
+            Insert the chat’s nonblank Memories using the existing durable-context placement rule.
+          </p>
+        </article>
+        <article class="object-note">
+          <strong>characterSheets</strong>
+          <p>
+            Insert sheet items for tracked, active characters. Appearance remains task-specific.
+          </p>
+        </article>
+        <article class="object-note">
+          <strong>plans</strong>
+          <p>
+            Include all visible Plans. If omitted, Plans are excluded from projected history.
+          </p>
+        </article>
+        <article class="object-note">
+          <strong>recentHistoryOnly</strong>
+          <p>
+            Keep the latest 12 persisted projected messages. Ignored when
+            <code>history</code> is omitted.
+          </p>
+        </article>
+      </div>
+
+      <div class="bundle">
+        <strong>Could this be four flags?</strong>
+        <p>
+          Yes: combine <code>memories</code> and <code>characterSheets</code> into
+          <code>durableContext</code>. The cost is a real behavior change for Book summary/title:
+          those requests must either gain Memories or lose Character Sheets. Five is the minimum
+          for near-parity; four is the absolute minimum if that change is acceptable.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="examples-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Pipeline-owned policy</p>
+          <h2 id="examples-heading">Each caller declares exactly what it wants</h2>
+        </div>
+        <p>
+          Similar pipelines may repeat the same few inclusions. That small duplication is preferable
+          to coupling unrelated callers through a central preset name.
+        </p>
+      </div>
+
+      <div class="code-shell">
+        <div class="code-title">
+          <strong>Examples from four independent pipelines</strong>
+          <span>Each literal lives in its own service.</span>
+        </div>
+        <pre><code><span class="code-comment">// TextGenerationService — Chat response</span>
+<span class="code-key">const</span> contextSelection: LLMContextSelection = {
+  history: true,
+  memories: true,
+  characterSheets: true,
+  plans: true,
+};
+
+<span class="code-comment">// PlanGenerationService — refresh Plan</span>
+<span class="code-key">const</span> contextSelection: LLMContextSelection = {
+  history: true,
+};
+
+<span class="code-comment">// BookGenerationService — summary/title</span>
+<span class="code-key">const</span> contextSelection: LLMContextSelection = {
+  characterSheets: true,
+};
+
+<span class="code-comment">// ActiveCharacterSelectionService</span>
+<span class="code-key">const</span> contextSelection: LLMContextSelection = {
+  history: true,
+  plans: true,
+  recentHistoryOnly: true,
+};</code></pre>
+      </div>
+
+      <div class="discussion-scopes" aria-label="Benefits of pipeline-owned context variables">
+        <article class="scope">
+          <strong>Dependencies point inward</strong>
+          <p>A feature depends on the generic builder. The builder never imports or names a feature pipeline.</p>
+        </article>
+        <article class="scope">
+          <strong>Policy is visible at the call site</strong>
+          <p>A reviewer sees named inclusions beside the prompt; every unmentioned source is excluded.</p>
+        </article>
+        <article class="scope">
+          <strong>Changes stay local</strong>
+          <p>Changing Book context does not require editing a shared catalog used conceptually by other pipelines.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="guardrails-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Explicit tradeoffs</p>
+          <h2 id="guardrails-heading">Functionality that would change</h2>
+        </div>
+        <p>
+          The simplification comes from deleting special policies. These are the behavior changes
+          required to get from today’s inventory to five optional, false-by-default flags.
+        </p>
+      </div>
+
+      <div class="guardrail-grid">
+        <article class="guardrail">
+          <strong>One projection policy everywhere</strong>
+          <p>
+            Every history-enabled request respects the system chapter buffer and the chat’s
+            reasoning retention. Plans, images, character tools, and discussions stop using the
+            hidden “6 messages + unlimited reasoning” defaults.
+          </p>
+        </article>
+        <article class="guardrail">
+          <strong>Plans become all-or-nothing</strong>
+          <p>
+            Omitting <code>plans</code> removes every Plan. Plan work therefore stops seeing other
+            Plans even when today’s <code>hideOtherPlans</code> setting would allow them. The
+            current Plan is still appended separately.
+          </p>
+        </article>
+        <article class="guardrail">
+          <strong>Recent means one fixed window</strong>
+          <p>
+            <code>recentHistoryOnly: true</code> always means the latest 12 persisted projected messages.
+            Active-character selection keeps its approximate current scope without a general
+            selection language.
+          </p>
+        </article>
+        <article class="guardrail">
+          <strong>Chapter snapshot uses configured policy</strong>
+          <p>
+            The click-time snapshot remains, but it should be captured with the configured builder.
+            A non-default chapter buffer can therefore change which trailing messages reach the
+            Chapter title/summary request.
+          </p>
+        </article>
+        <article class="guardrail">
+          <strong>Existing duplication is not solved here</strong>
+          <p>
+            Story/Chapter/Book discussions can still repeat current entity content, and Character
+            Sheet Sync can still repeat sheet items as task input. Deduplication is deliberately
+            outside this minimum refactor.
+          </p>
+        </article>
+        <article class="guardrail">
+          <strong>Prompts and transports do not change</strong>
+          <p>
+            Response prompts, reasoning prompts, schemas, labels, model selection, discussion
+            transcripts, summaries, appearances, feedback, streaming, and parsing remain owned by
+            their current feature services.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="migration-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Minimal implementation</p>
+          <h2 id="migration-heading">Three moves, then stop</h2>
+        </div>
+        <p>
+          This is a context cleanup, not a new request architecture. Resist adding a catalog,
+          executor, contributor interface, or generalized selector until a real second use appears.
+        </p>
+      </div>
+
+      <div class="migration">
+        <article class="migration-step">
+          <strong>Add the generic builder</strong>
+          <p>
+            Reuse configured projection and durable-context insertion behind the five-flag
+            allowlist. Add no shared caller presets.
+          </p>
+        </article>
+        <article class="migration-step">
+          <strong>Replace context assembly only</strong>
+          <p>
+            Each LLM workflow names its wanted sources locally, appends its existing task messages,
+            and keeps its existing OpenRouter call.
+          </p>
+        </article>
+        <article class="migration-step">
+          <strong>Lock the five inclusions</strong>
+          <p>
+            Test the selection at each call site, plus builder ordering, regeneration/snapshot
+            behavior, and an architecture check preventing direct projection reads.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="policy-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">The current problem this replaces</p>
+          <h2 id="policy-heading">Today there are two meanings of “projected history”</h2>
+        </div>
+        <p>
+          The allowlist builder would eliminate the default path: every
+          <code>history: true</code> request would use configured projection.
+        </p>
+      </div>
+
+      <div class="policy-grid">
+        <article class="policy configured">
+          <h3>Configured projection</h3>
+          <p>Built through <code>LLMMessageContextService</code>.</p>
+          <ul>
+            <li>Uses the system’s trailing-chapter message count.</li>
+            <li>Uses the chat’s reasoning enabled/expiration settings.</li>
+            <li>Can then insert Memories and tracked, active Character Sheets.</li>
+          </ul>
+        </article>
+        <article class="policy default">
+          <h3>Default projection</h3>
+          <p>Direct calls to <code>LLMChatProjection.GetMessages()</code>.</p>
+          <ul>
+            <li>Always uses a trailing chapter buffer of 6.</li>
+            <li>Uses reasoning retention <code>null</code>: uncompressed reasoning never expires.</li>
+            <li>Does not add Memories or Character Sheets.</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="bundle">
+        <strong>Projected-history bundle, after lifecycle and compression rules</strong>
+        <div class="chips" aria-label="Projected history sources">
+          <span class="chip">Story document</span>
+          <span class="chip">Visible book summaries</span>
+          <span class="chip">Visible chapter summaries</span>
+          <span class="chip">Trailing chapter messages</span>
+          <span class="chip">Uncompressed chat messages</span>
+          <span class="chip">Unexpired Notes</span>
+          <span class="chip">Visible Plans</span>
+          <span class="chip">Retained reasoning</span>
+          <span class="chip">Clarifications</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="matrix-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Request-by-request matrix</p>
+          <h2 id="matrix-heading">Available context and omissions</h2>
+        </div>
+        <p>
+          “Character Sheets” means tracked + active characters with non-empty sheet items.
+          The separate appearance field is not included unless an image workflow adds it explicitly.
+        </p>
+      </div>
+
+      <div class="legend" aria-label="Matrix legend">
+        <span class="badge yes">Included</span>
+        <span class="badge partial">Partial / conditional</span>
+        <span class="badge no">Not included</span>
+        <span class="badge warning">Potential inconsistency</span>
+      </div>
+
+      <section class="family" aria-labelledby="family-chat">
+        <header class="family-head">
+          <h3 id="family-chat">1 · Core narrative generation</h3>
+          <p>The only family with a shared durable-context composer.</p>
+        </header>
+        <div class="request-header" aria-hidden="true">
+          <div>Request</div><div>History</div><div>Memories</div><div>Sheets</div><div>Special input / prompt</div><div>Missing or limited</div>
+        </div>
+
+        <article class="request">
+          <div class="request-name"><strong>Continue chat response</strong><small>Streaming · label “Chat”</small></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge yes">Yes</span></div>
+          <div class="sheets"><span class="badge yes">Yes</span></div>
+          <div class="special cell">Chat response prompt; optional user guidance is last.</div>
+          <div class="missing cell">No known shared-context omission. Appearance fields remain excluded.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Reasoning</strong><small>Streaming · label “Reasoning”</small></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge yes">Yes</span></div>
+          <div class="sheets"><span class="badge yes">Yes</span></div>
+          <div class="special cell">Reasoning prompt; optional guidance. May consolidate all sections into one system message.</div>
+          <div class="missing cell"><em>Intentionally omits</em> the chat response prompt.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Regenerate response</strong><small>Streaming · label “Chat”</small></div>
+          <div class="history"><strong>Configured, truncated</strong><span class="badge partial">Before target</span></div>
+          <div class="memory"><span class="badge yes">Yes</span></div>
+          <div class="sheets"><span class="badge yes">Yes</span></div>
+          <div class="special cell">Original response and regeneration feedback only when feedback is supplied.</div>
+          <div class="missing cell">Target response, later history, and response prompt are omitted by design.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Chapter title + summary draft</strong><small>Plain · JSON parsed manually</small></div>
+          <div class="history"><strong>Captured snapshot</strong><span class="badge partial">Default buffer</span></div>
+          <div class="memory"><span class="badge yes">Yes</span></div>
+          <div class="sheets"><span class="badge yes">Yes</span></div>
+          <div class="special cell">Chapter summary prompt + title prompt + strict two-field JSON instruction.</div>
+          <div class="missing cell"><span class="badge warning">Uses buffer 6</span> Snapshot is captured with default trailing-buffer policy, then reasoning is re-filtered.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Book summary</strong><small>Plain · label “LLM”</small></div>
+          <div class="history"><strong>Selected summaries only</strong><span class="badge partial">Subset</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge yes">Yes</span></div>
+          <div class="special cell">Supplied chapter summaries and book-summary prompt.</div>
+          <div class="missing cell">Story, ordinary chat, Notes, Plans, reasoning, and Memories.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Book title</strong><small>Plain · label “LLM”</small></div>
+          <div class="history"><strong>Selected summaries only</strong><span class="badge partial">Subset</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge yes">Yes</span></div>
+          <div class="special cell">Supplied chapter summaries and book-title prompt.</div>
+          <div class="missing cell">Same omissions as book summary; this is intentionally a narrow request.</div>
+        </article>
+      </section>
+
+      <section class="family" aria-labelledby="family-plan">
+        <header class="family-head">
+          <h3 id="family-plan">2 · Plans and automation</h3>
+          <p>Plans use direct projection; Agent Intent uses configured durable context.</p>
+        </header>
+        <div class="request-header" aria-hidden="true">
+          <div>Request</div><div>History</div><div>Memories</div><div>Sheets</div><div>Special input / prompt</div><div>Missing or limited</div>
+        </div>
+
+        <article class="request">
+          <div class="request-name"><strong>Generate / refresh Plan</strong><small>Plain · label “LLM”</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge partial">Plan-filtered</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Plan name, definition prompt, optional consolidation. Other/own Plans depend on Plan settings.</div>
+          <div class="missing cell"><span class="badge warning">Default policy</span> Durable facts and chat-specific reasoning retention are absent.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Update Plan from feedback</strong><small>Plain · discussion/manual regeneration</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge partial">Own/all Plans removed</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Prior Plan content, Plan prompt, and optional user/discussion feedback.</div>
+          <div class="missing cell">Memories, Character Sheets, configured buffer/retention; own Plan is intentionally supplied separately.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Plan direction suggestions</strong><small>Structured · label “Plan Suggestions”</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge partial">Own/all Plans removed</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Plan definition, optional prior content, suggestion prompt, three-item JSON schema.</div>
+          <div class="missing cell">Same durable/configured-context omissions as Plan generation.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Agent Intent analysis</strong><small>Structured · label “Agent Intent”</small></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge yes">Yes</span></div>
+          <div class="sheets"><span class="badge yes">Yes</span></div>
+          <div class="special cell">Agent-flow prompt, sensitivity, optional selected intent, proposed-action schema.</div>
+          <div class="missing cell">Response prompt intentionally omitted. Otherwise receives the broad durable context.</div>
+        </article>
+      </section>
+
+      <section class="family" aria-labelledby="family-character">
+        <header class="family-head">
+          <h3 id="family-character">3 · Characters and image prompts</h3>
+          <p>Several nearby workflows use materially different character context.</p>
+        </header>
+        <div class="request-header" aria-hidden="true">
+          <div>Request</div><div>History</div><div>Memories</div><div>Sheets</div><div>Special input / prompt</div><div>Missing or limited</div>
+        </div>
+
+        <article class="request">
+          <div class="request-name"><strong>Generate character description</strong><small>Plain · label “LLM”</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Character name and appearance-only description prompt.</div>
+          <div class="missing cell"><span class="badge warning">Default policy</span> Existing character registry, sheets, appearances, and Memories.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Legacy image-character selection</strong><small>Plain · label “LLM”</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Character-selection prompt only.</div>
+          <div class="missing cell">Known-character list and tracking flags are not supplied; model returns a free-text name or UNCLEAR.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Active-character selection</strong><small>Structured · label “Active Characters”</small></div>
+          <div class="history"><strong>Configured, last 12</strong><span class="badge partial">ID-bearing only</span></div>
+          <div class="memory"><span class="badge no">Dropped</span></div>
+          <div class="sheets"><span class="badge no">Dropped</span></div>
+          <div class="special cell">Known character IDs, names, tracking flags, and active-cast JSON schema.</div>
+          <div class="missing cell"><span class="badge warning">Surprising filter</span> Memories and Sheets are fetched, then removed because they lack message IDs.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Character Sheet Sync</strong><small>Structured · label “Character Sheet Sync”</small></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge yes">Yes</span></div>
+          <div class="sheets"><span class="badge yes">Yes</span></div>
+          <div class="special cell">Requested character IDs, names, and current sheet items plus update schema.</div>
+          <div class="missing cell"><span class="badge warning">Possible duplication</span> Active sheets appear in durable context and again as currentItems.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Generate image scene prompt</strong><small>Plain · label “Image Prompt”</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge partial">One appearance</span></div>
+          <div class="special cell">Selected model’s image prompt and optional selected character appearance.</div>
+          <div class="missing cell">All other sheets, Memories, and configured policy. Entire history is used rather than a recent-scene window.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Regenerate image scene prompt</strong><small>Plain · label “Image Prompt”</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge partial">One appearance</span></div>
+          <div class="special cell">Image prompt, original generated prompt, user feedback, optional character appearance.</div>
+          <div class="missing cell">Same omissions as initial image prompt generation.</div>
+        </article>
+      </section>
+
+      <section class="family" aria-labelledby="family-discussion">
+        <header class="family-head">
+          <h3 id="family-discussion">4 · Story creation and discussions</h3>
+          <p>Discussion messages are ephemeral and only exist inside the open discussion service.</p>
+        </header>
+        <div class="request-header" aria-hidden="true">
+          <div>Request</div><div>History</div><div>Memories</div><div>Sheets</div><div>Special input / prompt</div><div>Missing or limited</div>
+        </div>
+
+        <article class="request">
+          <div class="request-name"><strong>New Story generator modal</strong><small>Plain · label “LLM”</small></div>
+          <div class="history"><strong>None</strong><span class="badge no">New story</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">New-story system prompt and the user’s story concept.</div>
+          <div class="missing cell">All existing chat context, intentionally: this operates before a story exists.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Existing Story / Chapter / Book discussion turn</strong><small>Plain · generic DiscussionService call</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Current target content, discussion prompt, and all prior ephemeral discussion turns.</div>
+          <div class="missing cell"><span class="badge warning">Target duplicated</span> Target is usually already in projected history and repeated in the system prompt.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Plan discussion turn</strong><small>Plain · generic DiscussionService call</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge partial">Own/all Plans removed</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Current Plan content, discussion prompt, ephemeral turns.</div>
+          <div class="missing cell">Durable facts and configured policy. Unlike other entity discussions, own Plan is deliberately deduplicated.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>New Chapter discussion turn</strong><small>Plain · generic DiscussionService call</small></div>
+          <div class="history"><strong>Default projection</strong><span class="badge yes">Pre-chapter</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Proposed title, optional draft summary, discussion prompt, ephemeral turns.</div>
+          <div class="missing cell">Memories, Character Sheets, configured policy. All messages remain visible because chapter compression has not happened.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>New Book discussion turn</strong><small>Plain · generic DiscussionService call</small></div>
+          <div class="history"><strong>Selected chapters only</strong><span class="badge partial">Subset</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Book title, selected chapter summaries, discussion prompt, ephemeral turns.</div>
+          <div class="missing cell">All unselected/global chat context. This is intentionally narrow, but differs from ordinary book generation by omitting Character Sheets.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Story creation discussion / generation</strong><small>Plain · no existing chat ID</small></div>
+          <div class="history"><strong>None</strong><span class="badge no">No chat</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Creative-writing system prompt and ephemeral discussion; final generation receives the formatted discussion transcript.</div>
+          <div class="missing cell">Existing Story Vault context by design.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Apply discussion feedback</strong><small>Plain · regenerate target</small></div>
+          <div class="history"><strong>Varies by target</strong><span class="badge partial">See scopes</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Formatted discussion transcript plus current/draft target content and generation prompt.</div>
+          <div class="missing cell">Story/Chapter/Book/New Chapter use default projection; New Book uses selected summaries; Plan delegates to filtered Plan update.</div>
+        </article>
+
+        <div class="note">
+          Initial discussion messages use the same context as a normal discussion turn, then append
+          one hidden user instruction such as the chapter/book summary prompt.
+        </div>
+      </section>
+    </section>
+
+    <section class="section" aria-labelledby="scope-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Discussion scope expansion</p>
+          <h2 id="scope-heading">What “Apply feedback” means for each target</h2>
+        </div>
+        <p>No new recommendation is implied here; these cards make the current differences explicit.</p>
+      </div>
+      <div class="discussion-scopes">
+        <article class="scope">
+          <strong>Story</strong>
+          <p>Default projected history + current Story + entire discussion transcript.</p>
+        </article>
+        <article class="scope">
+          <strong>Existing Chapter</strong>
+          <p>Default projected history + title/current summary + transcript.</p>
+        </article>
+        <article class="scope">
+          <strong>New Chapter</strong>
+          <p>Default pre-compression history + proposed title/draft + transcript.</p>
+        </article>
+        <article class="scope">
+          <strong>Existing Book</strong>
+          <p>Default projected history + title/current summary + transcript.</p>
+        </article>
+        <article class="scope">
+          <strong>New Book</strong>
+          <p>Selected chapter summaries + proposed title + transcript; no global history.</p>
+        </article>
+        <article class="scope">
+          <strong>Plan</strong>
+          <p>Default projection with own/all Plans removed + prior Plan + transcript.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="findings-heading">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Questions surfaced · documentation only</p>
+          <h2 id="findings-heading">The most consequential inconsistencies</h2>
+        </div>
+        <p>
+          These are review questions, not proposed code changes. Some may be deliberate product choices.
+        </p>
+      </div>
+      <div class="findings">
+        <article class="finding review">
+          <h3>Direct callers keep reasoning indefinitely</h3>
+          <p>Plans, discussions, character description/selection, and image prompts use default retention <code>null</code>, regardless of chat reasoning settings.</p>
+        </article>
+        <article class="finding review">
+          <h3>Durable facts stop at family boundaries</h3>
+          <p>Memories and Character Sheets reach core chat, Agent Intent, and Sheet Sync—but not Plans, most discussions, or image/character prompts.</p>
+        </article>
+        <article class="finding review">
+          <h3>Active-character selection drops fetched context</h3>
+          <p>It builds configured durable context, then keeps only ID-bearing messages, removing the Memory and Character Sheet messages it just loaded.</p>
+        </article>
+        <article class="finding review">
+          <h3>Entity discussions are not deduplicated consistently</h3>
+          <p>Plan discussion excludes its own Plan before adding current content. Story, Chapter, and Book discussions generally include and repeat their targets.</p>
+        </article>
+        <article class="finding intentional">
+          <h3>Narrow book requests are coherent</h3>
+          <p>Book summary/title intentionally use selected chapter summaries and Character Sheets rather than the entire chat. New Book discussion is narrower still.</p>
+        </article>
+        <article class="finding intentional">
+          <h3>Response prompts are correctly specialized</h3>
+          <p>The chat response prompt appears only in continuation responses. Reasoning, regeneration, analysis, and maintenance requests use their own workflow prompts.</p>
+        </article>
+      </div>
+
+      <div class="label-map" aria-label="Request inspection labels">
+        <div class="label-card"><strong>Distinct</strong><span>Chat · Reasoning · Image Prompt</span></div>
+        <div class="label-card"><strong>Distinct structured</strong><span>Agent Intent · Plan Suggestions · Active Characters · Character Sheet Sync</span></div>
+        <div class="label-card"><strong>Generic</strong><span>Most chapter, book, Plan, character, story, and discussion requests appear as “LLM”.</span></div>
+        <div class="label-card"><strong>Scope</strong><span>Civit image generation itself is excluded; this inventory covers OpenRouter LLM calls, including image-prompt writing.</span></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>
+        Derived from all production <code>postChat</code>, <code>postChatStream</code>, and
+        <code>postStructuredChat</code> call sites plus their builders and discussion configs.
+      </div>
+      <div>Inventory scope: current working tree · architecture proposal only · no production code changed.</div>
+    </footer>
+  </main>
+</body>
+</html>

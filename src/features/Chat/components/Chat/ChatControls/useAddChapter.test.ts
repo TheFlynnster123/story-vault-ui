@@ -33,6 +33,9 @@ describe("useAddChapter", () => {
     subscribe: vi.fn(() => vi.fn()),
     generateChapterDraft: vi.fn(),
   };
+  const messageContext = {
+    buildChapterGenerationSnapshot: vi.fn(),
+  };
   const addChapter = vi.fn();
 
   beforeEach(() => {
@@ -40,7 +43,13 @@ describe("useAddChapter", () => {
     localStorage.clear();
     generation.IsLoading = false;
     generation.generateChapterDraft.mockResolvedValue(GENERATED_DRAFT);
+    messageContext.buildChapterGenerationSnapshot.mockResolvedValue(
+      LLM_MESSAGES,
+    );
     vi.mocked(d.ChapterGenerationService).mockReturnValue(generation as never);
+    vi.mocked(d.LLMMessageContextService).mockReturnValue(
+      messageContext as never,
+    );
     vi.mocked(d.UserChatProjection).mockReturnValue({
       GetMessages: vi.fn(() => [
         { id: "message-1", type: "user", deleted: false },
@@ -48,9 +57,6 @@ describe("useAddChapter", () => {
         { id: "note-1", type: "note", deleted: false },
         { id: "message-2", type: "assistant", deleted: false },
       ]),
-    } as never);
-    vi.mocked(d.LLMChatProjection).mockReturnValue({
-      GetMessages: vi.fn(() => LLM_MESSAGES),
     } as never);
     vi.mocked(d.ChatService).mockReturnValue({
       AddChapter: addChapter.mockResolvedValue("chapter-1"),
@@ -94,10 +100,12 @@ describe("useAddChapter", () => {
   it("generates from an immutable snapshot without opening the editor", async () => {
     const { result } = renderChapterCreation();
 
-    act(() => result.current.handleGenerate());
-    await act(async () => {});
+    await act(async () => result.current.handleGenerate());
 
     expect(generation.generateChapterDraft).toHaveBeenCalledWith(LLM_MESSAGES);
+    expect(
+      messageContext.buildChapterGenerationSnapshot,
+    ).toHaveBeenCalledOnce();
     expect(result.current.showModal).toBe(false);
     expect(result.current.pendingDraftStatus).toBe("ready");
     expect(notifications.show).toHaveBeenCalledWith(
@@ -127,8 +135,7 @@ describe("useAddChapter", () => {
   it("compresses only the captured messages", async () => {
     const { result } = renderChapterCreation();
 
-    act(() => result.current.handleGenerate());
-    await act(async () => {});
+    await act(async () => result.current.handleGenerate());
     await act(async () => result.current.handleSubmit());
 
     expect(addChapter).toHaveBeenCalledWith(
@@ -143,8 +150,7 @@ describe("useAddChapter", () => {
     generation.generateChapterDraft.mockRejectedValueOnce(new Error("failed"));
     const { result } = renderChapterCreation();
 
-    act(() => result.current.handleGenerate());
-    await act(async () => {});
+    await act(async () => result.current.handleGenerate());
 
     expect(result.current.pendingDraftStatus).toBe("failed");
     expect(notifications.hide).toHaveBeenCalled();

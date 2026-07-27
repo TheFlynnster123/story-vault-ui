@@ -22,6 +22,8 @@ export interface ChatSettings {
   modelReasoningEffortOverride?: OpenRouterReasoningEffort;
   /** Per-chat message transparency (0-1). When set, overrides the default. */
   messageTransparency?: number;
+  /** Whether chapter draft generation may use saved message compressions. Defaults to false. */
+  chapterGenerationUseCompressedMessages?: boolean;
   /** Whether the chat should generate a reasoning message before assistant replies. Defaults to true. */
   reasoningEnabled?: boolean;
   /** Per-chat model override for reasoning generation. */

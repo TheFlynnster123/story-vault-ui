@@ -25,93 +25,104 @@ interface ChatEntryProps {
   chatId: string;
   message: UserChatMessage;
   isLastMessage?: boolean;
+  messageCompressionEnabled?: boolean;
   trailingChapterMessageCount?: number;
 }
 
-export const ChatEntry: React.FC<ChatEntryProps> = React.memo(({
-  chatId,
-  message,
-  isLastMessage = false,
-  trailingChapterMessageCount,
-}) => {
-  if (message.type === "story") {
+export const ChatEntry: React.FC<ChatEntryProps> = React.memo(
+  ({
+    chatId,
+    message,
+    isLastMessage = false,
+    messageCompressionEnabled = false,
+    trailingChapterMessageCount,
+  }) => {
+    if (message.type === "story") {
+      return (
+        <StoryMessage chatId={chatId} message={message as StoryChatMessage} />
+      );
+    }
+
+    if (message.type === "civit-workflow") {
+      return (
+        <CivitJobMessage
+          chatId={chatId}
+          message={message as CivitWorkflowChatMessage}
+          isLastMessage={isLastMessage}
+        />
+      );
+    }
+
+    if (message.type === "chapter") {
+      return (
+        <ChapterMessage
+          chatId={chatId}
+          chapter={message as ChapterChatMessage}
+          trailingMessageCount={trailingChapterMessageCount}
+        />
+      );
+    }
+
+    if (message.type === "book") {
+      return <BookMessage chatId={chatId} book={message as BookChatMessage} />;
+    }
+
+    if (message.type === "plan") {
+      return (
+        <PlanMessage chatId={chatId} message={message as PlanChatMessage} />
+      );
+    }
+
+    if (message.type === "note") {
+      return (
+        <NoteMessage chatId={chatId} message={message as NoteChatMessage} />
+      );
+    }
+
+    if (message.type === "agent-clarification") {
+      return (
+        <AgentClarificationMessage
+          chatId={chatId}
+          message={message as AgentClarificationChatMessage}
+        />
+      );
+    }
+
+    if (message.type === "reasoning") {
+      return (
+        <ReasoningMessage
+          chatId={chatId}
+          message={message as ReasoningChatMessage}
+          isLastMessage={isLastMessage}
+        />
+      );
+    }
+
+    if (message.type === "user-message") {
+      return (
+        <UserMessage
+          chatId={chatId}
+          message={message}
+          isLastMessage={isLastMessage}
+          messageCompressionEnabled={messageCompressionEnabled}
+        />
+      );
+    }
+
+    // Default to SystemMessage for all other types (system-message, assistant, etc.)
     return (
-      <StoryMessage chatId={chatId} message={message as StoryChatMessage} />
-    );
-  }
-
-  if (message.type === "civit-workflow") {
-    return (
-      <CivitJobMessage
-        chatId={chatId}
-        message={message as CivitWorkflowChatMessage}
-        isLastMessage={isLastMessage}
-      />
-    );
-  }
-
-  if (message.type === "chapter") {
-    return (
-      <ChapterMessage
-        chatId={chatId}
-        chapter={message as ChapterChatMessage}
-        trailingMessageCount={trailingChapterMessageCount}
-      />
-    );
-  }
-
-  if (message.type === "book") {
-    return <BookMessage chatId={chatId} book={message as BookChatMessage} />;
-  }
-
-  if (message.type === "plan") {
-    return <PlanMessage chatId={chatId} message={message as PlanChatMessage} />;
-  }
-
-  if (message.type === "note") {
-    return <NoteMessage chatId={chatId} message={message as NoteChatMessage} />;
-  }
-
-  if (message.type === "agent-clarification") {
-    return (
-      <AgentClarificationMessage
-        chatId={chatId}
-        message={message as AgentClarificationChatMessage}
-      />
-    );
-  }
-
-  if (message.type === "reasoning") {
-    return (
-      <ReasoningMessage
-        chatId={chatId}
-        message={message as ReasoningChatMessage}
-        isLastMessage={isLastMessage}
-      />
-    );
-  }
-
-  if (message.type === "user-message") {
-    return (
-      <UserMessage
+      <SystemMessage
         chatId={chatId}
         message={message}
         isLastMessage={isLastMessage}
+        messageCompressionEnabled={messageCompressionEnabled}
       />
     );
-  }
-
-  // Default to SystemMessage for all other types (system-message, assistant, etc.)
-  return (
-    <SystemMessage
-      chatId={chatId}
-      message={message}
-      isLastMessage={isLastMessage}
-    />
-  );
-}, (prev, next) =>
-  prev.chatId === next.chatId &&
-  prev.message === next.message &&
-  prev.isLastMessage === next.isLastMessage &&
-  prev.trailingChapterMessageCount === next.trailingChapterMessageCount
+  },
+  (prev, next) =>
+    prev.chatId === next.chatId &&
+    prev.message === next.message &&
+    prev.isLastMessage === next.isLastMessage &&
+    prev.messageCompressionEnabled === next.messageCompressionEnabled &&
+    prev.trailingChapterMessageCount === next.trailingChapterMessageCount,
 );

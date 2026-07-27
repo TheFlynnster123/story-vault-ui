@@ -12,11 +12,18 @@ vi.mock("./ChatEntries/ChatEntry", () => ({
   ChatEntry: ({
     message,
     trailingChapterMessageCount,
+    messageCompressionEnabled,
   }: {
     message: { id: string };
     trailingChapterMessageCount?: number;
+    messageCompressionEnabled?: boolean;
   }) => (
-    <div>
+    <div
+      data-testid={`chat-entry-${message.id}`}
+      data-message-compression-enabled={String(
+        messageCompressionEnabled ?? false,
+      )}
+    >
       {message.id}
       {trailingChapterMessageCount !== undefined
         ? ` trailing:${trailingChapterMessageCount}`
@@ -200,6 +207,54 @@ describe("ChatEntriesList", () => {
     expect(screen.getByTestId("virtuoso-item-message-1")).toHaveAttribute(
       "data-item-key",
       "message-1",
+    );
+  });
+
+  it("only enables compression controls while the global setting is on", () => {
+    vi.mocked(useSystemSettings).mockReturnValue({
+      systemSettings: {
+        messageCompressionSettings: {
+          enabled: true,
+        },
+      },
+      isLoading: false,
+      saveSystemSettings: vi.fn(),
+    });
+    vi.mocked(useUserChatProjection).mockReturnValue({
+      messages: [
+        {
+          id: "message-1",
+          type: "user-message",
+          content: "Message",
+          hiddenByChapterId: undefined,
+          deleted: false,
+          hidden: false,
+        },
+      ],
+      getChapterMessages: vi.fn(),
+    });
+
+    const { rerender } = render(<ChatEntriesList chatId="chat-1" />);
+
+    expect(screen.getByTestId("chat-entry-message-1")).toHaveAttribute(
+      "data-message-compression-enabled",
+      "true",
+    );
+
+    vi.mocked(useSystemSettings).mockReturnValue({
+      systemSettings: {
+        messageCompressionSettings: {
+          enabled: false,
+        },
+      },
+      isLoading: false,
+      saveSystemSettings: vi.fn(),
+    });
+    rerender(<ChatEntriesList chatId="chat-1" />);
+
+    expect(screen.getByTestId("chat-entry-message-1")).toHaveAttribute(
+      "data-message-compression-enabled",
+      "false",
     );
   });
 });
