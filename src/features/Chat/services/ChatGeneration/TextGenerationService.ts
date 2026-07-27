@@ -102,6 +102,9 @@ export class TextGenerationService extends GenerationOrchestrator {
         this.setStatus("Saving...");
         await d.ChatService(this.chatId).AddAssistantMessage(response);
         projection.removeStreamingMessage();
+        void d
+          .MessageCompressionService(this.chatId)
+          .compressEligibleMessages();
 
         return response;
       } catch (error) {

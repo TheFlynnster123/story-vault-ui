@@ -25,14 +25,11 @@ import { Page } from "../../../components/Page";
 import { Theme } from "../../../components/Theme";
 import { d } from "../../../services/Dependencies";
 import type {
+  LLMContextProjectionPolicy,
   LLMMessage,
 } from "../../../services/CQRS/LLMChatProjection";
-import type {
-  ChatEvent,
-} from "../../../services/CQRS/events/ChatEvent";
-import type {
-  UserChatMessage,
-} from "../../../services/CQRS/UserChatProjection";
+import type { ChatEvent } from "../../../services/CQRS/events/ChatEvent";
+import type { UserChatMessage } from "../../../services/CQRS/UserChatProjection";
 import {
   DEFAULT_INSPECTION_CONTEXT_COUNT,
   EXPANDED_INSPECTION_CONTEXT_COUNT,
@@ -40,6 +37,10 @@ import {
   getRecentContext,
 } from "./messageInspectionContext";
 import { MessageTypeBadge } from "../components/MessageTypeBadge";
+import {
+  DEFAULT_TRAILING_CHAPTER_MESSAGES,
+  normalizeMessageCompressionAfterMessages,
+} from "../../SystemSettings/services/SystemSettings";
 
 interface InspectionState {
   selectedMessage?: UserChatMessage;
@@ -48,6 +49,7 @@ interface InspectionState {
   llmMessages: LLMMessage[];
   llmMessage: LLMMessage | null;
   events: ChatEvent[];
+  messageCompressionEnabled: boolean;
 }
 
 export const ChatMessageInspectionPage: React.FC = () => {
@@ -64,34 +66,75 @@ export const ChatMessageInspectionPage: React.FC = () => {
     llmMessages: [],
     llmMessage: null,
     events: [],
+    messageCompressionEnabled: false,
   });
 
   useEffect(() => {
     if (!chatId || !messageId) return;
 
     let cancelled = false;
+    let projectionPolicy: LLMContextProjectionPolicy = {};
+    let messageCompressionEnabled = false;
 
     const load = async () => {
       setIsLoading(true);
-      await d.ChatEventService(chatId).Initialize();
+      const [, systemSettings] = await Promise.all([
+        d.ChatEventService(chatId).Initialize(),
+        d.SystemSettingsService().Get(),
+      ]);
       if (cancelled) return;
-      refreshInspectionState(chatId, messageId, setState);
+      messageCompressionEnabled =
+        systemSettings?.messageCompressionSettings?.enabled ?? false;
+      projectionPolicy = {
+        trailingChapterMessages:
+          systemSettings?.chapterCompressionSettings?.trailingChapterMessages ??
+          DEFAULT_TRAILING_CHAPTER_MESSAGES,
+        messageCompressionAfterMessages: systemSettings
+          ?.messageCompressionSettings?.enabled
+          ? normalizeMessageCompressionAfterMessages(
+              systemSettings.messageCompressionSettings.afterMessages,
+            )
+          : null,
+      };
+      refreshInspectionState(
+        chatId,
+        messageId,
+        setState,
+        projectionPolicy,
+        messageCompressionEnabled,
+      );
       setIsLoading(false);
     };
 
     void load();
 
     const userUnsubscribe = d.UserChatProjection(chatId).subscribe(() => {
-      refreshInspectionState(chatId, messageId, setState);
+      refreshInspectionState(
+        chatId,
+        messageId,
+        setState,
+        projectionPolicy,
+        messageCompressionEnabled,
+      );
     });
     const llmUnsubscribe = d.LLMChatProjection(chatId).subscribe(() => {
-      refreshInspectionState(chatId, messageId, setState);
+      refreshInspectionState(
+        chatId,
+        messageId,
+        setState,
+        projectionPolicy,
+        messageCompressionEnabled,
+      );
     });
+    const settingsUnsubscribe = d
+      .SystemSettingsManagedBlob()
+      .subscribe(() => void load());
 
     return () => {
       cancelled = true;
       userUnsubscribe();
       llmUnsubscribe();
+      settingsUnsubscribe();
     };
   }, [chatId, messageId]);
 
@@ -109,7 +152,11 @@ export const ChatMessageInspectionPage: React.FC = () => {
 
   return (
     <Page padding={isMobile ? 4 : "md"}>
-      <Paper mt={isMobile ? 4 : 20} p={isMobile ? "xs" : "xl"} style={styles.pageShell}>
+      <Paper
+        mt={isMobile ? 4 : 20}
+        p={isMobile ? "xs" : "xl"}
+        style={styles.pageShell}
+      >
         <Stack gap={isMobile ? "sm" : "lg"}>
           <Group justify="space-between" align="center" wrap="wrap">
             <Group gap="sm">
@@ -155,6 +202,7 @@ export const ChatMessageInspectionPage: React.FC = () => {
                 allMessages={state.allMessages}
                 contextIndex={contextIndex}
                 eventCount={state.events.length}
+                messageCompressionEnabled={state.messageCompressionEnabled}
               />
 
               <SimpleGrid
@@ -184,6 +232,11 @@ export const ChatMessageInspectionPage: React.FC = () => {
                 </ContentPanel>
               </SimpleGrid>
 
+              {state.messageCompressionEnabled &&
+                selectedMessage.compression && (
+                  <CompressionPanel message={selectedMessage} />
+                )}
+
               <ContentPanel title="Current LLM Context">
                 <ContextList
                   key={messageId}
@@ -204,21 +257,26 @@ const refreshInspectionState = (
   chatId: string,
   messageId: string,
   setState: React.Dispatch<React.SetStateAction<InspectionState>>,
+  projectionPolicy: LLMContextProjectionPolicy,
+  messageCompressionEnabled: boolean,
 ) => {
   const userProjection = d.UserChatProjection(chatId);
   const llmProjection = d.LLMChatProjection(chatId);
   const eventService = d.ChatEventService(chatId);
   const selectedMessage = userProjection.GetMessage(messageId);
 
+  const llmMessages = llmProjection.GetMessages(projectionPolicy);
+
   setState({
     selectedMessage,
     visibleMessages: userProjection.GetMessages(),
     allMessages: [...userProjection.Messages],
-    llmMessages: llmProjection.GetMessages(),
-    llmMessage: llmProjection.GetMessage(messageId),
+    llmMessages,
+    llmMessage: llmMessages.find((message) => message.id === messageId) ?? null,
     events: (eventService.Events ?? []).filter((event) =>
       eventReferencesMessage(event, messageId, selectedMessage),
     ),
+    messageCompressionEnabled,
   });
 };
 
@@ -228,10 +286,23 @@ const SummaryGrid: React.FC<{
   allMessages: UserChatMessage[];
   contextIndex: number;
   eventCount: number;
-}> = ({ message, visibleMessages, allMessages, contextIndex, eventCount }) => {
+  messageCompressionEnabled: boolean;
+}> = ({
+  message,
+  visibleMessages,
+  allMessages,
+  contextIndex,
+  eventCount,
+  messageCompressionEnabled,
+}) => {
   const timelineIndex = allMessages.findIndex((item) => item.id === message.id);
-  const visibleIndex = visibleMessages.findIndex((item) => item.id === message.id);
-  const words = (message.content ?? "").trim().split(/\s+/).filter(Boolean).length;
+  const visibleIndex = visibleMessages.findIndex(
+    (item) => item.id === message.id,
+  );
+  const words = (message.content ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
   const characters = (message.content ?? "").length;
   const hiddenReason = getHiddenReason(message);
 
@@ -269,16 +340,20 @@ const SummaryGrid: React.FC<{
           {characters} {characters === 1 ? "character" : "characters"}
         </Badge>
         {hiddenReason && (
-          <Badge
-            variant="light"
-            style={{ color: Theme.credits.warning }}
-          >
+          <Badge variant="light" style={{ color: Theme.credits.warning }}>
             Hidden · {hiddenReason}
           </Badge>
         )}
         {message.deleted && (
           <Badge variant="light" style={{ color: Theme.credits.error }}>
             Deleted
+          </Badge>
+        )}
+        {messageCompressionEnabled && message.compression && (
+          <Badge color="teal" variant="light">
+            {message.compression.userEdited
+              ? "Compression edited"
+              : "Compression generated"}
           </Badge>
         )}
       </Group>
@@ -298,6 +373,27 @@ const ContentPanel: React.FC<{
       {children}
     </Stack>
   </Paper>
+);
+
+const CompressionPanel: React.FC<{ message: UserChatMessage }> = ({
+  message,
+}) => (
+  <ContentPanel title="Message Compression">
+    <SimpleGrid cols={{ base: 1, md: 2 }} spacing="sm">
+      <Stack gap={4}>
+        <Text size="xs" c="dimmed" fw={700}>
+          Full original
+        </Text>
+        <Box style={styles.contextContent}>{message.content}</Box>
+      </Stack>
+      <Stack gap={4}>
+        <Text size="xs" c="dimmed" fw={700}>
+          Model-facing compression
+        </Text>
+        <Box style={styles.contextContent}>{message.compression?.content}</Box>
+      </Stack>
+    </SimpleGrid>
+  </ContentPanel>
 );
 
 const ContextList: React.FC<{
@@ -346,7 +442,10 @@ const ContextList: React.FC<{
           {messages.length > DEFAULT_INSPECTION_CONTEXT_COUNT && (
             <Group gap="xs" justify="flex-end">
               {visibleCount <
-                Math.min(EXPANDED_INSPECTION_CONTEXT_COUNT, messages.length) && (
+                Math.min(
+                  EXPANDED_INSPECTION_CONTEXT_COUNT,
+                  messages.length,
+                ) && (
                 <Button
                   size="compact-xs"
                   variant="light"
@@ -354,7 +453,8 @@ const ContextList: React.FC<{
                     setVisibleCount(EXPANDED_INSPECTION_CONTEXT_COUNT)
                   }
                 >
-                  Show {Math.min(EXPANDED_INSPECTION_CONTEXT_COUNT, messages.length)}
+                  Show{" "}
+                  {Math.min(EXPANDED_INSPECTION_CONTEXT_COUNT, messages.length)}
                 </Button>
               )}
               {visibleCount < messages.length && (
@@ -382,8 +482,8 @@ const ContextList: React.FC<{
         </Group>
         {hiddenCount > 0 && (
           <Text size="xs" c="dimmed" mt="xs">
-            {hiddenCount} older messages hidden. Expand from here without
-            losing your place.
+            {hiddenCount} older messages hidden. Expand from here without losing
+            your place.
           </Text>
         )}
         <Box
@@ -397,9 +497,7 @@ const ContextList: React.FC<{
       </Paper>
 
       <Box
-        style={
-          isMobile ? styles.contextTimelineMobile : styles.contextTimeline
-        }
+        style={isMobile ? styles.contextTimelineMobile : styles.contextTimeline}
       >
         <Box
           aria-hidden
@@ -573,7 +671,8 @@ const eventReferencesMessage = (
   if ("clarificationId" in event && event.clarificationId === messageId)
     return true;
   if ("jobId" in event && event.jobId === messageId) return true;
-  if ("messageIds" in event && event.messageIds.includes(messageId)) return true;
+  if ("messageIds" in event && event.messageIds.includes(messageId))
+    return true;
   if (
     "coveredMessageIds" in event &&
     event.coveredMessageIds.includes(messageId)
@@ -594,7 +693,8 @@ const eventReferencesMessage = (
 };
 
 const getHiddenReason = (message: UserChatMessage): string | undefined => {
-  if (message.hiddenByBookId) return `covered by book ${message.hiddenByBookId}`;
+  if (message.hiddenByBookId)
+    return `covered by book ${message.hiddenByBookId}`;
   if (message.hiddenByChapterId)
     return `covered by chapter ${message.hiddenByChapterId}`;
   if (message.hidden) return "explicitly hidden";

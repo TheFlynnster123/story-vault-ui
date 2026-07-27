@@ -118,11 +118,8 @@ export class ManagedBlob<T> {
 
   public async delete(): Promise<void> {
     this.clearDebounce();
-    this.data = undefined;
-    this.initialized = false;
-    this.notifySubscribers();
-
     await d.BlobAPI().deleteBlob(this.chatId, this.blobName);
+    this.updateLocalCache(undefined);
   }
 
   private async fetchAndCache(): Promise<T | undefined> {

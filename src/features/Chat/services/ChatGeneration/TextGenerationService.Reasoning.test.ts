@@ -37,6 +37,7 @@ describe("TextGenerationService reasoning", () => {
   const updateStreamingMessage = vi.fn();
   const removeStreamingMessage = vi.fn();
   const postChatStream = vi.fn();
+  const compressEligibleMessages = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -123,6 +124,10 @@ describe("TextGenerationService reasoning", () => {
       analyzeAutomaticSuggestion: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReturnType<typeof d.AgentFlowService>);
 
+    vi.mocked(d.MessageCompressionService).mockReturnValue({
+      compressEligibleMessages,
+    } as unknown as ReturnType<typeof d.MessageCompressionService>);
+
     vi.mocked(d.ErrorService).mockReturnValue({
       log: vi.fn(),
     } as unknown as ReturnType<typeof d.ErrorService>);
@@ -157,6 +162,7 @@ describe("TextGenerationService reasoning", () => {
     );
     expect(removeStreamingMessage).toHaveBeenCalledTimes(2);
     expect(postChatStream).toHaveBeenCalledTimes(2);
+    expect(compressEligibleMessages).toHaveBeenCalledOnce();
   });
 
   it("uses reasoning model override for reasoning and chat model override for response", async () => {

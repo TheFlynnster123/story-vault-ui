@@ -167,4 +167,20 @@ describe("SystemSettingsEditor", () => {
       maxWidth: "360px",
     });
   });
+
+  it("keeps automatic message compression opt-in", () => {
+    renderWithQueryClient(<SystemSettingsEditor />);
+
+    expect(
+      screen.getByRole("switch", {
+        name: /Automatically compress older text messages/,
+      }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByLabelText("Newer messages before compression"),
+    ).toBeDisabled();
+    expect(
+      screen.getByLabelText("Minimum original characters"),
+    ).toBeDisabled();
+  });
 });

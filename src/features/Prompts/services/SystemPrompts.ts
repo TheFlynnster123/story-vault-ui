@@ -40,6 +40,13 @@ export interface SystemPrompts {
   /** Prompt for generating chapter titles */
   chapterTitlePrompt: string;
 
+  /** Prompt for compressing an older ordinary chat message */
+  messageCompressionPrompt: string;
+  /** Model override for message compression (empty = use default) */
+  messageCompressionModel?: string;
+  /** OpenRouter request settings paired with the message compression model override */
+  messageCompressionRequestSettings?: OpenRouterRequestSettings;
+
   /** Prompt for generating book summaries (summaries of multiple chapters) */
   bookSummaryPrompt: string;
   /** Model override for book summary generation (empty = use default) */
@@ -151,6 +158,12 @@ Example:
 
   chapterTitlePrompt:
     "Review the conversation above and generate a concise, engaging title for the current chapter. The title should capture the essence of what happened. Keep it short (3-7 words). Provide only the title without formatting or any preamble.",
+
+  messageCompressionPrompt: `Compress the supplied chat message into 2-3 concise, self-contained sentences for use as earlier conversation context.
+
+Preserve only facts supported by the source message, especially names, decisions, state changes, continuity constraints, and essential dialogue intent. Do not invent, infer, or add facts. Do not give advice or continue the conversation.
+
+Return only the compressed message without a heading, preamble, quotation marks, or markdown formatting.`,
 
   bookSummaryPrompt:
     "Review the chapter summaries above and generate a comprehensive summary that combines them into a single cohesive book summary. Focus on the overarching narrative arc, major character developments, and key plot points across all chapters. Keep the summary to 2-3 paragraphs. Provide your summary directly without formatting or a preamble.",

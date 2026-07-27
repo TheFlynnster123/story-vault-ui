@@ -22,6 +22,7 @@ import {
   type SystemPrompts,
 } from "../../../Prompts/services/SystemPrompts";
 import {
+  normalizeMessageCompressionAfterMessages,
   DEFAULT_TRAILING_CHAPTER_MESSAGES,
   type SystemSettings,
 } from "../../../SystemSettings/services/SystemSettings";
@@ -47,10 +48,7 @@ export interface ContextRequestTrace {
 }
 
 export type ContextAppendedSource =
-  | "response-prompt"
-  | "reasoning-prompt"
-  | "guidance"
-  | "regeneration-feedback";
+  "response-prompt" | "reasoning-prompt" | "guidance" | "regeneration-feedback";
 
 export interface ContextRequest {
   messages: LLMMessage[];
@@ -226,6 +224,27 @@ export class LLMMessageContextService {
     ];
   }
 
+  async buildChapterGenerationSnapshot(): Promise<LLMMessage[]> {
+    const [chatSettings, systemSettings] = await Promise.all([
+      this.fetchChatSettings(),
+      this.fetchSystemSettings(),
+    ]);
+    const sources = { chatSettings, systemSettings };
+    const policy = this.createProjectionPolicy(sources);
+    const chapterPolicy = {
+      ...policy,
+      messageCompressionAfterMessages:
+        sources.chatSettings.chapterGenerationUseCompressedMessages === true
+          ? policy.messageCompressionAfterMessages
+          : null,
+    };
+
+    return d
+      .LLMChatProjection(this.chatId)
+      .GetMessages(chapterPolicy)
+      .map((message) => ({ ...message }));
+  }
+
   async buildBookSummaryRequestMessages(
     chapterSummaries: string[],
   ): Promise<LLMMessage[]> {
@@ -289,10 +308,7 @@ export class LLMMessageContextService {
   private async loadChatContextSnapshot(
     includeSystemPrompts = false,
   ): Promise<ChatContextSnapshot> {
-    const sources = await this.loadContextSources(
-      includeSystemPrompts,
-      true,
-    );
+    const sources = await this.loadContextSources(includeSystemPrompts, true);
     const policy = this.createProjectionPolicy(sources);
     const projection = d.LLMChatProjection(this.chatId).GetContext(policy);
 
@@ -307,23 +323,18 @@ export class LLMMessageContextService {
     includeSystemPrompts: boolean,
     includeSystemSettings: boolean,
   ): Promise<ContextSources> {
-    const [
-      chatSettings,
-      systemSettings,
-      systemPrompts,
-      memories,
-      characters,
-    ] = await Promise.all([
-      this.fetchChatSettings(),
-      includeSystemSettings
-        ? this.fetchSystemSettings()
-        : Promise.resolve(undefined),
-      includeSystemPrompts
-        ? this.fetchSystemPrompts()
-        : Promise.resolve(undefined),
-      this.fetchMemories(),
-      this.fetchCharacterDescriptions(),
-    ]);
+    const [chatSettings, systemSettings, systemPrompts, memories, characters] =
+      await Promise.all([
+        this.fetchChatSettings(),
+        includeSystemSettings
+          ? this.fetchSystemSettings()
+          : Promise.resolve(undefined),
+        includeSystemPrompts
+          ? this.fetchSystemPrompts()
+          : Promise.resolve(undefined),
+        this.fetchMemories(),
+        this.fetchCharacterDescriptions(),
+      ]);
 
     return {
       chatSettings,
@@ -344,16 +355,19 @@ export class LLMMessageContextService {
       reasoningRetentionMessages: this.getReasoningRetention(
         sources.chatSettings,
       ),
+      messageCompressionAfterMessages: sources.systemSettings
+        ?.messageCompressionSettings?.enabled
+        ? normalizeMessageCompressionAfterMessages(
+            sources.systemSettings.messageCompressionSettings.afterMessages,
+          )
+        : null,
     };
   }
 
   private createDurableContextDocument(
     snapshot: Pick<
       ChatContextSnapshot,
-      | "projectedHistory"
-      | "memories"
-      | "characters"
-      | "chatSettings"
+      "projectedHistory" | "memories" | "characters" | "chatSettings"
     >,
   ): ContextDocument {
     return createContextDocument({
@@ -423,10 +437,7 @@ export class LLMMessageContextService {
     guidance?: string,
   ): LLMMessage[] {
     if (!this.hasText(guidance)) return messages;
-    return [
-      ...messages,
-      toUserMessage(this.formatGuidanceMessage(guidance!)),
-    ];
+    return [...messages, toUserMessage(this.formatGuidanceMessage(guidance!))];
   }
 
   private createResponsePromptMessage(chatSettings: ChatSettings): LLMMessage {

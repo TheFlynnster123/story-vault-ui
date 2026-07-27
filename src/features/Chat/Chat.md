@@ -4,6 +4,12 @@
 
 The Chat feature is the core of Story Vault. It provides an interactive chat interface for collaborative storytelling with AI. Users create chats with a title, story context, and prompt, then exchange messages with the Grok LLM to develop narratives. The feature supports text generation, image generation, chapter organization, and message editing — all backed by an event sourcing architecture.
 
+Older ordinary text messages can be compressed into editable 2–3 sentence
+representations for LLM context. Original message content remains canonical and
+fully visible in the transcript. When global message compression is disabled,
+the transcript hides compression controls and all model context uses originals;
+saved compressions remain available if the setting is enabled again.
+
 ## Pages
 
 ### `ChatMenuPage`
@@ -25,7 +31,9 @@ Supports custom background photos per chat.
 
 ### `ChatEditorPage`
 
-Edit chat settings including title, prompt, custom prompt, and background photo. Also provides chat deletion.
+Edit chat settings including title, prompt, custom prompt, background photo,
+and whether chapter generation may use compressed messages. Also provides chat
+deletion.
 
 ## Components
 
@@ -85,6 +93,7 @@ A multi-step wizard for creating new chats:
 - **ImageGenerationService** — orchestrates image generation: generates prompt via LLM → triggers CivitAI job → saves job reference
 - **ChapterGenerationService** — generates chapter titles and summaries via LLM
 - **LLMMessageContextService** — builds the message array sent to the LLM, including memories, plans, and chapter context
+- **MessageCompressionService** — selects eligible older text messages and generates model-facing compressions in the background
 - **GenerationOrchestrator** — base class providing loading state, status updates, and subscriber notifications
 
 ## Event Sourcing Integration
@@ -95,6 +104,13 @@ All chat state changes flow through the CQRS layer:
 2. Event persisted to `ChatEventStore` (encrypted)
 3. `UserChatProjection` processes event → UI updates
 4. `LLMChatProjection` processes event → LLM context stays current
+
+Message compression adds `MessageCompressionCreated` and
+`MessageCompressionEdited` events. Both projections retain the original; only
+`LLMChatProjection.GetContext()` can materialize the compressed representation
+under the active policy. Editing the original invalidates its compression.
+Chapter generation uses originals by default; its per-chat setting can opt into
+eligible compressions, but only while global message compression is enabled.
 
 ## Directory Structure
 

@@ -2,6 +2,8 @@ export type ChatEvent =
   | MessageCreatedEvent
   | ReasoningCreatedEvent
   | MessageEditedEvent
+  | MessageCompressionCreatedEvent
+  | MessageCompressionEditedEvent
   | MessageDeletedEvent
   | MessagesDeletedEvent
   | ChapterCreatedEvent
@@ -40,6 +42,19 @@ export interface MessageEditedEvent {
   type: "MessageEdited";
   messageId: string;
   newContent: string;
+}
+
+export interface MessageCompressionCreatedEvent {
+  type: "MessageCompressionCreated";
+  messageId: string;
+  compressedContent: string;
+  sourceContentFingerprint: string;
+}
+
+export interface MessageCompressionEditedEvent {
+  type: "MessageCompressionEdited";
+  messageId: string;
+  compressedContent: string;
 }
 
 export interface MessageDeletedEvent {

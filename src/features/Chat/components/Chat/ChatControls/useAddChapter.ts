@@ -101,23 +101,23 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
 
   useEffect(() => subscribeToChapterCreationDraft(chatId, setDraft), [chatId]);
 
-  const getSnapshot = () => ({
-    coveredMessageIds: getChapterMessageIds(
-      d.UserChatProjection(chatId).GetMessages(),
-    ),
-    contextSnapshot: d
-      .LLMChatProjection(chatId)
-      .GetMessages()
-      .map((message) => ({ ...message })),
-  });
+  const getCoveredMessageIds = () =>
+    getChapterMessageIds(d.UserChatProjection(chatId).GetMessages());
+
+  const getGenerationSnapshot = async () => {
+    const contextSnapshot = await d
+      .LLMMessageContextService(chatId)
+      .buildChapterGenerationSnapshot();
+
+    return {
+      coveredMessageIds: getCoveredMessageIds(),
+      contextSnapshot,
+    };
+  };
 
   const openEditor = (title = "", summary = "") => {
     const nextDraft = {
-      ...createChapterDraft(
-        title,
-        summary,
-        getSnapshot().coveredMessageIds,
-      ),
+      ...createChapterDraft(title, summary, getCoveredMessageIds()),
     };
     persistDraft(nextDraft);
     setModalView("editor");
@@ -127,10 +127,10 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
   const handleCloseModal = () => setModalView("closed");
   const handleManual = () => openEditor();
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (chapterGeneration.IsLoading) return;
-    const snapshot = getSnapshot();
-    void generateDraft({
+    const snapshot = await getGenerationSnapshot();
+    await generateDraft({
       ...createChapterDraft("", "", snapshot.coveredMessageIds),
       contextSnapshot: snapshot.contextSnapshot,
       status: "generating",
@@ -140,10 +140,13 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
   const handlePendingDraft = () => {
     if (!draft || draft.status === "generating") return;
     if (draft.status === "failed") {
-      const snapshot = draft.contextSnapshot
-        ? draft
-        : { ...draft, ...getSnapshot() };
-      void generateDraft(snapshot);
+      if (draft.contextSnapshot) {
+        void generateDraft(draft);
+      } else {
+        void getGenerationSnapshot().then((snapshot) =>
+          generateDraft({ ...draft, ...snapshot }),
+        );
+      }
       return;
     }
     setModalView("editor");
@@ -160,11 +163,13 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
 
     setIsCreating(true);
     try {
-      await d.ChatService(chatId).AddChapter(
-        draft.title.trim(),
-        draft.summary.trim(),
-        draft.coveredMessageIds,
-      );
+      await d
+        .ChatService(chatId)
+        .AddChapter(
+          draft.title.trim(),
+          draft.summary.trim(),
+          draft.coveredMessageIds,
+        );
       handleDiscard();
     } catch (error) {
       d.ErrorService().log("Failed to create chapter", error);

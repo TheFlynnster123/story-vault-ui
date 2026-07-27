@@ -2,7 +2,7 @@
 
 ## Overview
 
-The SystemSettings feature provides a centralized settings page for configuring application-wide preferences. It manages API keys (Grok, CivitAI) and chat generation settings (default LLM model).
+The SystemSettings feature provides a centralized settings page for configuring application-wide preferences, including default LLM behavior, request monitoring, chapter buffering, and automatic message compression.
 
 ## Pages
 
@@ -11,7 +11,7 @@ The SystemSettings feature provides a centralized settings page for configuring 
 A settings dashboard organized into sections:
 1. **Grok API Configuration** — displays the `GrokKeyManager` for managing the Grok API key
 2. **Civitai API Configuration** — displays the `CivitaiKeyManager` for managing the CivitAI API key
-3. **Chat Generation Settings** — displays the `SystemSettingsEditor` for configuring the default model
+3. **Chat Generation Settings** — displays the `SystemSettingsEditor` for configuring the default model and context-compression policies
 
 Saves pending changes on navigation away.
 
@@ -19,7 +19,12 @@ Saves pending changes on navigation away.
 
 ### `SystemSettingsEditor`
 
-Renders a `ModelSelect` dropdown for choosing the default Grok model used across the application. Changes are debounce-saved to blob storage.
+Renders controls for the default model, monitoring retention, chapter trailing
+messages, and automatic message compression. Message compression is opt-in and
+configures both the number of newer ordinary messages required and the minimum
+source length. Disabling it hides saved compression controls and restores
+original message content in all LLM contexts without deleting the saved
+compressions. Changes are debounce-saved to blob storage.
 
 ## Hooks
 
@@ -47,10 +52,18 @@ TypeScript interfaces:
 ```typescript
 interface SystemSettings {
   chatGenerationSettings?: ChatGenerationSettings;
+  chapterCompressionSettings?: ChapterCompressionSettings;
+  messageCompressionSettings?: MessageCompressionSettings;
 }
 
 interface ChatGenerationSettings {
   model?: string;  // Default Grok model ID
+}
+
+interface MessageCompressionSettings {
+  enabled?: boolean;
+  afterMessages?: number;
+  minimumCharacters?: number;
 }
 ```
 

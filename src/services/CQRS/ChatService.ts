@@ -1,5 +1,9 @@
 import { MessageCreatedEventUtil as MessageCreatedEventUtil } from "./events/MessageCreatedEventUtil";
 import { MessageEditedEventUtil } from "./events/MessageEditedEventUtil";
+import {
+  MessageCompressionCreatedEventUtil,
+  MessageCompressionEditedEventUtil,
+} from "./events/MessageCompressionEventUtils";
 import { MessageDeletedEventUtil } from "./events/MessageDeletedEventUtil";
 import {
   ChapterCreatedEventUtil,
@@ -97,6 +101,30 @@ export class ChatService {
     newContent: string,
   ): Promise<void> {
     const event = MessageEditedEventUtil.Create(messageId, newContent);
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  public async AddMessageCompression(
+    messageId: string,
+    compressedContent: string,
+    sourceContent: string,
+  ): Promise<void> {
+    const event = MessageCompressionCreatedEventUtil.Create(
+      messageId,
+      compressedContent,
+      sourceContent,
+    );
+    await d.ChatEventService(this.chatId).AddChatEvent(event);
+  }
+
+  public async EditMessageCompression(
+    messageId: string,
+    compressedContent: string,
+  ): Promise<void> {
+    const event = MessageCompressionEditedEventUtil.Create(
+      messageId,
+      compressedContent,
+    );
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 

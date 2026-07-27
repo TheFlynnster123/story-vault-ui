@@ -13,12 +13,14 @@ interface UserMessageProps {
   chatId: string;
   message: UserChatMessage;
   isLastMessage: boolean;
+  messageCompressionEnabled?: boolean;
 }
 
 export const UserMessage: React.FC<UserMessageProps> = ({
   chatId,
   message,
   isLastMessage,
+  messageCompressionEnabled = false,
 }) => {
   const [showButtons, setShowButtons] = useState(false);
 
@@ -40,6 +42,9 @@ export const UserMessage: React.FC<UserMessageProps> = ({
             chatId={chatId}
             messageId={message.id}
             isLastMessage={isLastMessage}
+            hasCompression={
+              messageCompressionEnabled && message.compression !== undefined
+            }
           />
         </MessageOverlay>
       </MessageContentWrapper>

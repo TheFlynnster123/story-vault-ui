@@ -169,9 +169,8 @@ describe("ManagedBlob - Basic Functionality", () => {
       await blob.get();
       await blob.delete();
 
-      // After delete, get() should fetch again (returns undefined since blob doesn't exist)
-      blobApi.getBlob.mockResolvedValue(null);
       expect(await blob.get()).toBeUndefined();
+      expect(blobApi.getBlob).toHaveBeenCalledOnce();
     });
 
     it("calls deleteBlob on API", async () => {
@@ -190,6 +189,23 @@ describe("ManagedBlob - Basic Functionality", () => {
       await blob.delete();
 
       expect(subscriber).toHaveBeenCalled();
+    });
+
+    it("does not let a subscriber refetch the deleted value", async () => {
+      blobApi.getBlob.mockResolvedValue(JSON.stringify({ value: "stale" }));
+      const blob = createTestBlob(testChatId);
+      await blob.get();
+      let observedValue: { value: string } | undefined;
+
+      blob.subscribe(async () => {
+        observedValue = await blob.get();
+      });
+
+      await blob.delete();
+      await vi.waitFor(() => expect(observedValue).toBeUndefined());
+
+      expect(blob.getCached()).toBeUndefined();
+      expect(blobApi.getBlob).toHaveBeenCalledOnce();
     });
   });
 

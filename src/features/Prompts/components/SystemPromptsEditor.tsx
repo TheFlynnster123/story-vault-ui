@@ -490,6 +490,37 @@ export const SystemPromptsEditor: React.FC = () => {
 
       <PromptSection>
         <PromptInput
+          id="messageCompressionPrompt"
+          label="Message Compression Prompt"
+          helpText="This prompt creates the editable 2-3 sentence representation used for older ordinary text messages in LLM context."
+          value={localPrompts.messageCompressionPrompt || ""}
+          isHighlighted={highlightedPrompt === "messageCompressionPrompt"}
+          onChange={(value) =>
+            handlePromptChange({ messageCompressionPrompt: value })
+          }
+          onReset={() =>
+            handleResetClick(
+              "messageCompressionPrompt",
+              "Message Compression Prompt",
+            )
+          }
+          minRows={6}
+          icon={<LuFileText size={18} color="orange" />}
+        />
+        <ModelSelect
+          value={localPrompts.messageCompressionModel || ""}
+          requestSettings={localPrompts.messageCompressionRequestSettings}
+          {...createModelHandlers(
+            "messageCompressionModel",
+            "messageCompressionRequestSettings",
+          )}
+          label="Message Compression Model"
+          withDescription={false}
+        />
+      </PromptSection>
+
+      <PromptSection>
+        <PromptInput
           id="discussChapterPrompt"
           label="Discuss Chapter Prompt"
           helpText="This prompt defines how the AI behaves during chapter discussion conversations. It guides tone, focus, and style when helping users create or refine chapter summaries."

@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Story Vault — Message compression plan</title>
+  <style>
+    :root {
+      --ink: #162228;
+      --muted: #5f6e74;
+      --paper: #f3efe6;
+      --surface: #fffdf8;
+      --surface-2: #f8f4ec;
+      --line: #c9c1b3;
+      --teal: #176d69;
+      --teal-soft: #dcecea;
+      --amber: #a75c22;
+      --amber-soft: #f3dfcb;
+      --blue: #426c88;
+      --blue-soft: #dce8ef;
+      --rose: #93485a;
+      --rose-soft: #efdee2;
+      --shadow: 0 16px 38px rgba(27, 38, 40, 0.09);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 4% 2%, rgba(23, 109, 105, 0.09), transparent 28rem),
+        radial-gradient(circle at 98% 18%, rgba(167, 92, 34, 0.08), transparent 25rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1,
+    h2 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: -0.04em;
+    }
+
+    h1 {
+      max-width: 880px;
+      margin-bottom: 14px;
+      font-size: clamp(2.45rem, 7vw, 5.6rem);
+      line-height: 0.95;
+    }
+
+    h2 {
+      margin-bottom: 8px;
+      font-size: clamp(1.65rem, 3.4vw, 2.55rem);
+      line-height: 1.08;
+    }
+
+    h3 {
+      margin-bottom: 7px;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    code,
+    .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    code {
+      padding: 0.12rem 0.34rem;
+      border-radius: 5px;
+      background: rgba(22, 34, 40, 0.07);
+      font-size: 0.9em;
+    }
+
+    .page {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 46px 0 72px;
+    }
+
+    .hero,
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(27px, 5vw, 56px);
+      border-radius: 27px;
+    }
+
+    .hero::after {
+      content: "≋";
+      position: absolute;
+      top: -58px;
+      right: 20px;
+      color: var(--teal-soft);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 14rem;
+      font-weight: 700;
+      line-height: 1;
+      pointer-events: none;
+      transform: rotate(-8deg);
+    }
+
+    .eyebrow {
+      position: relative;
+      z-index: 1;
+      margin-bottom: 10px;
+      color: var(--teal);
+      font-size: 0.73rem;
+      font-weight: 850;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      position: relative;
+      z-index: 1;
+      max-width: 810px;
+      margin-bottom: 24px;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.18rem);
+    }
+
+    .verdict {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 13px;
+      align-items: center;
+      max-width: 850px;
+      padding: 15px 17px;
+      border: 1px solid #82b8b3;
+      border-radius: 14px;
+      background: var(--teal-soft);
+    }
+
+    .verdict strong {
+      display: grid;
+      width: 39px;
+      height: 39px;
+      place-items: center;
+      border: 1px solid var(--teal);
+      border-radius: 50%;
+      color: var(--teal);
+      background: #fff;
+      font-size: 1.1rem;
+    }
+
+    .verdict span {
+      font-size: 0.92rem;
+      font-weight: 680;
+    }
+
+    .section {
+      margin-top: 49px;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(230px, 0.75fr);
+      gap: 25px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .section-head > p {
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .panel {
+      border-radius: var(--radius);
+    }
+
+    .lanes {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 130px repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .lane-label,
+    .node {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .lane-label {
+      display: grid;
+      align-content: center;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .lane-label.user {
+      border-color: #9bb6c5;
+      background: var(--blue-soft);
+      color: #315b75;
+    }
+
+    .lane-label.llm {
+      border-color: #80b4b0;
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .node {
+      position: relative;
+      min-height: 104px;
+    }
+
+    .node:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -16px;
+      z-index: 2;
+      color: var(--amber);
+      font-weight: 900;
+      transform: translateY(-50%);
+    }
+
+    .node small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.74rem;
+      line-height: 1.45;
+    }
+
+    .anchor-note {
+      margin: 12px 18px 18px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--amber);
+      border-radius: 0 9px 9px 0;
+      background: var(--amber-soft);
+      font-size: 0.84rem;
+      font-weight: 650;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 13px;
+    }
+
+    .card {
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 0 10px 24px rgba(38, 48, 47, 0.055);
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .card ul {
+      margin: 9px 0 0;
+      padding-left: 18px;
+    }
+
+    .card li + li {
+      margin-top: 5px;
+    }
+
+    .tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: var(--teal);
+      background: var(--teal-soft);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .tag.amber {
+      color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .tag.rose {
+      color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .event-flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 18px;
+    }
+
+    .event {
+      position: relative;
+      min-height: 155px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .event:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 30px;
+      right: -17px;
+      z-index: 2;
+      color: var(--amber);
+      font-weight: 900;
+    }
+
+    .event .number,
+    .phase .number {
+      display: grid;
+      width: 29px;
+      height: 29px;
+      margin-bottom: 10px;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--teal);
+      font-size: 0.75rem;
+      font-weight: 850;
+    }
+
+    .event p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 0.77rem;
+    }
+
+    .precedence {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 11px;
+      margin-top: 13px;
+    }
+
+    .precedence > div {
+      padding: 13px;
+      border: 1px dashed var(--line);
+      border-radius: 11px;
+      background: var(--surface-2);
+      font-size: 0.78rem;
+    }
+
+    .precedence b {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--teal);
+    }
+
+    .phases {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      padding: 18px;
+    }
+
+    .phase {
+      min-height: 215px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+    }
+
+    .phase p {
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 0.77rem;
+    }
+
+    .phase small {
+      display: block;
+      padding-top: 9px;
+      border-top: 1px solid var(--line);
+      color: var(--teal);
+      font-size: 0.7rem;
+      font-weight: 750;
+    }
+
+    .matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .matrix th,
+    .matrix td {
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .matrix th {
+      color: var(--teal);
+      background: var(--teal-soft);
+      font-size: 0.71rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .matrix tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .matrix td:first-child {
+      width: 24%;
+      font-weight: 750;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+    }
+
+    .decision {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      padding: 18px;
+      border: 1px solid #d1a983;
+      border-radius: var(--radius);
+      background: var(--amber-soft);
+    }
+
+    .decision b:first-child {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--amber);
+    }
+
+    .decision p {
+      margin-bottom: 0;
+      color: #67401e;
+      font-size: 0.86rem;
+    }
+
+    .footer {
+      margin-top: 38px;
+      color: var(--muted);
+      font-size: 0.73rem;
+      text-align: center;
+    }
+
+    @media (max-width: 920px) {
+      .lane {
+        grid-template-columns: 110px 1fr;
+      }
+
+      .node:not(:last-child)::after {
+        content: "↓";
+        top: auto;
+        right: 50%;
+        bottom: -17px;
+        transform: translateX(50%);
+      }
+
+      .grid,
+      .precedence {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .event-flow {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .event:nth-child(2)::after {
+        display: none;
+      }
+
+      .phases {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 20px, 1160px);
+        padding-top: 10px;
+      }
+
+      .hero {
+        padding: 25px 20px;
+        border-radius: 18px;
+      }
+
+      .hero::after {
+        opacity: 0.5;
+        right: -44px;
+      }
+
+      .section {
+        margin-top: 38px;
+      }
+
+      .section-head {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+
+      .lane,
+      .grid,
+      .precedence,
+      .event-flow,
+      .phases {
+        grid-template-columns: 1fr;
+      }
+
+      .lane-label {
+        min-height: 48px;
+      }
+
+      .event:not(:last-child)::after {
+        content: "↓";
+        top: auto;
+        right: 50%;
+        bottom: -17px;
+        display: block;
+        transform: translateX(50%);
+      }
+
+      .matrix {
+        min-width: 720px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Context strategy · proposed</p>
+      <h1>Compress the model’s view, not the user’s history.</h1>
+      <p class="lede">
+        Preserve every original message in the event stream and visible transcript.
+        Attach an editable 2–3 sentence compression to eligible older text messages,
+        then let the LLM projection substitute that representation at request time.
+      </p>
+      <div class="verdict">
+        <strong>✓</strong>
+        <span>
+          Recommended. The current event-store → dual-projection → context-document
+          architecture already has the right seam; this should be an additive overlay,
+          never a destructive rewrite.
+        </span>
+      </div>
+    </header>
+
+    <section class="section" aria-labelledby="architecture">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">One source, two representations</p>
+          <h2 id="architecture">The original remains canonical</h2>
+        </div>
+        <p>
+          Keep the same message ID, role, order, and edit history in both lanes.
+          Only the content materialized for an LLM request changes.
+        </p>
+      </div>
+      <div class="panel">
+        <div class="lanes">
+          <div class="lane">
+            <div class="lane-label user">User lane</div>
+            <div class="node">
+              <h3>Event store</h3>
+              <small>Original <code>MessageCreated</code> / <code>MessageEdited</code> events remain untouched.</small>
+            </div>
+            <div class="node">
+              <h3>UserChatProjection</h3>
+              <small>Projects the full original content plus optional compression metadata.</small>
+            </div>
+            <div class="node">
+              <h3>Visible transcript</h3>
+              <small>Message bubble stays complete. Click → “View compression” → edit and save.</small>
+            </div>
+          </div>
+          <div class="lane">
+            <div class="lane-label llm">LLM lane</div>
+            <div class="node">
+              <h3>Compression event</h3>
+              <small>Stores <code>messageId</code>, compressed content, and a source fingerprint.</small>
+            </div>
+            <div class="node">
+              <h3>LLMChatProjection</h3>
+              <small>Chooses original or compressed content under the active age policy.</small>
+            </div>
+            <div class="node">
+              <h3>ContextDocument</h3>
+              <small>Receives the substitute with the original ID, role, position, and traceability.</small>
+            </div>
+          </div>
+        </div>
+        <div class="anchor-note">
+          “Keep just these sentences in chat” should mean the LLM-bound chat payload.
+          The UI transcript and persisted original must retain the full message.
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="policy">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Eligibility policy</p>
+          <h2 id="policy">Compress only ordinary text messages</h2>
+        </div>
+        <p>
+          Count newer qualifying messages after each candidate. When that count reaches
+          configurable <code>N</code>, queue compression after the current response is safely saved.
+        </p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <span class="tag">Eligible</span>
+          <h3><code>type === "message"</code></h3>
+          <p>
+            User, assistant, and ordinary system-role text created through
+            <code>MessageCreated</code>. Apply a minimum source-length check so short messages
+            are never made larger by “compression.”
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag rose">Excluded</span>
+          <h3>Structured and ephemeral items</h3>
+          <p>
+            Reasoning, image workflows, story, chapter, book, plan, note, and agent
+            clarification items neither qualify nor advance the age counter.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag amber">Trigger</span>
+          <h3>Post-response background task</h3>
+          <p>
+            Run after the assistant message persists, deduplicate by message ID, and never
+            block the next visible response. Failure leaves the original context intact.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag">Prompt contract</span>
+          <h3>Faithful, self-contained, brief</h3>
+          <p>
+            Preserve names, decisions, state changes, constraints, and essential dialogue
+            intent. Add no facts. Return only 2–3 sentences with no preamble.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag">No recursion</span>
+          <h3>Always summarize the original</h3>
+          <p>
+            Never summarize a prior summary. Manual compression edits update the overlay,
+            not the source from which future regeneration is produced.
+          </p>
+        </article>
+        <article class="card">
+          <span class="tag amber">Suggested pilot</span>
+          <h3>Tune <code>N</code> from traces</h3>
+          <p>
+            Start behind a setting with a conservative recent-message window and a
+            meaningful minimum character count. Treat the exact defaults as a pilot choice,
+            not a hard-coded product truth.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="events">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Lifecycle and races</p>
+          <h2 id="events">A small event contract keeps replay deterministic</h2>
+        </div>
+        <p>
+          The source fingerprint is the guardrail: an async result generated from stale
+          original content must never become active after an edit.
+        </p>
+      </div>
+      <div class="panel">
+        <div class="event-flow">
+          <article class="event">
+            <span class="number">1</span>
+            <h3>Message ages past <code>N</code></h3>
+            <p>The selector finds an eligible, visible text message with no current compression.</p>
+          </article>
+          <article class="event">
+            <span class="number">2</span>
+            <h3>Generate from a snapshot</h3>
+            <p>The service records a fingerprint, calls the configured low-cost model, and rejects no-savings output.</p>
+          </article>
+          <article class="event">
+            <span class="number">3</span>
+            <h3>Persist compression</h3>
+            <p><code>MessageCompressionCreated</code> stores the message ID, 2–3 sentences, and source fingerprint.</p>
+          </article>
+          <article class="event">
+            <span class="number">4</span>
+            <h3>Project or invalidate</h3>
+            <p>A matching source activates it. <code>MessageEdited</code> invalidates it; a stale late response is ignored.</p>
+          </article>
+        </div>
+        <div class="precedence">
+          <div>
+            <b>Chapter / book first</b>
+            If the message is hidden by structural compression, it remains excluded.
+          </div>
+          <div>
+            <b>Message representation second</b>
+            A visible or chapter-buffered message uses its active compression when old enough.
+          </div>
+          <div>
+            <b>Regeneration stays original</b>
+            <code>GetMessage(id)</code> returns source content; only <code>GetContext()</code> materializes the substitute.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="delivery">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Implementation path</p>
+          <h2 id="delivery">Five bounded changes</h2>
+        </div>
+        <p>
+          Keep automatic activation behind settings until projection, race, and narrative
+          quality tests pass. Each phase has a useful completion boundary.
+        </p>
+      </div>
+      <div class="panel phases">
+        <article class="phase">
+          <span class="number">1</span>
+          <h3>Events + projection state</h3>
+          <p>Add created/edited compression events, utilities, ChatService operations, replay handlers, and source invalidation.</p>
+          <small>Done: originals survive; both projections expose compression metadata.</small>
+        </article>
+        <article class="phase">
+          <span class="number">2</span>
+          <h3>Context substitution</h3>
+          <p>Materialize compressed content in <code>GetContext()</code>, preserve ID/role/order, and extend trace entries with representation data.</p>
+          <small>Done: requests shrink without changing the visible transcript.</small>
+        </article>
+        <article class="phase">
+          <span class="number">3</span>
+          <h3>View + edit UX</h3>
+          <p>Add “View compression” to the message overlay, an original-versus-compressed editor, a status cue, and inspector coverage.</p>
+          <small>Done: users can audit and correct every active substitute.</small>
+        </article>
+        <article class="phase">
+          <span class="number">4</span>
+          <h3>Generator + scheduler</h3>
+          <p>Add prompt/model settings, an eligibility selector, post-response background orchestration, in-flight dedupe, and request tracking.</p>
+          <small>Done: newly eligible messages compress automatically without blocking chat.</small>
+        </article>
+        <article class="phase">
+          <span class="number">5</span>
+          <h3>Pilot + tune</h3>
+          <p>Compare full and compressed requests on representative stories; inspect savings, continuity, failures, and manual correction rate.</p>
+          <small>Done: enable by default only after quality and savings justify it.</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="validation">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Verification</p>
+          <h2 id="validation">Test the semantic seams, not just the happy path</h2>
+        </div>
+        <p>
+          Existing projection and context-pipeline tests are the natural homes for most
+          coverage; add focused UI and generation-service tests around them.
+        </p>
+      </div>
+      <div class="panel table-wrap" tabindex="0" aria-label="Verification matrix">
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Required proof</th>
+              <th>Failure prevented</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Replay</td>
+              <td>Created and edited compression events replay to the same current overlay; legacy chats remain unchanged.</td>
+              <td>Non-deterministic state or migration breakage.</td>
+            </tr>
+            <tr>
+              <td>Eligibility</td>
+              <td>Only ordinary text counts; reasoning, images, notes, plans, story, chapters, books, and clarifications are excluded.</td>
+              <td>Unexpected cost and compression of structured context.</td>
+            </tr>
+            <tr>
+              <td>Concurrency</td>
+              <td>An original edit during generation makes the late result inactive; duplicate schedulers produce at most one active result.</td>
+              <td>Stale summaries and repeated billing.</td>
+            </tr>
+            <tr>
+              <td>LLM projection</td>
+              <td>Same ID, role, order, and trace; only eligible old message content changes. Recent messages remain original.</td>
+              <td>Broken regeneration, chronology, or role semantics.</td>
+            </tr>
+            <tr>
+              <td>Structural compression</td>
+              <td>Chapter/book exclusion wins; a trailing chapter buffer may use message compression without revealing other hidden items.</td>
+              <td>Double inclusion or loss of chapter behavior.</td>
+            </tr>
+            <tr>
+              <td>User experience</td>
+              <td>Full bubble remains visible; compression is inspectable, editable, and clearly labeled as the model-facing representation.</td>
+              <td>User confusion about what was deleted or changed.</td>
+            </tr>
+            <tr>
+              <td>Quality + cost</td>
+              <td>Compression adds no unsupported facts, preserves continuity-critical details, and delivers material character/token savings.</td>
+              <td>Paying for summaries that harm context or do not shrink it.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="decision">
+      <div class="decision">
+        <b>!</b>
+        <div>
+          <h2 id="decision">One product decision before implementation</h2>
+          <p>
+            Decide whether the first pilot is opt-in per chat or globally enabled with an
+            escape hatch. The safer rollout is opt-in or disabled-by-default while the
+            request inspector exposes original size, compressed size, active representation,
+            and manual-edit rate.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      Story Vault UI · Message compression proposal · 26 July 2026
+    </footer>
+  </main>
+</body>
+</html>

@@ -4,7 +4,8 @@ export type RequestType =
   | "chat"
   | "image-prompt"
   | "agent-intent"
-  | "plan-suggestion";
+  | "plan-suggestion"
+  | "message-compression";
 
 export interface TrackedMessage {
   role: string;
@@ -18,6 +19,9 @@ export interface TrackedContextTrace {
     included: boolean;
     buffered: boolean;
     exclusionReason?: string;
+    contentRepresentation?: "original" | "message-compression";
+    originalCharacterCount?: number;
+    contextCharacterCount?: number;
   }>;
   sections: Array<{
     source: string;
