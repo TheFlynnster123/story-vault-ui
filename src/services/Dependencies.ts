@@ -71,6 +71,10 @@ import { getRequestTrackerInstance } from "../features/OpenRouter/services/Reque
 import { ModelPricingEstimator } from "../features/OpenRouter/services/ModelPricingEstimator";
 import { getOpenRouterModelsQueryKey } from "../features/OpenRouter/hooks/useOpenRouterModels";
 import type { OpenRouterModel } from "../features/OpenRouter/services/OpenRouterModelsAPI";
+import { getContinuityHistoriesManagedBlobInstance } from "../features/Histories/services/ContinuityHistoriesManagedBlob";
+import { ContinuityHistoriesService } from "../features/Histories/services/ContinuityHistoriesService";
+import { getContinuityHistoryMaintenanceServiceInstance } from "../features/Histories/services/ContinuityHistoryMaintenanceService";
+import { getContinuityHistoryContextServiceInstance } from "../features/Histories/services/ContinuityHistoryContextService";
 
 export class Dependencies {
   CivitKeyAPI() {
@@ -161,6 +165,15 @@ export class Dependencies {
   CharacterUpdateProposalService(chatId: string) {
     return new CharacterUpdateProposalService(chatId);
   }
+  ContinuityHistoriesService(chatId: string) {
+    return new ContinuityHistoriesService(chatId);
+  }
+  ContinuityHistoryMaintenanceService(chatId: string) {
+    return getContinuityHistoryMaintenanceServiceInstance(chatId);
+  }
+  ContinuityHistoryContextService(chatId: string) {
+    return getContinuityHistoryContextServiceInstance(chatId);
+  }
   ImageGenerator(chatId: string) {
     return new ImageGenerator(chatId);
   }
@@ -246,6 +259,9 @@ export class Dependencies {
   }
   CharacterUpdateProposalManagedBlob(chatId: string) {
     return getCharacterUpdateProposalManagedBlobInstance(chatId);
+  }
+  ContinuityHistoriesManagedBlob(chatId: string) {
+    return getContinuityHistoriesManagedBlobInstance(chatId);
   }
 
   PlansManagedBlob(chatId: string) {

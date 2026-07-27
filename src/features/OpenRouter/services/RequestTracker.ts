@@ -5,7 +5,9 @@ export type RequestType =
   | "image-prompt"
   | "agent-intent"
   | "plan-suggestion"
-  | "message-compression";
+  | "message-compression"
+  | "history-refresh"
+  | "history-selection";
 
 export interface TrackedMessage {
   role: string;

@@ -35,6 +35,9 @@ describe("LLMMessageContextService", () => {
   let SystemPromptsService: Mocked<SystemPromptsService>;
   let SystemSettingsService: Mocked<SystemSettingsService>;
   let CharacterDescriptionsService: Mocked<CharacterDescriptionsService>;
+  const ContinuityHistoryContextService = {
+    buildContext: vi.fn(),
+  };
 
   beforeEach(() => {
     ChatSettingsService = {
@@ -67,6 +70,11 @@ describe("LLMMessageContextService", () => {
     CharacterDescriptionsService = {
       get: vi.fn().mockResolvedValue([]),
     } as unknown as Mocked<CharacterDescriptionsService>;
+    ContinuityHistoryContextService.buildContext.mockResolvedValue({
+      messages: [],
+      selections: [],
+      trailingMessageCount: 5,
+    });
 
     vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
     vi.mocked(d.LLMChatProjection).mockReturnValue(LLMChatProjection);
@@ -75,6 +83,9 @@ describe("LLMMessageContextService", () => {
     vi.mocked(d.SystemSettingsService).mockReturnValue(SystemSettingsService);
     vi.mocked(d.CharacterDescriptionsService).mockReturnValue(
       CharacterDescriptionsService,
+    );
+    vi.mocked(d.ContinuityHistoryContextService).mockReturnValue(
+      ContinuityHistoryContextService as never,
     );
   });
 
@@ -333,6 +344,50 @@ describe("LLMMessageContextService", () => {
       expectResponsePromptIsLast(result);
     });
 
+    it("inserts selected continuity histories at their independent trailing-message offset", async () => {
+      ContinuityHistoryContextService.buildContext.mockResolvedValue({
+        messages: [
+          {
+            role: "system",
+            content:
+              "# Relevant Continuity Histories\n\n## The Brass Key\nThe key is now held by Mara.",
+          },
+        ],
+        selections: [
+          {
+            historyId: "history-1",
+            revisionId: "revision-2",
+            title: "The Brass Key",
+            reason: "The latest turn mentions the vault.",
+          },
+        ],
+        trailingMessageCount: 1,
+      });
+
+      const request = await new LLMMessageContextService(
+        testChatId,
+      ).buildGenerationRequestWithTrace();
+
+      expect(request.messages[0].id).toBe("msg-1");
+      expect(request.messages[1].content).toContain(
+        "# Relevant Continuity Histories",
+      );
+      expect(request.messages[2].id).toBe("msg-2");
+      expect(request.messages[3].content).toBe("Test prompt");
+      expect(request.trace.sections[3]).toEqual({
+        source: "continuity-histories",
+        messageCount: 1,
+        messageIds: [],
+        itemIds: ["history-1"],
+        selections: [
+          expect.objectContaining({
+            historyId: "history-1",
+            revisionId: "revision-2",
+          }),
+        ],
+      });
+    });
+
     it("returns a source trace for durable context and appended instructions", async () => {
       MemoriesService.get.mockResolvedValue(createMockMemories());
       const service = new LLMMessageContextService(testChatId);
@@ -354,6 +409,13 @@ describe("LLMMessageContextService", () => {
           messageIds: [expect.any(String)],
         },
         { source: "character-sheets", messageCount: 0, messageIds: [] },
+        {
+          source: "continuity-histories",
+          messageCount: 0,
+          messageIds: [],
+          itemIds: [],
+          selections: [],
+        },
         {
           source: "recent-history",
           messageCount: 2,

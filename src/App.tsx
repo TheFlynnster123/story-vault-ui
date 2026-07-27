@@ -37,6 +37,7 @@ import { ReasoningSettingsPage } from "./features/Chat/pages/ReasoningSettingsPa
 import { QUERY_CLIENT } from "./services/QueryClient";
 import { ErrorDiagnosticsModal } from "./components/ErrorDiagnosticsModal";
 import { RequestInspectorModal } from "./features/OpenRouter/components/RequestInspectorModal";
+import { ContinuityHistoriesPage } from "./features/Histories/pages/ContinuityHistoriesPage";
 
 const App: React.FC = () => {
   return (
@@ -172,6 +173,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <CharacterDescriptionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:chatId/histories"
+            element={
+              <ProtectedRoute>
+                <ContinuityHistoriesPage />
               </ProtectedRoute>
             }
           />

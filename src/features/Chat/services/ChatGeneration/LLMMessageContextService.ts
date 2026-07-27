@@ -17,6 +17,7 @@ import {
 } from "../../../Characters/services/CharacterDescription";
 import { normalizeCharacterSheetTrailingMessageCount } from "../../../Characters/services/CharacterSheetSettings";
 import type { Memory } from "../../../Memories/services/Memory";
+import type { ContinuityHistoryContextResult } from "../../../Histories/services/ContinuityHistoryContextService";
 import {
   DEFAULT_SYSTEM_PROMPTS,
   type SystemPrompts,
@@ -66,6 +67,7 @@ interface ContextSources {
 interface ChatContextSnapshot extends ContextSources {
   projectedHistory: LLMMessage[];
   projectionTrace: LLMContextProjectionTraceEntry[];
+  continuityHistoryContext: ContinuityHistoryContextResult;
 }
 
 export class LLMMessageContextService {
@@ -171,15 +173,8 @@ export class LLMMessageContextService {
     originalContent: string,
     feedback?: string,
   ): Promise<ContextRequest> {
-    const snapshot = await this.loadChatContextSnapshot();
-    const truncatedSnapshot = {
-      ...snapshot,
-      projectedHistory: this.truncateMessagesBeforeId(
-        snapshot.projectedHistory,
-        messageId,
-      ),
-    };
-    const document = this.createDurableContextDocument(truncatedSnapshot);
+    const snapshot = await this.loadChatContextSnapshot(false, messageId);
+    const document = this.createDurableContextDocument(snapshot);
     const messages = this.appendFeedbackMessage(
       renderContextDocumentMessages(document),
       originalContent,
@@ -205,9 +200,13 @@ export class LLMMessageContextService {
       snapshot,
       this.getReasoningRetention(sources.chatSettings),
     );
+    const continuityHistoryContext = await d
+      .ContinuityHistoryContextService(this.chatId)
+      .buildContext(projectedHistory);
     const document = this.createDurableContextDocument({
       ...sources,
       projectedHistory,
+      continuityHistoryContext,
     });
     const prompts = sources.systemPrompts;
     const draftPrompt = [
@@ -307,15 +306,23 @@ export class LLMMessageContextService {
 
   private async loadChatContextSnapshot(
     includeSystemPrompts = false,
+    beforeMessageId?: string,
   ): Promise<ChatContextSnapshot> {
     const sources = await this.loadContextSources(includeSystemPrompts, true);
     const policy = this.createProjectionPolicy(sources);
     const projection = d.LLMChatProjection(this.chatId).GetContext(policy);
+    const projectedHistory = beforeMessageId
+      ? this.truncateMessagesBeforeId(projection.messages, beforeMessageId)
+      : projection.messages;
+    const continuityHistoryContext = await d
+      .ContinuityHistoryContextService(this.chatId)
+      .buildContext(projectedHistory, beforeMessageId);
 
     return {
       ...sources,
-      projectedHistory: projection.messages,
+      projectedHistory,
       projectionTrace: projection.trace,
+      continuityHistoryContext,
     };
   }
 
@@ -367,7 +374,11 @@ export class LLMMessageContextService {
   private createDurableContextDocument(
     snapshot: Pick<
       ChatContextSnapshot,
-      "projectedHistory" | "memories" | "characters" | "chatSettings"
+      | "projectedHistory"
+      | "memories"
+      | "characters"
+      | "chatSettings"
+      | "continuityHistoryContext"
     >,
   ): ContextDocument {
     return createContextDocument({
@@ -376,9 +387,15 @@ export class LLMMessageContextService {
       characterSheetMessages: this.buildCharacterSheetMessages(
         snapshot.characters,
       ),
+      continuityHistoryMessages:
+        snapshot.continuityHistoryContext.messages,
+      selectedContinuityHistories:
+        snapshot.continuityHistoryContext.selections,
       recentMessageCount: normalizeCharacterSheetTrailingMessageCount(
         snapshot.chatSettings.characterSheetsTrailingMessageCount,
       ),
+      continuityHistoryRecentMessageCount:
+        snapshot.continuityHistoryContext.trailingMessageCount,
     });
   }
 

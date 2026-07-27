@@ -119,6 +119,13 @@ describe("TextGenerationService reasoning", () => {
         status: "not-due",
       }),
     } as unknown as ReturnType<typeof d.CharacterMaintenanceService>);
+    vi.mocked(d.ContinuityHistoryMaintenanceService).mockReturnValue({
+      onSavedUserTurn: vi.fn().mockResolvedValue({
+        status: "waiting",
+        updatedCount: 0,
+        discoveredCount: 0,
+      }),
+    } as unknown as ReturnType<typeof d.ContinuityHistoryMaintenanceService>);
 
     vi.mocked(d.AgentFlowService).mockReturnValue({
       analyzeAutomaticSuggestion: vi.fn().mockResolvedValue(undefined),

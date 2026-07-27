@@ -118,6 +118,15 @@ export class TextGenerationService extends GenerationOrchestrator {
     void d
       .CharacterMaintenanceService(this.chatId)
       .maybeCreateProposalAfterSavedUserTurn();
+    void d
+      .ContinuityHistoryMaintenanceService(this.chatId)
+      .onSavedUserTurn()
+      .catch((error) =>
+        d.ErrorService().log(
+          "Failed to run continuity history maintenance",
+          error,
+        ),
+      );
 
     try {
       const chatSettingsService = d.ChatSettingsService(this.chatId);
