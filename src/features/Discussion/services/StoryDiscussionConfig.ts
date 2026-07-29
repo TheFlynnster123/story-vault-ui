@@ -84,7 +84,7 @@ export const createStoryDiscussionConfig = (
 
     const messages: LLMMessage[] = [
       ...chatMessages,
-      { role: "system", content: systemPrompt },
+      { role: "user", content: systemPrompt },
     ];
 
     const response = await d

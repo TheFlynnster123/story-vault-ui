@@ -38,13 +38,13 @@ describe("LLMChatProjection - Note Events", () => {
       );
     });
 
-    it("should use system role for note messages", () => {
+    it("should use user role for note messages", () => {
       const event = NoteCreatedEventUtil.Create("Note", 10);
 
       projection.process(event);
 
       const messages = projection.GetMessages();
-      expect(messages[0].role).toBe("system");
+      expect(messages[0].role).toBe("user");
     });
 
     it("should store expiresAfterMessages in message data", () => {
@@ -225,7 +225,7 @@ describe("LLMChatProjection - Note Events", () => {
       const messages = projection.GetMessages();
       expect(messages).toHaveLength(3);
       expect(messages[0].role).toBe("user");
-      expect(messages[1].role).toBe("system");
+      expect(messages[1].role).toBe("user");
       expect(messages[1].content).toContain("[Note]");
       expect(messages[2].role).toBe("assistant");
     });

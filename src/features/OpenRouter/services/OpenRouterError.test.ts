@@ -80,6 +80,35 @@ describe("OpenRouterError", () => {
       const error = new OpenRouterError(502, "fail", meta);
       expect(error.metadata).toEqual(meta);
     });
+
+    it("should extract the provider message from raw JSON metadata", () => {
+      const raw = JSON.stringify({
+        type: "error",
+        error: {
+          type: "invalid_request_error",
+          message: "messages.8: role 'system' is invalid here",
+        },
+      });
+
+      const error = new OpenRouterError(400, "Provider returned error", {
+        raw,
+        provider_name: "Anthropic",
+      });
+
+      expect(error.providerErrorMessage).toBe(
+        "messages.8: role 'system' is invalid here",
+      );
+    });
+
+    it("should preserve a non-JSON raw provider message", () => {
+      const error = new OpenRouterError(400, "Provider returned error", {
+        raw: "Upstream request was rejected",
+      });
+
+      expect(error.providerErrorMessage).toBe(
+        "Upstream request was rejected",
+      );
+    });
   });
 });
 

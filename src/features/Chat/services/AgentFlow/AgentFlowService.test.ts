@@ -222,7 +222,7 @@ describe("AgentFlowService", () => {
     expect(sentMessages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          role: "system",
+          role: "user",
           content: "Custom intent prompt",
         }),
       ]),

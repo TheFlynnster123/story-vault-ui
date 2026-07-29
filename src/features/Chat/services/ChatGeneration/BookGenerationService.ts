@@ -3,7 +3,7 @@ import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { OpenRouterRequestSettings } from "../../../OpenRouter/services/OpenRouterRequestSettings";
 import {
-  toSystemMessage,
+  toAssistantMessage,
   toUserMessage,
 } from "../../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
@@ -106,7 +106,7 @@ const buildBookRequestMessages = (
 
   return [
     ...contextMessages,
-    toSystemMessage(summariesContent),
+    toAssistantMessage(summariesContent),
     toUserMessage(prompt),
   ];
 };

@@ -1,7 +1,7 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
-import { toSystemMessage } from "../../../services/Utils/MessageUtils";
+import { toUserMessage } from "../../../services/Utils/MessageUtils";
 import type { Plan } from "./Plan";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import {
@@ -83,12 +83,12 @@ const buildPromptMessages = (
   if (plan.consolidateMessageHistory) {
     const consolidatedHistory = consolidateMessagesToString(chatMessages);
     return [
-      toSystemMessage(
+      toUserMessage(
         `Chat History:\n\n${consolidatedHistory}\n\n---\n\n${buildPlanPrompt(plan, feedback)}`,
       ),
     ];
   }
-  return [...chatMessages, toSystemMessage(buildPlanPrompt(plan, feedback))];
+  return [...chatMessages, toUserMessage(buildPlanPrompt(plan, feedback))];
 };
 
 const buildUpdatePromptMessages = (
@@ -100,14 +100,14 @@ const buildUpdatePromptMessages = (
   if (plan.consolidateMessageHistory) {
     const consolidatedHistory = consolidateMessagesToString(chatMessages);
     return [
-      toSystemMessage(
+      toUserMessage(
         `Chat History:\n\n${consolidatedHistory}\n\n---\n\n${buildUpdatePlanPrompt(plan, priorContent, feedback)}`,
       ),
     ];
   }
   return [
     ...chatMessages,
-    toSystemMessage(buildUpdatePlanPrompt(plan, priorContent, feedback)),
+    toUserMessage(buildUpdatePlanPrompt(plan, priorContent, feedback)),
   ];
 };
 
@@ -149,11 +149,11 @@ const buildPlanSuggestionPromptMessages = (
   if (plan.consolidateMessageHistory) {
     const consolidatedHistory = consolidateMessagesToString(chatMessages);
     return [
-      toSystemMessage(`Chat History:\n\n${consolidatedHistory}\n\n---\n\n${prompt}`),
+      toUserMessage(`Chat History:\n\n${consolidatedHistory}\n\n---\n\n${prompt}`),
     ];
   }
 
-  return [...chatMessages, toSystemMessage(prompt)];
+  return [...chatMessages, toUserMessage(prompt)];
 };
 
 interface PlanSuggestionResponse {

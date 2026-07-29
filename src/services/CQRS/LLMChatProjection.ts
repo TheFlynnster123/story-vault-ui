@@ -358,7 +358,7 @@ export class LLMChatProjection {
     const chapterMessage = this.createMessageState(
       event.chapterId,
       "chapter",
-      "system",
+      "assistant",
       chapterContent,
       event.coveredMessageIds,
     );
@@ -425,7 +425,7 @@ export class LLMChatProjection {
     const bookMessage = this.createMessageState(
       event.bookId,
       "book",
-      "system",
+      "assistant",
       bookContent,
     );
     bookMessage.data = {
@@ -484,7 +484,7 @@ export class LLMChatProjection {
     const planMessage = this.createMessageState(
       event.messageId,
       "plan",
-      "system",
+      "assistant",
       formattedContent,
     );
     planMessage.data = {
@@ -522,7 +522,7 @@ export class LLMChatProjection {
     const noteMessage = this.createMessageState(
       event.noteId,
       "note",
-      "system",
+      "user",
       formattedContent,
     );
     noteMessage.data = {
@@ -554,7 +554,7 @@ export class LLMChatProjection {
     const clarificationMessage = this.createMessageState(
       event.clarificationId,
       "agent-clarification",
-      "system",
+      "user",
       this.formatAgentClarificationContent(event.question, event.answer),
     );
     clarificationMessage.data = {

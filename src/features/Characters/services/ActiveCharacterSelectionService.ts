@@ -1,7 +1,6 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
 import {
-  toSystemMessage,
   toUserMessage,
 } from "../../../services/Utils/MessageUtils";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
@@ -103,7 +102,7 @@ const buildActiveCharacterMessages = (
   characters: CharacterDescription[],
 ): LLMMessage[] => [
   ...contextMessages,
-  toSystemMessage(prompt),
+  toUserMessage(prompt),
   toUserMessage(
     [
       "Select the active cast and return exactly the configured JSON object.",

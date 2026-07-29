@@ -42,13 +42,13 @@ describe("LLMChatProjection - Plan Events", () => {
       );
     });
 
-    it("should use system role for plan messages", () => {
+    it("should use assistant role for plan messages", () => {
       const event = createPlanEvent("def-1", "Plan", "Content");
 
       projection.process(event);
 
       const messages = projection.GetMessages();
-      expect(messages[0].role).toBe("system");
+      expect(messages[0].role).toBe("assistant");
     });
 
     it("should store planDefinitionId in message data", () => {
@@ -215,7 +215,7 @@ describe("LLMChatProjection - Plan Events", () => {
       const messages = projection.GetMessages();
       expect(messages).toHaveLength(3);
       expect(messages[0].role).toBe("user");
-      expect(messages[1].role).toBe("system");
+      expect(messages[1].role).toBe("assistant");
       expect(messages[1].content).toContain("[Plan:");
       expect(messages[2].role).toBe("assistant");
     });

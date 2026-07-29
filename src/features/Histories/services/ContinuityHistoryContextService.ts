@@ -2,6 +2,7 @@ import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import type { ChatEvent } from "../../../services/CQRS/events/ChatEvent";
 import { d } from "../../../services/Dependencies";
 import {
+  toAssistantMessage,
   toSystemMessage,
   toUserMessage,
 } from "../../../services/Utils/MessageUtils";
@@ -132,7 +133,7 @@ export class ContinuityHistoryContextService {
         selected.length === 0
           ? []
           : [
-              toSystemMessage(
+              toAssistantMessage(
                 [
                   "# Relevant Continuity Histories",
                   ...selected.map(({ entry }) =>

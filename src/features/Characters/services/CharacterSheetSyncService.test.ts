@@ -122,7 +122,7 @@ describe("CharacterSheetSyncService", () => {
     expect(call[0]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          role: "system",
+          role: "user",
           content: "Update continuity.",
         }),
       ]),

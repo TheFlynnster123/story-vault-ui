@@ -112,7 +112,7 @@ describe("ActiveCharacterSelectionService", () => {
     expect(call[0]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          role: "system",
+          role: "user",
           content: "Find the current cast.",
         }),
       ]),

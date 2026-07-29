@@ -44,7 +44,7 @@ export const createNewBookDiscussionConfig = (
 
     return [
       {
-        role: "system",
+        role: "assistant",
         content: `# Selected Chapter Summaries\n${summariesContent}`,
       },
     ];
@@ -104,7 +104,7 @@ export const createNewBookDiscussionConfig = (
       `Keep the summary to 2-3 paragraphs. Provide your summary directly without formatting or a preamble.`,
     ].join("\n");
 
-    const messages: LLMMessage[] = [{ role: "system", content: systemPrompt }];
+    const messages: LLMMessage[] = [{ role: "user", content: systemPrompt }];
 
     const model = bookSummaryModel || undefined;
     const summary = await d

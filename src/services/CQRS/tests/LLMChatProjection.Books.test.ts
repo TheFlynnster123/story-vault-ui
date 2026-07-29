@@ -71,7 +71,7 @@ describe("LLMChatProjection - Book Operations", () => {
       expect(bookMessage!.content).toBe(
         "[Book Summary: Book One]\nBook summary\n[End of Book Summary]",
       );
-      expect(bookMessage!.role).toBe("system");
+      expect(bookMessage!.role).toBe("assistant");
     });
 
     it("should hide covered chapters", () => {

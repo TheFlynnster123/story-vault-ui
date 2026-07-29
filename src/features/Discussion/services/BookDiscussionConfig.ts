@@ -107,7 +107,7 @@ export const createBookDiscussionConfig = (
 
     const messages: LLMMessage[] = [
       ...chatMessages,
-      { role: "system", content: systemPrompt },
+      { role: "user", content: systemPrompt },
     ];
 
     const model = bookSummaryModel || undefined;

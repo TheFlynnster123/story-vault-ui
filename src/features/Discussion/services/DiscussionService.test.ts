@@ -178,16 +178,16 @@ describe("DiscussionService", () => {
       );
     });
 
-    it("should include system prompt from config in LLM call", async () => {
+    it("should include the configured task prompt in the LLM call", async () => {
       const service = new DiscussionService(mockConfig);
       await service.sendMessage("Hello");
 
       const callMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      const systemMessages = callMessages.filter(
-        (m: any) => m.role === "system",
+      const taskMessages = callMessages.filter(
+        (m: any) => m.role === "user",
       );
       expect(
-        systemMessages.some((m: any) =>
+        taskMessages.some((m: any) =>
           m.content.includes("You are a helpful assistant."),
         ),
       ).toBe(true);
@@ -220,7 +220,7 @@ describe("DiscussionService", () => {
         "Context unavailable",
       );
       await expect(service.getLLMContext()).resolves.toEqual([
-        expect.objectContaining({ role: "system" }),
+        expect.objectContaining({ role: "user" }),
       ]);
 
       expect(mockConfig.getChatMessages).toHaveBeenCalledTimes(2);

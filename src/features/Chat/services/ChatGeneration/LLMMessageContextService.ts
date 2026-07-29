@@ -4,7 +4,7 @@ import type {
   LLMMessage,
 } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
-import { toSystemMessage } from "../../../../services/Utils/MessageUtils";
+import { toAssistantMessage } from "../../../../services/Utils/MessageUtils";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { CharacterDescription } from "../../../Characters/services/CharacterDescription";
 import {
@@ -143,7 +143,7 @@ export class LLMMessageContextService {
       .map((memory) => memory.content)
       .filter(this.hasText)
       .join("\r\n");
-    return content ? [toSystemMessage(`# Memories\r\n${content}`)] : [];
+    return content ? [toAssistantMessage(`# Memories\r\n${content}`)] : [];
   }
 
   private buildCharacterSheetMessages(
@@ -166,7 +166,9 @@ export class LLMMessageContextService {
       )
       .join("\n\n");
 
-    return content ? [toSystemMessage(`# Character Sheets\r\n${content}`)] : [];
+    return content
+      ? [toAssistantMessage(`# Character Sheets\r\n${content}`)]
+      : [];
   }
 
   private needsProjection(

@@ -36,7 +36,7 @@ export const createStoryCreationDiscussionConfig = (
 
     try {
       const messages: LLMMessage[] = [
-        { role: "system", content: systemPrompt },
+        { role: "user", content: systemPrompt },
       ];
       const story = await d.OpenRouterChatAPI().postChat(messages);
       onStoryGenerated(story);

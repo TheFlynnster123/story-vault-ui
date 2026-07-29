@@ -1,7 +1,6 @@
 import type { LLMMessage } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
 import {
-  toSystemMessage,
   toUserMessage,
 } from "../../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
@@ -265,7 +264,7 @@ const buildIntentMessages = (
   sensitivity: number = 50,
 ): LLMMessage[] => [
   ...contextMessages,
-  toSystemMessage(prompt),
+  toUserMessage(prompt),
   toUserMessage(
     [
       "Analyze the current chat state and return exactly one JSON object.",

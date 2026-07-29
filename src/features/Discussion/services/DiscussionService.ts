@@ -1,6 +1,6 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
-import { toSystemMessage } from "../../../services/Utils/MessageUtils";
+import { toUserMessage } from "../../../services/Utils/MessageUtils";
 import type { DiscussionConfig } from "./DiscussionConfig";
 import type { DiscussionMessage } from "./DiscussionMessage";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
@@ -223,7 +223,7 @@ export class DiscussionService {
 
     return [
       ...chatMessages,
-      toSystemMessage(systemPrompt),
+      toUserMessage(systemPrompt),
       ...conversationMessages,
     ];
   };

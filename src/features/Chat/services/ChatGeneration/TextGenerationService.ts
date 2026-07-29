@@ -319,7 +319,7 @@ export class TextGenerationService extends GenerationOrchestrator {
               ),
             ),
           ]
-        : [...context.messages, toSystemMessage(reasoningPrompt)];
+        : [...context.messages, toUserMessage(reasoningPrompt)];
     const appendedSources: TextAppendedSource[] = ["reasoning-prompt"];
 
     if (hasText(guidance)) {

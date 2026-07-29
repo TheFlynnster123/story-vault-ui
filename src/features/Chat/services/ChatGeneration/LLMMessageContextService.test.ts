@@ -255,7 +255,7 @@ describe("LLMMessageContextService", () => {
 
     expect(result).toEqual([
       expect.objectContaining({
-        role: "system",
+        role: "assistant",
         content: "# Memories\r\nFirst memory\r\nSecond memory",
       }),
     ]);
@@ -277,7 +277,7 @@ describe("LLMMessageContextService", () => {
 
     expect(result).toEqual([
       expect.objectContaining({
-        role: "system",
+        role: "assistant",
         content:
           "# Character Sheets\r\n## active\n- Keeps a brass compass.",
       }),
@@ -312,7 +312,7 @@ describe("LLMMessageContextService", () => {
 
   it("selects and traces Continuity Histories only when requested", async () => {
     buildContinuityContext.mockResolvedValue({
-      messages: [{ role: "system", content: "# Continuity History" }],
+      messages: [{ role: "assistant", content: "# Continuity History" }],
       selections: [{ historyId: "history-1", revisionId: "revision-1" }],
       trailingMessageCount: 1,
     });
@@ -335,7 +335,7 @@ describe("LLMMessageContextService", () => {
 
   it("can select Continuity Histories without including chat history", async () => {
     buildContinuityContext.mockResolvedValue({
-      messages: [{ role: "system", content: "# Continuity History" }],
+      messages: [{ role: "assistant", content: "# Continuity History" }],
       selections: [{ historyId: "history-1", revisionId: "revision-1" }],
       trailingMessageCount: 1,
     });
@@ -347,7 +347,7 @@ describe("LLMMessageContextService", () => {
     expect(buildContinuityContext).toHaveBeenCalledWith(HISTORY, undefined);
     expect(result).toEqual([
       expect.objectContaining({
-        role: "system",
+        role: "assistant",
         content: "# Continuity History",
       }),
     ]);

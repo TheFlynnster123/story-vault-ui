@@ -1,7 +1,6 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
 import {
-  toSystemMessage,
   toUserMessage,
 } from "../../../services/Utils/MessageUtils";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
@@ -118,7 +117,7 @@ const buildCharacterSheetUpdateMessages = (
   characters: CharacterDescription[],
 ): LLMMessage[] => [
   ...contextMessages,
-  toSystemMessage(prompt),
+  toUserMessage(prompt),
   toUserMessage(
     [
       "Return every requested character exactly once in the configured JSON object.",

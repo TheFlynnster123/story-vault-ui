@@ -22,7 +22,7 @@ describe("TextGenerationService reasoning", () => {
     ...mockContextMessages,
     {
       id: expect.any(String),
-      role: "system" as const,
+      role: "user" as const,
       content: "Reason first",
     },
   ];

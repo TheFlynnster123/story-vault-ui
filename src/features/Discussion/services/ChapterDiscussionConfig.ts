@@ -105,7 +105,7 @@ export const createChapterDiscussionConfig = (
 
     const messages: LLMMessage[] = [
       ...chatMessages,
-      { role: "system", content: systemPrompt },
+      { role: "user", content: systemPrompt },
     ];
 
     const model = chapterSummaryModel || undefined;

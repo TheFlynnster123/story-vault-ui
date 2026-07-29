@@ -920,7 +920,7 @@ describe("PlanGenerationService", () => {
       await service.generatePlanNow("plan-1");
 
       const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      // Should have multiple messages (chat messages + system message)
+      // Should have multiple messages (chat messages + user task message)
       expect(callArgs.length).toBeGreaterThan(1);
       // First message should be from the chat history
       expect(callArgs[0]).toEqual({
@@ -943,9 +943,9 @@ describe("PlanGenerationService", () => {
       await service.generatePlanNow("plan-1");
 
       const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      // Should have only one system message with consolidated content
+      // Should have only one user task message with consolidated content
       expect(callArgs.length).toBe(1);
-      expect(callArgs[0].role).toBe("system");
+      expect(callArgs[0].role).toBe("user");
       expect(callArgs[0].content).toContain("Chat History:");
       expect(callArgs[0].content).toContain("User: Hello");
       expect(callArgs[0].content).toContain("Assistant: Hi there!");
@@ -970,7 +970,7 @@ describe("PlanGenerationService", () => {
 
       const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       expect(callArgs.length).toBe(1);
-      expect(callArgs[0].role).toBe("system");
+      expect(callArgs[0].role).toBe("user");
       expect(callArgs[0].content).toContain("Chat History:");
       expect(callArgs[0].content).toContain("User: Hello");
       expect(callArgs[0].content).toContain("current version of this plan");
@@ -1016,7 +1016,7 @@ describe("PlanGenerationService", () => {
 
       const callArgs = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
       expect(callArgs.length).toBe(1);
-      expect(callArgs[0].role).toBe("system");
+      expect(callArgs[0].role).toBe("user");
       expect(callArgs[0].content).toContain("Chat History:");
     });
   });
