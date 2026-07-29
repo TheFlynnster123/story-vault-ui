@@ -121,10 +121,7 @@ describe("ModelSelectorModal", () => {
     );
 
   const openBrowseModels = async () => {
-    await screen.findByText("No model setups yet");
-    await userEvent
-      .setup()
-      .click(screen.getByRole("radio", { name: "Browse models" }));
+    await screen.findByLabelText("Search models");
   };
 
   const openModel = async (modelName: string) => {
@@ -136,20 +133,20 @@ describe("ModelSelectorModal", () => {
     mockModels();
     renderModal({ isOpen: false });
 
-    expect(
-      screen.queryByText("Select model setup"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Configure setup")).not.toBeInTheDocument();
   });
 
-  it("opens on the remembered setups screen", async () => {
+  it("opens on other models while keeping setups available", async () => {
     mockModels();
     renderModal();
 
-    expect(
-      await screen.findByText("Select model setup"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("My setups")).toBeInTheDocument();
-    expect(screen.getByText("No model setups yet")).toBeInTheDocument();
+    expect(await screen.findByText("Configure setup")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search models")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Other models" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("button", { name: "My setups" })).toBeInTheDocument();
   });
 
   it("browses all available models", async () => {
@@ -205,16 +202,16 @@ describe("ModelSelectorModal", () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it("returns to the list without committing the draft", async () => {
+  it("returns to other models without committing the draft", async () => {
     mockModels();
     const onSelect = vi.fn();
     renderModal({ onSelect });
     const user = userEvent.setup();
     await openModel("GPT-4");
 
-    await user.click(screen.getByLabelText("Back to model setups"));
+    await user.click(screen.getByRole("button", { name: "Other models" }));
 
-    expect(screen.getByText("Select model setup")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search models")).toBeInTheDocument();
     expect(onSelect).not.toHaveBeenCalled();
   });
 
@@ -237,7 +234,7 @@ describe("ModelSelectorModal", () => {
     ).toContain("openai/gpt-4");
   });
 
-  it("opens the active setup with its current configuration", async () => {
+  it("defaults to other models and provides a highlighted current model", async () => {
     mockModels();
     renderModal({
       selectedModelId: "openai/gpt-4",
@@ -245,8 +242,31 @@ describe("ModelSelectorModal", () => {
     });
 
     expect(await screen.findByText("Configure setup")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search models")).toBeInTheDocument();
+    const currentModelButton = await screen.findByRole("button", {
+      name: "Current model: GPT-4",
+    });
+    expect(currentModelButton).toHaveTextContent("Active");
+    expect(screen.getAllByText("GPT-4")).toHaveLength(1);
+    expect(screen.queryByLabelText("Temperature")).not.toBeInTheDocument();
+  });
+
+  it("opens the current model with its active configuration", async () => {
+    mockModels();
+    renderModal({
+      selectedModelId: "openai/gpt-4",
+      selectedRequestSettings: { temperature: 0.6 },
+    });
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Current model: GPT-4",
+      }),
+    );
+
     expect(await screen.findByLabelText("Temperature")).toHaveValue("0.6");
-    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getAllByText("Active")).toHaveLength(2);
   });
 
   it("edits supported settings and applies them together", async () => {
@@ -276,6 +296,11 @@ describe("ModelSelectorModal", () => {
     const user = userEvent.setup();
 
     await user.click(
+      await screen.findByRole("button", {
+        name: "Current model: GPT-4",
+      }),
+    );
+    await user.click(
       await screen.findByLabelText("Advanced settings for GPT-4"),
     );
 
@@ -303,6 +328,7 @@ describe("ModelSelectorModal", () => {
     renderModal({ onSelect });
     const user = userEvent.setup();
 
+    await user.click(screen.getByRole("button", { name: "My setups" }));
     await user.click(await screen.findByText("Focused"));
     expect(onSelect).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Use this setup" }));
@@ -317,12 +343,17 @@ describe("ModelSelectorModal", () => {
     renderModal({ selectedModelId: "openai/gpt-4" });
     const user = userEvent.setup();
 
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Current model: GPT-4",
+      }),
+    );
     await user.type(
       await screen.findByLabelText("Preset name for GPT-4"),
       "Creative draft",
     );
     await user.click(screen.getByRole("button", { name: "Save as new" }));
-    await user.click(screen.getByLabelText("Back to model setups"));
+    await user.click(screen.getByRole("button", { name: "My setups" }));
 
     expect(await screen.findByText("Creative draft")).toBeInTheDocument();
   });
@@ -341,6 +372,7 @@ describe("ModelSelectorModal", () => {
     renderModal();
     const user = userEvent.setup();
 
+    await user.click(screen.getByRole("button", { name: "My setups" }));
     await user.click(
       await screen.findByLabelText("Delete preset Temporary"),
     );
@@ -358,6 +390,9 @@ describe("ModelSelectorModal", () => {
     mockModels();
     renderModal();
 
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "My setups" }));
     expect(await screen.findByText("Recently used")).toBeInTheDocument();
     expect(screen.getByText("GPT-4")).toBeInTheDocument();
   });
@@ -377,9 +412,8 @@ describe("ModelSelectorModal", () => {
     vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network error"));
     renderModal();
 
-    expect(
-      await screen.findByText("Select model setup"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("No model setups yet")).toBeInTheDocument();
+    expect(await screen.findByText("Configure setup")).toBeInTheDocument();
+    expect(await screen.findByText("0 models available")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search models")).toBeInTheDocument();
   });
 });

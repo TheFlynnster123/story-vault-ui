@@ -12,14 +12,12 @@ import {
   Box,
   Button,
   Checkbox,
-  Divider,
   Group,
   Loader,
   Modal,
   NumberInput,
   Paper,
   ScrollArea,
-  SegmentedControl,
   Select,
   Stack,
   Text,
@@ -27,8 +25,9 @@ import {
   Title,
 } from "@mantine/core";
 import {
-  RiArrowLeftLine,
+  RiApps2Line,
   RiArrowRightSLine,
+  RiBookmarkLine,
   RiDeleteBinLine,
   RiRobot2Line,
 } from "react-icons/ri";
@@ -152,10 +151,12 @@ const NUMBER_PARAMETERS = [
 
 type PickerView = "setups" | "browse";
 type PickerScreen = "list" | "detail";
+type DraftSource = "current" | "preset" | "model";
 
 interface ModelDraft {
   modelId: string;
   name: string;
+  source: DraftSource;
   requestSettings?: OpenRouterRequestSettings;
 }
 
@@ -327,6 +328,169 @@ const ModelListItem: React.FC<{
     )}
     <RiArrowRightSLine size={20} color="#707583" />
   </Paper>
+);
+
+type NavigationDestination = PickerView | "current";
+
+const NavigationItem: React.FC<{
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  active: boolean;
+  current?: boolean;
+  disabled?: boolean;
+  badge?: string;
+  ariaLabel: string;
+  onClick: () => void;
+}> = ({
+  label,
+  description,
+  icon,
+  active,
+  current = false,
+  disabled = false,
+  badge,
+  ariaLabel,
+  onClick,
+}) => {
+  const accentColor = current ? "#35d1bc" : "#8b9eff";
+  const activeBackground = current
+    ? "rgba(53, 209, 188, 0.13)"
+    : "rgba(113, 135, 255, 0.14)";
+  const idleBackground = current
+    ? "rgba(53, 209, 188, 0.055)"
+    : "transparent";
+  const borderColor = current
+    ? "rgba(53, 209, 188, 0.48)"
+    : active
+      ? "rgba(113, 135, 255, 0.42)"
+      : "transparent";
+
+  return (
+    <Paper
+      component="button"
+      type="button"
+      aria-label={ariaLabel}
+      aria-current={active ? "page" : undefined}
+      disabled={disabled}
+      onClick={onClick}
+      p="xs"
+      radius="md"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        minWidth: 0,
+        minHeight: 54,
+        border: `1px solid ${borderColor}`,
+        background: active ? activeBackground : idleBackground,
+        color: "inherit",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.5 : 1,
+        textAlign: "left",
+      }}
+    >
+      <Box
+        style={{
+          display: "grid",
+          placeItems: "center",
+          width: 34,
+          height: 34,
+          flex: "0 0 34px",
+          borderRadius: 9,
+          background: current
+            ? "rgba(53, 209, 188, 0.12)"
+            : "rgba(139, 158, 255, 0.1)",
+          color: accentColor,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box style={{ minWidth: 0, flex: 1 }}>
+        <Group gap={6} wrap="nowrap">
+          <Text size="xs" fw={700} truncate>
+            {label}
+          </Text>
+          {badge && (
+            <Badge size="xs" color="teal" variant="light">
+              {badge}
+            </Badge>
+          )}
+        </Group>
+        <Text
+          size="xs"
+          truncate
+          mt={2}
+          style={{ color: current ? "#35d1bc" : "#777e8e" }}
+        >
+          {description}
+        </Text>
+      </Box>
+    </Paper>
+  );
+};
+
+const SetupNavigation: React.FC<{
+  activeDestination?: NavigationDestination;
+  currentModel?: OpenRouterModel;
+  presetCount: number;
+  isMobile: boolean;
+  onBrowse: () => void;
+  onSetups: () => void;
+  onCurrent: () => void;
+}> = ({
+  activeDestination,
+  currentModel,
+  presetCount,
+  isMobile,
+  onBrowse,
+  onSetups,
+  onCurrent,
+}) => (
+  <Box
+    p="sm"
+    style={{
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1.2fr",
+      gap: 6,
+      borderBottom: "1px solid rgba(255,255,255,0.1)",
+      background: "rgba(9,11,16,0.34)",
+    }}
+  >
+    <NavigationItem
+      label="Other models"
+      description="Browse and compare"
+      icon={<RiApps2Line size={18} />}
+      active={activeDestination === "browse"}
+      ariaLabel="Other models"
+      onClick={onBrowse}
+    />
+    <NavigationItem
+      label="My setups"
+      description={`${presetCount} saved ${
+        presetCount === 1 ? "preset" : "presets"
+      }`}
+      icon={<RiBookmarkLine size={18} />}
+      active={activeDestination === "setups"}
+      ariaLabel="My setups"
+      onClick={onSetups}
+    />
+    <NavigationItem
+      label="Current model"
+      description={currentModel?.name ?? "Not available"}
+      icon={<RiRobot2Line size={18} />}
+      active={activeDestination === "current"}
+      current
+      disabled={!currentModel}
+      badge={currentModel ? "Active" : undefined}
+      ariaLabel={
+        currentModel
+          ? `Current model: ${currentModel.name}`
+          : "Current model unavailable"
+      }
+      onClick={onCurrent}
+    />
+  </Box>
 );
 
 const EmptySetups: React.FC<{ onBrowse: () => void }> = ({ onBrowse }) => (
@@ -518,7 +682,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   const isMobile = useMobileViewport();
   const recentModelsService = useRef(d.RecentModelsService()).current;
   const modelPresetsService = useRef(d.ModelPresetsService()).current;
-  const [view, setView] = useState<PickerView>("setups");
+  const [view, setView] = useState<PickerView>("browse");
   const [screen, setScreen] = useState<PickerScreen>("list");
   const [search, setSearch] = useState("");
   const [presets, setPresets] = useState<ModelPreset[]>([]);
@@ -544,12 +708,16 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   );
   const recommendedModels = useMemo(
     () =>
-      uniqueModels.filter((model) => RECOMMENDED_MODEL_IDS.has(model.id)),
-    [uniqueModels],
+      uniqueModels.filter(
+        (model) =>
+          model.id !== selectedModelId && RECOMMENDED_MODEL_IDS.has(model.id),
+      ),
+    [selectedModelId, uniqueModels],
   );
   const filteredModels = useMemo(
     () =>
       uniqueModels
+        .filter((model) => model.id !== selectedModelId)
         .filter((model) => matchesSearch(model, search))
         .filter(
           (model) =>
@@ -557,7 +725,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
             !RECOMMENDED_MODEL_IDS.has(model.id),
         )
         .sort((left, right) => left.name.localeCompare(right.name)),
-    [search, uniqueModels],
+    [search, selectedModelId, uniqueModels],
   );
   const draftModel = draft ? modelsById.get(draft.modelId) : undefined;
 
@@ -567,20 +735,11 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setView("setups");
+    setView("browse");
     setSearch("");
     setPresetName("");
-    if (selectedModelId) {
-      setDraft({
-        modelId: selectedModelId,
-        name: "Current setup",
-        requestSettings: selectedRequestSettings,
-      });
-      setScreen("detail");
-    } else {
-      setDraft(undefined);
-      setScreen("list");
-    }
+    setDraft(undefined);
+    setScreen("list");
   }, [isOpen, selectedModelId, selectedRequestSettings]);
 
   useEffect(() => {
@@ -595,15 +754,17 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
     (
       modelId: string,
       name: string,
+      source: DraftSource,
       requestSettings?: OpenRouterRequestSettings,
     ) => {
       const model = modelsById.get(modelId);
       setDraft({
         modelId,
         name,
+        source,
         requestSettings: filterSettingsForModel(requestSettings, model),
       });
-      setPresetName(name === "Current setup" ? "" : name);
+      setPresetName(source === "current" ? "" : name);
       setScreen("detail");
     },
     [modelsById],
@@ -647,17 +808,38 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
     [loadPresets, modelPresetsService],
   );
 
-  const hasSetups =
-    selectedModel !== undefined ||
-    presets.length > 0 ||
-    recentModels.length > 0;
-  const title = screen === "detail" ? "Configure setup" : "Select model setup";
+  const showBrowse = () => {
+    setView("browse");
+    setScreen("list");
+  };
+  const showSetups = () => {
+    setView("setups");
+    setScreen("list");
+  };
+  const showCurrent = () => {
+    if (!selectedModel) return;
+    showDraft(
+      selectedModel.id,
+      "Current setup",
+      "current",
+      selectedRequestSettings,
+    );
+  };
+  const hasSetups = presets.length > 0 || recentModels.length > 0;
+  const activeDestination: NavigationDestination | undefined =
+    screen === "list"
+      ? view
+      : draft?.source === "current"
+        ? "current"
+        : draft?.source === "preset"
+          ? "setups"
+          : undefined;
 
   return (
     <Modal
       opened={isOpen}
       onClose={onClose}
-      title={title}
+      title="Configure setup"
       fullScreen={isMobile}
       size="lg"
       centered={!isMobile}
@@ -679,59 +861,37 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
         content: { overflow: "hidden" },
       }}
     >
+      <SetupNavigation
+        activeDestination={activeDestination}
+        currentModel={selectedModel}
+        presetCount={presets.length}
+        isMobile={isMobile}
+        onBrowse={showBrowse}
+        onSetups={showSetups}
+        onCurrent={showCurrent}
+      />
       {screen === "list" ? (
         <>
-          <Box p="sm">
-            <SegmentedControl
-              fullWidth
-              value={view}
-              onChange={(value) => {
-                setView(value as PickerView);
-                setSearch("");
+          {view === "browse" && (
+            <Box
+              p="sm"
+              style={{
+                borderBottom: "1px solid rgba(255,255,255,0.1)",
               }}
-              data={[
-                { label: "My setups", value: "setups" },
-                { label: "Browse models", value: "browse" },
-              ]}
-            />
-            {view === "browse" && (
+            >
               <TextInput
-                mt="sm"
                 value={search}
                 onChange={(event) => setSearch(event.currentTarget.value)}
                 placeholder="Search models by name, ID, or description..."
                 aria-label="Search models"
               />
-            )}
-          </Box>
-          <Divider />
+            </Box>
+          )}
           <ScrollArea style={{ flex: 1 }} p="sm">
             {view === "setups" ? (
               <Stack gap="sm">
                 {!hasSetups && (
-                  <EmptySetups onBrowse={() => setView("browse")} />
-                )}
-                {selectedModel && (
-                  <Stack gap="xs">
-                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
-                      Current
-                    </Text>
-                    <ModelListItem
-                      model={selectedModel}
-                      label="Current setup"
-                      active
-                      configured={hasOpenRouterRequestSettings(
-                        selectedRequestSettings,
-                      )}
-                      onClick={() =>
-                        showDraft(
-                          selectedModel.id,
-                          "Current setup",
-                          selectedRequestSettings,
-                        )
-                      }
-                    />
-                  </Stack>
+                  <EmptySetups onBrowse={showBrowse} />
                 )}
                 {presets.length > 0 && (
                   <Stack gap="xs">
@@ -753,6 +913,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                             showDraft(
                               preset.modelId,
                               preset.name,
+                              "preset",
                               preset.requestSettings,
                             )
                           }
@@ -772,7 +933,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                         key={model.id}
                         model={model}
                         onClick={() =>
-                          showDraft(model.id, model.name)
+                          showDraft(model.id, model.name, "model")
                         }
                       />
                     ))}
@@ -799,7 +960,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                         key={`recommended-${model.id}`}
                         model={model}
                         onClick={() =>
-                          showDraft(model.id, model.name)
+                          showDraft(model.id, model.name, "model")
                         }
                       />
                     ))}
@@ -821,7 +982,9 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                     <ModelListItem
                       key={model.id}
                       model={model}
-                      onClick={() => showDraft(model.id, model.name)}
+                      onClick={() =>
+                        showDraft(model.id, model.name, "model")
+                      }
                     />
                   ))}
                   {!isLoading && filteredModels.length === 0 && (
@@ -836,20 +999,22 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
         </>
       ) : (
         <>
-          <Box px="sm" pt="xs">
-            <Button
-              variant="subtle"
-              color="gray"
-              leftSection={<RiArrowLeftLine />}
-              onClick={() => setScreen("list")}
-              aria-label="Back to model setups"
-            >
-              Back
-            </Button>
-          </Box>
           <ScrollArea style={{ flex: 1 }}>
             <Stack p="md" gap="lg">
-              <Paper withBorder p="md">
+              <Paper
+                withBorder
+                p="md"
+                style={{
+                  borderColor:
+                    draft?.source === "current"
+                      ? "rgba(53, 209, 188, 0.55)"
+                      : "rgba(113, 135, 255, 0.42)",
+                  background:
+                    draft?.source === "current"
+                      ? "linear-gradient(135deg, rgba(53, 209, 188, 0.15), rgba(53, 209, 188, 0.035))"
+                      : "linear-gradient(135deg, rgba(113, 135, 255, 0.13), rgba(113, 135, 255, 0.035))",
+                }}
+              >
                 <Stack gap="xs">
                   <Group justify="space-between" align="flex-start">
                     <Box>
@@ -858,9 +1023,19 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                         {draftModel?.name ?? draft?.modelId}
                       </Text>
                     </Box>
-                    {draft?.modelId === selectedModelId && (
+                    {draft?.source === "current" && (
                       <Badge color="teal" variant="light">
                         Active
+                      </Badge>
+                    )}
+                    {draft?.source === "preset" && (
+                      <Badge color="yellow" variant="light">
+                        Saved
+                      </Badge>
+                    )}
+                    {draft?.source === "model" && (
+                      <Badge color="indigo" variant="light">
+                        Preview
                       </Badge>
                     )}
                   </Group>
@@ -927,7 +1102,9 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                 </Button>
               </Group>
               <Text size="xs" c="dimmed">
-                Preview only. Nothing changes until you apply.
+                {draft?.source === "current"
+                  ? "This is the model currently used by this chat."
+                  : "Preview only. Nothing changes until you apply."}
               </Text>
               <Button fullWidth size="md" onClick={applyDraft}>
                 Use this setup
