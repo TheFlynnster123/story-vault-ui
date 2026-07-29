@@ -53,7 +53,7 @@ describe("ContinuityHistoriesSection", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Manage Histories" }),
+      screen.getByRole("button", { name: /Continuity Histories/ }),
     );
 
     expect(onNavigate).toHaveBeenCalledOnce();
