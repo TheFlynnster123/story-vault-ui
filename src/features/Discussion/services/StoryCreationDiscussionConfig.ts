@@ -10,7 +10,7 @@ import type { DiscussionConfig } from "./DiscussionConfig";
 export const createStoryCreationDiscussionConfig = (
   onStoryGenerated: (story: string) => void,
 ): DiscussionConfig => {
-  const getChatMessages = (): LLMMessage[] => [];
+  const getChatMessages = async (): Promise<LLMMessage[]> => [];
 
   const buildSystemPrompt = (): string =>
     [
@@ -36,7 +36,7 @@ export const createStoryCreationDiscussionConfig = (
 
     try {
       const messages: LLMMessage[] = [
-        { role: "system", content: systemPrompt },
+        { role: "user", content: systemPrompt },
       ];
       const story = await d.OpenRouterChatAPI().postChat(messages);
       onStoryGenerated(story);

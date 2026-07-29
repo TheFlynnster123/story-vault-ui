@@ -4,11 +4,15 @@ import {
   UserChatProjection,
   type UserChatMessage,
 } from "../UserChatProjection";
-import type { ChatEvent, MessageCreatedEvent } from "../events/ChatEvent";
+import type { ChatEvent } from "../events/ChatEvent";
 import {
   MessageCompressionCreatedEventUtil,
   MessageCompressionEditedEventUtil,
 } from "../events/MessageCompressionEventUtils";
+import {
+  createTextMessageEvent,
+  type TextMessageAuthor,
+} from "./TextMessageEventTestUtils";
 
 describe("message compression projections", () => {
   let userProjection: UserChatProjection;
@@ -206,11 +210,6 @@ describe("message compression projections", () => {
 
 const createMessage = (
   messageId: string,
-  role: MessageCreatedEvent["role"],
+  role: TextMessageAuthor,
   content: string,
-): MessageCreatedEvent => ({
-  type: "MessageCreated",
-  messageId,
-  role,
-  content,
-});
+) => createTextMessageEvent(messageId, role, content);

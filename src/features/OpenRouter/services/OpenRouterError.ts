@@ -19,6 +19,7 @@ export class OpenRouterError extends Error {
   /** Optional metadata (moderation reasons, provider details, etc.). */
   readonly metadata?: Record<string, unknown>;
   readonly responseBody?: string;
+  readonly providerErrorMessage?: string;
 
   constructor(
     code: number,
@@ -32,6 +33,7 @@ export class OpenRouterError extends Error {
     this.apiMessage = apiMessage;
     this.metadata = metadata;
     this.responseBody = responseBody;
+    this.providerErrorMessage = getProviderErrorMessage(metadata?.raw);
   }
 }
 
@@ -63,6 +65,29 @@ export const parseOpenRouterError = (
     return undefined;
   }
 };
+
+const getProviderErrorMessage = (raw: unknown): string | undefined => {
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return undefined;
+
+    try {
+      return getProviderErrorMessage(JSON.parse(trimmed)) ?? trimmed;
+    } catch {
+      return trimmed;
+    }
+  }
+
+  if (!isRecord(raw)) return undefined;
+
+  const providerError = isRecord(raw.error) ? raw.error : raw;
+  return typeof providerError.message === "string"
+    ? providerError.message
+    : undefined;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
 /**
  * Maps an OpenRouter error code + metadata to a short, human-readable

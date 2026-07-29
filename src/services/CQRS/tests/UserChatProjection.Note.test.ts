@@ -5,7 +5,7 @@ import {
   NoteCreatedEventUtil,
   NoteEditedEventUtil,
 } from "../events/NoteEventUtils";
-import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
+import { createGeneratedTextMessageEvent } from "./TextMessageEventTestUtils";
 import type { ChapterCreatedEvent } from "../events/ChatEvent";
 
 const createChapterEvent = (
@@ -94,7 +94,7 @@ describe("UserChatProjection - Note Events", () => {
     });
 
     it("should appear after existing messages in timeline", () => {
-      const msgEvent = MessageCreatedEventUtil.Create("user", "Hello");
+      const msgEvent = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msgEvent);
 
       const noteEvent = NoteCreatedEventUtil.Create("Note", 10);
@@ -184,9 +184,9 @@ describe("UserChatProjection - Note Events", () => {
       const noteEvent = NoteCreatedEventUtil.Create("Note", 2);
       projection.process(noteEvent);
 
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
       projection.process(
-        MessageCreatedEventUtil.Create("assistant", "Reply 1"),
+        createGeneratedTextMessageEvent("assistant", "Reply 1"),
       );
 
       const messages = projection.GetMessages();
@@ -198,9 +198,9 @@ describe("UserChatProjection - Note Events", () => {
       const noteEvent = NoteCreatedEventUtil.Create("Note", 5);
       projection.process(noteEvent);
 
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
       projection.process(
-        MessageCreatedEventUtil.Create("assistant", "Reply 1"),
+        createGeneratedTextMessageEvent("assistant", "Reply 1"),
       );
 
       const messages = projection.GetMessages();
@@ -215,7 +215,7 @@ describe("UserChatProjection - Note Events", () => {
       // Add many messages
       for (let i = 0; i < 100; i++) {
         projection.process(
-          MessageCreatedEventUtil.Create("user", `Msg ${i}`),
+          createGeneratedTextMessageEvent("user", `Msg ${i}`),
         );
       }
 
@@ -232,7 +232,7 @@ describe("UserChatProjection - Note Events", () => {
       projection.process(NoteCreatedEventUtil.Create("Other note", null));
 
       // Add only 1 qualifying message
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
 
       const messages = projection.GetMessages();
       const note = messages.find(
@@ -245,7 +245,7 @@ describe("UserChatProjection - Note Events", () => {
       const noteEvent = NoteCreatedEventUtil.Create("Note", 1);
       projection.process(noteEvent);
 
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
 
       const messages = projection.GetMessages();
       const note = messages.find((m) => m.type === "note") as NoteChatMessage;
@@ -258,7 +258,7 @@ describe("UserChatProjection - Note Events", () => {
       const note2 = NoteCreatedEventUtil.Create("Long note", 5);
       projection.process(note2);
 
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
 
       const messages = projection.GetMessages();
       const shortNote = messages.find(
@@ -275,7 +275,7 @@ describe("UserChatProjection - Note Events", () => {
     it("should still show expired notes in GetMessages", () => {
       const noteEvent = NoteCreatedEventUtil.Create("Note", 1);
       projection.process(noteEvent);
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
 
       const messages = projection.GetMessages();
       const notes = messages.filter((m) => m.type === "note");
@@ -285,7 +285,7 @@ describe("UserChatProjection - Note Events", () => {
 
   describe("Chapter-Note Interaction", () => {
     it("should not hide note messages when chapter covers their IDs", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
       const noteEvent = NoteCreatedEventUtil.Create("Note", 10);
       projection.process(noteEvent);
@@ -301,8 +301,8 @@ describe("UserChatProjection - Note Events", () => {
     });
 
     it("should still hide regular messages when chapter covers them alongside notes", () => {
-      const msg1 = MessageCreatedEventUtil.Create("user", "Hello");
-      const msg2 = MessageCreatedEventUtil.Create("assistant", "Hi there");
+      const msg1 = createGeneratedTextMessageEvent("user", "Hello");
+      const msg2 = createGeneratedTextMessageEvent("assistant", "Hi there");
       projection.process(msg1);
       projection.process(msg2);
 
@@ -318,7 +318,7 @@ describe("UserChatProjection - Note Events", () => {
     });
 
     it("should keep note visible alongside chapter in timeline", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
       const noteEvent = NoteCreatedEventUtil.Create("Note", 10);
       projection.process(noteEvent);
@@ -336,8 +336,8 @@ describe("UserChatProjection - Note Events", () => {
     it("should keep a note expired after chapter compression hides the expiring messages", () => {
       const noteEvent = NoteCreatedEventUtil.Create("Temporary note", 2);
       projection.process(noteEvent);
-      const msg1 = MessageCreatedEventUtil.Create("user", "Msg 1");
-      const msg2 = MessageCreatedEventUtil.Create("assistant", "Reply 1");
+      const msg1 = createGeneratedTextMessageEvent("user", "Msg 1");
+      const msg2 = createGeneratedTextMessageEvent("assistant", "Reply 1");
       projection.process(msg1);
       projection.process(msg2);
 

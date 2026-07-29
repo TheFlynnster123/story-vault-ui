@@ -1,4 +1,7 @@
-import { MessageCreatedEventUtil as MessageCreatedEventUtil } from "./events/MessageCreatedEventUtil";
+import {
+  AssistantResponseCreatedEventUtil,
+  UserMessageCreatedEventUtil,
+} from "./events/MessageEventUtils";
 import { MessageEditedEventUtil } from "./events/MessageEditedEventUtil";
 import {
   MessageCompressionCreatedEventUtil,
@@ -56,17 +59,12 @@ export class ChatService {
 
   // ---- Message Operations ----
   public async AddUserMessage(message: string): Promise<void> {
-    const event = MessageCreatedEventUtil.Create("user", message);
+    const event = UserMessageCreatedEventUtil.Create(message);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 
-  public async AddSystemMessage(message: string): Promise<void> {
-    const event = MessageCreatedEventUtil.Create("system", message);
-    await d.ChatEventService(this.chatId).AddChatEvent(event);
-  }
-
-  public async AddAssistantMessage(message: string): Promise<void> {
-    const event = MessageCreatedEventUtil.Create("assistant", message);
+  public async AddAssistantResponse(message: string): Promise<void> {
+    const event = AssistantResponseCreatedEventUtil.Create(message);
     await d.ChatEventService(this.chatId).AddChatEvent(event);
   }
 

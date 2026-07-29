@@ -4,6 +4,12 @@ import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const BOOK_DISCUSSION_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 /**
  * Creates a DiscussionConfig for discussing a specific book's summary.
@@ -29,8 +35,10 @@ export const createBookDiscussionConfig = (
       .GetMessages()
       .find((m) => m.id === bookId) as BookChatMessage | undefined;
 
-  const getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(chatId).GetMessages();
+  const getChatMessages = (): Promise<LLMMessage[]> =>
+    d
+      .LLMMessageContextService(chatId)
+      .buildContext(BOOK_DISCUSSION_CONTEXT_SELECTION);
 
   const resolvedPrompt = (): string =>
     bookSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.bookSummaryPrompt;
@@ -77,7 +85,7 @@ export const createBookDiscussionConfig = (
     const title = book.data?.title ?? "";
     const currentSummary = book.content ?? "";
 
-    const chatMessages = getChatMessages();
+    const chatMessages = await getChatMessages();
     const systemPrompt = [
       resolvedPrompt(),
       ``,
@@ -99,7 +107,7 @@ export const createBookDiscussionConfig = (
 
     const messages: LLMMessage[] = [
       ...chatMessages,
-      { role: "system", content: systemPrompt },
+      { role: "user", content: systemPrompt },
     ];
 
     const model = bookSummaryModel || undefined;

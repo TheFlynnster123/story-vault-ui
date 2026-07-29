@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { LLMChatProjection } from "../LLMChatProjection";
 import type {
-  MessageCreatedEvent,
   ChapterCreatedEvent,
   BookCreatedEvent,
   BookEditedEvent,
   BookDeletedEvent,
 } from "../events/ChatEvent";
+import { createTextMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("LLMChatProjection - Book Operations", () => {
   let projection: LLMChatProjection;
@@ -22,13 +22,7 @@ describe("LLMChatProjection - Book Operations", () => {
     role: "user" | "assistant" | "system",
     content: string,
   ): void {
-    const event: MessageCreatedEvent = {
-      type: "MessageCreated",
-      messageId: id,
-      role,
-      content,
-    };
-    proj.process(event);
+    proj.process(createTextMessageEvent(id, role, content));
   }
 
   function createChapter(
@@ -77,7 +71,7 @@ describe("LLMChatProjection - Book Operations", () => {
       expect(bookMessage!.content).toBe(
         "[Book Summary: Book One]\nBook summary\n[End of Book Summary]",
       );
-      expect(bookMessage!.role).toBe("system");
+      expect(bookMessage!.role).toBe("assistant");
     });
 
     it("should hide covered chapters", () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { UserChatProjection } from "../UserChatProjection";
 import type {
-  MessageCreatedEvent,
+  TextMessageCreatedEvent,
   ChapterCreatedEvent,
   BookCreatedEvent,
   BookEditedEvent,
@@ -18,10 +18,9 @@ describe("UserChatProjection - Book Operations", () => {
   // ---- Helper Functions ----
   function addMessages(ids: string[]) {
     ids.forEach((id) => {
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: id,
-        role: "user",
         content: `Content ${id}`,
       };
       projection.process(event);

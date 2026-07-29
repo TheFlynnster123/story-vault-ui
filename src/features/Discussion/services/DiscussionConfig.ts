@@ -10,7 +10,7 @@ export interface DiscussionConfig {
   buildSystemPrompt: () => string;
 
   /** Get the chat message context for the LLM (story log) */
-  getChatMessages: () => LLMMessage[];
+  getChatMessages: () => Promise<LLMMessage[]>;
 
   /** Get the default model for this discussion (if any) */
   getDefaultModel: () => string | undefined;

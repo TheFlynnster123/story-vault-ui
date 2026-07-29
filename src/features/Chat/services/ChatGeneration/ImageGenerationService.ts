@@ -11,6 +11,12 @@ import type {
   CivitWorkflowChatMessage,
 } from "../../../../services/CQRS/UserChatProjection";
 import { v4 as uuidv4 } from "uuid";
+import type { LLMContextSelection } from "./LLMMessageContextService";
+
+const IMAGE_PROMPT_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 export const getImageGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new ImageGenerationService(chatId),
@@ -147,7 +153,9 @@ export class ImageGenerationService extends GenerationOrchestrator {
       await d.ChatService(this.chatId).DeleteMessage(messageId);
 
       this.setStatus("Generating image prompt...");
-      const messageList = d.LLMChatProjection(this.chatId).GetMessages();
+      const messageList = await d
+        .LLMMessageContextService(this.chatId)
+        .buildContext(IMAGE_PROMPT_CONTEXT_SELECTION);
 
       const characterContext = characterName
         ? await resolveCharacterContextByName(this.chatId, characterName)
@@ -197,7 +205,9 @@ export class ImageGenerationService extends GenerationOrchestrator {
     messageId?: string,
   ): Promise<void> {
     this.setStatus("Generating image prompt...");
-    const messageList = d.LLMChatProjection(this.chatId).GetMessages();
+    const messageList = await d
+      .LLMMessageContextService(this.chatId)
+      .buildContext(IMAGE_PROMPT_CONTEXT_SELECTION);
     const preferredImage =
       await this.resolveCharacterPreferredImage(characterContext);
     const selectedModelName = messageId

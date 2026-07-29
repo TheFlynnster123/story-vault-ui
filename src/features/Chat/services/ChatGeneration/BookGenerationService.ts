@@ -2,6 +2,19 @@ import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { OpenRouterRequestSettings } from "../../../OpenRouter/services/OpenRouterRequestSettings";
+import {
+  toAssistantMessage,
+  toUserMessage,
+} from "../../../../services/Utils/MessageUtils";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
+import type { LLMContextSelection } from "./LLMMessageContextService";
+import type { LLMMessage } from "../../../../services/CQRS/LLMChatProjection";
+
+const BOOK_CONTEXT_SELECTION = {
+  characterSheets: true,
+} as const satisfies LLMContextSelection;
+
+type BookTextKind = "summary" | "title";
 
 export const getBookGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new BookGenerationService(chatId),
@@ -18,56 +31,82 @@ export class BookGenerationService extends GenerationOrchestrator {
   async generateBookSummary(
     chapterSummaries: string[],
   ): Promise<string | undefined> {
-    return this.orchestrate(async () => {
-      const requestMessages = await d
-        .LLMMessageContextService(this.chatId)
-        .buildBookSummaryRequestMessages(chapterSummaries);
-
-      const { model, requestSettings } = await this.resolveBookSummaryModel();
-
-      this.setStatus("Generating book summary...");
-      return await d
-        .OpenRouterChatAPI()
-        .postChat(requestMessages, model, "chat", "LLM", requestSettings);
-    });
+    return this.generateBookText(chapterSummaries, "summary");
   }
 
   async generateBookTitle(
     chapterSummaries: string[],
   ): Promise<string | undefined> {
+    return this.generateBookText(chapterSummaries, "title");
+  }
+
+  private generateBookText(
+    chapterSummaries: string[],
+    kind: BookTextKind,
+  ): Promise<string | undefined> {
     return this.orchestrate(async () => {
-      const requestMessages = await d
-        .LLMMessageContextService(this.chatId)
-        .buildBookTitleRequestMessages(chapterSummaries);
+      const [contextMessages, config] = await Promise.all([
+        d
+          .LLMMessageContextService(this.chatId)
+          .buildContext(BOOK_CONTEXT_SELECTION),
+        this.resolveBookConfig(kind),
+      ]);
+      const requestMessages = buildBookRequestMessages(
+        contextMessages,
+        chapterSummaries,
+        config.prompt,
+      );
 
-      const { model, requestSettings } = await this.resolveBookTitleModel();
-
-      this.setStatus("Generating book title...");
+      this.setStatus(`Generating book ${kind}...`);
       return await d
         .OpenRouterChatAPI()
-        .postChat(requestMessages, model, "chat", "LLM", requestSettings);
+        .postChat(
+          requestMessages,
+          config.model,
+          "chat",
+          "LLM",
+          config.requestSettings,
+        );
     });
   }
 
-  private async resolveBookSummaryModel(): Promise<{
+  private async resolveBookConfig(kind: BookTextKind): Promise<{
     model: string | undefined;
     requestSettings: OpenRouterRequestSettings | undefined;
+    prompt: string;
   }> {
     const systemPrompts = await d.SystemPromptsService().Get();
-    return {
-      model: systemPrompts?.bookSummaryModel || undefined,
-      requestSettings: systemPrompts?.bookSummaryRequestSettings,
-    };
-  }
-
-  private async resolveBookTitleModel(): Promise<{
-    model: string | undefined;
-    requestSettings: OpenRouterRequestSettings | undefined;
-  }> {
-    const systemPrompts = await d.SystemPromptsService().Get();
-    return {
-      model: systemPrompts?.bookTitleModel || undefined,
-      requestSettings: systemPrompts?.bookTitleRequestSettings,
-    };
+    const isSummary = kind === "summary";
+    return isSummary
+      ? {
+          model: systemPrompts?.bookSummaryModel || undefined,
+          requestSettings: systemPrompts?.bookSummaryRequestSettings,
+          prompt:
+            systemPrompts?.bookSummaryPrompt ||
+            DEFAULT_SYSTEM_PROMPTS.bookSummaryPrompt,
+        }
+      : {
+          model: systemPrompts?.bookTitleModel || undefined,
+          requestSettings: systemPrompts?.bookTitleRequestSettings,
+          prompt:
+            systemPrompts?.bookTitlePrompt ||
+            DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt,
+        };
   }
 }
+
+const buildBookRequestMessages = (
+  contextMessages: LLMMessage[],
+  chapterSummaries: string[],
+  prompt: string,
+): LLMMessage[] => {
+  const summariesContent = chapterSummaries
+    .map((summary, index) => `Chapter ${index + 1}:\n${summary}`)
+    .join("\n\n");
+
+  return [
+    ...contextMessages,
+    toAssistantMessage(summariesContent),
+    toUserMessage(prompt),
+  ];
+};

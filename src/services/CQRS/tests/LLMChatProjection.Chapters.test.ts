@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { LLMChatProjection } from "../LLMChatProjection";
 import type {
-  MessageCreatedEvent,
   ChapterCreatedEvent,
   ChapterEditedEvent,
   ChapterDeletedEvent,
 } from "../events/ChatEvent";
+import { createTextMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("LLMChatProjection - Chapter Operations", () => {
   let projection: LLMChatProjection;
@@ -21,13 +21,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
     role: "user" | "assistant" | "system",
     content: string,
   ): void {
-    const event: MessageCreatedEvent = {
-      type: "MessageCreated",
-      messageId: id,
-      role,
-      content,
-    };
-    proj.process(event);
+    proj.process(createTextMessageEvent(id, role, content));
   }
 
   function createChapter(
@@ -105,15 +99,15 @@ describe("LLMChatProjection - Chapter Operations", () => {
       const messages = projection.GetMessages();
       // Should have: 5 buffer messages + 1 chapter = 6 total
       expect(messages).toHaveLength(6);
-      expect(messages[5].role).toBe("system");
+      expect(messages[5].role).toBe("assistant");
       expect(messages[5].content).toContain("Summary of chapter one");
     });
 
-    it("chapter is a system message", () => {
+    it("chapter is an assistant message", () => {
       createChapter(projection, "chapter-1", "Title", "Summary", []);
 
       const messages = projection.GetMessages();
-      expect(messages[0].role).toBe("system");
+      expect(messages[0].role).toBe("assistant");
     });
 
     it("hides all non-chapter messages when chapter is added", () => {
@@ -130,7 +124,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       const messages = projection.GetMessages();
       // Should have: 6 buffer messages + 1 chapter = 7 total
       expect(messages).toHaveLength(7);
-      expect(messages[6].role).toBe("system");
+      expect(messages[6].role).toBe("assistant");
     });
   });
 
@@ -185,7 +179,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       // Should have: 6 prior messages + 1 chapter message = 7 total
       expect(messages).toHaveLength(7);
       expect(messages[0].content).toBe("Message 5"); // Last 6: msg-5 through msg-10
-      expect(messages[6].role).toBe("system"); // Chapter at the end
+      expect(messages[6].role).toBe("assistant"); // Chapter at the end
     });
 
     it("displays fewer than 6 prior messages if not enough exist", () => {
@@ -203,7 +197,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       // Should have: 3 prior messages + 1 chapter message = 4 total
       expect(messages).toHaveLength(4);
       expect(messages[0].content).toBe("Message 1");
-      expect(messages[3].role).toBe("system");
+      expect(messages[3].role).toBe("assistant");
     });
 
     it("shows last 6 messages from covered messages", () => {
@@ -244,7 +238,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       const messages = projection.GetMessages();
       // Should have: 1 chapter + 6 new messages = 7 total
       expect(messages).toHaveLength(7);
-      expect(messages[0].role).toBe("system");
+      expect(messages[0].role).toBe("assistant");
       expect(messages[1].content).toBe("Message 11");
       expect(messages[6].content).toBe("Message 16");
     });
@@ -356,7 +350,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       // Should have: chapter-1, last 5 buffer msgs from chapter-2, chapter-2 = 7 total
       // Find chapter-1 in the messages
       const chapter1 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Summary 1"),
+        (m) => m.type === "chapter" && m.content.includes("Summary 1"),
       );
       expect(chapter1).toBeDefined();
       expect(chapter1!.content).toContain("Summary 1");
@@ -416,7 +410,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       const messages = projection.GetMessages();
       const chapter1 = messages.find(
         (m) =>
-          m.role === "system" &&
+          m.type === "chapter" &&
           m.content.includes("Important summary from first chapter"),
       );
       expect(chapter1).toBeDefined();
@@ -470,13 +464,13 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       // All chapters contain their summaries
       const chapter1 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Sum1"),
+        (m) => m.type === "chapter" && m.content.includes("Sum1"),
       );
       const chapter2 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Sum2"),
+        (m) => m.type === "chapter" && m.content.includes("Sum2"),
       );
       const chapter3 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Sum3"),
+        (m) => m.type === "chapter" && m.content.includes("Sum3"),
       );
 
       expect(chapter1).toBeDefined();
@@ -501,7 +495,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       editChapter(projection, "chapter-1", "Updated Title", "Updated Summary");
 
       const messages = projection.GetMessages();
-      const chapter = messages.find((m) => m.role === "system");
+      const chapter = messages.find((m) => m.type === "chapter");
       expect(chapter).toBeDefined();
       expect(chapter!.content).toContain("Updated Summary");
       expect(chapter!.content).toContain(
@@ -532,7 +526,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       const messages = projection.GetMessages();
       const chapter1 = messages.find(
-        (m) => m.role === "system" && m.content.includes("Updated Sum1"),
+        (m) => m.type === "chapter" && m.content.includes("Updated Sum1"),
       );
       expect(chapter1).toBeDefined();
       expect(chapter1!.content).toContain("Updated Sum1");
@@ -639,7 +633,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       const messages = projection.GetMessages();
       expect(messages.length).toBeGreaterThan(0);
-      expect(messages[messages.length - 1].role).toBe("system");
+      expect(messages[messages.length - 1].role).toBe("assistant");
     });
 
     it("preserves message order with chapters", () => {
@@ -655,7 +649,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
       // Should have: chapter-1, last 3 buffer from chapter-2, chapter-2, msg-7, msg-8 = 7 total
       expect(messages).toHaveLength(7);
       // Find the chapters
-      const chapters = messages.filter((m) => m.role === "system");
+      const chapters = messages.filter((m) => m.type === "chapter");
       expect(chapters).toHaveLength(2);
       // Last two messages should be msg-7 and msg-8
       expect(messages[messages.length - 2].content).toBe("Message 7");
@@ -672,7 +666,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       const messages = projection.GetMessages();
       expect(messages).toHaveLength(7); // Chapter + 6 messages
-      expect(messages[0].role).toBe("system");
+      expect(messages[0].role).toBe("assistant");
     });
   });
 
@@ -702,7 +696,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       const chapter = projection.GetMessage("chapter-1");
       expect(chapter).not.toBeNull();
-      expect(chapter!.role).toBe("system");
+      expect(chapter!.role).toBe("assistant");
       expect(chapter!.content).toContain("Summary");
     });
 
@@ -755,13 +749,13 @@ describe("LLMChatProjection - Chapter Operations", () => {
 
       // Find indices
       const chapter1Index = messages.findIndex(
-        (m) => m.role === "system" && m.content.includes("Summary 1"),
+        (m) => m.type === "chapter" && m.content.includes("Summary 1"),
       );
       const chapter2Index = messages.findIndex(
-        (m) => m.role === "system" && m.content.includes("Summary 2"),
+        (m) => m.type === "chapter" && m.content.includes("Summary 2"),
       );
       const chapter3Index = messages.findIndex(
-        (m) => m.role === "system" && m.content.includes("Summary 3"),
+        (m) => m.type === "chapter" && m.content.includes("Summary 3"),
       );
       const bufferMessageIndex = messages.findIndex(
         (m) => m.content === "Message 11",

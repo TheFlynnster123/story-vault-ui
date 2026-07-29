@@ -229,8 +229,7 @@ const message = (
 });
 
 const created = (messageId: string, content: string): ChatEvent => ({
-  type: "MessageCreated",
+  type: "AssistantResponseCreated",
   messageId,
-  role: "assistant",
   content,
 });

@@ -1,7 +1,7 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
 import { createInstanceCache } from "../../../services/Utils/getOrCreateInstance";
-import { toSystemMessage } from "../../../services/Utils/MessageUtils";
+import { toUserMessage } from "../../../services/Utils/MessageUtils";
 import type { Plan } from "./Plan";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import {
@@ -10,6 +10,11 @@ import {
   isDueForRefresh,
   resetMessageCounter,
 } from "./Plan";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const PLAN_CONTEXT_SELECTION = {
+  history: true,
+} as const satisfies LLMContextSelection;
 
 export const getPlanGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new PlanGenerationService(chatId),
@@ -78,12 +83,12 @@ const buildPromptMessages = (
   if (plan.consolidateMessageHistory) {
     const consolidatedHistory = consolidateMessagesToString(chatMessages);
     return [
-      toSystemMessage(
+      toUserMessage(
         `Chat History:\n\n${consolidatedHistory}\n\n---\n\n${buildPlanPrompt(plan, feedback)}`,
       ),
     ];
   }
-  return [...chatMessages, toSystemMessage(buildPlanPrompt(plan, feedback))];
+  return [...chatMessages, toUserMessage(buildPlanPrompt(plan, feedback))];
 };
 
 const buildUpdatePromptMessages = (
@@ -95,14 +100,14 @@ const buildUpdatePromptMessages = (
   if (plan.consolidateMessageHistory) {
     const consolidatedHistory = consolidateMessagesToString(chatMessages);
     return [
-      toSystemMessage(
+      toUserMessage(
         `Chat History:\n\n${consolidatedHistory}\n\n---\n\n${buildUpdatePlanPrompt(plan, priorContent, feedback)}`,
       ),
     ];
   }
   return [
     ...chatMessages,
-    toSystemMessage(buildUpdatePlanPrompt(plan, priorContent, feedback)),
+    toUserMessage(buildUpdatePlanPrompt(plan, priorContent, feedback)),
   ];
 };
 
@@ -144,11 +149,11 @@ const buildPlanSuggestionPromptMessages = (
   if (plan.consolidateMessageHistory) {
     const consolidatedHistory = consolidateMessagesToString(chatMessages);
     return [
-      toSystemMessage(`Chat History:\n\n${consolidatedHistory}\n\n---\n\n${prompt}`),
+      toUserMessage(`Chat History:\n\n${consolidatedHistory}\n\n---\n\n${prompt}`),
     ];
   }
 
-  return [...chatMessages, toSystemMessage(prompt)];
+  return [...chatMessages, toUserMessage(prompt)];
 };
 
 interface PlanSuggestionResponse {
@@ -269,7 +274,7 @@ export class PlanGenerationService {
     if (!plan) return;
 
     await this.trackGeneration(planId, async () => {
-      const chatMessages = this.getChatMessages(plan);
+      const chatMessages = await this.getChatMessages();
       await this.regeneratePlan(plan, chatMessages);
       this.resetCounter(planId);
     });
@@ -300,11 +305,7 @@ export class PlanGenerationService {
     if (!plan) return;
 
     await this.trackGeneration(planDefinitionId, async () => {
-      const chatMessages = plan.hideOtherPlans
-        ? d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans()
-        : d
-            .LLMChatProjection(this.chatId)
-            .GetMessagesExcludingPlan(planDefinitionId);
+      const chatMessages = await this.getChatMessages();
 
       const promptMessages = priorContent
         ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
@@ -346,7 +347,7 @@ export class PlanGenerationService {
       plan.suggestionRequestSettings ??
       systemPrompts.planSuggestionRequestSettings;
 
-    const chatMessages = this.getChatMessagesForSuggestion(plan);
+    const chatMessages = await this.getChatMessages();
     const promptMessages = buildPlanSuggestionPromptMessages(
       chatMessages,
       plan,
@@ -375,7 +376,7 @@ export class PlanGenerationService {
     await Promise.all(
       duePlans.map((plan) =>
         this.trackGeneration(plan.id, async () => {
-          const chatMessages = this.getChatMessages(plan);
+          const chatMessages = await this.getChatMessages();
           await this.regeneratePlan(plan, chatMessages);
           this.resetCounter(plan.id);
         }),
@@ -392,22 +393,10 @@ export class PlanGenerationService {
     planService.savePlans(updatedPlans);
   };
 
-  private getChatMessages = (plan: Plan): LLMMessage[] => {
-    if (plan.hideOtherPlans) {
-      return d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans();
-    }
-    if (plan.excludeOwnPlanFromHistory) {
-      return d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(plan.id);
-    }
-    return d.LLMChatProjection(this.chatId).GetMessages();
-  };
-
-  private getChatMessagesForSuggestion = (plan: Plan): LLMMessage[] => {
-    if (plan.hideOtherPlans) {
-      return d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans();
-    }
-    return d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(plan.id);
-  };
+  private getChatMessages = (): Promise<LLMMessage[]> =>
+    d
+      .LLMMessageContextService(this.chatId)
+      .buildContext(PLAN_CONTEXT_SELECTION);
 
   private findPlanDefinition = (planDefinitionId: string): Plan | undefined =>
     d

@@ -13,6 +13,7 @@ export class EncryptionManager {
   private chatEncryptionKey?: string;
   private civitaiEncryptionKey?: string;
   private encryptionGuid?: string;
+  private initializationPromise: Promise<void> | null = null;
 
   async getOpenRouterEncryptionKey() {
     await this.ensureKeysInitialized();
@@ -35,13 +36,13 @@ export class EncryptionManager {
   }
 
   async ensureKeysInitialized() {
-    if (!this.encryptionGuid) {
-      this.encryptionGuid = await d.AuthAPI().getEncryptionGuid();
+    if (this.hasInitializedKeys()) return;
 
-      this.openRouterEncryptionKey = await this.deriveKey("openrouter");
-      this.chatEncryptionKey = await this.deriveKey("chat");
-      this.civitaiEncryptionKey = await this.deriveKey("civitai");
-    }
+    this.initializationPromise ??= this.initializeKeys().finally(() => {
+      this.initializationPromise = null;
+    });
+
+    await this.initializationPromise;
   }
 
   async encryptString(keyType: EncryptionKeyType, data: string) {
@@ -111,10 +112,38 @@ export class EncryptionManager {
     return new TextDecoder().decode(decryptedData);
   }
 
-  private async deriveKey(salt: string) {
+  private hasInitializedKeys(): boolean {
+    return Boolean(
+      this.encryptionGuid &&
+        this.openRouterEncryptionKey &&
+        this.chatEncryptionKey &&
+        this.civitaiEncryptionKey,
+    );
+  }
+
+  private async initializeKeys(): Promise<void> {
+    const encryptionGuid = await d.AuthAPI().getEncryptionGuid();
+    if (!encryptionGuid) {
+      throw new Error("Encryption GUID is unavailable");
+    }
+
+    const [openRouterEncryptionKey, chatEncryptionKey, civitaiEncryptionKey] =
+      await Promise.all([
+        this.deriveKey(encryptionGuid, "openrouter"),
+        this.deriveKey(encryptionGuid, "chat"),
+        this.deriveKey(encryptionGuid, "civitai"),
+      ]);
+
+    this.encryptionGuid = encryptionGuid;
+    this.openRouterEncryptionKey = openRouterEncryptionKey;
+    this.chatEncryptionKey = chatEncryptionKey;
+    this.civitaiEncryptionKey = civitaiEncryptionKey;
+  }
+
+  private async deriveKey(encryptionGuid: string, salt: string) {
     const keyMaterial = await crypto.subtle.importKey(
       "raw",
-      new TextEncoder().encode(this.encryptionGuid),
+      new TextEncoder().encode(encryptionGuid),
       { name: "PBKDF2" },
       false,
       ["deriveKey"],

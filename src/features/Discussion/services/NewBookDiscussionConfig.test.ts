@@ -67,14 +67,14 @@ describe("NewBookDiscussionConfig", () => {
     vi.clearAllMocks();
   });
 
-  it("returns selected chapter summaries as discussion context", () => {
+  it("returns selected chapter summaries as discussion context", async () => {
     const config = createNewBookDiscussionConfig(
       testChatId,
       testTitle,
       chapterIds,
     );
 
-    const messages = config.getChatMessages();
+    const messages = await config.getChatMessages();
 
     expect(messages[0].content).toContain("Chapter One");
     expect(messages[0].content).toContain("First chapter summary.");

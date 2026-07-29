@@ -41,6 +41,17 @@ describe("CharacterDescriptionsService", () => {
     expect(settings.update).not.toHaveBeenCalled();
   });
 
+  it("preserves trailing spaces while a schema-v4 sheet item is being edited", async () => {
+    const characters = [
+      createCharacter({ sheetItems: ["Keeps watch over "] }),
+    ];
+    blob.get.mockResolvedValue(characters);
+
+    const result = await service.get();
+
+    expect(result[0].sheetItems).toEqual(["Keeps watch over "]);
+  });
+
   it("migrates schema-v3 records with safe tracking defaults", async () => {
     const character = createCharacter();
     blob.get.mockResolvedValue([

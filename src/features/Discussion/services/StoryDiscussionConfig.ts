@@ -4,6 +4,12 @@ import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const STORY_DISCUSSION_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 /**
  * Creates a DiscussionConfig for discussing the story.
@@ -21,8 +27,10 @@ export const createStoryDiscussionConfig = (
       .GetMessages()
       .find((m) => m.type === "story") as StoryChatMessage | undefined;
 
-  const getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(chatId).GetMessages();
+  const getChatMessages = (): Promise<LLMMessage[]> =>
+    d
+      .LLMMessageContextService(chatId)
+      .buildContext(STORY_DISCUSSION_CONTEXT_SELECTION);
 
   const resolvedDiscussionPrompt = (): string =>
     discussStoryPrompt || DEFAULT_SYSTEM_PROMPTS.discussStoryPrompt;
@@ -55,7 +63,7 @@ export const createStoryDiscussionConfig = (
 
     const currentContent = story.content ?? "";
 
-    const chatMessages = getChatMessages();
+    const chatMessages = await getChatMessages();
     const systemPrompt = [
       `Review the conversation above and generate an updated story.`,
       ``,
@@ -76,7 +84,7 @@ export const createStoryDiscussionConfig = (
 
     const messages: LLMMessage[] = [
       ...chatMessages,
-      { role: "system", content: systemPrompt },
+      { role: "user", content: systemPrompt },
     ];
 
     const response = await d

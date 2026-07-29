@@ -60,6 +60,11 @@ describe("ChapterDiscussionConfig", () => {
     vi.mocked(d.LLMChatProjection).mockReturnValue(
       mockLLMChatProjection as any,
     );
+    vi.mocked(d.LLMMessageContextService).mockReturnValue({
+      buildContext: vi
+        .fn()
+        .mockResolvedValue(mockLLMChatProjection.GetMessages()),
+    } as any);
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue(
       mockOpenRouterChatAPI as any,
     );
@@ -128,7 +133,7 @@ describe("ChapterDiscussionConfig", () => {
       );
     });
 
-    it("should use custom chapter summary prompt in system message", async () => {
+    it("should use custom chapter summary prompt in the task message", async () => {
       const customPrompt = "Custom chapter summary instructions.";
       const config = createChapterDiscussionConfig(
         testChatId,
@@ -141,11 +146,11 @@ describe("ChapterDiscussionConfig", () => {
       await config.generateFromFeedback("Add more detail");
 
       const callMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      const systemMessages = callMessages.filter(
-        (m: any) => m.role === "system",
+      const taskMessages = callMessages.filter(
+        (m: any) => m.role === "user",
       );
       expect(
-        systemMessages.some((m: any) => m.content.includes(customPrompt)),
+        taskMessages.some((m: any) => m.content.includes(customPrompt)),
       ).toBe(true);
     });
 
@@ -155,11 +160,11 @@ describe("ChapterDiscussionConfig", () => {
       await config.generateFromFeedback("Add more detail");
 
       const callMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      const systemMessages = callMessages.filter(
-        (m: any) => m.role === "system",
+      const taskMessages = callMessages.filter(
+        (m: any) => m.role === "user",
       );
       expect(
-        systemMessages.some((m: any) =>
+        taskMessages.some((m: any) =>
           m.content.includes(DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt),
         ),
       ).toBe(true);

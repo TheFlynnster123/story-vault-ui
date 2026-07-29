@@ -1,14 +1,15 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   LLMChatProjection,
+  type LLMContextProjectionPolicy,
   type LLMMessage,
 } from "../LLMChatProjection";
 import {
   PlanCreatedEventUtil,
   PlanHiddenEventUtil,
 } from "../events/PlanEventUtils";
-import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
 import type { ChapterCreatedEvent } from "../events/ChatEvent";
+import { createGeneratedTextMessageEvent } from "./TextMessageEventTestUtils";
 
 const createChapterEvent = (
   chapterId: string,
@@ -41,13 +42,13 @@ describe("LLMChatProjection - Plan Events", () => {
       );
     });
 
-    it("should use system role for plan messages", () => {
+    it("should use assistant role for plan messages", () => {
       const event = createPlanEvent("def-1", "Plan", "Content");
 
       projection.process(event);
 
       const messages = projection.GetMessages();
-      expect(messages[0].role).toBe("system");
+      expect(messages[0].role).toBe("assistant");
     });
 
     it("should store planDefinitionId in message data", () => {
@@ -137,7 +138,7 @@ describe("LLMChatProjection - Plan Events", () => {
     });
 
     it("should not affect non-plan messages", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+      projection.process(createGeneratedTextMessageEvent("user", "Hello"));
       projection.process(createPlanEvent("def-1", "Plan", "Content"));
 
       projection.process(PlanHiddenEventUtil.Create("def-1"));
@@ -205,16 +206,16 @@ describe("LLMChatProjection - Plan Events", () => {
     });
 
     it("should place plans chronologically among other messages", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Message 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Message 1"));
       projection.process(createPlanEvent("def-1", "Plan", "Plan content"));
       projection.process(
-        MessageCreatedEventUtil.Create("assistant", "Response"),
+        createGeneratedTextMessageEvent("assistant", "Response"),
       );
 
       const messages = projection.GetMessages();
       expect(messages).toHaveLength(3);
       expect(messages[0].role).toBe("user");
-      expect(messages[1].role).toBe("system");
+      expect(messages[1].role).toBe("assistant");
       expect(messages[1].content).toContain("[Plan:");
       expect(messages[2].role).toBe("assistant");
     });
@@ -235,87 +236,18 @@ describe("LLMChatProjection - Plan Events", () => {
     });
   });
 
-  describe("GetMessagesExcludingPlan", () => {
-    it("should exclude plan messages for the specified definition", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
-      projection.process(
-        createPlanEvent("def-1", "Story Plan", "Plan content"),
-      );
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
-
-      const messages = projection.GetMessagesExcludingPlan("def-1");
-
-      expect(messages).toHaveLength(2);
-      expect(messages[0].content).toBe("Hello");
-      expect(messages[1].content).toBe("Hi");
-    });
-
-    it("should keep plan messages from other definitions", () => {
-      projection.process(createPlanEvent("def-1", "Plan A", "A content"));
-      projection.process(createPlanEvent("def-2", "Plan B", "B content"));
-
-      const messages = projection.GetMessagesExcludingPlan("def-1");
-
-      expect(messages).toHaveLength(1);
-      expect(messages[0].content).toContain("Plan B");
-    });
-
-    it("should return all messages when no plans match the definition", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
-      projection.process(createPlanEvent("def-1", "Plan", "Content"));
-
-      const messages = projection.GetMessagesExcludingPlan("nonexistent");
-
-      expect(messages).toHaveLength(2);
-    });
-
-    it("should return all messages when there are no plans at all", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
-
-      const messages = projection.GetMessagesExcludingPlan("any-id");
-
-      expect(messages).toHaveLength(2);
-    });
-
-    it("should not exclude hidden plan messages (already filtered by GetMessages)", () => {
-      projection.process(createPlanEvent("def-1", "Plan", "v1"));
-      projection.process(PlanHiddenEventUtil.Create("def-1"));
-      projection.process(createPlanEvent("def-1", "Plan", "v2"));
-
-      const messages = projection.GetMessagesExcludingPlan("def-1");
-
-      // v1 is already hidden by GetMessages, v2 is excluded by the filter
-      expect(messages).toHaveLength(0);
-    });
-
-    it("should preserve message order", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "First"));
-      projection.process(createPlanEvent("def-1", "Plan", "Plan content"));
-      projection.process(MessageCreatedEventUtil.Create("user", "Second"));
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Third"));
-
-      const messages = projection.GetMessagesExcludingPlan("def-1");
-
-      expect(messages).toHaveLength(3);
-      expect(messages[0].content).toBe("First");
-      expect(messages[1].content).toBe("Second");
-      expect(messages[2].content).toBe("Third");
-    });
-  });
-
-  describe("GetMessagesExcludingAllPlans", () => {
+  describe("exclude-all planSelection policy", () => {
     it("should exclude all plan messages", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+      projection.process(createGeneratedTextMessageEvent("user", "Hello"));
       projection.process(
         createPlanEvent("def-1", "Story Plan", "Plan content"),
       );
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
+      projection.process(createGeneratedTextMessageEvent("assistant", "Hi"));
       projection.process(
         createPlanEvent("def-2", "Character Plan", "Character details"),
       );
 
-      const messages = projection.GetMessagesExcludingAllPlans();
+      const messages = projection.GetMessages(EXCLUDE_ALL_PLANS);
 
       expect(messages).toHaveLength(2);
       expect(messages[0].content).toBe("Hello");
@@ -323,10 +255,10 @@ describe("LLMChatProjection - Plan Events", () => {
     });
 
     it("should return all messages when there are no plans", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
+      projection.process(createGeneratedTextMessageEvent("user", "Hello"));
+      projection.process(createGeneratedTextMessageEvent("assistant", "Hi"));
 
-      const messages = projection.GetMessagesExcludingAllPlans();
+      const messages = projection.GetMessages(EXCLUDE_ALL_PLANS);
 
       expect(messages).toHaveLength(2);
       expect(messages[0].content).toBe("Hello");
@@ -337,7 +269,7 @@ describe("LLMChatProjection - Plan Events", () => {
       projection.process(createPlanEvent("def-1", "Plan A", "A content"));
       projection.process(createPlanEvent("def-2", "Plan B", "B content"));
 
-      const messages = projection.GetMessagesExcludingAllPlans();
+      const messages = projection.GetMessages(EXCLUDE_ALL_PLANS);
 
       expect(messages).toHaveLength(0);
     });
@@ -346,9 +278,9 @@ describe("LLMChatProjection - Plan Events", () => {
       projection.process(createPlanEvent("def-1", "Plan", "v1"));
       projection.process(PlanHiddenEventUtil.Create("def-1"));
       projection.process(createPlanEvent("def-1", "Plan", "v2"));
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+      projection.process(createGeneratedTextMessageEvent("user", "Hello"));
 
-      const messages = projection.GetMessagesExcludingAllPlans();
+      const messages = projection.GetMessages(EXCLUDE_ALL_PLANS);
 
       // v1 is already hidden by GetMessages, v2 is excluded by the filter
       expect(messages).toHaveLength(1);
@@ -356,13 +288,13 @@ describe("LLMChatProjection - Plan Events", () => {
     });
 
     it("should preserve message order", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "First"));
+      projection.process(createGeneratedTextMessageEvent("user", "First"));
       projection.process(createPlanEvent("def-1", "Plan", "Plan content"));
-      projection.process(MessageCreatedEventUtil.Create("user", "Second"));
+      projection.process(createGeneratedTextMessageEvent("user", "Second"));
       projection.process(createPlanEvent("def-2", "Plan B", "Plan B content"));
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Third"));
+      projection.process(createGeneratedTextMessageEvent("assistant", "Third"));
 
-      const messages = projection.GetMessagesExcludingAllPlans();
+      const messages = projection.GetMessages(EXCLUDE_ALL_PLANS);
 
       expect(messages).toHaveLength(3);
       expect(messages[0].content).toBe("First");
@@ -374,9 +306,9 @@ describe("LLMChatProjection - Plan Events", () => {
       projection.process(createPlanEvent("arc", "Arc Plan", "Arc"));
       projection.process(createPlanEvent("theme", "Theme Plan", "Theme"));
       projection.process(createPlanEvent("plot", "Plot Plan", "Plot"));
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+      projection.process(createGeneratedTextMessageEvent("user", "Hello"));
 
-      const messages = projection.GetMessagesExcludingAllPlans();
+      const messages = projection.GetMessages(EXCLUDE_ALL_PLANS);
 
       expect(messages).toHaveLength(1);
       expect(messages[0].content).toBe("Hello");
@@ -385,7 +317,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
   describe("Chapter-Plan Interaction", () => {
     it("does not duplicate a covered plan while the chapter buffer is active", () => {
-      const message = MessageCreatedEventUtil.Create("user", "Hello");
+      const message = createGeneratedTextMessageEvent("user", "Hello");
       const plan = createPlanEvent("def-1", "Story Plan", "Plan content");
       projection.process(message);
       projection.process(plan);
@@ -404,7 +336,7 @@ describe("LLMChatProjection - Plan Events", () => {
     });
 
     it("should not hide plan messages when chapter covers their IDs", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
       const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
       projection.process(planEvent);
@@ -415,7 +347,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       // Add messages after chapter so buffer logic doesn't re-inject covered messages
       for (let i = 0; i < 10; i++) {
-        projection.process(MessageCreatedEventUtil.Create("user", `Post ${i}`));
+        projection.process(createGeneratedTextMessageEvent("user", `Post ${i}`));
       }
 
       const messages = projection.GetMessages();
@@ -424,11 +356,11 @@ describe("LLMChatProjection - Plan Events", () => {
     });
 
     it("should still hide regular messages when chapter covers them alongside plans", () => {
-      const msg1 = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg1 = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg1);
       const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
       projection.process(planEvent);
-      const msg2 = MessageCreatedEventUtil.Create("assistant", "Hi there");
+      const msg2 = createGeneratedTextMessageEvent("assistant", "Hi there");
       projection.process(msg2);
 
       projection.process(
@@ -442,7 +374,7 @@ describe("LLMChatProjection - Plan Events", () => {
       // Add enough messages after so buffer doesn't re-include hidden messages
       for (let i = 0; i < 10; i++) {
         projection.process(
-          MessageCreatedEventUtil.Create("user", `Post chapter ${i}`),
+          createGeneratedTextMessageEvent("user", `Post chapter ${i}`),
         );
       }
 
@@ -462,7 +394,7 @@ describe("LLMChatProjection - Plan Events", () => {
     });
 
     it("should keep plan visible alongside chapter summary", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
       const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
       projection.process(planEvent);
@@ -473,7 +405,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       // Add messages after chapter so buffer logic doesn't interfere
       for (let i = 0; i < 10; i++) {
-        projection.process(MessageCreatedEventUtil.Create("user", `Post ${i}`));
+        projection.process(createGeneratedTextMessageEvent("user", `Post ${i}`));
       }
 
       const messages = projection.GetMessages();
@@ -486,11 +418,11 @@ describe("LLMChatProjection - Plan Events", () => {
     });
 
     it("should not hide plan when multiple plans and messages are covered", () => {
-      const msg1 = MessageCreatedEventUtil.Create("user", "Msg 1");
+      const msg1 = createGeneratedTextMessageEvent("user", "Msg 1");
       projection.process(msg1);
       const plan1 = createPlanEvent("def-1", "Plan A", "A");
       projection.process(plan1);
-      const msg2 = MessageCreatedEventUtil.Create("assistant", "Msg 2");
+      const msg2 = createGeneratedTextMessageEvent("assistant", "Msg 2");
       projection.process(msg2);
       const plan2 = createPlanEvent("def-2", "Plan B", "B");
       projection.process(plan2);
@@ -506,7 +438,7 @@ describe("LLMChatProjection - Plan Events", () => {
 
       // Add messages after chapter so buffer logic doesn't re-inject covered messages
       for (let i = 0; i < 10; i++) {
-        projection.process(MessageCreatedEventUtil.Create("user", `Post ${i}`));
+        projection.process(createGeneratedTextMessageEvent("user", `Post ${i}`));
       }
 
       const messages = projection.GetMessages();
@@ -517,6 +449,10 @@ describe("LLMChatProjection - Plan Events", () => {
 });
 
 // ---- Test Helpers ----
+
+const EXCLUDE_ALL_PLANS: LLMContextProjectionPolicy = {
+  planSelection: { mode: "exclude-all" },
+};
 
 const createPlanEvent = (
   planDefinitionId: string,

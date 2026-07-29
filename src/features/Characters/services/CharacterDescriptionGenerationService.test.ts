@@ -11,11 +11,15 @@ describe("CharacterDescriptionGenerationService", () => {
   let mockOpenRouterChatAPI: any;
   let mockSystemPromptsService: any;
   const chatId = "test-chat-123";
+  const mockBuildContext = vi.fn<[], Promise<LLMMessage[]>>();
 
   beforeEach(() => {
     mockLLMChatProjection = {
       GetMessages: vi.fn(),
     };
+    mockBuildContext
+      .mockReset()
+      .mockImplementation(async () => mockLLMChatProjection.GetMessages());
 
     mockOpenRouterChatAPI = {
       postChat: vi.fn(),
@@ -26,6 +30,9 @@ describe("CharacterDescriptionGenerationService", () => {
     };
 
     (d.LLMChatProjection as any) = vi.fn(() => mockLLMChatProjection);
+    (d.LLMMessageContextService as any) = vi.fn(() => ({
+      buildContext: mockBuildContext,
+    }));
     (d.OpenRouterChatAPI as any) = vi.fn(() => mockOpenRouterChatAPI);
     (d.SystemPromptsService as any) = vi.fn(() => mockSystemPromptsService);
 
@@ -43,6 +50,10 @@ describe("CharacterDescriptionGenerationService", () => {
       const result = await service.generateDescription("Sarah Chen");
 
       expect(result).toBe(expectedDescription);
+      expect(mockBuildContext).toHaveBeenCalledWith({
+        history: true,
+        plans: true,
+      });
     });
 
     it("should trim whitespace from description", async () => {

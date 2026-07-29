@@ -7,7 +7,10 @@ import {
   isCharacterTracked,
   type CharacterDescription,
 } from "../../Characters/services/CharacterDescription";
-import { toSystemMessage } from "../../../services/Utils/MessageUtils";
+import {
+  toAssistantMessage,
+  toUserMessage,
+} from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import { resolveVariant } from "./ImageModelVariant";
 import type { WorkflowCost } from "./CivitJob";
@@ -372,10 +375,10 @@ const buildPromptMessagesWithCharacter = (
   const promptMessages = [...messages];
 
   if (characterDescription) {
-    promptMessages.push(toSystemMessage(characterDescription));
+    promptMessages.push(toAssistantMessage(characterDescription));
   }
 
-  promptMessages.push(toSystemMessage(imagePrompt));
+  promptMessages.push(toUserMessage(imagePrompt));
 
   return promptMessages;
 };
@@ -389,11 +392,11 @@ const buildPromptMessagesWithCharacterAndFeedback = (
   const promptMessages = [...messages];
 
   if (characterDescription) {
-    promptMessages.push(toSystemMessage(characterDescription));
+    promptMessages.push(toAssistantMessage(characterDescription));
   }
 
-  promptMessages.push(toSystemMessage(imagePrompt));
-  promptMessages.push(toSystemMessage(feedbackMessage));
+  promptMessages.push(toUserMessage(imagePrompt));
+  promptMessages.push(toUserMessage(feedbackMessage));
 
   return promptMessages;
 };

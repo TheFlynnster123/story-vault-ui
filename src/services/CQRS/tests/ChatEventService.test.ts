@@ -135,7 +135,7 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      const event = createMessageCreatedEvent();
+      const event = createTextMessageCreatedEvent();
       await service.AddChatEvent(event);
 
       expect(mockUserChatProjection.process).toHaveBeenCalledWith(event);
@@ -146,7 +146,7 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      const event = createMessageCreatedEvent();
+      const event = createTextMessageCreatedEvent();
       await service.AddChatEvent(event);
 
       expect(mockChatEventStore.addChatEvent).toHaveBeenCalledWith(
@@ -158,7 +158,7 @@ describe("ChatEventService", () => {
     it("should auto-initialize if not already initialized", async () => {
       const service = new ChatEventService(testChatId);
 
-      const event = createMessageCreatedEvent();
+      const event = createTextMessageCreatedEvent();
       await service.AddChatEvent(event);
 
       expect(mockChatEventStore.getChatEvents).toHaveBeenCalledWith(testChatId);
@@ -168,7 +168,7 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      const event = createMessageCreatedEvent();
+      const event = createTextMessageCreatedEvent();
       await service.AddChatEvent(event);
 
       // Verify order: projections process before store is called
@@ -191,7 +191,7 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      const event = createMessageCreatedEvent();
+      const event = createTextMessageCreatedEvent();
 
       await expect(service.AddChatEvent(event)).rejects.toThrow(
         "Persistence error"
@@ -257,7 +257,7 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      const messageEvent = createMessageCreatedEvent();
+      const messageEvent = createTextMessageCreatedEvent();
       const editEvent = createMessageEditedEvent();
       const deleteEvent = createMessageDeletedEvent();
 
@@ -283,9 +283,9 @@ describe("ChatEventService", () => {
 
     it("should maintain event order during initialization", async () => {
       const events = [
-        createMessageCreatedEvent("msg-1"),
-        createMessageCreatedEvent("msg-2"),
-        createMessageCreatedEvent("msg-3"),
+        createTextMessageCreatedEvent("msg-1"),
+        createTextMessageCreatedEvent("msg-2"),
+        createTextMessageCreatedEvent("msg-3"),
       ];
       mockChatEventStore.getChatEvents.mockResolvedValue(events);
 
@@ -301,7 +301,7 @@ describe("ChatEventService", () => {
       const service = new ChatEventService(testChatId);
       await service.Initialize();
 
-      const event = createMessageCreatedEvent();
+      const event = createTextMessageCreatedEvent();
       await service.AddChatEvent(event);
 
       expect(d.UserChatProjection).toHaveBeenCalledWith(testChatId);
@@ -330,15 +330,14 @@ describe("ChatEventService", () => {
 
   function createMockEvents(count: number): ChatEvent[] {
     return Array.from({ length: count }, (_, i) =>
-      createMessageCreatedEvent(`msg-${i}`)
+      createTextMessageCreatedEvent(`msg-${i}`)
     );
   }
 
-  function createMessageCreatedEvent(messageId?: string): ChatEvent {
+  function createTextMessageCreatedEvent(messageId?: string): ChatEvent {
     return {
-      type: "MessageCreated",
+      type: "UserMessageCreated",
       messageId: messageId || `msg-${Date.now()}`,
-      role: "user",
       content: "Test message content",
     };
   }

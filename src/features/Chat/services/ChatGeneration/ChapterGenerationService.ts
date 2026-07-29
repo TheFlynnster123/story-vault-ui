@@ -3,6 +3,20 @@ import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { OpenRouterRequestSettings } from "../../../OpenRouter/services/OpenRouterRequestSettings";
 import type { LLMMessage } from "../../../../services/CQRS/LLMChatProjection";
+import { toUserMessage } from "../../../../services/Utils/MessageUtils";
+import {
+  DEFAULT_SYSTEM_PROMPTS,
+  type SystemPrompts,
+} from "../../../Prompts/services/SystemPrompts";
+import type { LLMContextSelection } from "./LLMMessageContextService";
+
+const CHAPTER_CONTEXT_SELECTION = {
+  history: true,
+  memories: true,
+  characterSheets: true,
+  continuityHistories: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 export interface ChapterDraft {
   title: string;
@@ -26,11 +40,18 @@ export class ChapterGenerationService extends GenerationOrchestrator {
   ): Promise<ChapterDraft | undefined> {
     return this.orchestrate(async () => {
       this.setStatus("Generating chapter draft...");
-      const context = d.LLMMessageContextService(this.chatId);
-      const [messages, config] = await Promise.all([
-        context.buildChapterDraftRequestMessages(snapshot),
-        this.resolveChapterModel(),
+      const [contextMessages, config] = await Promise.all([
+        d
+          .LLMMessageContextService(this.chatId)
+          .buildContext(CHAPTER_CONTEXT_SELECTION, {
+            historyOverride: snapshot,
+          }),
+        this.resolveChapterConfig(),
       ]);
+      const messages = [
+        ...contextMessages,
+        toUserMessage(buildChapterDraftPrompt(config.prompts)),
+      ];
       const response = await d
         .OpenRouterChatAPI()
         .postChat(
@@ -45,17 +66,28 @@ export class ChapterGenerationService extends GenerationOrchestrator {
     });
   }
 
-  private async resolveChapterModel(): Promise<{
+  private async resolveChapterConfig(): Promise<{
     model: string | undefined;
     requestSettings: OpenRouterRequestSettings | undefined;
+    prompts: SystemPrompts;
   }> {
-    const systemPrompts = await d.SystemPromptsService().Get();
+    const prompts =
+      (await d.SystemPromptsService().Get()) ?? DEFAULT_SYSTEM_PROMPTS;
     return {
-      model: systemPrompts?.chapterSummaryModel || undefined,
-      requestSettings: systemPrompts?.chapterSummaryRequestSettings,
+      model: prompts.chapterSummaryModel || undefined,
+      requestSettings: prompts.chapterSummaryRequestSettings,
+      prompts,
     };
   }
 }
+
+const buildChapterDraftPrompt = (prompts: SystemPrompts): string =>
+  [
+    prompts.chapterSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt,
+    prompts.chapterTitlePrompt || DEFAULT_SYSTEM_PROMPTS.chapterTitlePrompt,
+    "Return one JSON object with exactly two string fields: title and summary.",
+    "Do not use markdown fences or include any text outside the JSON object.",
+  ].join("\n\n");
 
 export const parseChapterDraft = (response: string): ChapterDraft => {
   const json = response

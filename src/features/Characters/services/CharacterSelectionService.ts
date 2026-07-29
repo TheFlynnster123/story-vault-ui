@@ -3,6 +3,12 @@ import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { toUserMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const CHARACTER_SELECTION_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 export class CharacterSelectionService {
   private chatId: string;
@@ -12,7 +18,9 @@ export class CharacterSelectionService {
   }
 
   selectCharacterForImage = async (): Promise<string | null> => {
-    const messages = this.getChatMessages();
+    const messages = await d
+      .LLMMessageContextService(this.chatId)
+      .buildContext(CHARACTER_SELECTION_CONTEXT_SELECTION);
     const prompt = await this.getCharacterSelectionPrompt();
     const { model, requestSettings } = await this.getCharacterSelectionModel();
 
@@ -23,9 +31,6 @@ export class CharacterSelectionService {
 
     return parseCharacterName(response);
   };
-
-  private getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(this.chatId).GetMessages();
 
   private getCharacterSelectionPrompt = async (): Promise<string> => {
     const systemPrompts = await d.SystemPromptsService().Get();

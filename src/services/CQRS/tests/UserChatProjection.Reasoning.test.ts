@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { UserChatProjection } from "../UserChatProjection";
-import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
+import { createGeneratedTextMessageEvent } from "./TextMessageEventTestUtils";
 import { ReasoningCreatedEventUtil } from "../events/ReasoningEventUtils";
 import type { ChapterCreatedEvent } from "../events/ChatEvent";
 
@@ -39,9 +39,9 @@ describe("UserChatProjection - Reasoning Events", () => {
   });
 
   it("places reasoning chronologically between user and assistant messages", () => {
-    projection.process(MessageCreatedEventUtil.Create("user", "What next?"));
+    projection.process(createGeneratedTextMessageEvent("user", "What next?"));
     projection.process(ReasoningCreatedEventUtil.Create("Continue the scene."));
-    projection.process(MessageCreatedEventUtil.Create("assistant", "Next."));
+    projection.process(createGeneratedTextMessageEvent("assistant", "Next."));
 
     expect(projection.GetMessages().map((m) => m.type)).toEqual([
       "user-message",
@@ -51,9 +51,9 @@ describe("UserChatProjection - Reasoning Events", () => {
   });
 
   it("hides reasoning when it is covered by a chapter", () => {
-    const user = MessageCreatedEventUtil.Create("user", "Start");
+    const user = createGeneratedTextMessageEvent("user", "Start");
     const reasoning = ReasoningCreatedEventUtil.Create("Bridge the intent.");
-    const assistant = MessageCreatedEventUtil.Create("assistant", "Done");
+    const assistant = createGeneratedTextMessageEvent("assistant", "Done");
 
     projection.process(user);
     projection.process(reasoning);
@@ -70,7 +70,7 @@ describe("UserChatProjection - Reasoning Events", () => {
   });
 
   it("returns the last persisted text message from the chat view", () => {
-    projection.process(MessageCreatedEventUtil.Create("user", "Start"));
+    projection.process(createGeneratedTextMessageEvent("user", "Start"));
     const reasoning = ReasoningCreatedEventUtil.Create("Think first.");
     projection.process(reasoning);
     projection.process({
@@ -88,7 +88,7 @@ describe("UserChatProjection - Reasoning Events", () => {
 
   it("ignores deleted text messages after reasoning", () => {
     const reasoning = ReasoningCreatedEventUtil.Create("Keep this reasoning.");
-    const assistant = MessageCreatedEventUtil.Create(
+    const assistant = createGeneratedTextMessageEvent(
       "assistant",
       "Failed response",
     );
@@ -115,7 +115,7 @@ describe("UserChatProjection - Reasoning Events", () => {
   });
 
   it("streams reasoning as a transient reasoning message", () => {
-    projection.process(MessageCreatedEventUtil.Create("user", "What next?"));
+    projection.process(createGeneratedTextMessageEvent("user", "What next?"));
 
     projection.addStreamingMessage("streaming-reasoning", "reasoning");
     projection.updateStreamingMessage("Follow the clue");
@@ -135,7 +135,7 @@ describe("UserChatProjection - Reasoning Events", () => {
 
   it("ignores an assistant message while it is being regenerated", () => {
     const reasoning = ReasoningCreatedEventUtil.Create("Keep this reasoning.");
-    const assistant = MessageCreatedEventUtil.Create("assistant", "Response");
+    const assistant = createGeneratedTextMessageEvent("assistant", "Response");
     projection.process(reasoning);
     projection.process(assistant);
     projection.startStreamingExistingMessage(assistant.messageId);

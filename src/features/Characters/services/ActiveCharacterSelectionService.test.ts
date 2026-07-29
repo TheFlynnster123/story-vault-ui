@@ -8,7 +8,7 @@ vi.mock("../../../services/Dependencies");
 
 describe("ActiveCharacterSelectionService", () => {
   const contextService = {
-    buildGenerationRequestMessages: vi.fn(),
+    buildContext: vi.fn(),
   };
   const promptsService = { Get: vi.fn() };
   const api = { postStructuredChat: vi.fn() };
@@ -19,7 +19,7 @@ describe("ActiveCharacterSelectionService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    contextService.buildGenerationRequestMessages.mockResolvedValue([
+    contextService.buildContext.mockResolvedValue([
       { id: "1", role: "user", content: "Mara confronts Talia." },
       { id: "2", role: "assistant", content: "Ivo has left the city." },
     ] satisfies LLMMessage[]);
@@ -43,9 +43,11 @@ describe("ActiveCharacterSelectionService", () => {
       existingCharacterIds: ["mara"],
       newCharacterNames: ["Talia"],
     });
-    expect(contextService.buildGenerationRequestMessages).toHaveBeenCalledWith(
-      false,
-    );
+    expect(contextService.buildContext).toHaveBeenCalledWith({
+      history: true,
+      plans: true,
+      recentHistoryOnly: true,
+    });
   });
 
   it("keeps untracked names in the roster but rejects them from model output", async () => {
@@ -73,30 +75,27 @@ describe("ActiveCharacterSelectionService", () => {
     );
   });
 
-  it("uses only the last twelve projected scene messages", async () => {
-    contextService.buildGenerationRequestMessages.mockResolvedValue([
-      { role: "system", content: "Discarded prompt" },
-      ...Array.from({ length: 14 }, (_, index) => ({
+  it("requests recent history from the shared context builder", async () => {
+    contextService.buildContext.mockResolvedValue([
+      ...Array.from({ length: 12 }, (_, index) => ({
         id: `${index + 1}`,
         role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
         content: `Scene ${index + 1}`,
       })),
-      { role: "system", content: "Trailing configured prompt" },
     ]);
     api.postStructuredChat.mockResolvedValue({ activeCharacterNames: [] });
 
     await new ActiveCharacterSelectionService("chat-1").select(characters);
 
+    expect(contextService.buildContext).toHaveBeenCalledWith({
+      history: true,
+      plans: true,
+      recentHistoryOnly: true,
+    });
     const requestMessages = api.postStructuredChat.mock.calls[0][0] as
       LLMMessage[] | undefined;
-    expect(requestMessages?.some((message) => message.id === "1")).toBe(false);
-    expect(requestMessages?.some((message) => message.id === "2")).toBe(false);
-    expect(requestMessages?.some((message) => message.id === "3")).toBe(true);
-    expect(
-      requestMessages?.some(
-        (message) => message.content === "Trailing configured prompt",
-      ),
-    ).toBe(false);
+    expect(requestMessages?.some((message) => message.id === "1")).toBe(true);
+    expect(requestMessages?.some((message) => message.id === "12")).toBe(true);
   });
 
   it("passes the configured prompt, model, and request settings", async () => {
@@ -113,7 +112,7 @@ describe("ActiveCharacterSelectionService", () => {
     expect(call[0]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          role: "system",
+          role: "user",
           content: "Find the current cast.",
         }),
       ]),

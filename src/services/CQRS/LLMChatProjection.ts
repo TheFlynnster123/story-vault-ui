@@ -1,6 +1,7 @@
 import type {
+  AssistantResponseCreatedEvent,
   ChatEvent,
-  MessageCreatedEvent,
+  InstructionCreatedEvent,
   ReasoningCreatedEvent,
   MessageEditedEvent,
   MessageCompressionCreatedEvent,
@@ -20,9 +21,9 @@ import type {
   NoteCreatedEvent,
   NoteEditedEvent,
   AgentClarificationCreatedEvent,
+  UserMessageCreatedEvent,
 } from "./events/ChatEvent";
 import { createMessageContentFingerprint } from "./events/MessageCompressionEventUtils";
-import { normalizeChatEvent } from "./events/normalizeChatEvent";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
 
@@ -39,8 +40,7 @@ export interface LLMContextProjectionPolicy {
 
 export type PlanContextSelection =
   | { mode: "include" }
-  | { mode: "exclude-all" }
-  | { mode: "exclude-definition"; planDefinitionId: string };
+  | { mode: "exclude-all" };
 
 export type LLMContextExclusionReason =
   | "deleted"
@@ -49,7 +49,8 @@ export type LLMContextExclusionReason =
   | "book-compressed"
   | "expired-note"
   | "expired-reasoning"
-  | "plan-filtered";
+  | "plan-filtered"
+  | "regeneration-truncated";
 
 export interface LLMContextProjectionTraceEntry {
   id: string;
@@ -96,13 +97,13 @@ export class LLMChatProjection {
 
   // ---- Event Processing ----
   public process(event: ChatEvent) {
-    this.applyEvent(normalizeChatEvent(event));
+    this.applyEvent(event);
     this.notifySubscribers();
   }
 
   public processBatch(events: ChatEvent[]) {
     for (const event of events) {
-      this.applyEvent(normalizeChatEvent(event));
+      this.applyEvent(event);
     }
     this.notifySubscribers();
   }
@@ -115,8 +116,14 @@ export class LLMChatProjection {
       case "StoryEdited":
         this.processStoryEdited(event);
         break;
-      case "MessageCreated":
-        this.processMessageCreated(event);
+      case "UserMessageCreated":
+        this.processUserMessageCreated(event);
+        break;
+      case "AssistantResponseCreated":
+        this.processAssistantResponseCreated(event);
+        break;
+      case "InstructionCreated":
+        this.processInstructionCreated(event);
         break;
       case "ReasoningCreated":
         this.processReasoningCreated(event);
@@ -218,37 +225,6 @@ export class LLMChatProjection {
     };
   }
 
-  /**
-   * Returns LLM context messages excluding plan messages for a specific plan definition.
-   * Used during plan regeneration so the plan's own content isn't in the context
-   * (it's provided separately in the prompt instead).
-   */
-  public GetMessagesExcludingPlan(
-    planDefinitionId: string,
-    policy: LLMContextProjectionPolicy = {},
-  ): LLMMessage[] {
-    return this.GetMessages({
-      ...policy,
-      planSelection: {
-        mode: "exclude-definition",
-        planDefinitionId,
-      },
-    });
-  }
-
-  /**
-   * Returns LLM context messages excluding all plan messages.
-   * Used when a plan has hideOtherPlans enabled to prevent model confusion.
-   */
-  public GetMessagesExcludingAllPlans(
-    policy: LLMContextProjectionPolicy = {},
-  ): LLMMessage[] {
-    return this.GetMessages({
-      ...policy,
-      planSelection: { mode: "exclude-all" },
-    });
-  }
-
   public GetMessage(id: string): LLMMessage | null {
     const msg = this.getMessage(id);
 
@@ -271,12 +247,34 @@ export class LLMChatProjection {
     }
   }
 
-  processMessageCreated(event: MessageCreatedEvent) {
+  processUserMessageCreated(event: UserMessageCreatedEvent) {
     this.messages.push(
       this.createMessageState(
         event.messageId,
         "message",
-        event.role,
+        "user",
+        event.content,
+      ),
+    );
+  }
+
+  processAssistantResponseCreated(event: AssistantResponseCreatedEvent) {
+    this.messages.push(
+      this.createMessageState(
+        event.messageId,
+        "message",
+        "assistant",
+        event.content,
+      ),
+    );
+  }
+
+  processInstructionCreated(event: InstructionCreatedEvent) {
+    this.messages.push(
+      this.createMessageState(
+        event.messageId,
+        "message",
+        "system",
         event.content,
       ),
     );
@@ -360,7 +358,7 @@ export class LLMChatProjection {
     const chapterMessage = this.createMessageState(
       event.chapterId,
       "chapter",
-      "system",
+      "assistant",
       chapterContent,
       event.coveredMessageIds,
     );
@@ -427,7 +425,7 @@ export class LLMChatProjection {
     const bookMessage = this.createMessageState(
       event.bookId,
       "book",
-      "system",
+      "assistant",
       bookContent,
     );
     bookMessage.data = {
@@ -486,7 +484,7 @@ export class LLMChatProjection {
     const planMessage = this.createMessageState(
       event.messageId,
       "plan",
-      "system",
+      "assistant",
       formattedContent,
     );
     planMessage.data = {
@@ -524,7 +522,7 @@ export class LLMChatProjection {
     const noteMessage = this.createMessageState(
       event.noteId,
       "note",
-      "system",
+      "user",
       formattedContent,
     );
     noteMessage.data = {
@@ -556,7 +554,7 @@ export class LLMChatProjection {
     const clarificationMessage = this.createMessageState(
       event.clarificationId,
       "agent-clarification",
-      "system",
+      "user",
       this.formatAgentClarificationContent(event.question, event.answer),
     );
     clarificationMessage.data = {
@@ -932,15 +930,9 @@ const filterPlans = <T extends MessageState>(
   messages: T[],
   selection: PlanContextSelection,
 ): T[] => {
-  if (selection.mode === "include") return messages;
-  if (selection.mode === "exclude-all") {
-    return messages.filter((message) => message.type !== "plan");
-  }
-  return messages.filter(
-    (message) =>
-      message.type !== "plan" ||
-      message.data?.planDefinitionId !== selection.planDefinitionId,
-  );
+  return selection.mode === "include"
+    ? messages
+    : messages.filter((message) => message.type !== "plan");
 };
 
 const createIdSet = (messages: MessageState[]): Set<string> =>

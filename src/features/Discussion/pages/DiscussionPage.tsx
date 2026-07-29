@@ -60,7 +60,7 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
     isGenerating,
     defaultModel,
     defaultRequestSettings,
-    getLLMContext,
+    llmContext,
     sendMessage,
     generateInitialMessage,
     sendFinalFeedbackAndGenerate,
@@ -158,7 +158,7 @@ export const DiscussionPage: React.FC<DiscussionPageProps> = ({
         </Box>
 
         <DiscussionChatArea
-          context={getLLMContext()}
+          context={llmContext}
           messages={messages}
           isGenerating={isGenerating}
           config={config}

@@ -34,6 +34,11 @@ describe("NewChapterDiscussionConfig", () => {
     vi.mocked(d.LLMChatProjection).mockReturnValue(
       mockLLMChatProjection as any,
     );
+    vi.mocked(d.LLMMessageContextService).mockReturnValue({
+      buildContext: vi
+        .fn()
+        .mockResolvedValue(mockLLMChatProjection.GetMessages()),
+    } as any);
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue(
       mockOpenRouterChatAPI as any,
     );
@@ -51,9 +56,9 @@ describe("NewChapterDiscussionConfig", () => {
   });
 
   describe("getChatMessages", () => {
-    it("should return messages from LLMChatProjection", () => {
+    it("should return messages from shared context", async () => {
       const config = createNewChapterDiscussionConfig(testChatId, testTitle);
-      const messages = config.getChatMessages();
+      const messages = await config.getChatMessages();
       expect(messages).toEqual([
         { id: "message-1", role: "user", content: "Hello" },
         { id: "message-2", role: "assistant", content: "World" },
@@ -139,33 +144,33 @@ describe("NewChapterDiscussionConfig", () => {
       );
     });
 
-    it("should include feedback in the system prompt", async () => {
+    it("should include feedback in the task prompt", async () => {
       const config = createNewChapterDiscussionConfig(testChatId, testTitle);
 
       await config.generateFromFeedback("Include the dragon fight");
 
       const callMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      const systemMessages = callMessages.filter(
-        (m: any) => m.role === "system",
+      const taskMessages = callMessages.filter(
+        (m: any) => m.role === "user",
       );
       expect(
-        systemMessages.some((m: any) =>
+        taskMessages.some((m: any) =>
           m.content.includes("Include the dragon fight"),
         ),
       ).toBe(true);
     });
 
-    it("should include chapter title in system prompt", async () => {
+    it("should include chapter title in the task prompt", async () => {
       const config = createNewChapterDiscussionConfig(testChatId, testTitle);
 
       await config.generateFromFeedback("Some feedback");
 
       const callMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      const systemMessages = callMessages.filter(
-        (m: any) => m.role === "system",
+      const taskMessages = callMessages.filter(
+        (m: any) => m.role === "user",
       );
       expect(
-        systemMessages.some((m: any) => m.content.includes("Chapter One")),
+        taskMessages.some((m: any) => m.content.includes("Chapter One")),
       ).toBe(true);
     });
 
@@ -214,7 +219,7 @@ describe("NewChapterDiscussionConfig", () => {
       );
     });
 
-    it("should use custom chapter summary prompt in system message", async () => {
+    it("should use custom chapter summary prompt in the task message", async () => {
       const customPrompt = "Custom chapter summary instructions.";
       const config = createNewChapterDiscussionConfig(
         testChatId,
@@ -227,11 +232,11 @@ describe("NewChapterDiscussionConfig", () => {
       await config.generateFromFeedback("Add more detail");
 
       const callMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      const systemMessages = callMessages.filter(
-        (m: any) => m.role === "system",
+      const taskMessages = callMessages.filter(
+        (m: any) => m.role === "user",
       );
       expect(
-        systemMessages.some((m: any) => m.content.includes(customPrompt)),
+        taskMessages.some((m: any) => m.content.includes(customPrompt)),
       ).toBe(true);
     });
 
@@ -241,11 +246,11 @@ describe("NewChapterDiscussionConfig", () => {
       await config.generateFromFeedback("Add more detail");
 
       const callMessages = mockOpenRouterChatAPI.postChat.mock.calls[0][0];
-      const systemMessages = callMessages.filter(
-        (m: any) => m.role === "system",
+      const taskMessages = callMessages.filter(
+        (m: any) => m.role === "user",
       );
       expect(
-        systemMessages.some((m: any) =>
+        taskMessages.some((m: any) =>
           m.content.includes(DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt),
         ),
       ).toBe(true);

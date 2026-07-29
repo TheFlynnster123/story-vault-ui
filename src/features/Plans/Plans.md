@@ -98,7 +98,9 @@ Plans are processed as part of the `TextGenerationService` flow:
    - **Due plans** (counter >= interval): Regenerated via Grok LLM → `PlanHidden` + `PlanCreated` events emitted → counter reset to 0
    - **Not-due plans**: Counter incremented by 1
 4. Plan definitions saved (counters updated)
-5. Plans appear naturally in the LLM context from the `LLMChatProjection` — no separate plan injection needed
+5. A caller receives projected Plans only when its local context selection includes
+   `plans: true`. Chat continuation opts in; Plan generation and Plan discussion omit
+   all projected Plans and append only the target Plan content as task input.
 
 ### LLM Context Formatting
 
@@ -109,6 +111,11 @@ In `LLMChatProjection`, plan messages are formatted with markers:
 [End of Plan]
 ```
 This helps the LLM distinguish plan content from conversation messages.
+
+Plan discussion resolves prior content by the requested `planDefinitionId`, not
+by whichever Plan message happened to be newest. Stored presets are normalized
+when loaded and before mutations so removed context-policy fields cannot leak
+back into current Plan definitions.
 
 ## Directory Structure
 

@@ -5,12 +5,13 @@ import {
   type LLMMessage,
 } from "../LLMChatProjection";
 import type {
-  MessageCreatedEvent,
   MessageEditedEvent,
   MessageDeletedEvent,
   MessagesDeletedEvent,
   CivitJobCreatedEvent,
 } from "../events/ChatEvent";
+import { AgentClarificationCreatedEventUtil } from "../events/AgentClarificationEventUtils";
+import { createTextMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("LLMChatProjection - Core Operations", () => {
   let projection: LLMChatProjection;
@@ -225,6 +226,26 @@ describe("LLMChatProjection - Core Operations", () => {
       const messages = projection.GetMessages();
 
       expectMessageCount(messages, 3);
+    });
+  });
+
+  describe("AgentClarificationCreated Event", () => {
+    it("projects the user's clarification as a user message", () => {
+      projection.process(
+        AgentClarificationCreatedEventUtil.Create(
+          "Which character should lead?",
+          "Mara should lead.",
+        ),
+      );
+
+      expect(projection.GetMessages()).toEqual([
+        expect.objectContaining({
+          type: "agent-clarification",
+          role: "user",
+          content:
+            "[User Clarification]\nQuestion: Which character should lead?\nAnswer: Mara should lead.\n[End of User Clarification]",
+        }),
+      ]);
     });
   });
 
@@ -502,8 +523,8 @@ describe("LLMChatProjection - Core Operations", () => {
     messageId: string,
     role: "user" | "assistant" | "system",
     content: string
-  ): MessageCreatedEvent {
-    return { type: "MessageCreated", messageId, role, content };
+  ) {
+    return createTextMessageEvent(messageId, role, content);
   }
 
   function processMessageCreated(
@@ -512,13 +533,7 @@ describe("LLMChatProjection - Core Operations", () => {
     role: "user" | "assistant" | "system",
     content: string
   ): void {
-    const event: MessageCreatedEvent = {
-      type: "MessageCreated",
-      messageId,
-      role,
-      content,
-    };
-    proj.process(event);
+    proj.process(createTextMessageEvent(messageId, role, content));
   }
 
   function processMessageEdited(

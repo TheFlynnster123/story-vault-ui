@@ -9,22 +9,22 @@ vi.mock("../../../../services/Dependencies");
 
 const CHAT_ID = "chat-1";
 const SNAPSHOT = [{ role: "user" as const, content: "Story context" }];
-const REQUEST_MESSAGES = [{ role: "user" as const, content: "Draft prompt" }];
+const CONTEXT_MESSAGES = [{ role: "system" as const, content: "Context" }];
 
 describe("ChapterGenerationService", () => {
-  const buildChapterDraftRequestMessages = vi.fn();
+  const buildContext = vi.fn();
   const postChat = vi.fn();
   const getPrompts = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    buildChapterDraftRequestMessages.mockResolvedValue(REQUEST_MESSAGES);
+    buildContext.mockResolvedValue(CONTEXT_MESSAGES);
     postChat.mockResolvedValue(
       JSON.stringify({ title: "Chapter One", summary: "A concise summary." }),
     );
     getPrompts.mockResolvedValue({});
     vi.mocked(d.LLMMessageContextService).mockReturnValue({
-      buildChapterDraftRequestMessages,
+      buildContext,
     } as never);
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue({ postChat } as never);
     vi.mocked(d.SystemPromptsService).mockReturnValue({
@@ -37,7 +37,16 @@ describe("ChapterGenerationService", () => {
 
     const result = await service.generateChapterDraft(SNAPSHOT);
 
-    expect(buildChapterDraftRequestMessages).toHaveBeenCalledWith(SNAPSHOT);
+    expect(buildContext).toHaveBeenCalledWith(
+      {
+        history: true,
+        memories: true,
+        characterSheets: true,
+        continuityHistories: true,
+        plans: true,
+      },
+      { historyOverride: SNAPSHOT },
+    );
     expect(postChat).toHaveBeenCalledOnce();
     expect(result).toEqual({
       title: "Chapter One",
@@ -55,7 +64,14 @@ describe("ChapterGenerationService", () => {
     await service.generateChapterDraft(SNAPSHOT);
 
     expect(postChat).toHaveBeenCalledWith(
-      REQUEST_MESSAGES,
+      expect.arrayContaining([
+        CONTEXT_MESSAGES[0],
+        expect.objectContaining({
+          content: expect.stringContaining(
+            "Return one JSON object with exactly two string fields",
+          ),
+        }),
+      ]),
       "openai/gpt-5",
       "chat",
       "LLM",

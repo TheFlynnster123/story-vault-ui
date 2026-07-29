@@ -15,3 +15,11 @@ export function toUserMessage(text: string): LLMMessage {
     content: text,
   };
 }
+
+export function toAssistantMessage(text: string): LLMMessage {
+  return {
+    id: `assistant-${Date.now()}`,
+    role: "assistant",
+    content: text,
+  };
+}

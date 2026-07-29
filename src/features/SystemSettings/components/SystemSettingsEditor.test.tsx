@@ -118,9 +118,11 @@ describe("SystemSettingsEditor", () => {
     screen.getByLabelText("Model").click();
 
     await waitFor(() => {
-      expect(screen.getByText("Select model setup")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Configure setup" }),
+      ).toBeInTheDocument();
     });
-    screen.getByRole("radio", { name: "Browse models" }).click();
+    screen.getByRole("button", { name: "Other models" }).click();
     await waitFor(() => {
       expect(screen.getByText("Grok 4.20 Beta")).toBeInTheDocument();
     });
@@ -136,9 +138,11 @@ describe("SystemSettingsEditor", () => {
     screen.getByLabelText("Model").click();
 
     await waitFor(() => {
-      expect(screen.getByText("Select model setup")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Configure setup" }),
+      ).toBeInTheDocument();
     });
-    screen.getByRole("radio", { name: "Browse models" }).click();
+    screen.getByRole("button", { name: "Other models" }).click();
 
     await waitFor(() => {
       expect(screen.getByText("Claude Opus 4")).toBeInTheDocument();

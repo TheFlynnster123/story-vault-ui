@@ -15,7 +15,12 @@ export interface ErrorDiagnostic {
   message: string;
   errorName?: string;
   errorMessage?: string;
+  providerErrorMessage?: string;
   stack?: string;
+}
+
+export interface ErrorDiagnosticDetails {
+  providerErrorMessage?: string;
 }
 
 const MAX_CONSOLE_ENTRIES = 200;
@@ -41,7 +46,11 @@ class ErrorDiagnostics {
     }
   }
 
-  record(message: string, error?: unknown): ErrorDiagnostic {
+  record(
+    message: string,
+    error?: unknown,
+    details: ErrorDiagnosticDetails = {},
+  ): ErrorDiagnostic {
     const diagnostic: ErrorDiagnostic = {
       id: crypto.randomUUID(),
       timestamp: new Date(),
@@ -53,6 +62,7 @@ class ErrorDiagnostics {
           : error === undefined
             ? undefined
             : formatValue(error),
+      providerErrorMessage: details.providerErrorMessage,
       stack: error instanceof Error ? error.stack : undefined,
     };
     this.diagnostics = [diagnostic, ...this.diagnostics].slice(0, 50);

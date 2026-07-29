@@ -19,6 +19,7 @@ describe("ImageGenerationService", () => {
     GetMessages: ReturnType<typeof vi.fn>;
     GetMessage: ReturnType<typeof vi.fn>;
   };
+  const mockBuildContext = vi.fn<[], Promise<LLMMessage[]>>();
   let mockUserChatProjection: {
     GetMessage: ReturnType<typeof vi.fn>;
     GetMessages: ReturnType<typeof vi.fn>;
@@ -60,6 +61,11 @@ describe("ImageGenerationService", () => {
       GetMessages: vi.fn().mockReturnValue(createMockMessages()),
       GetMessage: vi.fn(),
     };
+    mockBuildContext
+      .mockReset()
+      .mockImplementation(
+        async () => mockLLMChatProjection.GetMessages() as LLMMessage[],
+      );
 
     mockUserChatProjection = {
       GetMessage: vi.fn(),
@@ -134,6 +140,9 @@ describe("ImageGenerationService", () => {
     vi.mocked(d.LLMChatProjection).mockReturnValue(
       mockLLMChatProjection as any,
     );
+    vi.mocked(d.LLMMessageContextService).mockReturnValue({
+      buildContext: mockBuildContext,
+    } as any);
     vi.mocked(d.UserChatProjection).mockReturnValue(
       mockUserChatProjection as any,
     );
@@ -333,6 +342,10 @@ describe("ImageGenerationService", () => {
           generationStatus: "submitted",
         }),
       );
+    });
+    expect(mockBuildContext).toHaveBeenCalledWith({
+      history: true,
+      plans: true,
     });
   });
 

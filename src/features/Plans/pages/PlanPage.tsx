@@ -69,8 +69,6 @@ const createNewPlan = (): Plan => ({
   refreshInterval: DEFAULT_REFRESH_INTERVAL,
   messagesSinceLastUpdate: 0,
   consolidateMessageHistory: false,
-  hideOtherPlans: false,
-  excludeOwnPlanFromHistory: false,
 });
 
 const inputStyles = {
@@ -157,12 +155,6 @@ export const PlanPage: React.FC = () => {
       planId,
       "consolidateMessageHistory",
       preset.consolidateMessageHistory,
-    );
-    updatePlanDefinition?.(planId, "hideOtherPlans", preset.hideOtherPlans);
-    updatePlanDefinition?.(
-      planId,
-      "excludeOwnPlanFromHistory",
-      preset.excludeOwnPlanFromHistory,
     );
   };
 
@@ -458,8 +450,6 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
     suggestionRequestSettings: plan.suggestionRequestSettings,
     refreshInterval: plan.refreshInterval,
     consolidateMessageHistory: plan.consolidateMessageHistory,
-    hideOtherPlans: plan.hideOtherPlans,
-    excludeOwnPlanFromHistory: plan.excludeOwnPlanFromHistory,
   });
 
   const handleSaveSubmit = async () => {
@@ -632,30 +622,6 @@ const PlanEditor: React.FC<PlanEditorProps> = ({
           onChange(
             plan.id,
             "consolidateMessageHistory",
-            e.currentTarget.checked,
-          )
-        }
-        styles={{
-          label: { color: Theme.page.text },
-        }}
-      />
-      <Checkbox
-        label="Hide Other Plans"
-        checked={plan.hideOtherPlans}
-        onChange={(e) =>
-          onChange(plan.id, "hideOtherPlans", e.currentTarget.checked)
-        }
-        styles={{
-          label: { color: Theme.page.text },
-        }}
-      />
-      <Checkbox
-        label="Exclude Own Plan From History"
-        checked={plan.excludeOwnPlanFromHistory}
-        onChange={(e) =>
-          onChange(
-            plan.id,
-            "excludeOwnPlanFromHistory",
             e.currentTarget.checked,
           )
         }

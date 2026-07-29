@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Story Vault — Configure setup concept</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --canvas: #090b10;
+        --surface: #12151c;
+        --surface-raised: #181c25;
+        --surface-hover: #1e2330;
+        --line: rgba(255, 255, 255, 0.1);
+        --line-strong: rgba(255, 255, 255, 0.16);
+        --text: #f6f7fb;
+        --muted: #979eae;
+        --faint: #6d7483;
+        --accent: #8b9eff;
+        --accent-strong: #7187ff;
+        --accent-soft: rgba(113, 135, 255, 0.14);
+        --current: #35d1bc;
+        --current-strong: #1eb7a4;
+        --current-soft: rgba(53, 209, 188, 0.12);
+        --warning: #f0bd69;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 0%, rgba(73, 89, 173, 0.16), transparent 30rem),
+          radial-gradient(circle at 90% 80%, rgba(22, 163, 147, 0.1), transparent 34rem),
+          var(--canvas);
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        color: inherit;
+      }
+
+      .page {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        padding: 32px;
+      }
+
+      .concept {
+        display: grid;
+        width: min(100%, 1120px);
+        grid-template-columns: minmax(0, 720px) minmax(240px, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .modal {
+        position: relative;
+        display: flex;
+        min-height: min(780px, calc(100vh - 64px));
+        max-height: min(820px, calc(100vh - 64px));
+        overflow: hidden;
+        flex-direction: column;
+        border: 1px solid var(--line-strong);
+        border-radius: 18px;
+        background: rgba(18, 21, 28, 0.98);
+        box-shadow:
+          0 28px 80px rgba(0, 0, 0, 0.5),
+          0 1px 0 rgba(255, 255, 255, 0.04) inset;
+      }
+
+      .modal-header {
+        display: flex;
+        min-height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 720;
+        letter-spacing: -0.02em;
+      }
+
+      .icon-button {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        place-items: center;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      .icon-button:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+      }
+
+      .navigation {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1.2fr;
+        gap: 6px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(9, 11, 16, 0.35);
+      }
+
+      .nav-button {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        min-height: 54px;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .nav-button:hover {
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--text);
+      }
+
+      .nav-button.active {
+        border-color: rgba(113, 135, 255, 0.36);
+        background: var(--accent-soft);
+        color: var(--text);
+      }
+
+      .nav-button.current {
+        border-color: rgba(53, 209, 188, 0.2);
+        background: rgba(53, 209, 188, 0.055);
+      }
+
+      .nav-button.current:hover,
+      .nav-button.current.active {
+        border-color: rgba(53, 209, 188, 0.56);
+        background: var(--current-soft);
+      }
+
+      .nav-icon {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        place-items: center;
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.055);
+        color: var(--accent);
+      }
+
+      .current .nav-icon {
+        background: rgba(53, 209, 188, 0.12);
+        color: var(--current);
+      }
+
+      .setups .nav-icon {
+        background: rgba(240, 189, 105, 0.1);
+        color: var(--warning);
+      }
+
+      .nav-copy {
+        min-width: 0;
+        line-height: 1.2;
+      }
+
+      .nav-label {
+        display: block;
+        overflow: hidden;
+        font-size: 13px;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .nav-meta {
+        display: block;
+        overflow: hidden;
+        margin-top: 3px;
+        color: var(--faint);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .current .nav-meta {
+        color: rgba(53, 209, 188, 0.75);
+      }
+
+      .content {
+        min-height: 0;
+        overflow: auto;
+        flex: 1;
+        scrollbar-color: #3a404e transparent;
+      }
+
+      .view {
+        display: none;
+      }
+
+      .view.active {
+        display: block;
+      }
+
+      .catalog-toolbar {
+        position: sticky;
+        z-index: 2;
+        top: 0;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(18, 21, 28, 0.96);
+        backdrop-filter: blur(14px);
+      }
+
+      .search {
+        position: relative;
+      }
+
+      .search svg {
+        position: absolute;
+        top: 50%;
+        left: 13px;
+        color: var(--faint);
+        pointer-events: none;
+        transform: translateY(-50%);
+      }
+
+      .search input {
+        width: 100%;
+        height: 42px;
+        padding: 0 14px 0 40px;
+        border: 1px solid var(--line-strong);
+        border-radius: 11px;
+        outline: none;
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--text);
+      }
+
+      .search input::placeholder {
+        color: var(--faint);
+      }
+
+      .search input:focus {
+        border-color: rgba(139, 158, 255, 0.72);
+        box-shadow: 0 0 0 3px rgba(139, 158, 255, 0.12);
+      }
+
+      .catalog {
+        padding: 18px 16px 28px;
+      }
+
+      .section + .section {
+        margin-top: 22px;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 2px 9px;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: #b8becc;
+        font-size: 11px;
+        font-weight: 780;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .section-count {
+        color: var(--faint);
+        font-size: 11px;
+      }
+
+      .model-list {
+        display: grid;
+        gap: 9px;
+      }
+
+      .model-card {
+        display: grid;
+        width: 100%;
+        min-height: 76px;
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.025);
+        cursor: pointer;
+        text-align: left;
+        transition:
+          border-color 130ms ease,
+          background 130ms ease,
+          transform 130ms ease;
+      }
+
+      .model-card:hover {
+        border-color: rgba(139, 158, 255, 0.42);
+        background: var(--surface-hover);
+        transform: translateY(-1px);
+      }
+
+      .model-logo {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border: 1px solid rgba(139, 158, 255, 0.16);
+        border-radius: 11px;
+        background: rgba(139, 158, 255, 0.08);
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .model-copy {
+        min-width: 0;
+      }
+
+      .model-name {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 14px;
+        font-weight: 690;
+      }
+
+      .model-provider,
+      .model-stats {
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .model-provider {
+        margin-top: 2px;
+      }
+
+      .model-stats {
+        color: var(--faint);
+        font-size: 11px;
+      }
+
+      .chevron {
+        color: var(--faint);
+      }
+
+      .badge {
+        display: inline-flex;
+        min-height: 20px;
+        align-items: center;
+        padding: 2px 7px;
+        border-radius: 999px;
+        color: var(--accent);
+        background: rgba(139, 158, 255, 0.12);
+        font-size: 9px;
+        font-weight: 780;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .badge.current-badge {
+        color: var(--current);
+        background: rgba(53, 209, 188, 0.12);
+      }
+
+      .empty-search {
+        display: none;
+        padding: 48px 20px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .presets {
+        padding: 20px 16px 28px;
+      }
+
+      .presets-intro {
+        margin: 5px 2px 18px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .preset-list {
+        display: grid;
+        gap: 9px;
+      }
+
+      .preset-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 38px;
+        gap: 7px;
+      }
+
+      .preset-row .model-card {
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+      }
+
+      .delete-button {
+        display: grid;
+        min-height: 100%;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.025);
+        color: var(--faint);
+        cursor: pointer;
+      }
+
+      .delete-button:hover {
+        border-color: rgba(240, 99, 114, 0.4);
+        background: rgba(240, 99, 114, 0.08);
+        color: #f06372;
+      }
+
+      .empty-presets {
+        display: none;
+        padding: 54px 24px;
+        border: 1px dashed var(--line-strong);
+        border-radius: 14px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .empty-presets strong {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .detail {
+        padding: 20px 18px 28px;
+      }
+
+      .setup-summary {
+        padding: 16px;
+        border: 1px solid rgba(139, 158, 255, 0.38);
+        border-radius: 14px;
+        background:
+          linear-gradient(135deg, rgba(139, 158, 255, 0.13), rgba(139, 158, 255, 0.035));
+      }
+
+      .setup-summary.current-summary {
+        border-color: rgba(53, 209, 188, 0.52);
+        background:
+          linear-gradient(135deg, rgba(53, 209, 188, 0.16), rgba(53, 209, 188, 0.035));
+        box-shadow: 0 0 0 1px rgba(53, 209, 188, 0.04) inset;
+      }
+
+      .summary-top {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .summary-kicker {
+        margin: 0 0 4px;
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 780;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .current-summary .summary-kicker {
+        color: var(--current);
+      }
+
+      .summary-title {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: -0.025em;
+      }
+
+      .summary-provider {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .summary-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 14px;
+      }
+
+      .meta-pill {
+        padding: 4px 8px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        color: #b7bdca;
+        font-size: 10px;
+      }
+
+      .settings {
+        display: grid;
+        gap: 17px;
+        margin-top: 22px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .field-help {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .field select,
+      .field input {
+        width: 100%;
+        height: 42px;
+        padding: 0 12px;
+        border: 1px solid var(--line-strong);
+        border-radius: 10px;
+        outline: none;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+      }
+
+      .advanced {
+        display: flex;
+        width: 100%;
+        height: 48px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 13px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.025);
+        cursor: pointer;
+      }
+
+      .footer {
+        padding: 14px 16px 16px;
+        border-top: 1px solid var(--line);
+        background: rgba(15, 18, 24, 0.98);
+      }
+
+      .footer-note {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .save-setup {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        margin-bottom: 11px;
+      }
+
+      .save-setup input {
+        width: 100%;
+        min-width: 0;
+        height: 40px;
+        padding: 0 11px;
+        border: 1px solid var(--line-strong);
+        border-radius: 9px;
+        outline: none;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+      }
+
+      .save-setup input:focus {
+        border-color: rgba(139, 158, 255, 0.72);
+        box-shadow: 0 0 0 3px rgba(139, 158, 255, 0.1);
+      }
+
+      .secondary-button {
+        min-height: 40px;
+        padding: 0 14px;
+        border: 1px solid var(--line-strong);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.055);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 680;
+      }
+
+      .secondary-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .primary-button {
+        width: 100%;
+        min-height: 44px;
+        border: 0;
+        border-radius: 10px;
+        background: linear-gradient(180deg, #8395ff, #667cef);
+        color: white;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 720;
+        box-shadow: 0 8px 22px rgba(89, 108, 221, 0.22);
+      }
+
+      .primary-button:hover {
+        filter: brightness(1.08);
+      }
+
+      .primary-button.current-action {
+        background: linear-gradient(180deg, #39cfbc, #20aa99);
+        box-shadow: 0 8px 22px rgba(32, 170, 153, 0.2);
+      }
+
+      .notes {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(18, 21, 28, 0.72);
+        backdrop-filter: blur(16px);
+      }
+
+      .notes h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .notes p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .notes ol {
+        display: grid;
+        gap: 12px;
+        margin: 18px 0 0;
+        padding: 0;
+        counter-reset: item;
+        list-style: none;
+      }
+
+      .notes li {
+        display: grid;
+        grid-template-columns: 25px 1fr;
+        gap: 9px;
+        align-items: start;
+        color: #c7ccd6;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .notes li::before {
+        display: grid;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        border-radius: 7px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        content: counter(item);
+        counter-increment: item;
+        font-size: 10px;
+        font-weight: 800;
+      }
+
+      .notes strong {
+        color: var(--text);
+      }
+
+      .keyboard {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+        color: var(--faint);
+        font-size: 10px;
+      }
+
+      @media (max-width: 920px) {
+        .concept {
+          grid-template-columns: minmax(0, 720px);
+          justify-content: center;
+        }
+
+        .notes {
+          display: none;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .page {
+          display: block;
+          padding: 0;
+        }
+
+        .modal {
+          min-height: 100dvh;
+          max-height: 100dvh;
+          border: 0;
+          border-radius: 0;
+        }
+
+        .navigation {
+          grid-template-columns: 1fr;
+        }
+
+        .nav-button {
+          min-height: 48px;
+        }
+
+        .nav-button.current:not(.active) {
+          min-height: 44px;
+        }
+
+        .save-setup {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="concept">
+        <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <header class="modal-header">
+            <h1 class="modal-title" id="modal-title">Configure setup</h1>
+            <button class="icon-button" type="button" aria-label="Close dialog">
+              <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none">
+                <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+            </button>
+          </header>
+
+          <nav class="navigation" aria-label="Model setup navigation">
+            <button class="nav-button active" id="other-models-nav" type="button">
+              <span class="nav-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <rect x="4" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.7" />
+                  <rect x="14" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.7" />
+                  <rect x="4" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.7" />
+                  <rect x="14" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.7" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <span class="nav-label">Other models</span>
+                <span class="nav-meta">Browse and compare</span>
+              </span>
+            </button>
+
+            <button class="nav-button setups" id="saved-setups-nav" type="button">
+              <span class="nav-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 4h12a2 2 0 0 1 2 2v14l-8-4-8 4V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <span class="nav-label">My setups</span>
+                <span class="nav-meta" id="preset-count-nav">3 saved presets</span>
+              </span>
+            </button>
+
+            <button class="nav-button current" id="current-model-nav" type="button">
+              <span class="nav-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M8 9h8M9 14h.01M12 14h.01M15 14h.01M7 5h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  <path d="M9 5V3m6 2V3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span class="nav-copy">
+                <span class="nav-label">Current model</span>
+                <span class="nav-meta">Claude Sonnet 4.6</span>
+              </span>
+              <span class="badge current-badge">Active</span>
+            </button>
+          </nav>
+
+          <div class="content">
+            <section class="view" id="presets-view" aria-label="My setups">
+              <div class="presets">
+                <div class="section-heading">
+                  <h2 class="eyebrow">Saved setups</h2>
+                  <span class="section-count" id="preset-count-heading">3 presets</span>
+                </div>
+                <p class="presets-intro">Reusable combinations of a model and its settings. Opening one is still a preview until you apply it.</p>
+                <div class="preset-list" id="preset-list"></div>
+                <div class="empty-presets" id="empty-presets">
+                  <strong>No saved setups yet</strong>
+                  Configure any model and give it a name to save it here.
+                </div>
+              </div>
+            </section>
+
+            <section class="view active" id="catalog-view" aria-label="Other models">
+              <div class="catalog-toolbar">
+                <div class="search">
+                  <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8" />
+                    <path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                  <input id="model-search" type="search" placeholder="Search models by name, provider, or capability…" aria-label="Search models" />
+                </div>
+              </div>
+
+              <div class="catalog">
+                <section class="section" data-model-section>
+                  <div class="section-heading">
+                    <h2 class="eyebrow">Recommended</h2>
+                    <span class="section-count">3 models</span>
+                  </div>
+                  <div class="model-list">
+                    <button class="model-card" type="button" data-model="Kimi K2.5" data-provider="Moonshot AI" data-context="256K context" data-price="$0.45 prompt · $2.20 completion">
+                      <span class="model-logo" aria-hidden="true">K</span>
+                      <span class="model-copy">
+                        <span class="model-name">Kimi K2.5 <span class="badge">Recommended</span></span>
+                        <span class="model-provider">Moonshot AI · moonshotai/kimi-k2.5</span>
+                        <span class="model-stats">256K context · $0.45 prompt / M</span>
+                      </span>
+                      <span class="chevron" aria-hidden="true">›</span>
+                    </button>
+
+                    <button class="model-card" type="button" data-model="GLM 5 Turbo" data-provider="Z.ai" data-context="202K context" data-price="$0.80 prompt · $2.56 completion">
+                      <span class="model-logo" aria-hidden="true">G</span>
+                      <span class="model-copy">
+                        <span class="model-name">GLM 5 Turbo <span class="badge">Recommended</span></span>
+                        <span class="model-provider">Z.ai · z-ai/glm-5-turbo</span>
+                        <span class="model-stats">202K context · $0.80 prompt / M</span>
+                      </span>
+                      <span class="chevron" aria-hidden="true">›</span>
+                    </button>
+
+                    <button class="model-card" type="button" data-model="DeepSeek V3.2" data-provider="DeepSeek" data-context="164K context" data-price="$0.25 prompt · $0.38 completion">
+                      <span class="model-logo" aria-hidden="true">D</span>
+                      <span class="model-copy">
+                        <span class="model-name">DeepSeek V3.2 <span class="badge">Recommended</span></span>
+                        <span class="model-provider">DeepSeek · deepseek/deepseek-v3.2</span>
+                        <span class="model-stats">164K context · $0.25 prompt / M</span>
+                      </span>
+                      <span class="chevron" aria-hidden="true">›</span>
+                    </button>
+                  </div>
+                </section>
+
+                <section class="section" data-model-section>
+                  <div class="section-heading">
+                    <h2 class="eyebrow">All other models</h2>
+                    <span class="section-count">4 models</span>
+                  </div>
+                  <div class="model-list">
+                    <button class="model-card" type="button" data-model="GPT-5.2" data-provider="OpenAI" data-context="400K context" data-price="$1.75 prompt · $14.00 completion">
+                      <span class="model-logo" aria-hidden="true">O</span>
+                      <span class="model-copy">
+                        <span class="model-name">GPT-5.2</span>
+                        <span class="model-provider">OpenAI · openai/gpt-5.2</span>
+                        <span class="model-stats">400K context · $1.75 prompt / M</span>
+                      </span>
+                      <span class="chevron" aria-hidden="true">›</span>
+                    </button>
+
+                    <button class="model-card" type="button" data-model="Gemini 3 Pro Preview" data-provider="Google" data-context="1M context" data-price="$2.00 prompt · $12.00 completion">
+                      <span class="model-logo" aria-hidden="true">G</span>
+                      <span class="model-copy">
+                        <span class="model-name">Gemini 3 Pro Preview</span>
+                        <span class="model-provider">Google · google/gemini-3-pro-preview</span>
+                        <span class="model-stats">1M context · $2.00 prompt / M</span>
+                      </span>
+                      <span class="chevron" aria-hidden="true">›</span>
+                    </button>
+
+                    <button class="model-card" type="button" data-model="Qwen 3.5 122B" data-provider="Qwen" data-context="262K context" data-price="$0.40 prompt · $1.20 completion">
+                      <span class="model-logo" aria-hidden="true">Q</span>
+                      <span class="model-copy">
+                        <span class="model-name">Qwen 3.5 122B</span>
+                        <span class="model-provider">Qwen · qwen/qwen3.5-122b-a10b</span>
+                        <span class="model-stats">262K context · $0.40 prompt / M</span>
+                      </span>
+                      <span class="chevron" aria-hidden="true">›</span>
+                    </button>
+
+                    <button class="model-card" type="button" data-model="Palmyra X5" data-provider="Writer" data-context="1M context" data-price="$0.60 prompt · $6.00 completion">
+                      <span class="model-logo" aria-hidden="true">W</span>
+                      <span class="model-copy">
+                        <span class="model-name">Palmyra X5</span>
+                        <span class="model-provider">Writer · writer/palmyra-x5</span>
+                        <span class="model-stats">1M context · $0.60 prompt / M</span>
+                      </span>
+                      <span class="chevron" aria-hidden="true">›</span>
+                    </button>
+                  </div>
+                </section>
+                <div class="empty-search" id="empty-search">No other models match this search.</div>
+              </div>
+            </section>
+
+            <section class="view" id="detail-view" aria-label="Model settings">
+              <div class="detail">
+                <article class="setup-summary" id="setup-summary">
+                  <div class="summary-top">
+                    <div>
+                      <p class="summary-kicker" id="summary-kicker">New setup</p>
+                      <h2 class="summary-title" id="summary-title">Kimi K2.5</h2>
+                      <p class="summary-provider" id="summary-provider">Moonshot AI</p>
+                    </div>
+                    <span class="badge" id="summary-badge">Preview</span>
+                  </div>
+                  <div class="summary-meta">
+                    <span class="meta-pill" id="summary-context">256K context</span>
+                    <span class="meta-pill" id="summary-price">$0.45 prompt · $2.20 completion</span>
+                  </div>
+                </article>
+
+                <div class="settings">
+                  <div class="field">
+                    <label for="reasoning">Reasoning effort</label>
+                    <p class="field-help">Higher effort may improve difficult work but costs more time and tokens.</p>
+                    <select id="reasoning">
+                      <option>Auto</option>
+                      <option>Low</option>
+                      <option>Medium</option>
+                      <option>High</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="temperature">Temperature</label>
+                    <p class="field-help">Controls randomness. Lower is consistent; higher is more surprising.</p>
+                    <input id="temperature" type="number" min="0" max="2" step="0.1" value="0.7" />
+                  </div>
+
+                  <button class="advanced" type="button">
+                    <span>Advanced settings</span>
+                    <span class="chevron" aria-hidden="true">⌄</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <footer class="footer" id="footer" hidden>
+            <div class="save-setup">
+              <input id="setup-name" type="text" placeholder="Name this setup" aria-label="Setup name" />
+              <button class="secondary-button" id="save-setup-button" type="button" disabled>Save as new</button>
+            </div>
+            <p class="footer-note" id="footer-note">Preview only. Your current model will not change until you apply.</p>
+            <button class="primary-button" id="apply-button" type="button">Use Kimi K2.5</button>
+          </footer>
+        </section>
+
+        <aside class="notes" aria-label="Design notes">
+          <h2>Interaction notes</h2>
+          <p>This template opens on the model catalog, even when a model is already active.</p>
+          <ol>
+            <li><span><strong>Other models is a destination.</strong> It replaces generic back language and stays available from every setup screen.</span></li>
+            <li><span><strong>Presets remain first-class.</strong> “My setups” lists reusable model-and-settings combinations and supports deleting or creating them.</span></li>
+            <li><span><strong>The current model is one click away.</strong> Its persistent teal navigation item shows both its name and active status.</span></li>
+            <li><span><strong>Color carries meaning.</strong> Teal is reserved for the applied model; indigo marks a candidate being configured.</span></li>
+            <li><span><strong>Selection stays explicit.</strong> Browsing or configuring never changes the active model until “Use” is pressed.</span></li>
+          </ol>
+          <div class="keyboard">Interactive: choose a model, search the catalog, or open the current model.</div>
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      const catalogView = document.querySelector("#catalog-view");
+      const presetsView = document.querySelector("#presets-view");
+      const detailView = document.querySelector("#detail-view");
+      const otherModelsNav = document.querySelector("#other-models-nav");
+      const savedSetupsNav = document.querySelector("#saved-setups-nav");
+      const currentModelNav = document.querySelector("#current-model-nav");
+      const footer = document.querySelector("#footer");
+      const applyButton = document.querySelector("#apply-button");
+      const footerNote = document.querySelector("#footer-note");
+      const setupName = document.querySelector("#setup-name");
+      const saveSetupButton = document.querySelector("#save-setup-button");
+      const summary = document.querySelector("#setup-summary");
+      const summaryKicker = document.querySelector("#summary-kicker");
+      const summaryTitle = document.querySelector("#summary-title");
+      const summaryProvider = document.querySelector("#summary-provider");
+      const summaryContext = document.querySelector("#summary-context");
+      const summaryPrice = document.querySelector("#summary-price");
+      const summaryBadge = document.querySelector("#summary-badge");
+      const search = document.querySelector("#model-search");
+      const emptySearch = document.querySelector("#empty-search");
+      const presetList = document.querySelector("#preset-list");
+      const emptyPresets = document.querySelector("#empty-presets");
+      const presetCountNav = document.querySelector("#preset-count-nav");
+      const presetCountHeading = document.querySelector("#preset-count-heading");
+      const currentModel = {
+        name: "Claude Sonnet 4.6",
+        provider: "Anthropic",
+        context: "1M context",
+        price: "$3.00 prompt · $15.00 completion",
+        logo: "A"
+      };
+      let activeModel = currentModel;
+      let presets = [
+        {
+          id: 1,
+          name: "Focused prose",
+          model: currentModel,
+          settings: "Medium reasoning · Temperature 0.4"
+        },
+        {
+          id: 2,
+          name: "Creative draft",
+          model: {
+            name: "Kimi K2.5",
+            provider: "Moonshot AI",
+            context: "256K context",
+            price: "$0.45 prompt · $2.20 completion",
+            logo: "K"
+          },
+          settings: "High reasoning · Temperature 0.9"
+        },
+        {
+          id: 3,
+          name: "Fast brainstorm",
+          model: {
+            name: "DeepSeek V3.2",
+            provider: "DeepSeek",
+            context: "164K context",
+            price: "$0.25 prompt · $0.38 completion",
+            logo: "D"
+          },
+          settings: "Auto reasoning · Temperature 1.1"
+        }
+      ];
+
+      function setActiveNavigation(activeButton) {
+        [otherModelsNav, savedSetupsNav, currentModelNav].forEach((button) => {
+          button.classList.toggle("active", button === activeButton);
+          button.setAttribute("aria-current", button === activeButton ? "page" : "false");
+        });
+      }
+
+      function showOnly(view) {
+        [catalogView, presetsView, detailView].forEach((candidate) => {
+          candidate.classList.toggle("active", candidate === view);
+        });
+      }
+
+      function showCatalog() {
+        showOnly(catalogView);
+        footer.hidden = true;
+        setActiveNavigation(otherModelsNav);
+        requestAnimationFrame(() => search.focus());
+      }
+
+      function showPresets() {
+        showOnly(presetsView);
+        footer.hidden = true;
+        setActiveNavigation(savedSetupsNav);
+      }
+
+      function showModel(model, options = {}) {
+        const { isCurrent = false, presetName = "" } = options;
+        activeModel = model;
+        showOnly(detailView);
+        footer.hidden = false;
+        setActiveNavigation(isCurrent ? currentModelNav : presetName ? savedSetupsNav : null);
+
+        summary.classList.toggle("current-summary", isCurrent);
+        summaryKicker.textContent = isCurrent ? "Current setup" : presetName ? "Saved setup" : "New setup";
+        summaryTitle.textContent = presetName || model.name;
+        summaryProvider.textContent = presetName ? `${model.name} · ${model.provider}` : model.provider;
+        summaryContext.textContent = model.context;
+        summaryPrice.textContent = model.price;
+        summaryBadge.textContent = isCurrent ? "Active" : presetName ? "Preset" : "Preview";
+        summaryBadge.classList.toggle("current-badge", isCurrent);
+        applyButton.textContent = isCurrent ? "Keep current model" : presetName ? `Use ${presetName}` : `Use ${model.name}`;
+        applyButton.classList.toggle("current-action", isCurrent);
+        setupName.value = presetName;
+        saveSetupButton.disabled = !setupName.value.trim();
+        footerNote.textContent = isCurrent
+          ? "This is the model currently used by this chat."
+          : presetName
+            ? "Saved setup preview. Your current model will not change until you apply."
+            : "Preview only. Your current model will not change until you apply.";
+      }
+
+      function renderPresets() {
+        presetList.replaceChildren();
+
+        presets.forEach((preset) => {
+          const row = document.createElement("div");
+          row.className = "preset-row";
+
+          const openButton = document.createElement("button");
+          openButton.className = "model-card";
+          openButton.type = "button";
+          openButton.innerHTML = `
+            <span class="model-logo" aria-hidden="true">${preset.model.logo}</span>
+            <span class="model-copy">
+              <span class="model-name">${preset.name}</span>
+              <span class="model-provider">${preset.model.name} · ${preset.model.provider}</span>
+              <span class="model-stats">${preset.settings}</span>
+            </span>
+            <span class="chevron" aria-hidden="true">›</span>
+          `;
+          openButton.addEventListener("click", () => {
+            showModel(preset.model, { presetName: preset.name });
+          });
+
+          const deleteButton = document.createElement("button");
+          deleteButton.className = "delete-button";
+          deleteButton.type = "button";
+          deleteButton.setAttribute("aria-label", `Delete preset ${preset.name}`);
+          deleteButton.textContent = "×";
+          deleteButton.addEventListener("click", () => {
+            presets = presets.filter((candidate) => candidate.id !== preset.id);
+            renderPresets();
+          });
+
+          row.append(openButton, deleteButton);
+          presetList.append(row);
+        });
+
+        const count = presets.length;
+        presetCountNav.textContent = `${count} saved ${count === 1 ? "preset" : "presets"}`;
+        presetCountHeading.textContent = `${count} ${count === 1 ? "preset" : "presets"}`;
+        emptyPresets.style.display = count === 0 ? "block" : "none";
+      }
+
+      otherModelsNav.addEventListener("click", showCatalog);
+      savedSetupsNav.addEventListener("click", showPresets);
+      currentModelNav.addEventListener("click", () => showModel(currentModel, { isCurrent: true }));
+
+      document.querySelectorAll(".model-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          showModel({
+            name: card.dataset.model,
+            provider: card.dataset.provider,
+            context: card.dataset.context,
+            price: card.dataset.price,
+            logo: card.querySelector(".model-logo").textContent.trim()
+          });
+        });
+      });
+
+      setupName.addEventListener("input", () => {
+        saveSetupButton.disabled = !setupName.value.trim();
+      });
+
+      saveSetupButton.addEventListener("click", () => {
+        const name = setupName.value.trim();
+        if (!name) return;
+
+        presets = [
+          {
+            id: Date.now(),
+            name,
+            model: activeModel,
+            settings: `${document.querySelector("#reasoning").value} reasoning · Temperature ${document.querySelector("#temperature").value}`
+          },
+          ...presets
+        ];
+        renderPresets();
+        saveSetupButton.textContent = "Saved ✓";
+        window.setTimeout(() => {
+          saveSetupButton.textContent = "Save as new";
+        }, 1400);
+      });
+
+      search.addEventListener("input", () => {
+        const query = search.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        document.querySelectorAll("[data-model-section]").forEach((section) => {
+          let sectionCount = 0;
+          section.querySelectorAll(".model-card").forEach((card) => {
+            const matches = card.textContent.toLowerCase().includes(query);
+            card.hidden = !matches;
+            if (matches) {
+              sectionCount += 1;
+              visibleCount += 1;
+            }
+          });
+
+          section.hidden = sectionCount === 0;
+          const count = section.querySelector(".section-count");
+          count.textContent = `${sectionCount} ${sectionCount === 1 ? "model" : "models"}`;
+        });
+
+        emptySearch.style.display = visibleCount === 0 ? "block" : "none";
+      });
+
+      applyButton.addEventListener("click", () => {
+        const originalLabel = applyButton.textContent;
+        applyButton.textContent = "Setup selected ✓";
+        window.setTimeout(() => {
+          applyButton.textContent = originalLabel;
+        }, 1400);
+      });
+
+      renderPresets();
+    </script>
+  </body>
+</html>

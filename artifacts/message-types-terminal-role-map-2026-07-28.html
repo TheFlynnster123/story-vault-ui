@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A source-backed map of Story Vault timeline message types, outbound LLM roles, and request-ending roles."
+    />
+    <title>Story Vault message types and terminal-role risk</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #18201c;
+        --muted: #5f6862;
+        --paper: #f4f1e9;
+        --card: #fffdf8;
+        --line: #d7d2c5;
+        --green: #245f48;
+        --green-soft: #e2eee7;
+        --blue: #315a75;
+        --blue-soft: #e4edf3;
+        --amber: #906318;
+        --amber-soft: #f5ead4;
+        --red: #8b4338;
+        --red-soft: #f4e3df;
+        --gray-soft: #ecebe6;
+        --shadow: 0 14px 34px rgba(36, 42, 37, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(rgba(49, 90, 117, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(49, 90, 117, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 28px 28px;
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      a {
+        color: var(--blue);
+        text-underline-offset: 0.2em;
+      }
+
+      a:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid #d19b32;
+        outline-offset: 4px;
+        border-radius: 4px;
+      }
+
+      code {
+        padding: 0.12em 0.38em;
+        border: 1px solid #d9d5ca;
+        border-radius: 5px;
+        background: #f1efe9;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.91em;
+      }
+
+      .wrap {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        padding: 62px 0 34px;
+      }
+
+      .eyebrow,
+      .label {
+        margin: 0 0 10px;
+        color: var(--green);
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 900px;
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2.3rem, 6vw, 5.2rem);
+        font-weight: 500;
+        letter-spacing: -0.045em;
+        line-height: 0.98;
+      }
+
+      .lede {
+        max-width: 830px;
+        margin: 24px 0 0;
+        color: #3f4842;
+        font-size: clamp(1.05rem, 2vw, 1.32rem);
+      }
+
+      .verdict {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 18px;
+        align-items: start;
+        margin: 30px 0 0;
+        padding: 22px;
+        border: 1px solid #d9bd84;
+        border-left: 6px solid var(--amber);
+        border-radius: 12px;
+        background: #fff8ea;
+        box-shadow: var(--shadow);
+      }
+
+      .verdict-mark {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--amber);
+        color: white;
+        font-size: 1.3rem;
+        font-weight: 900;
+      }
+
+      .verdict h2 {
+        margin: 0 0 4px;
+        font-size: 1.08rem;
+      }
+
+      .verdict p {
+        margin: 0;
+      }
+
+      main {
+        padding-bottom: 68px;
+      }
+
+      section {
+        margin-top: 34px;
+        padding: 30px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 253, 248, 0.94);
+        box-shadow: var(--shadow);
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(1.45rem, 3vw, 2rem);
+        letter-spacing: -0.025em;
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+
+      .section-intro {
+        max-width: 850px;
+        margin: 8px 0 24px;
+        color: var(--muted);
+      }
+
+      .funnel {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) 64px minmax(0, 1fr);
+        gap: 18px;
+        align-items: center;
+      }
+
+      .type-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        align-content: start;
+      }
+
+      .type-chip,
+      .role-card,
+      .workflow {
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .type-chip {
+        padding: 8px 11px;
+        border-radius: 999px;
+        font-size: 0.87rem;
+        font-weight: 700;
+      }
+
+      .arrow {
+        color: var(--green);
+        font-size: 2.4rem;
+        font-weight: 300;
+        text-align: center;
+      }
+
+      .role-stack {
+        display: grid;
+        gap: 9px;
+      }
+
+      .role-card {
+        display: grid;
+        grid-template-columns: 90px 1fr;
+        gap: 12px;
+        align-items: center;
+        padding: 12px;
+        border-radius: 10px;
+      }
+
+      .role-card strong {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92rem;
+      }
+
+      .role-user {
+        border-left: 5px solid var(--green);
+      }
+
+      .role-assistant {
+        border-left: 5px solid var(--blue);
+      }
+
+      .role-system {
+        border-left: 5px solid var(--amber);
+      }
+
+      .role-none {
+        border-left: 5px solid #77766f;
+      }
+
+      .role-card span {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        font-size: 0.9rem;
+      }
+
+      th,
+      td {
+        padding: 13px 14px;
+        border-bottom: 1px solid #e5e1d8;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #ede9de;
+        color: #3f4741;
+        font-size: 0.73rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      td:first-child {
+        font-weight: 750;
+        white-space: nowrap;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.75rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .user {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .assistant {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .system {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .none {
+        background: var(--gray-soft);
+        color: #62625c;
+      }
+
+      .flow-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .workflow {
+        position: relative;
+        overflow: hidden;
+        padding: 18px;
+        border-radius: 12px;
+      }
+
+      .workflow::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: var(--role-color);
+        content: "";
+      }
+
+      .workflow p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .workflow .pill {
+        margin-top: 14px;
+      }
+
+      .ends-system {
+        --role-color: var(--amber);
+      }
+
+      .ends-user {
+        --role-color: var(--green);
+      }
+
+      .ends-mixed {
+        --role-color: var(--blue);
+      }
+
+      .risk-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .callout {
+        padding: 20px;
+        border-radius: 12px;
+      }
+
+      .callout h3 {
+        margin-bottom: 8px;
+      }
+
+      .callout p,
+      .callout ul {
+        margin-top: 8px;
+        margin-bottom: 0;
+      }
+
+      .callout li + li {
+        margin-top: 7px;
+      }
+
+      .strong-signal {
+        border: 1px solid #dbb1a9;
+        background: var(--red-soft);
+      }
+
+      .boundary {
+        border: 1px solid #a9c3d3;
+        background: var(--blue-soft);
+      }
+
+      .test-flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        counter-reset: test-step;
+      }
+
+      .test-step {
+        position: relative;
+        min-height: 155px;
+        padding: 44px 16px 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+        counter-increment: test-step;
+      }
+
+      .test-step::before {
+        position: absolute;
+        top: 14px;
+        left: 16px;
+        display: grid;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--green);
+        color: white;
+        content: counter(test-step);
+        font-size: 0.76rem;
+        font-weight: 900;
+      }
+
+      .test-step p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .rule {
+        margin-top: 16px;
+        padding: 15px 17px;
+        border-left: 5px solid var(--green);
+        background: var(--green-soft);
+      }
+
+      .rule p {
+        margin: 0;
+      }
+
+      details {
+        margin-top: 20px;
+      }
+
+      summary {
+        width: fit-content;
+        cursor: pointer;
+        color: var(--blue);
+        font-weight: 750;
+      }
+
+      .source-list {
+        display: grid;
+        gap: 10px;
+        margin: 16px 0 0;
+        padding-left: 20px;
+        color: var(--muted);
+      }
+
+      footer {
+        padding: 0 0 42px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      @media (max-width: 860px) {
+        .funnel {
+          grid-template-columns: 1fr;
+        }
+
+        .arrow {
+          transform: rotate(90deg);
+        }
+
+        .flow-grid,
+        .test-flow {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .risk-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .wrap {
+          width: min(100% - 20px, 1180px);
+        }
+
+        header {
+          padding-top: 38px;
+        }
+
+        section {
+          padding: 20px 16px;
+        }
+
+        .verdict {
+          grid-template-columns: 1fr;
+        }
+
+        .verdict-mark {
+          width: 34px;
+          height: 34px;
+        }
+
+        .flow-grid,
+        .test-flow {
+          grid-template-columns: 1fr;
+        }
+
+        .role-card {
+          grid-template-columns: 82px 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: white;
+        }
+
+        section,
+        .verdict {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="wrap">
+      <p class="eyebrow">Story Vault request anatomy · source review · 28 July 2026</p>
+      <h1>Eleven message types become three roles.</h1>
+      <p class="lede">
+        The UI type is not what OpenRouter sees. Before a request leaves Story
+        Vault, timeline events are projected into <code>user</code>,
+        <code>assistant</code>, or <code>system</code> messages—and the type
+        metadata is stripped.
+      </p>
+      <aside class="verdict" aria-labelledby="verdict-heading">
+        <div class="verdict-mark" aria-hidden="true">!</div>
+        <div>
+          <h2 id="verdict-heading">Your theory is plausible, and the sharpest suspect is terminal <code>system</code>.</h2>
+          <p>
+            Core chat, reasoning, plans, image-prompt generation, and several
+            “generate from discussion” actions deliberately end their outbound
+            arrays with a system message. A model/provider that expects the
+            final turn to be <code>user</code> could therefore fail consistently
+            by workflow, even when the selected model otherwise works.
+          </p>
+        </div>
+      </aside>
+    </header>
+
+    <main class="wrap">
+      <section aria-labelledby="collapse-heading">
+        <p class="label">The collapse</p>
+        <h2 id="collapse-heading">What the app shows vs. what the model receives</h2>
+        <p class="section-intro">
+          The request cleaner sends only <code>{ role, content }</code>.
+          Timeline labels such as <code>plan</code> and <code>chapter</code>
+          never reach OpenRouter as a message “type.”
+        </p>
+        <div class="funnel">
+          <div class="type-cloud" aria-label="Story Vault timeline types">
+            <span class="type-chip">story</span>
+            <span class="type-chip">user-message</span>
+            <span class="type-chip">system-message</span>
+            <span class="type-chip">assistant</span>
+            <span class="type-chip">reasoning</span>
+            <span class="type-chip">civit-workflow</span>
+            <span class="type-chip">chapter</span>
+            <span class="type-chip">book</span>
+            <span class="type-chip">plan</span>
+            <span class="type-chip">note</span>
+            <span class="type-chip">agent-clarification</span>
+          </div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="role-stack" aria-label="Outbound roles">
+            <div class="role-card role-user">
+              <strong>user</strong>
+              <span>ordinary user text</span>
+            </div>
+            <div class="role-card role-assistant">
+              <strong>assistant</strong>
+              <span>response text and saved reasoning</span>
+            </div>
+            <div class="role-card role-system">
+              <strong>system</strong>
+              <span>instructions and most durable context objects</span>
+            </div>
+            <div class="role-card role-none">
+              <strong>omitted</strong>
+              <span>image workflow status is UI-only</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="mapping-heading">
+        <p class="label">Exact mapping</p>
+        <h2 id="mapping-heading">Every timeline type, decoded</h2>
+        <p class="section-intro">
+          “Wire role” means the role after LLM projection. The content wrappers
+          are significant prompt text, but they do not create new protocol roles.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Timeline type</th>
+                <th scope="col">Wire role</th>
+                <th scope="col">What it represents</th>
+                <th scope="col">Wire content</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>story</code></td>
+                <td><span class="pill system">system</span></td>
+                <td>The current story/world context, inserted at the start.</td>
+                <td><code># Story</code> followed by story text.</td>
+              </tr>
+              <tr>
+                <td><code>user-message</code></td>
+                <td><span class="pill user">user</span></td>
+                <td>A human chat turn.</td>
+                <td>Raw text, unless an older eligible message is compressed.</td>
+              </tr>
+              <tr>
+                <td><code>system-message</code></td>
+                <td><span class="pill system">system</span></td>
+                <td>An ordinary persisted message explicitly created with system role.</td>
+                <td>Raw text, unless compressed.</td>
+              </tr>
+              <tr>
+                <td><code>assistant</code></td>
+                <td><span class="pill assistant">assistant</span></td>
+                <td>A generated chat response.</td>
+                <td>Raw text, unless compressed.</td>
+              </tr>
+              <tr>
+                <td><code>reasoning</code></td>
+                <td><span class="pill assistant">assistant</span></td>
+                <td>A separately generated and persisted reasoning step.</td>
+                <td><code>[Reasoning] … [End of Reasoning]</code>.</td>
+              </tr>
+              <tr>
+                <td><code>civit-workflow</code></td>
+                <td><span class="pill none">not sent</span></td>
+                <td>Image-job state, cost, model, and workflow metadata.</td>
+                <td>No LLM projection handler or LLM context item type.</td>
+              </tr>
+              <tr>
+                <td><code>chapter</code></td>
+                <td><span class="pill system">system</span></td>
+                <td>A summary replacing covered messages in durable context.</td>
+                <td><code>[Previous Chapter Summary: …]</code> wrapper.</td>
+              </tr>
+              <tr>
+                <td><code>book</code></td>
+                <td><span class="pill system">system</span></td>
+                <td>A summary replacing covered chapters.</td>
+                <td><code>[Book Summary: …]</code> wrapper.</td>
+              </tr>
+              <tr>
+                <td><code>plan</code></td>
+                <td><span class="pill system">system</span></td>
+                <td>The latest visible instance of a named generated plan.</td>
+                <td><code>[Plan: …] … [End of Plan]</code>.</td>
+              </tr>
+              <tr>
+                <td><code>note</code></td>
+                <td><span class="pill system">system</span></td>
+                <td>Persistent user feedback, optionally expiring after N messages.</td>
+                <td><code>[Note] … [End of Note]</code>.</td>
+              </tr>
+              <tr>
+                <td><code>agent-clarification</code></td>
+                <td><span class="pill system">system</span></td>
+                <td>A saved question/answer pair from an agent workflow.</td>
+                <td><code>[User Clarification]</code> with question and answer.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="terminal-heading">
+        <p class="label">Terminal role by request path</p>
+        <h2 id="terminal-heading">The last item is often added after chat history</h2>
+        <p class="section-intro">
+          The latest timeline event does not necessarily determine the final
+          wire role. Request builders append task instructions after projected
+          history.
+        </p>
+        <div class="flow-grid">
+          <article class="workflow ends-system">
+            <h3>Normal chat response</h3>
+            <p>
+              Appends the chat’s response prompt after all durable context.
+              With no one-off guidance, that prompt is last.
+            </p>
+            <span class="pill system">ends system</span>
+          </article>
+          <article class="workflow ends-system">
+            <h3>Reasoning generation</h3>
+            <p>
+              Usually sends one consolidated system message containing context
+              plus reasoning instructions.
+            </p>
+            <span class="pill system">ends system</span>
+          </article>
+          <article class="workflow ends-system">
+            <h3>Plans & plan suggestions</h3>
+            <p>
+              Both consolidated and unconsolidated builders place the plan
+              instruction in the final system message.
+            </p>
+            <span class="pill system">ends system</span>
+          </article>
+          <article class="workflow ends-system">
+            <h3>Image-prompt generation</h3>
+            <p>
+              The image instruction—and regeneration feedback—are appended as
+              system messages.
+            </p>
+            <span class="pill system">ends system</span>
+          </article>
+          <article class="workflow ends-system">
+            <h3>Generate from discussion</h3>
+            <p>
+              Story, chapter, and book finalization paths often use a trailing
+              system instruction; some send only that one system message.
+            </p>
+            <span class="pill system">ends system</span>
+          </article>
+          <article class="workflow ends-user">
+            <h3>Helper & maintenance jobs</h3>
+            <p>
+              Character selection, sheets, agent intent, compression,
+              continuity refresh, chapter drafts, and book summaries append a
+              concrete user task.
+            </p>
+            <span class="pill user">ends user</span>
+          </article>
+          <article class="workflow ends-user">
+            <h3>Chat with guidance</h3>
+            <p>
+              Guidance is appended after the response or reasoning prompt, so
+              it converts those requests to a terminal user turn.
+            </p>
+            <span class="pill user">ends user</span>
+          </article>
+          <article class="workflow ends-mixed">
+            <h3>Regenerate response</h3>
+            <p>
+              Feedback makes the last role user. Without feedback, the request
+              simply ends wherever truncated history ends.
+            </p>
+            <span class="pill assistant">variable</span>
+          </article>
+          <article class="workflow ends-user">
+            <h3>New story & discussion turns</h3>
+            <p>
+              The basic story generator, discussion replies, and discussion
+              openers finish with an explicit user instruction.
+            </p>
+            <span class="pill user">ends user</span>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="interpret-heading">
+        <p class="label">Interpretation</p>
+        <h2 id="interpret-heading">What the code proves—and what it does not</h2>
+        <div class="risk-grid">
+          <article class="callout strong-signal">
+            <h3>Strong repository evidence</h3>
+            <ul>
+              <li>Failures can cluster by feature because terminal roles cluster by feature.</li>
+              <li>The dominant unusual pattern is a trailing <code>system</code> message.</li>
+              <li>The request boundary strips IDs and types, so models cannot reject <code>plan</code> or <code>note</code> as protocol types.</li>
+              <li>Adding guidance is already a clean A/B switch from terminal system to terminal user.</li>
+            </ul>
+          </article>
+          <article class="callout boundary">
+            <h3>Not yet proven</h3>
+            <ul>
+              <li>No per-model terminal-role capability matrix exists in this repository.</li>
+              <li>OpenRouter’s public chat schema accepts system, user, and assistant messages generally; it does not promise every upstream model treats every ordering identically.</li>
+              <li>A 400 can support a formatting mismatch; 402, 429, 502, or 503 usually point elsewhere.</li>
+              <li>The error body and exact upstream transformation are needed to attribute a failure confidently.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="rule">
+          <p>
+            <strong>Working conclusion:</strong> model compatibility should be
+            analyzed against <em>terminal wire role</em>, not the visible
+            Story Vault message type.
+          </p>
+        </div>
+      </section>
+
+      <section aria-labelledby="test-heading">
+        <p class="label">Fast validation</p>
+        <h2 id="test-heading">A four-part experiment isolates the variable</h2>
+        <p class="section-intro">
+          Keep model, provider settings, prompt text, and history constant.
+          Change only the role of the final instruction.
+        </p>
+        <div class="test-flow">
+          <article class="test-step">
+            <h3>Record</h3>
+            <p>
+              For every tracked request, capture model, feature label, final
+              role, status, HTTP status, and raw provider error.
+            </p>
+          </article>
+          <article class="test-step">
+            <h3>Pair</h3>
+            <p>
+              Run the same minimal instruction once as trailing
+              <code>system</code> and once as trailing <code>user</code>.
+            </p>
+          </article>
+          <article class="test-step">
+            <h3>Cross</h3>
+            <p>
+              Repeat for the suspect models and at least one known-good model
+              through the same Story Vault backend.
+            </p>
+          </article>
+          <article class="test-step">
+            <h3>Decide</h3>
+            <p>
+              If only terminal system fails with 400-class provider errors,
+              normalize task prompts to user role or add a compatibility rule.
+            </p>
+          </article>
+        </div>
+        <details>
+          <summary>Evidence and source locations</summary>
+          <ul class="source-list">
+            <li>
+              Timeline union:
+              <code>src/services/CQRS/UserChatProjection.ts:742</code>
+            </li>
+            <li>
+              Story, ordinary messages, reasoning, chapters, books, plans,
+              notes, and clarifications are mapped in
+              <code>src/services/CQRS/LLMChatProjection.ts:259</code>.
+            </li>
+            <li>
+              Chat response and reasoning prompt order:
+              <code>src/features/Chat/services/ChatGeneration/LLMMessageContextService.ts:91</code>.
+            </li>
+            <li>
+              The transport strips messages to role and content:
+              <code>src/features/OpenRouter/services/OpenRouterChatAPI.ts:474</code>.
+            </li>
+            <li>
+              Plan prompt order:
+              <code>src/features/Plans/services/PlanGenerationService.ts:73</code>.
+            </li>
+            <li>
+              Image-prompt order:
+              <code>src/features/Images/services/ImageGenerator.ts:367</code>.
+            </li>
+            <li>
+              OpenRouter’s
+              <a href="https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request"
+                >Chat Completions reference</a
+              >
+              defines the common message schema.
+            </li>
+            <li>
+              OpenRouter’s
+              <a href="https://openrouter.ai/docs/api/reference/errors-and-debugging"
+                >debugging reference</a
+              >
+              says provider transformations can merge or reformat messages and
+              documents how to inspect the upstream request.
+            </li>
+          </ul>
+        </details>
+      </section>
+    </main>
+
+    <footer class="wrap">
+      Repository inspection artifact. “Compatibility risk” is a testable
+      inference from request construction, not a claim that every provider
+      rejects terminal system messages.
+    </footer>
+  </body>
+</html>

@@ -41,15 +41,15 @@ describe("ChatService - General Operations", () => {
 
   // ---- AddUserMessage Tests ----
   describe("AddUserMessage", () => {
-    it("should create MessageCreated event with user role", async () => {
+    it("should create a semantic user message event without an LLM role", async () => {
       const service = new ChatService(testChatId);
       const message = "Hello, world!";
 
       await service.AddUserMessage(message);
 
       const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
-      expect(calledEvent.type).toBe("MessageCreated");
-      expect(calledEvent.role).toBe("user");
+      expect(calledEvent.type).toBe("UserMessageCreated");
+      expect(calledEvent).not.toHaveProperty("role");
       expect(calledEvent.content).toBe(message);
     });
 
@@ -62,10 +62,9 @@ describe("ChatService - General Operations", () => {
       expect(mockChatEventService.AddChatEvent).toHaveBeenCalledTimes(1);
       expect(mockChatEventService.AddChatEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: "MessageCreated",
-          role: "user",
+          type: "UserMessageCreated",
           content: message,
-        })
+        }),
       );
     });
 
@@ -78,32 +77,17 @@ describe("ChatService - General Operations", () => {
     });
   });
 
-  // ---- AddSystemMessage Tests ----
-  describe("AddSystemMessage", () => {
-    it("should create MessageCreated event with system role", async () => {
-      const service = new ChatService(testChatId);
-      const message = "System notification";
-
-      await service.AddSystemMessage(message);
-
-      const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
-      expect(calledEvent.type).toBe("MessageCreated");
-      expect(calledEvent.role).toBe("system");
-      expect(calledEvent.content).toBe(message);
-    });
-  });
-
-  // ---- AddAssistantMessage Tests ----
-  describe("AddAssistantMessage", () => {
-    it("should create MessageCreated event with assistant role", async () => {
+  // ---- AddAssistantResponse Tests ----
+  describe("AddAssistantResponse", () => {
+    it("should create a semantic assistant response event without an LLM role", async () => {
       const service = new ChatService(testChatId);
       const message = "Assistant response";
 
-      await service.AddAssistantMessage(message);
+      await service.AddAssistantResponse(message);
 
       const calledEvent = mockChatEventService.AddChatEvent.mock.calls[0][0];
-      expect(calledEvent.type).toBe("MessageCreated");
-      expect(calledEvent.role).toBe("assistant");
+      expect(calledEvent.type).toBe("AssistantResponseCreated");
+      expect(calledEvent).not.toHaveProperty("role");
       expect(calledEvent.content).toBe(message);
     });
 
@@ -111,7 +95,7 @@ describe("ChatService - General Operations", () => {
       const service = new ChatService(testChatId);
       const message = "Assistant message";
 
-      await service.AddAssistantMessage(message);
+      await service.AddAssistantResponse(message);
 
       expect(mockChatEventService.AddChatEvent).toHaveBeenCalledTimes(1);
     });
@@ -258,10 +242,9 @@ describe("ChatService - General Operations", () => {
       const service = new ChatService(testChatId);
 
       await service.AddUserMessage("msg1");
-      await service.AddSystemMessage("msg2");
-      await service.AddAssistantMessage("msg3");
+      await service.AddAssistantResponse("msg2");
 
-      expect(mockChatEventService.AddChatEvent).toHaveBeenCalledTimes(3);
+      expect(mockChatEventService.AddChatEvent).toHaveBeenCalledTimes(2);
     });
 
     it("should use correct chatId across all operations", async () => {

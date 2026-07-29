@@ -1,13 +1,21 @@
 import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../services/Dependencies";
 import {
-  toSystemMessage,
   toUserMessage,
 } from "../../../services/Utils/MessageUtils";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { CharacterDescription } from "./CharacterDescription";
 import { normalizeSheetItems } from "./CharacterDescription";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const CHARACTER_SHEET_SYNC_CONTEXT_SELECTION = {
+  history: true,
+  memories: true,
+  characterSheets: true,
+  continuityHistories: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 export interface CharacterSheetUpdate {
   characterId: string;
@@ -60,7 +68,7 @@ export class CharacterSheetSyncService {
 
     const contextMessages = await d
       .LLMMessageContextService(this.chatId)
-      .buildGenerationRequestMessages(false);
+      .buildContext(CHARACTER_SHEET_SYNC_CONTEXT_SELECTION);
     const settings = await this.getPromptSettings();
     const response = await d
       .OpenRouterChatAPI()
@@ -109,7 +117,7 @@ const buildCharacterSheetUpdateMessages = (
   characters: CharacterDescription[],
 ): LLMMessage[] => [
   ...contextMessages,
-  toSystemMessage(prompt),
+  toUserMessage(prompt),
   toUserMessage(
     [
       "Return every requested character exactly once in the configured JSON object.",

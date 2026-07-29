@@ -103,6 +103,11 @@
       text-transform: uppercase;
     }
 
+    .hero .eyebrow {
+      position: relative;
+      z-index: 1;
+    }
+
     h1,
     h2,
     h3,
@@ -891,18 +896,18 @@
 <body>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">Story Vault · LLM request inventory · 26 July 2026</p>
+      <p class="eyebrow">Story Vault · implemented context standard · updated 28 July 2026</p>
       <h1>What every LLM request can see—and what it cannot</h1>
       <p class="lede">
-        This code-derived inventory now includes the smallest standardization proposal: one context
-        builder, five optional allowlist flags chosen locally by each pipeline, and the existing
-        task-specific prompts left where they are.
+        This code-derived inventory now reflects the implemented standard: one context builder,
+        six optional allowlist flags chosen locally by each pipeline, and task-specific prompts
+        left where they belong.
       </p>
       <div class="hero-metrics" aria-label="Request inventory totals">
-        <div class="metric"><strong>25</strong><span>direct API call sites</span></div>
+        <div class="metric"><strong>27</strong><span>direct API call sites</span></div>
         <div class="metric"><strong>18</strong><span>plain text requests</span></div>
         <div class="metric"><strong>3</strong><span>streaming requests</span></div>
-        <div class="metric"><strong>4</strong><span>structured JSON requests</span></div>
+        <div class="metric"><strong>6</strong><span>structured JSON requests</span></div>
       </div>
     </header>
 
@@ -940,7 +945,7 @@
         </p>
       </div>
 
-      <div class="architecture-flow" aria-label="Proposed request assembly flow">
+      <div class="architecture-flow" aria-label="Implemented request assembly flow">
         <article class="flow-step">
           <span class="step-number">1</span>
           <strong>Name only wanted sources</strong>
@@ -989,13 +994,14 @@
 
       <div class="code-shell">
         <div class="code-title">
-          <strong>Proposed context builder</strong>
+          <strong>Implemented context builder</strong>
           <span>No shared presets, request registry, transport abstraction, or contributor pipeline.</span>
         </div>
         <pre><code><span class="code-key">interface</span> <span class="code-type">LLMContextSelection</span> {
   history?: true;
   memories?: true;
   characterSheets?: true;
+  continuityHistories?: true;
   plans?: true;
   recentHistoryOnly?: true; <span class="code-comment">// fixed last 12 projected messages</span>
 }
@@ -1003,6 +1009,7 @@
 <span class="code-key">interface</span> <span class="code-type">LLMContextInput</span> {
   beforeMessageId?: string;  <span class="code-comment">// regeneration only</span>
   historyOverride?: readonly LLMMessage[]; <span class="code-comment">// frozen Chapter snapshot only</span>
+  disableMessageCompression?: true; <span class="code-comment">// frozen snapshot opt-out only</span>
 }
 
 <span class="code-key">async function</span> buildLLMContext(
@@ -1016,9 +1023,10 @@
     history: true,
     memories: true,
     characterSheets: true,
+    continuityHistories: true,
     plans: true,
   }),
-  system(chatSettings.prompt),
+  user(chatSettings.prompt), <span class="code-comment">// deliberately terminal; newer-model compatibility</span>
   ...optionalGuidance(guidance),
 ];
 
@@ -1031,7 +1039,7 @@
 );</code></pre>
       </div>
 
-      <div class="object-notes" aria-label="Meaning of the five optional context flags">
+      <div class="object-notes" aria-label="Meaning of the six optional context flags">
         <article class="object-note">
           <strong>history</strong>
           <p>
@@ -1052,6 +1060,13 @@
           </p>
         </article>
         <article class="object-note">
+          <strong>continuityHistories</strong>
+          <p>
+            Select and insert relevant long-range Continuity Histories. This source can be used
+            with or without rendering chat history in the final request.
+          </p>
+        </article>
+        <article class="object-note">
           <strong>plans</strong>
           <p>
             Include all visible Plans. If omitted, Plans are excluded from projected history.
@@ -1067,12 +1082,12 @@
       </div>
 
       <div class="bundle">
-        <strong>Could this be four flags?</strong>
+        <strong>Could this be five flags?</strong>
         <p>
           Yes: combine <code>memories</code> and <code>characterSheets</code> into
           <code>durableContext</code>. The cost is a real behavior change for Book summary/title:
-          those requests must either gain Memories or lose Character Sheets. Five is the minimum
-          for near-parity; four is the absolute minimum if that change is acceptable.
+          those requests must either gain Memories or lose Character Sheets. Six is the minimum
+          for current parity because Continuity Histories have independent selection semantics.
         </p>
       </div>
     </section>
@@ -1099,6 +1114,7 @@
   history: true,
   memories: true,
   characterSheets: true,
+  continuityHistories: true,
   plans: true,
 };
 
@@ -1140,11 +1156,11 @@
       <div class="section-head">
         <div>
           <p class="kicker">Explicit tradeoffs</p>
-          <h2 id="guardrails-heading">Functionality that would change</h2>
+          <h2 id="guardrails-heading">Functionality changed by the implementation</h2>
         </div>
         <p>
           The simplification comes from deleting special policies. These are the behavior changes
-          required to get from today’s inventory to five optional, false-by-default flags.
+          made to reach six optional, false-by-default flags.
         </p>
       </div>
 
@@ -1160,9 +1176,9 @@
         <article class="guardrail">
           <strong>Plans become all-or-nothing</strong>
           <p>
-            Omitting <code>plans</code> removes every Plan. Plan work therefore stops seeing other
-            Plans even when today’s <code>hideOtherPlans</code> setting would allow them. The
-            current Plan is still appended separately.
+            Omitting <code>plans</code> removes every Plan. Plan work no longer has
+            <code>hideOtherPlans</code> or <code>excludeOwnPlanFromHistory</code>; the current Plan
+            is appended separately when a task needs it.
           </p>
         </article>
         <article class="guardrail">
@@ -1203,11 +1219,11 @@
     <section class="section" aria-labelledby="migration-heading">
       <div class="section-head">
         <div>
-          <p class="kicker">Minimal implementation</p>
-          <h2 id="migration-heading">Three moves, then stop</h2>
+          <p class="kicker">Implemented boundary</p>
+          <h2 id="migration-heading">Three moves—and no framework</h2>
         </div>
         <p>
-          This is a context cleanup, not a new request architecture. Resist adding a catalog,
+          This remains a context cleanup, not a new request architecture. There is no catalog,
           executor, contributor interface, or generalized selector until a real second use appears.
         </p>
       </div>
@@ -1216,7 +1232,7 @@
         <article class="migration-step">
           <strong>Add the generic builder</strong>
           <p>
-            Reuse configured projection and durable-context insertion behind the five-flag
+            Reuse configured projection and durable-context insertion behind the six-flag
             allowlist. Add no shared caller presets.
           </p>
         </article>
@@ -1228,10 +1244,11 @@
           </p>
         </article>
         <article class="migration-step">
-          <strong>Lock the five inclusions</strong>
+          <strong>Lock the six inclusions</strong>
           <p>
             Test the selection at each call site, plus builder ordering, regeneration/snapshot
-            behavior, and an architecture check preventing direct projection reads.
+            behavior. Production callers are inspected to keep direct projection reads out of
+            base-context assembly.
           </p>
         </article>
       </div>
@@ -1240,12 +1257,12 @@
     <section class="section" aria-labelledby="policy-heading">
       <div class="section-head">
         <div>
-          <p class="kicker">The current problem this replaces</p>
-          <h2 id="policy-heading">Today there are two meanings of “projected history”</h2>
+          <p class="kicker">Standardized projection</p>
+          <h2 id="policy-heading">“Projected history” now has one meaning for LLM requests</h2>
         </div>
         <p>
-          The allowlist builder would eliminate the default path: every
-          <code>history: true</code> request would use configured projection.
+          Every standardized <code>history: true</code> request uses the configured projection.
+          Direct projection remains an internal read model, not a feature-level context assembler.
         </p>
       </div>
 
@@ -1260,12 +1277,12 @@
           </ul>
         </article>
         <article class="policy default">
-          <h3>Default projection</h3>
-          <p>Direct calls to <code>LLMChatProjection.GetMessages()</code>.</p>
+          <h3>Retired feature bypass</h3>
+          <p>The former direct <code>LLMChatProjection.GetMessages()</code> path.</p>
           <ul>
-            <li>Always uses a trailing chapter buffer of 6.</li>
-            <li>Uses reasoning retention <code>null</code>: uncompressed reasoning never expires.</li>
-            <li>Does not add Memories or Character Sheets.</li>
+            <li>No migrated LLM feature uses this as its base-context policy.</li>
+            <li>Plan-specific projection convenience methods were deleted.</li>
+            <li>Task code now declares selected sources beside its prompt.</li>
           </ul>
         </article>
       </div>
@@ -1319,8 +1336,8 @@
           <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
           <div class="memory"><span class="badge yes">Yes</span></div>
           <div class="sheets"><span class="badge yes">Yes</span></div>
-          <div class="special cell">Chat response prompt; optional user guidance is last.</div>
-          <div class="missing cell">No known shared-context omission. Appearance fields remain excluded.</div>
+          <div class="special cell">Chat response prompt is a terminal user message; optional user guidance follows when present.</div>
+          <div class="missing cell">Also includes selected Continuity Histories. Appearance fields remain excluded.</div>
         </article>
 
         <article class="request">
@@ -1329,7 +1346,7 @@
           <div class="memory"><span class="badge yes">Yes</span></div>
           <div class="sheets"><span class="badge yes">Yes</span></div>
           <div class="special cell">Reasoning prompt; optional guidance. May consolidate all sections into one system message.</div>
-          <div class="missing cell"><em>Intentionally omits</em> the chat response prompt.</div>
+          <div class="missing cell">Includes selected Continuity Histories; intentionally omits the chat response prompt.</div>
         </article>
 
         <article class="request">
@@ -1338,16 +1355,16 @@
           <div class="memory"><span class="badge yes">Yes</span></div>
           <div class="sheets"><span class="badge yes">Yes</span></div>
           <div class="special cell">Original response and regeneration feedback only when feedback is supplied.</div>
-          <div class="missing cell">Target response, later history, and response prompt are omitted by design.</div>
+          <div class="missing cell">Includes pre-target Continuity Histories. Target response, later history, and response prompt are omitted.</div>
         </article>
 
         <article class="request">
           <div class="request-name"><strong>Chapter title + summary draft</strong><small>Plain · JSON parsed manually</small></div>
-          <div class="history"><strong>Captured snapshot</strong><span class="badge partial">Default buffer</span></div>
+          <div class="history"><strong>Captured snapshot</strong><span class="badge partial">Configured buffer</span></div>
           <div class="memory"><span class="badge yes">Yes</span></div>
           <div class="sheets"><span class="badge yes">Yes</span></div>
           <div class="special cell">Chapter summary prompt + title prompt + strict two-field JSON instruction.</div>
-          <div class="missing cell"><span class="badge warning">Uses buffer 6</span> Snapshot is captured with default trailing-buffer policy, then reasoning is re-filtered.</div>
+          <div class="missing cell">Uses the configured chapter buffer and optional configured message compression; also includes Continuity Histories.</div>
         </article>
 
         <article class="request">
@@ -1372,7 +1389,7 @@
       <section class="family" aria-labelledby="family-plan">
         <header class="family-head">
           <h3 id="family-plan">2 · Plans and automation</h3>
-          <p>Plans use direct projection; Agent Intent uses configured durable context.</p>
+          <p>Every request uses the shared builder; each caller selects a deliberately different source set.</p>
         </header>
         <div class="request-header" aria-hidden="true">
           <div>Request</div><div>History</div><div>Memories</div><div>Sheets</div><div>Special input / prompt</div><div>Missing or limited</div>
@@ -1380,29 +1397,29 @@
 
         <article class="request">
           <div class="request-name"><strong>Generate / refresh Plan</strong><small>Plain · label “LLM”</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge partial">Plan-filtered</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge partial">All Plans removed</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
-          <div class="special cell">Plan name, definition prompt, optional consolidation. Other/own Plans depend on Plan settings.</div>
-          <div class="missing cell"><span class="badge warning">Default policy</span> Durable facts and chat-specific reasoning retention are absent.</div>
+          <div class="special cell">Plan name, definition prompt, optional consolidation. The current Plan is supplied separately when updating.</div>
+          <div class="missing cell">Memories, Character Sheets, Continuity Histories, and every projected Plan are intentionally absent.</div>
         </article>
 
         <article class="request">
           <div class="request-name"><strong>Update Plan from feedback</strong><small>Plain · discussion/manual regeneration</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge partial">Own/all Plans removed</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge partial">All Plans removed</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
           <div class="special cell">Prior Plan content, Plan prompt, and optional user/discussion feedback.</div>
-          <div class="missing cell">Memories, Character Sheets, configured buffer/retention; own Plan is intentionally supplied separately.</div>
+          <div class="missing cell">Memories, Character Sheets, and Continuity Histories; prior Plan is intentionally supplied separately.</div>
         </article>
 
         <article class="request">
           <div class="request-name"><strong>Plan direction suggestions</strong><small>Structured · label “Plan Suggestions”</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge partial">Own/all Plans removed</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge partial">All Plans removed</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
           <div class="special cell">Plan definition, optional prior content, suggestion prompt, three-item JSON schema.</div>
-          <div class="missing cell">Same durable/configured-context omissions as Plan generation.</div>
+          <div class="missing cell">Same durable-context omissions as Plan generation.</div>
         </article>
 
         <article class="request">
@@ -1411,7 +1428,7 @@
           <div class="memory"><span class="badge yes">Yes</span></div>
           <div class="sheets"><span class="badge yes">Yes</span></div>
           <div class="special cell">Agent-flow prompt, sensitivity, optional selected intent, proposed-action schema.</div>
-          <div class="missing cell">Response prompt intentionally omitted. Otherwise receives the broad durable context.</div>
+          <div class="missing cell">Response prompt intentionally omitted. Receives Memories, Sheets, Plans, and Continuity Histories.</div>
         </article>
       </section>
 
@@ -1426,16 +1443,16 @@
 
         <article class="request">
           <div class="request-name"><strong>Generate character description</strong><small>Plain · label “LLM”</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
           <div class="special cell">Character name and appearance-only description prompt.</div>
-          <div class="missing cell"><span class="badge warning">Default policy</span> Existing character registry, sheets, appearances, and Memories.</div>
+          <div class="missing cell">Existing character registry, sheets, appearances, Memories, and Continuity Histories.</div>
         </article>
 
         <article class="request">
           <div class="request-name"><strong>Legacy image-character selection</strong><small>Plain · label “LLM”</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
           <div class="special cell">Character-selection prompt only.</div>
@@ -1448,7 +1465,7 @@
           <div class="memory"><span class="badge no">Dropped</span></div>
           <div class="sheets"><span class="badge no">Dropped</span></div>
           <div class="special cell">Known character IDs, names, tracking flags, and active-cast JSON schema.</div>
-          <div class="missing cell"><span class="badge warning">Surprising filter</span> Memories and Sheets are fetched, then removed because they lack message IDs.</div>
+          <div class="missing cell">Memories and Sheets are not fetched; the builder directly returns the last 12 persisted projected messages.</div>
         </article>
 
         <article class="request">
@@ -1457,21 +1474,21 @@
           <div class="memory"><span class="badge yes">Yes</span></div>
           <div class="sheets"><span class="badge yes">Yes</span></div>
           <div class="special cell">Requested character IDs, names, and current sheet items plus update schema.</div>
-          <div class="missing cell"><span class="badge warning">Possible duplication</span> Active sheets appear in durable context and again as currentItems.</div>
+          <div class="missing cell">Also includes selected Continuity Histories. Active sheets still appear again as currentItems.</div>
         </article>
 
         <article class="request">
           <div class="request-name"><strong>Generate image scene prompt</strong><small>Plain · label “Image Prompt”</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge partial">One appearance</span></div>
           <div class="special cell">Selected model’s image prompt and optional selected character appearance.</div>
-          <div class="missing cell">All other sheets, Memories, and configured policy. Entire history is used rather than a recent-scene window.</div>
+          <div class="missing cell">All other sheets, Memories, and Continuity Histories. Entire configured history is used rather than a recent-scene window.</div>
         </article>
 
         <article class="request">
           <div class="request-name"><strong>Regenerate image scene prompt</strong><small>Plain · label “Image Prompt”</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge partial">One appearance</span></div>
           <div class="special cell">Image prompt, original generated prompt, user feedback, optional character appearance.</div>
@@ -1499,7 +1516,7 @@
 
         <article class="request">
           <div class="request-name"><strong>Existing Story / Chapter / Book discussion turn</strong><small>Plain · generic DiscussionService call</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge yes">Full</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Full</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
           <div class="special cell">Current target content, discussion prompt, and all prior ephemeral discussion turns.</div>
@@ -1508,20 +1525,20 @@
 
         <article class="request">
           <div class="request-name"><strong>Plan discussion turn</strong><small>Plain · generic DiscussionService call</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge partial">Own/all Plans removed</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge partial">All Plans removed</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
           <div class="special cell">Current Plan content, discussion prompt, ephemeral turns.</div>
-          <div class="missing cell">Durable facts and configured policy. Unlike other entity discussions, own Plan is deliberately deduplicated.</div>
+          <div class="missing cell">Memories, Character Sheets, and Continuity Histories. Prior Plan content is supplied separately.</div>
         </article>
 
         <article class="request">
           <div class="request-name"><strong>New Chapter discussion turn</strong><small>Plain · generic DiscussionService call</small></div>
-          <div class="history"><strong>Default projection</strong><span class="badge yes">Pre-chapter</span></div>
+          <div class="history"><strong>Configured projection</strong><span class="badge yes">Pre-chapter</span></div>
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
           <div class="special cell">Proposed title, optional draft summary, discussion prompt, ephemeral turns.</div>
-          <div class="missing cell">Memories, Character Sheets, configured policy. All messages remain visible because chapter compression has not happened.</div>
+          <div class="missing cell">Memories, Character Sheets, and Continuity Histories. All messages remain visible because chapter compression has not happened.</div>
         </article>
 
         <article class="request">
@@ -1548,13 +1565,50 @@
           <div class="memory"><span class="badge no">No</span></div>
           <div class="sheets"><span class="badge no">No</span></div>
           <div class="special cell">Formatted discussion transcript plus current/draft target content and generation prompt.</div>
-          <div class="missing cell">Story/Chapter/Book/New Chapter use default projection; New Book uses selected summaries; Plan delegates to filtered Plan update.</div>
+          <div class="missing cell">Story/Chapter/Book/New Chapter use configured projection; New Book uses selected summaries; Plan delegates to plan-free configured history.</div>
         </article>
 
         <div class="note">
           Initial discussion messages use the same context as a normal discussion turn, then append
           one hidden user instruction such as the chapter/book summary prompt.
         </div>
+      </section>
+
+      <section class="family" aria-labelledby="family-maintenance">
+        <header class="family-head">
+          <h3 id="family-maintenance">5 · Context maintenance and routing</h3>
+          <p>Background requests create or select context; they do not consume the full reusable-context bundle.</p>
+        </header>
+        <div class="request-header" aria-hidden="true">
+          <div>Request</div><div>History</div><div>Memories</div><div>Sheets</div><div>Special input / prompt</div><div>Missing or limited</div>
+        </div>
+
+        <article class="request">
+          <div class="request-name"><strong>Message compression</strong><small>Plain · label “Message Compression”</small></div>
+          <div class="history"><strong>One source message</strong><span class="badge partial">Target only</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Compression prompt, source role, and original source content.</div>
+          <div class="missing cell">All surrounding story and chat context. The result is accepted only when non-empty and shorter than the source.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Continuity History selection</strong><small>Structured · label “Continuity History Selection”</small></div>
+          <div class="history"><strong>Recent messages</strong><span class="badge partial">Configured lookback</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Eligible History metadata, routing hints, current-state excerpts, selection prompt, and bounded schema.</div>
+          <div class="missing cell">Full projected history and durable sources. A lexical selector is used when LLM selection is disabled or fails.</div>
+        </article>
+
+        <article class="request">
+          <div class="request-name"><strong>Continuity History refresh</strong><small>Structured · label “Continuity History Refresh”</small></div>
+          <div class="history"><strong>Recent story messages</strong><span class="badge partial">Configured lookback</span></div>
+          <div class="memory"><span class="badge no">No</span></div>
+          <div class="sheets"><span class="badge no">No</span></div>
+          <div class="special cell">Current History definitions/revisions, refresh prompt, optional discovery instruction, and update schema.</div>
+          <div class="missing cell">Plans, reasoning, compressions, Memories, and Character Sheets are deliberately excluded from maintenance input.</div>
+        </article>
       </section>
     </section>
 
@@ -1569,19 +1623,19 @@
       <div class="discussion-scopes">
         <article class="scope">
           <strong>Story</strong>
-          <p>Default projected history + current Story + entire discussion transcript.</p>
+          <p>Configured projected history + current Story + entire discussion transcript.</p>
         </article>
         <article class="scope">
           <strong>Existing Chapter</strong>
-          <p>Default projected history + title/current summary + transcript.</p>
+          <p>Configured projected history + title/current summary + transcript.</p>
         </article>
         <article class="scope">
           <strong>New Chapter</strong>
-          <p>Default pre-compression history + proposed title/draft + transcript.</p>
+          <p>Configured pre-chapter history + proposed title/draft + transcript.</p>
         </article>
         <article class="scope">
           <strong>Existing Book</strong>
-          <p>Default projected history + title/current summary + transcript.</p>
+          <p>Configured projected history + title/current summary + transcript.</p>
         </article>
         <article class="scope">
           <strong>New Book</strong>
@@ -1589,7 +1643,7 @@
         </article>
         <article class="scope">
           <strong>Plan</strong>
-          <p>Default projection with own/all Plans removed + prior Plan + transcript.</p>
+          <p>Configured projection with all Plans removed + prior Plan + transcript.</p>
         </article>
       </div>
     </section>
@@ -1597,29 +1651,37 @@
     <section class="section" aria-labelledby="findings-heading">
       <div class="section-head">
         <div>
-          <p class="kicker">Questions surfaced · documentation only</p>
-          <h2 id="findings-heading">The most consequential inconsistencies</h2>
+          <p class="kicker">Implementation result</p>
+          <h2 id="findings-heading">What became simpler—and what stays intentionally different</h2>
         </div>
         <p>
-          These are review questions, not proposed code changes. Some may be deliberate product choices.
+          Standardization removed policy drift without pretending every request needs the same information.
         </p>
       </div>
       <div class="findings">
         <article class="finding review">
-          <h3>Direct callers keep reasoning indefinitely</h3>
-          <p>Plans, discussions, character description/selection, and image prompts use default retention <code>null</code>, regardless of chat reasoning settings.</p>
+          <h3>Configured lifecycle rules are universal</h3>
+          <p>Plans, discussions, character tools, image prompts, and narrative generation now share the configured chapter buffer, reasoning retention, and message-compression policy.</p>
         </article>
         <article class="finding review">
-          <h3>Durable facts stop at family boundaries</h3>
-          <p>Memories and Character Sheets reach core chat, Agent Intent, and Sheet Sync—but not Plans, most discussions, or image/character prompts.</p>
+          <h3>Durable sources remain explicit</h3>
+          <p>Memories, Character Sheets, and Continuity Histories reach only callers that name them. Their absence elsewhere is visible at the local selection literal.</p>
         </article>
         <article class="finding review">
-          <h3>Active-character selection drops fetched context</h3>
-          <p>It builds configured durable context, then keeps only ID-bearing messages, removing the Memory and Character Sheet messages it just loaded.</p>
+          <h3>Recent-scene selection fetches only what it uses</h3>
+          <p>Active-character selection requests <code>history</code>, <code>plans</code>, and <code>recentHistoryOnly</code>; it no longer loads durable sources and discards them.</p>
         </article>
         <article class="finding review">
-          <h3>Entity discussions are not deduplicated consistently</h3>
-          <p>Plan discussion excludes its own Plan before adding current content. Story, Chapter, and Book discussions generally include and repeat their targets.</p>
+          <h3>Plan filtering has one rule</h3>
+          <p>Plan generation and Plan discussion omit <code>plans</code>, so every projected Plan is excluded. Discussion resolves the requested Plan by definition ID, and preset normalization removes the retired fields from legacy storage on the next mutation.</p>
+        </article>
+        <article class="finding review">
+          <h3>Inspection matches the actual request</h3>
+          <p>Regeneration traces mark the replaced response and later projected messages as <code>regeneration-truncated</code>. Text-only appended prompt labels stay in Text generation instead of expanding the generic builder’s vocabulary.</p>
+        </article>
+        <article class="finding review">
+          <h3>Repeated work is collapsed</h3>
+          <p>A Discussion service resolves its immutable base context once and reuses it for preview and sends. Book summary and title share one generation path, while Memory and Character Sheet formatting remain private implementation details.</p>
         </article>
         <article class="finding intentional">
           <h3>Narrow book requests are coherent</h3>
@@ -1627,13 +1689,13 @@
         </article>
         <article class="finding intentional">
           <h3>Response prompts are correctly specialized</h3>
-          <p>The chat response prompt appears only in continuation responses. Reasoning, regeneration, analysis, and maintenance requests use their own workflow prompts.</p>
+          <p>The chat response prompt appears only in continuation responses and deliberately uses the terminal user role for newer-model compatibility. Reasoning, regeneration, analysis, and maintenance requests use their own workflow prompts.</p>
         </article>
       </div>
 
       <div class="label-map" aria-label="Request inspection labels">
         <div class="label-card"><strong>Distinct</strong><span>Chat · Reasoning · Image Prompt</span></div>
-        <div class="label-card"><strong>Distinct structured</strong><span>Agent Intent · Plan Suggestions · Active Characters · Character Sheet Sync</span></div>
+        <div class="label-card"><strong>Distinct structured</strong><span>Agent Intent · Plan Suggestions · Active Characters · Character Sheet Sync · Continuity History Selection · Continuity History Refresh</span></div>
         <div class="label-card"><strong>Generic</strong><span>Most chapter, book, Plan, character, story, and discussion requests appear as “LLM”.</span></div>
         <div class="label-card"><strong>Scope</strong><span>Civit image generation itself is excluded; this inventory covers OpenRouter LLM calls, including image-prompt writing.</span></div>
       </div>
@@ -1644,7 +1706,7 @@
         Derived from all production <code>postChat</code>, <code>postChatStream</code>, and
         <code>postStructuredChat</code> call sites plus their builders and discussion configs.
       </div>
-      <div>Inventory scope: current working tree · architecture proposal only · no production code changed.</div>
+      <div>Inventory scope: current working tree · implemented architecture · tests cover source selection, ordering, and caller behavior.</div>
     </footer>
   </main>
 </body>

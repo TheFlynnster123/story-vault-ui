@@ -74,20 +74,7 @@ const DiagnosticDetails = ({
 
   return (
     <Stack gap="md">
-      <Box>
-        <Text c="red" fw={700}>
-          {diagnostic.message}
-        </Text>
-        {diagnostic.errorMessage &&
-          diagnostic.errorMessage !== diagnostic.message && (
-            <Text size="sm" mt={4}>
-              {diagnostic.errorMessage}
-            </Text>
-          )}
-        <Text size="xs" c="dimmed" mt={4}>
-          {diagnostic.timestamp.toLocaleString()}
-        </Text>
-      </Box>
+      <DiagnosticSummary diagnostic={diagnostic} />
 
       <Accordion
         multiple
@@ -135,6 +122,34 @@ const DiagnosticDetails = ({
     </Stack>
   );
 };
+
+export const DiagnosticSummary = ({
+  diagnostic,
+}: {
+  diagnostic: ErrorDiagnostic;
+}) => (
+  <Box>
+    <Text c="red" fw={700}>
+      {diagnostic.message}
+    </Text>
+    {diagnostic.errorMessage &&
+      diagnostic.errorMessage !== diagnostic.message && (
+        <Text size="sm" mt={4}>
+          {diagnostic.errorMessage}
+        </Text>
+      )}
+    {diagnostic.providerErrorMessage &&
+      diagnostic.providerErrorMessage !== diagnostic.message &&
+      diagnostic.providerErrorMessage !== diagnostic.errorMessage && (
+        <Text size="sm" mt={4}>
+          {diagnostic.providerErrorMessage}
+        </Text>
+      )}
+    <Text size="xs" c="dimmed" mt={4}>
+      {diagnostic.timestamp.toLocaleString()}
+    </Text>
+  </Box>
+);
 
 const ConsoleEntries = ({ entries }: { entries: ConsoleEntry[] }) => {
   if (entries.length === 0) {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { LLMChatProjection } from "../LLMChatProjection";
-import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
+import { createGeneratedTextMessageEvent } from "./TextMessageEventTestUtils";
 import { ReasoningCreatedEventUtil } from "../events/ReasoningEventUtils";
 import type { ChapterCreatedEvent } from "../events/ChatEvent";
 
@@ -34,9 +34,9 @@ describe("LLMChatProjection - Reasoning Events", () => {
   });
 
   it("places reasoning chronologically before the final assistant message", () => {
-    projection.process(MessageCreatedEventUtil.Create("user", "What next?"));
+    projection.process(createGeneratedTextMessageEvent("user", "What next?"));
     projection.process(ReasoningCreatedEventUtil.Create("Continue the scene."));
-    projection.process(MessageCreatedEventUtil.Create("assistant", "Next."));
+    projection.process(createGeneratedTextMessageEvent("assistant", "Next."));
 
     expect(projection.GetMessages().map((m) => m.role)).toEqual([
       "user",
@@ -47,9 +47,9 @@ describe("LLMChatProjection - Reasoning Events", () => {
   });
 
   it("marks reasoning as chapter-hidden when chapter compression covers it", () => {
-    const user = MessageCreatedEventUtil.Create("user", "Start");
+    const user = createGeneratedTextMessageEvent("user", "Start");
     const reasoning = ReasoningCreatedEventUtil.Create("Bridge the intent.");
-    const assistant = MessageCreatedEventUtil.Create("assistant", "Done");
+    const assistant = createGeneratedTextMessageEvent("assistant", "Done");
 
     projection.process(user);
     projection.process(reasoning);
@@ -71,9 +71,9 @@ describe("LLMChatProjection - Reasoning Events", () => {
   describe("reasoning retention policy", () => {
     it("excludes all reasoning when retention is set to 0", () => {
       projection.process(ReasoningCreatedEventUtil.Create("First reasoning"));
-      projection.process(MessageCreatedEventUtil.Create("user", "Hello"));
+      projection.process(createGeneratedTextMessageEvent("user", "Hello"));
       projection.process(ReasoningCreatedEventUtil.Create("Second reasoning"));
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Hi"));
+      projection.process(createGeneratedTextMessageEvent("assistant", "Hi"));
 
       const messages = projection.GetMessages({
         reasoningRetentionMessages: 0,
@@ -84,9 +84,9 @@ describe("LLMChatProjection - Reasoning Events", () => {
 
     it("excludes expired reasoning based on message count", () => {
       projection.process(ReasoningCreatedEventUtil.Create("Old reasoning"));
-      projection.process(MessageCreatedEventUtil.Create("user", "First"));
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Second"));
-      projection.process(MessageCreatedEventUtil.Create("user", "Third"));
+      projection.process(createGeneratedTextMessageEvent("user", "First"));
+      projection.process(createGeneratedTextMessageEvent("assistant", "Second"));
+      projection.process(createGeneratedTextMessageEvent("user", "Third"));
 
       const messages = projection.GetMessages({
         reasoningRetentionMessages: 2,
@@ -96,7 +96,7 @@ describe("LLMChatProjection - Reasoning Events", () => {
 
     it("keeps reasoning within retention window", () => {
       projection.process(ReasoningCreatedEventUtil.Create("Recent reasoning"));
-      projection.process(MessageCreatedEventUtil.Create("user", "First"));
+      projection.process(createGeneratedTextMessageEvent("user", "First"));
 
       const messages = projection.GetMessages({
         reasoningRetentionMessages: 2,
@@ -106,10 +106,10 @@ describe("LLMChatProjection - Reasoning Events", () => {
 
     it("keeps all reasoning when retention is null", () => {
       projection.process(ReasoningCreatedEventUtil.Create("Old reasoning"));
-      projection.process(MessageCreatedEventUtil.Create("user", "First"));
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Second"));
-      projection.process(MessageCreatedEventUtil.Create("user", "Third"));
-      projection.process(MessageCreatedEventUtil.Create("assistant", "Fourth"));
+      projection.process(createGeneratedTextMessageEvent("user", "First"));
+      projection.process(createGeneratedTextMessageEvent("assistant", "Second"));
+      projection.process(createGeneratedTextMessageEvent("user", "Third"));
+      projection.process(createGeneratedTextMessageEvent("assistant", "Fourth"));
 
       const messages = projection.GetMessages({
         reasoningRetentionMessages: null,

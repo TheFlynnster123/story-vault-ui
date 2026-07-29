@@ -10,7 +10,12 @@ export interface IErrorService {
 export class ErrorService implements IErrorService {
   log = (message: string, error?: unknown) => {
     console.error(message, error);
-    const diagnostic = getErrorDiagnosticsInstance().record(message, error);
+    const diagnostic = getErrorDiagnosticsInstance().record(message, error, {
+      providerErrorMessage:
+        error instanceof OpenRouterError
+          ? error.providerErrorMessage
+          : undefined,
+    });
 
     if (error instanceof OpenRouterError) {
       this.showOpenRouterError(error, diagnostic.id);

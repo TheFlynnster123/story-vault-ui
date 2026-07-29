@@ -165,7 +165,7 @@ const getPersistedSheetItems = (
   character: Partial<CharacterDescription & CharacterDescriptionV2>,
 ): string[] => {
   if (Array.isArray(character.sheetItems)) {
-    return normalizeSheetItems(character.sheetItems);
+    return [...character.sheetItems];
   }
 
   return parseLegacySheet(character.sheet ?? "");

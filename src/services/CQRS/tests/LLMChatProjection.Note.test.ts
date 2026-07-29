@@ -4,7 +4,7 @@ import {
   NoteCreatedEventUtil,
   NoteEditedEventUtil,
 } from "../events/NoteEventUtils";
-import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
+import { createGeneratedTextMessageEvent } from "./TextMessageEventTestUtils";
 import type { ChapterCreatedEvent } from "../events/ChatEvent";
 
 const createChapterEvent = (
@@ -38,13 +38,13 @@ describe("LLMChatProjection - Note Events", () => {
       );
     });
 
-    it("should use system role for note messages", () => {
+    it("should use user role for note messages", () => {
       const event = NoteCreatedEventUtil.Create("Note", 10);
 
       projection.process(event);
 
       const messages = projection.GetMessages();
-      expect(messages[0].role).toBe("system");
+      expect(messages[0].role).toBe("user");
     });
 
     it("should store expiresAfterMessages in message data", () => {
@@ -159,9 +159,9 @@ describe("LLMChatProjection - Note Events", () => {
       const noteEvent = NoteCreatedEventUtil.Create("Note", 2);
       projection.process(noteEvent);
 
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
       projection.process(
-        MessageCreatedEventUtil.Create("assistant", "Reply 1"),
+        createGeneratedTextMessageEvent("assistant", "Reply 1"),
       );
 
       const messages = projection.GetMessages();
@@ -175,7 +175,7 @@ describe("LLMChatProjection - Note Events", () => {
       const noteEvent = NoteCreatedEventUtil.Create("Note", 10);
       projection.process(noteEvent);
 
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
 
       const messages = projection.GetMessages();
       const noteMessages = messages.filter((m) =>
@@ -190,7 +190,7 @@ describe("LLMChatProjection - Note Events", () => {
 
       for (let i = 0; i < 100; i++) {
         projection.process(
-          MessageCreatedEventUtil.Create("user", `Msg ${i}`),
+          createGeneratedTextMessageEvent("user", `Msg ${i}`),
         );
       }
 
@@ -205,7 +205,7 @@ describe("LLMChatProjection - Note Events", () => {
       projection.process(NoteCreatedEventUtil.Create("Short", 1));
       projection.process(NoteCreatedEventUtil.Create("Long", 10));
 
-      projection.process(MessageCreatedEventUtil.Create("user", "Msg 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Msg 1"));
 
       const messages = projection.GetMessages();
       const noteMessages = messages.filter((m) =>
@@ -216,16 +216,16 @@ describe("LLMChatProjection - Note Events", () => {
     });
 
     it("should place notes chronologically among other messages", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Message 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Message 1"));
       projection.process(NoteCreatedEventUtil.Create("Note content", null));
       projection.process(
-        MessageCreatedEventUtil.Create("assistant", "Response"),
+        createGeneratedTextMessageEvent("assistant", "Response"),
       );
 
       const messages = projection.GetMessages();
       expect(messages).toHaveLength(3);
       expect(messages[0].role).toBe("user");
-      expect(messages[1].role).toBe("system");
+      expect(messages[1].role).toBe("user");
       expect(messages[1].content).toContain("[Note]");
       expect(messages[2].role).toBe("assistant");
     });
@@ -233,7 +233,7 @@ describe("LLMChatProjection - Note Events", () => {
 
   describe("Chapter-Note Interaction", () => {
     it("should not hide note messages when chapter covers their IDs", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
       const noteEvent = NoteCreatedEventUtil.Create("Note content", null);
       projection.process(noteEvent);
@@ -245,7 +245,7 @@ describe("LLMChatProjection - Note Events", () => {
       // Add messages after chapter so buffer logic doesn't re-inject covered messages
       for (let i = 0; i < 10; i++) {
         projection.process(
-          MessageCreatedEventUtil.Create("user", `Post ${i}`),
+          createGeneratedTextMessageEvent("user", `Post ${i}`),
         );
       }
 
@@ -257,11 +257,11 @@ describe("LLMChatProjection - Note Events", () => {
     });
 
     it("should still hide regular messages when chapter covers them alongside notes", () => {
-      const msg1 = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg1 = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg1);
       const noteEvent = NoteCreatedEventUtil.Create("Note", null);
       projection.process(noteEvent);
-      const msg2 = MessageCreatedEventUtil.Create("assistant", "Hi there");
+      const msg2 = createGeneratedTextMessageEvent("assistant", "Hi there");
       projection.process(msg2);
 
       projection.process(
@@ -275,7 +275,7 @@ describe("LLMChatProjection - Note Events", () => {
       // Add enough messages after so buffer doesn't re-include hidden messages
       for (let i = 0; i < 10; i++) {
         projection.process(
-          MessageCreatedEventUtil.Create("user", `Post chapter ${i}`),
+          createGeneratedTextMessageEvent("user", `Post chapter ${i}`),
         );
       }
 
@@ -295,7 +295,7 @@ describe("LLMChatProjection - Note Events", () => {
     });
 
     it("should keep note visible alongside chapter summary", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
       const noteEvent = NoteCreatedEventUtil.Create("Note content", null);
       projection.process(noteEvent);
@@ -307,7 +307,7 @@ describe("LLMChatProjection - Note Events", () => {
       // Add messages after chapter so buffer logic doesn't interfere
       for (let i = 0; i < 10; i++) {
         projection.process(
-          MessageCreatedEventUtil.Create("user", `Post ${i}`),
+          createGeneratedTextMessageEvent("user", `Post ${i}`),
         );
       }
 
@@ -323,8 +323,8 @@ describe("LLMChatProjection - Note Events", () => {
     it("should keep expired notes out of LLM context after chapter compression hides the expiring messages", () => {
       const noteEvent = NoteCreatedEventUtil.Create("Temporary note", 2);
       projection.process(noteEvent);
-      const msg1 = MessageCreatedEventUtil.Create("user", "Msg 1");
-      const msg2 = MessageCreatedEventUtil.Create("assistant", "Reply 1");
+      const msg1 = createGeneratedTextMessageEvent("user", "Msg 1");
+      const msg2 = createGeneratedTextMessageEvent("assistant", "Reply 1");
       projection.process(msg1);
       projection.process(msg2);
 
@@ -333,7 +333,7 @@ describe("LLMChatProjection - Note Events", () => {
       );
       for (let i = 0; i < 10; i++) {
         projection.process(
-          MessageCreatedEventUtil.Create("user", `Post chapter ${i}`),
+          createGeneratedTextMessageEvent("user", `Post chapter ${i}`),
         );
       }
 

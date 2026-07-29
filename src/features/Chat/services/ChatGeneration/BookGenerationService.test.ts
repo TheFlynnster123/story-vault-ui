@@ -9,8 +9,7 @@ describe("BookGenerationService", () => {
   const testChatId = "test-chat-123";
 
   let mockLLMMessageContextService: {
-    buildBookSummaryRequestMessages: ReturnType<typeof vi.fn>;
-    buildBookTitleRequestMessages: ReturnType<typeof vi.fn>;
+    buildContext: ReturnType<typeof vi.fn>;
   };
 
   let mockOpenRouterChatAPI: {
@@ -23,14 +22,9 @@ describe("BookGenerationService", () => {
 
   beforeEach(() => {
     mockLLMMessageContextService = {
-      buildBookSummaryRequestMessages: vi
+      buildContext: vi
         .fn()
-        .mockResolvedValue([
-          { role: "system", content: "book summary prompt" },
-        ]),
-      buildBookTitleRequestMessages: vi
-        .fn()
-        .mockResolvedValue([{ role: "system", content: "book title prompt" }]),
+        .mockResolvedValue([{ role: "system", content: "Character Sheets" }]),
     };
 
     mockOpenRouterChatAPI = {
@@ -58,15 +52,26 @@ describe("BookGenerationService", () => {
 
   // ---- generateBookSummary Tests ----
   describe("generateBookSummary", () => {
-    it("should call LLMMessageContextService with chapter summaries", async () => {
+    it("requests only Character Sheets from shared context", async () => {
       const service = new BookGenerationService(testChatId);
       const summaries = ["Chapter 1 summary", "Chapter 2 summary"];
 
       await service.generateBookSummary(summaries);
 
-      expect(
-        mockLLMMessageContextService.buildBookSummaryRequestMessages,
-      ).toHaveBeenCalledWith(summaries);
+      expect(mockLLMMessageContextService.buildContext).toHaveBeenCalledWith({
+        characterSheets: true,
+      });
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            content: expect.stringContaining("Chapter 1 summary"),
+          }),
+        ]),
+        undefined,
+        "chat",
+        "LLM",
+        undefined,
+      );
     });
 
     it("should call OpenRouterChatAPI with request messages", async () => {
@@ -179,15 +184,26 @@ describe("BookGenerationService", () => {
 
   // ---- generateBookTitle Tests ----
   describe("generateBookTitle", () => {
-    it("should call LLMMessageContextService with chapter summaries", async () => {
+    it("requests only Character Sheets from shared context", async () => {
       const service = new BookGenerationService(testChatId);
       const summaries = ["Chapter 1 summary", "Chapter 2 summary"];
 
       await service.generateBookTitle(summaries);
 
-      expect(
-        mockLLMMessageContextService.buildBookTitleRequestMessages,
-      ).toHaveBeenCalledWith(summaries);
+      expect(mockLLMMessageContextService.buildContext).toHaveBeenCalledWith({
+        characterSheets: true,
+      });
+      expect(mockOpenRouterChatAPI.postChat).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            content: expect.stringContaining("Chapter 2 summary"),
+          }),
+        ]),
+        undefined,
+        "chat",
+        "LLM",
+        undefined,
+      );
     });
 
     it("should return generated title", async () => {
