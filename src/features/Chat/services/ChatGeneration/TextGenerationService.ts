@@ -2,6 +2,37 @@ import { d } from "../../../../services/Dependencies";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
 import type { OpenRouterRequestSettings } from "../../../OpenRouter/services/OpenRouterRequestSettings";
+import type { TrackedContextTrace } from "../../../OpenRouter/services/RequestTracker";
+import {
+  toSystemMessage,
+  toUserMessage,
+} from "../../../../services/Utils/MessageUtils";
+import {
+  DEFAULT_SYSTEM_PROMPTS,
+  type SystemPrompts,
+} from "../../../Prompts/services/SystemPrompts";
+import type { ChatSettings } from "../Chat/ChatSettings";
+import {
+  renderConsolidatedReasoningContext,
+} from "./ContextDocument";
+import type {
+  ContextRequest,
+  LLMContextSelection,
+} from "./LLMMessageContextService";
+
+const TEXT_CONTEXT_SELECTION = {
+  history: true,
+  memories: true,
+  characterSheets: true,
+  continuityHistories: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
+
+type TextAppendedSource =
+  | "response-prompt"
+  | "reasoning-prompt"
+  | "guidance"
+  | "regeneration-feedback";
 
 export const getTextGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new TextGenerationService(chatId),
@@ -75,9 +106,7 @@ export class TextGenerationService extends GenerationOrchestrator {
         await this.generateReasoning(guidance);
       }
 
-      const request = await d
-        .LLMMessageContextService(this.chatId)
-        .buildGenerationRequestWithTrace(true, guidance);
+      const request = await this.buildResponseRequest(guidance);
 
       this.setStatus("Generating response...");
 
@@ -100,7 +129,7 @@ export class TextGenerationService extends GenerationOrchestrator {
         );
 
         this.setStatus("Saving...");
-        await d.ChatService(this.chatId).AddAssistantMessage(response);
+        await d.ChatService(this.chatId).AddAssistantResponse(response);
         projection.removeStreamingMessage();
         void d
           .MessageCompressionService(this.chatId)
@@ -158,9 +187,7 @@ export class TextGenerationService extends GenerationOrchestrator {
   }
 
   private async generateReasoning(guidance?: string): Promise<void> {
-    const request = await d
-      .LLMMessageContextService(this.chatId)
-      .buildReasoningRequestWithTrace(guidance);
+    const request = await this.buildReasoningRequest(guidance);
 
     this.setStatus("Reasoning...");
 
@@ -206,13 +233,11 @@ export class TextGenerationService extends GenerationOrchestrator {
 
       d.PlanGenerationService(this.chatId).onMessageSent();
 
-      const request = await d
-        .LLMMessageContextService(this.chatId)
-        .buildRegenerationRequestWithTrace(
-          messageId,
-          originalContent,
-          feedback,
-        );
+      const request = await this.buildRegenerationRequest(
+        messageId,
+        originalContent,
+        feedback,
+      );
 
       this.setStatus("Generating response...");
 
@@ -244,4 +269,118 @@ export class TextGenerationService extends GenerationOrchestrator {
       }
     });
   }
+
+  private async buildResponseRequest(guidance?: string): Promise<{
+    messages: ContextRequest["messages"];
+    trace: TrackedContextTrace;
+  }> {
+    const [context, chatSettings] = await Promise.all([
+      d
+        .LLMMessageContextService(this.chatId)
+        .buildContextWithTrace(TEXT_CONTEXT_SELECTION),
+      d.ChatSettingsService(this.chatId).Get() as Promise<ChatSettings>,
+    ]);
+    const messages = [
+      ...context.messages,
+      toUserMessage(chatSettings.prompt),
+    ];
+    const appendedSources: TextAppendedSource[] = ["response-prompt"];
+
+    if (hasText(guidance)) {
+      messages.push(toUserMessage(formatGuidanceMessage(guidance)));
+      appendedSources.push("guidance");
+    }
+
+    return withAppendedSources(context, messages, appendedSources);
+  }
+
+  private async buildReasoningRequest(guidance?: string): Promise<{
+    messages: ContextRequest["messages"];
+    trace: TrackedContextTrace;
+  }> {
+    const [context, chatSettings, systemPrompts] = await Promise.all([
+      d
+        .LLMMessageContextService(this.chatId)
+        .buildContextWithTrace(TEXT_CONTEXT_SELECTION),
+      d.ChatSettingsService(this.chatId).Get() as Promise<ChatSettings>,
+      d.SystemPromptsService().Get(),
+    ]);
+    const reasoningPrompt = resolveReasoningPrompt(
+      chatSettings,
+      systemPrompts,
+    );
+    const messages =
+      chatSettings.reasoningConsolidateMessageHistory ?? true
+        ? [
+            toSystemMessage(
+              renderConsolidatedReasoningContext(
+                context.document,
+                reasoningPrompt,
+              ),
+            ),
+          ]
+        : [...context.messages, toSystemMessage(reasoningPrompt)];
+    const appendedSources: TextAppendedSource[] = ["reasoning-prompt"];
+
+    if (hasText(guidance)) {
+      messages.push(toUserMessage(formatGuidanceMessage(guidance)));
+      appendedSources.push("guidance");
+    }
+
+    return withAppendedSources(context, messages, appendedSources);
+  }
+
+  private async buildRegenerationRequest(
+    messageId: string,
+    originalContent: string,
+    feedback?: string,
+  ): Promise<{
+    messages: ContextRequest["messages"];
+    trace: TrackedContextTrace;
+  }> {
+    const context = await d
+      .LLMMessageContextService(this.chatId)
+      .buildContextWithTrace(TEXT_CONTEXT_SELECTION, {
+        beforeMessageId: messageId,
+      });
+    const messages = [...context.messages];
+    const appendedSources: TextAppendedSource[] = [];
+
+    if (hasText(feedback)) {
+      messages.push(
+        toUserMessage(
+          `The previous response was: "${originalContent}"\n\nPlease regenerate with this feedback: ${feedback}`,
+        ),
+      );
+      appendedSources.push("regeneration-feedback");
+    }
+
+    return withAppendedSources(context, messages, appendedSources);
+  }
 }
+
+const withAppendedSources = (
+  context: ContextRequest,
+  messages: ContextRequest["messages"],
+  appendedSources: TextAppendedSource[],
+): { messages: ContextRequest["messages"]; trace: TrackedContextTrace } => ({
+  messages,
+  trace: {
+    ...context.trace,
+    appendedSources,
+  },
+});
+
+const resolveReasoningPrompt = (
+  chatSettings: ChatSettings,
+  systemPrompts: SystemPrompts | undefined,
+): string =>
+  chatSettings.reasoningPromptOverride?.trim() ||
+  systemPrompts?.reasoningPrompt ||
+  DEFAULT_SYSTEM_PROMPTS.reasoningPrompt;
+
+const formatGuidanceMessage = (guidance: string): string =>
+  `User guidance for the next response: ${guidance}`;
+
+const hasText = (content: string | undefined): content is string =>
+  content !== undefined && content.trim().length > 0;

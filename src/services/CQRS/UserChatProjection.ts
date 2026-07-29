@@ -1,6 +1,7 @@
 import type {
+  AssistantResponseCreatedEvent,
   ChatEvent,
-  MessageCreatedEvent,
+  InstructionCreatedEvent,
   ReasoningCreatedEvent,
   MessageEditedEvent,
   MessageCompressionCreatedEvent,
@@ -22,11 +23,12 @@ import type {
   NoteCreatedEvent,
   NoteEditedEvent,
   AgentClarificationCreatedEvent,
+  TextMessageCreatedEvent,
+  UserMessageCreatedEvent,
 } from "./events/ChatEvent";
 import { createMessageContentFingerprint } from "./events/MessageCompressionEventUtils";
 
 import { createInstanceCache } from "../Utils/getOrCreateInstance";
-import { normalizeChatEvent } from "./events/normalizeChatEvent";
 
 export const getUserChatProjectionInstance = createInstanceCache(
   () => new UserChatProjection(),
@@ -118,13 +120,13 @@ export class UserChatProjection {
 
   // ---- Event Processing ----
   public process(event: ChatEvent) {
-    this.applyEvent(normalizeChatEvent(event));
+    this.applyEvent(event);
     this.notifySubscribers();
   }
 
   public processBatch(events: ChatEvent[]) {
     for (const event of events) {
-      this.applyEvent(normalizeChatEvent(event));
+      this.applyEvent(event);
     }
     this.notifySubscribers();
   }
@@ -137,8 +139,14 @@ export class UserChatProjection {
       case "StoryEdited":
         this.processStoryEdited(event);
         break;
-      case "MessageCreated":
-        this.processMessageCreated(event);
+      case "UserMessageCreated":
+        this.processUserMessageCreated(event);
+        break;
+      case "AssistantResponseCreated":
+        this.processAssistantResponseCreated(event);
+        break;
+      case "InstructionCreated":
+        this.processInstructionCreated(event);
         break;
       case "ReasoningCreated":
         this.processReasoningCreated(event);
@@ -282,10 +290,27 @@ export class UserChatProjection {
     this.replaceMessage(event.storyId, { content: event.content });
   }
 
-  private processMessageCreated(event: MessageCreatedEvent) {
+  private processUserMessageCreated(event: UserMessageCreatedEvent) {
+    this.appendTextMessage(event, "user-message");
+  }
+
+  private processAssistantResponseCreated(
+    event: AssistantResponseCreatedEvent,
+  ) {
+    this.appendTextMessage(event, "assistant");
+  }
+
+  private processInstructionCreated(event: InstructionCreatedEvent) {
+    this.appendTextMessage(event, "system-message");
+  }
+
+  private appendTextMessage(
+    event: TextMessageCreatedEvent,
+    type: "user-message" | "assistant" | "system-message",
+  ) {
     this.Messages.push({
       id: event.messageId,
-      type: toType(event.role),
+      type,
       content: event.content,
       hiddenByChapterId: undefined,
       deleted: false,
@@ -867,23 +892,3 @@ const definedFields = <T extends Record<string, unknown>>(
   Object.fromEntries(
     Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined),
   ) as Partial<T>;
-
-function toType(
-  role: "assistant" | "user" | "system",
-):
-  | "chapter"
-  | "assistant"
-  | "user-message"
-  | "system-message"
-  | "civit-workflow" {
-  switch (role) {
-    case "assistant":
-      return "assistant";
-    case "user":
-      return "user-message";
-    case "system":
-      return "system-message";
-    default:
-      throw new Error(`Unknown role: ${role}`);
-  }
-}

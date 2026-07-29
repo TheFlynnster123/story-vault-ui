@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { LLMChatProjection } from "../LLMChatProjection";
 import type {
-  MessageCreatedEvent,
   ChapterCreatedEvent,
   ChapterEditedEvent,
   ChapterDeletedEvent,
 } from "../events/ChatEvent";
+import { createTextMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("LLMChatProjection - Chapter Operations", () => {
   let projection: LLMChatProjection;
@@ -21,13 +21,7 @@ describe("LLMChatProjection - Chapter Operations", () => {
     role: "user" | "assistant" | "system",
     content: string,
   ): void {
-    const event: MessageCreatedEvent = {
-      type: "MessageCreated",
-      messageId: id,
-      role,
-      content,
-    };
-    proj.process(event);
+    proj.process(createTextMessageEvent(id, role, content));
   }
 
   function createChapter(

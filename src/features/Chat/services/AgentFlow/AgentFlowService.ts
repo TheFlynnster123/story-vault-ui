@@ -6,6 +6,15 @@ import {
 } from "../../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
+import type { LLMContextSelection } from "../ChatGeneration/LLMMessageContextService";
+
+const AGENT_CONTEXT_SELECTION = {
+  history: true,
+  memories: true,
+  characterSheets: true,
+  continuityHistories: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 export const getAgentFlowServiceInstance = createInstanceCache(
   (chatId: string) => new AgentFlowService(chatId),
@@ -196,7 +205,7 @@ export class AgentFlowService {
 
     const contextMessages = await d
       .LLMMessageContextService(this.chatId)
-      .buildGenerationRequestMessages(false);
+      .buildContext(AGENT_CONTEXT_SELECTION);
 
     const messages = buildIntentMessages(
       contextMessages,

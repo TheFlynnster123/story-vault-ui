@@ -1,5 +1,7 @@
 export type ChatEvent =
-  | MessageCreatedEvent
+  | UserMessageCreatedEvent
+  | AssistantResponseCreatedEvent
+  | InstructionCreatedEvent
   | ReasoningCreatedEvent
   | MessageEditedEvent
   | MessageCompressionCreatedEvent
@@ -25,12 +27,28 @@ export type ChatEvent =
   | NoteEditedEvent
   | AgentClarificationCreatedEvent;
 
-export interface MessageCreatedEvent {
-  type: "MessageCreated";
+export interface UserMessageCreatedEvent {
+  type: "UserMessageCreated";
   messageId: string;
-  role: "assistant" | "user" | "system";
   content: string;
 }
+
+export interface AssistantResponseCreatedEvent {
+  type: "AssistantResponseCreated";
+  messageId: string;
+  content: string;
+}
+
+export interface InstructionCreatedEvent {
+  type: "InstructionCreated";
+  messageId: string;
+  content: string;
+}
+
+export type TextMessageCreatedEvent =
+  | UserMessageCreatedEvent
+  | AssistantResponseCreatedEvent
+  | InstructionCreatedEvent;
 
 export interface ReasoningCreatedEvent {
   type: "ReasoningCreated";

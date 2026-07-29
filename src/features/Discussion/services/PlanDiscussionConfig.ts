@@ -3,6 +3,11 @@ import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { Plan } from "../../Plans/services/Plan";
 import type { DiscussionConfig } from "./DiscussionConfig";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const PLAN_DISCUSSION_CONTEXT_SELECTION = {
+  history: true,
+} as const satisfies LLMContextSelection;
 
 /**
  * Creates a DiscussionConfig for discussing a specific plan.
@@ -18,33 +23,13 @@ export const createPlanDiscussionConfig = (
       .getPlans()
       .find((p) => p.id === planId);
 
-  const getLatestPlanContent = (): string | undefined => {
-    const messages = d.LLMChatProjection(chatId).GetMessages();
-    const planMessages = messages.filter((m) => m.id?.startsWith("plan-"));
+  const getLatestPlanContent = (): string | undefined =>
+    d.UserChatProjection(chatId).GetLatestPlanContent(planId);
 
-    for (let i = planMessages.length - 1; i >= 0; i--) {
-      const msg = planMessages[i];
-      if (msg.content?.includes(`[Plan: `)) {
-        const match = msg.content.match(
-          /\[Plan: [^\]]+\]\n([\s\S]*)\n\[End of Plan\]/,
-        );
-        if (match) return match[1];
-        return msg.content;
-      }
-    }
-
-    return undefined;
-  };
-
-  const getChatMessages = (): LLMMessage[] => {
-    const plan = findPlan();
-    if (!plan) return [];
-
-    if (plan.hideOtherPlans) {
-      return d.LLMChatProjection(chatId).GetMessagesExcludingAllPlans();
-    }
-    return d.LLMChatProjection(chatId).GetMessagesExcludingPlan(planId);
-  };
+  const getChatMessages = (): Promise<LLMMessage[]> =>
+    d
+      .LLMMessageContextService(chatId)
+      .buildContext(PLAN_DISCUSSION_CONTEXT_SELECTION);
 
   const resolvedDiscussionPrompt = (): string =>
     discussPlanPrompt || DEFAULT_SYSTEM_PROMPTS.discussPlanPrompt;

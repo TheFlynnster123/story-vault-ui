@@ -4,6 +4,12 @@ import { d } from "../../../services/Dependencies";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { DiscussionConfig } from "./DiscussionConfig";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const CHAPTER_DISCUSSION_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 /**
  * Creates a DiscussionConfig for discussing a specific chapter's summary.
@@ -28,8 +34,10 @@ export const createChapterDiscussionConfig = (
       .GetMessages()
       .find((m) => m.id === chapterId) as ChapterChatMessage | undefined;
 
-  const getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(chatId).GetMessages();
+  const getChatMessages = (): Promise<LLMMessage[]> =>
+    d
+      .LLMMessageContextService(chatId)
+      .buildContext(CHAPTER_DISCUSSION_CONTEXT_SELECTION);
 
   const resolvedPrompt = (): string =>
     chapterSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt;
@@ -76,7 +84,7 @@ export const createChapterDiscussionConfig = (
     const title = chapter.data?.title ?? "";
     const currentSummary = chapter.content ?? "";
 
-    const chatMessages = getChatMessages();
+    const chatMessages = await getChatMessages();
     const systemPrompt = [
       resolvedPrompt(),
       ``,

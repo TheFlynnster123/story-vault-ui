@@ -5,7 +5,7 @@ import {
   PlanCreatedEventUtil,
   PlanHiddenEventUtil,
 } from "../events/PlanEventUtils";
-import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
+import { createGeneratedTextMessageEvent } from "./TextMessageEventTestUtils";
 import type { ChapterCreatedEvent } from "../events/ChatEvent";
 
 const createChapterEvent = (
@@ -94,7 +94,7 @@ describe("UserChatProjection - Plan Events", () => {
     });
 
     it("should appear after existing messages in timeline", () => {
-      const msgEvent = MessageCreatedEventUtil.Create("user", "Hello");
+      const msgEvent = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msgEvent);
 
       const planEvent = createPlanEvent("def-1", "Plan", "Content");
@@ -153,7 +153,7 @@ describe("UserChatProjection - Plan Events", () => {
     });
 
     it("should not affect non-plan messages", () => {
-      const msgEvent = MessageCreatedEventUtil.Create("user", "Hello");
+      const msgEvent = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msgEvent);
       projection.process(createPlanEvent("def-1", "Plan", "Content"));
 
@@ -197,10 +197,10 @@ describe("UserChatProjection - Plan Events", () => {
     });
 
     it("should interleave plans with regular messages chronologically", () => {
-      projection.process(MessageCreatedEventUtil.Create("user", "Message 1"));
+      projection.process(createGeneratedTextMessageEvent("user", "Message 1"));
       projection.process(createPlanEvent("def-1", "Plan", "Plan v1"));
       projection.process(
-        MessageCreatedEventUtil.Create("assistant", "Response 1"),
+        createGeneratedTextMessageEvent("assistant", "Response 1"),
       );
 
       const messages = projection.GetMessages();
@@ -232,7 +232,7 @@ describe("UserChatProjection - Plan Events", () => {
 
   describe("Chapter-Plan Interaction", () => {
     it("should not hide plan messages when chapter covers their IDs", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
       const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
       projection.process(planEvent);
@@ -248,8 +248,8 @@ describe("UserChatProjection - Plan Events", () => {
     });
 
     it("should still hide regular messages when chapter covers them", () => {
-      const msg1 = MessageCreatedEventUtil.Create("user", "Hello");
-      const msg2 = MessageCreatedEventUtil.Create("assistant", "Hi there");
+      const msg1 = createGeneratedTextMessageEvent("user", "Hello");
+      const msg2 = createGeneratedTextMessageEvent("assistant", "Hi there");
       projection.process(msg1);
       projection.process(msg2);
 
@@ -265,7 +265,7 @@ describe("UserChatProjection - Plan Events", () => {
     });
 
     it("should keep plan visible alongside chapter in timeline", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
       const planEvent = createPlanEvent("def-1", "Story Plan", "Plan content");
       projection.process(planEvent);
@@ -281,11 +281,11 @@ describe("UserChatProjection - Plan Events", () => {
     });
 
     it("should not hide plan when multiple plans and messages are covered", () => {
-      const msg1 = MessageCreatedEventUtil.Create("user", "Msg 1");
+      const msg1 = createGeneratedTextMessageEvent("user", "Msg 1");
       projection.process(msg1);
       const plan1 = createPlanEvent("def-1", "Plan A", "A");
       projection.process(plan1);
-      const msg2 = MessageCreatedEventUtil.Create("assistant", "Msg 2");
+      const msg2 = createGeneratedTextMessageEvent("assistant", "Msg 2");
       projection.process(msg2);
       const plan2 = createPlanEvent("def-2", "Plan B", "B");
       projection.process(plan2);
@@ -305,7 +305,7 @@ describe("UserChatProjection - Plan Events", () => {
     });
 
     it("should not hide chapter messages when covered by another chapter", () => {
-      const msg = MessageCreatedEventUtil.Create("user", "Hello");
+      const msg = createGeneratedTextMessageEvent("user", "Hello");
       projection.process(msg);
 
       projection.process(createChapterEvent("ch-1", [msg.messageId]));

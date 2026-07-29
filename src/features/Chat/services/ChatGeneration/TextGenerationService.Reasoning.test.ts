@@ -1,18 +1,39 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { d } from "../../../../services/Dependencies";
 import { TextGenerationService } from "./TextGenerationService";
+import { createContextDocument } from "./ContextDocument";
+import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
 
 vi.mock("../../../../services/Dependencies");
 
 const CHAT_ID = "chat-1";
 
 describe("TextGenerationService reasoning", () => {
-  const mockRequestMessages = [{ role: "user" as const, content: "Hello" }];
+  const mockContextMessages = [{ role: "user" as const, content: "Hello" }];
+  const mockRequestMessages = [
+    ...mockContextMessages,
+    {
+      id: expect.any(String),
+      role: "user" as const,
+      content: "Response prompt",
+    },
+  ];
   const mockReasoningMessages = [
-    { role: "system" as const, content: "Reason first" },
+    ...mockContextMessages,
+    {
+      id: expect.any(String),
+      role: "system" as const,
+      content: "Reason first",
+    },
   ];
   const mockRegenerationMessages = [
-    { role: "user" as const, content: "Rewrite this" },
+    ...mockContextMessages,
+    {
+      id: expect.any(String),
+      role: "user" as const,
+      content:
+        'The previous response was: "Original response"\n\nPlease regenerate with this feedback: Make it sharper',
+    },
   ];
   const mockResponseTrace = {
     projection: [],
@@ -72,23 +93,35 @@ describe("TextGenerationService reasoning", () => {
     } as unknown as ReturnType<typeof d.PlanGenerationService>);
 
     vi.mocked(d.ChatSettingsService).mockReturnValue({
-      Get: vi.fn().mockResolvedValue({ reasoningEnabled: true }),
+      Get: vi.fn().mockResolvedValue({
+        reasoningEnabled: true,
+        reasoningConsolidateMessageHistory: false,
+        prompt: "Response prompt",
+      }),
     } as unknown as ReturnType<typeof d.ChatSettingsService>);
 
     vi.mocked(d.LLMMessageContextService).mockReturnValue({
-      buildReasoningRequestWithTrace: vi.fn().mockResolvedValue({
-        messages: mockReasoningMessages,
-        trace: mockReasoningTrace,
-      }),
-      buildGenerationRequestWithTrace: vi.fn().mockResolvedValue({
-        messages: mockRequestMessages,
-        trace: mockResponseTrace,
-      }),
-      buildRegenerationRequestWithTrace: vi.fn().mockResolvedValue({
-        messages: mockRegenerationMessages,
-        trace: mockRegenerationTrace,
+      buildContextWithTrace: vi.fn().mockResolvedValue({
+        messages: mockContextMessages,
+        document: createContextDocument({
+          projectedHistory: mockContextMessages,
+          memoryMessages: [],
+          characterSheetMessages: [],
+          recentMessageCount: 0,
+        }),
+        trace: {
+          projection: [],
+          sections: [],
+        },
       }),
     } as unknown as ReturnType<typeof d.LLMMessageContextService>);
+
+    vi.mocked(d.SystemPromptsService).mockReturnValue({
+      Get: vi.fn().mockResolvedValue({
+        ...DEFAULT_SYSTEM_PROMPTS,
+        reasoningPrompt: "Reason first",
+      }),
+    } as unknown as ReturnType<typeof d.SystemPromptsService>);
 
     vi.mocked(d.UserChatProjection).mockReturnValue({
       GetLastPersistedTextMessage: getLastPersistedTextMessage,
@@ -110,7 +143,7 @@ describe("TextGenerationService reasoning", () => {
     vi.mocked(d.ChatService).mockReturnValue({
       AddUserMessage: addUserMessage,
       AddReasoningMessage: vi.fn().mockResolvedValue(undefined),
-      AddAssistantMessage: vi.fn().mockResolvedValue(undefined),
+      AddAssistantResponse: vi.fn().mockResolvedValue(undefined),
       EditMessage: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReturnType<typeof d.ChatService>);
 
@@ -146,7 +179,7 @@ describe("TextGenerationService reasoning", () => {
     await service.generateResponse();
 
     expect(
-      d.LLMMessageContextService(CHAT_ID).buildReasoningRequestWithTrace,
+      d.LLMMessageContextService(CHAT_ID).buildContextWithTrace,
     ).toHaveBeenCalled();
     expect(postChatStream).toHaveBeenNthCalledWith(
       1,
@@ -176,6 +209,8 @@ describe("TextGenerationService reasoning", () => {
     vi.mocked(d.ChatSettingsService).mockReturnValue({
       Get: vi.fn().mockResolvedValue({
         reasoningEnabled: true,
+        reasoningConsolidateMessageHistory: false,
+        prompt: "Response prompt",
         modelOverride: "openai/gpt-4.1",
         modelRequestSettingsOverride: { temperature: 0.4 },
         reasoningModelOverride: "anthropic/claude-4-sonnet",
@@ -210,6 +245,57 @@ describe("TextGenerationService reasoning", () => {
     );
   });
 
+  it("ends the response request with a user task after persisted reasoning", async () => {
+    const contextAfterReasoning = [
+      { role: "system" as const, content: "Story context" },
+      { role: "user" as const, content: "Continue the story" },
+      { role: "assistant" as const, content: "Reasoning output" },
+    ];
+    vi.mocked(
+      d.LLMMessageContextService(CHAT_ID).buildContextWithTrace,
+    ).mockResolvedValueOnce({
+      messages: mockContextMessages,
+      document: createContextDocument({
+        projectedHistory: mockContextMessages,
+        memoryMessages: [],
+        characterSheetMessages: [],
+        recentMessageCount: 0,
+      }),
+      trace: {
+        projection: [],
+        sections: [],
+      },
+    }).mockResolvedValueOnce({
+      messages: contextAfterReasoning,
+      document: createContextDocument({
+        projectedHistory: contextAfterReasoning,
+        memoryMessages: [],
+        characterSheetMessages: [],
+        recentMessageCount: 0,
+      }),
+      trace: {
+        projection: [],
+        sections: [],
+      },
+    });
+    const service = new TextGenerationService(CHAT_ID);
+
+    await service.generateResponse();
+
+    const responseMessages = postChatStream.mock.calls[1][0];
+    expect(responseMessages.slice(-2)).toEqual([
+      {
+        role: "assistant",
+        content: "Reasoning output",
+      },
+      {
+        id: expect.any(String),
+        role: "user",
+        content: "Response prompt",
+      },
+    ]);
+  });
+
   it("skips the reasoning request when reasoning is disabled", async () => {
     vi.mocked(d.ChatSettingsService).mockReturnValue({
       Get: vi.fn().mockResolvedValue({ reasoningEnabled: false }),
@@ -219,8 +305,8 @@ describe("TextGenerationService reasoning", () => {
     await service.generateResponse();
 
     expect(
-      d.LLMMessageContextService(CHAT_ID).buildReasoningRequestWithTrace,
-    ).not.toHaveBeenCalled();
+      d.LLMMessageContextService(CHAT_ID).buildContextWithTrace,
+    ).toHaveBeenCalledOnce();
     expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
     expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
     expect(postChatStream).toHaveBeenCalledOnce();
@@ -236,8 +322,8 @@ describe("TextGenerationService reasoning", () => {
     await service.generateResponse();
 
     expect(
-      d.LLMMessageContextService(CHAT_ID).buildReasoningRequestWithTrace,
-    ).not.toHaveBeenCalled();
+      d.LLMMessageContextService(CHAT_ID).buildContextWithTrace,
+    ).toHaveBeenCalledOnce();
     expect(d.OpenRouterChatAPI().postChat).not.toHaveBeenCalled();
     expect(d.ChatService(CHAT_ID).AddReasoningMessage).not.toHaveBeenCalled();
     expect(postChatStream).toHaveBeenCalledOnce();
@@ -280,11 +366,16 @@ describe("TextGenerationService reasoning", () => {
     await service.regenerateResponse("assistant-1", "Make it sharper");
 
     expect(
-      d.LLMMessageContextService(CHAT_ID).buildRegenerationRequestWithTrace,
+      d.LLMMessageContextService(CHAT_ID).buildContextWithTrace,
     ).toHaveBeenCalledWith(
-      "assistant-1",
-      "Original response",
-      "Make it sharper",
+      expect.objectContaining({
+        history: true,
+        memories: true,
+        characterSheets: true,
+        continuityHistories: true,
+        plans: true,
+      }),
+      { beforeMessageId: "assistant-1" },
     );
     expect(startStreamingExistingMessage).toHaveBeenCalledWith("assistant-1");
     expect(postChatStream).toHaveBeenCalledWith(

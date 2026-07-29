@@ -339,7 +339,9 @@ const getMessageEventPositions = (
   const positions = new Map<string, number>();
   events.forEach((event, index) => {
     if (
-      event.type === "MessageCreated" ||
+      event.type === "UserMessageCreated" ||
+      event.type === "AssistantResponseCreated" ||
+      event.type === "InstructionCreated" ||
       event.type === "ReasoningCreated" ||
       event.type === "PlanCreated"
     ) {

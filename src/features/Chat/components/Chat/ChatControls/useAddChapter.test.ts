@@ -34,7 +34,7 @@ describe("useAddChapter", () => {
     generateChapterDraft: vi.fn(),
   };
   const messageContext = {
-    buildChapterGenerationSnapshot: vi.fn(),
+    buildContext: vi.fn(),
   };
   const addChapter = vi.fn();
 
@@ -43,13 +43,16 @@ describe("useAddChapter", () => {
     localStorage.clear();
     generation.IsLoading = false;
     generation.generateChapterDraft.mockResolvedValue(GENERATED_DRAFT);
-    messageContext.buildChapterGenerationSnapshot.mockResolvedValue(
-      LLM_MESSAGES,
-    );
+    messageContext.buildContext.mockResolvedValue(LLM_MESSAGES);
     vi.mocked(d.ChapterGenerationService).mockReturnValue(generation as never);
     vi.mocked(d.LLMMessageContextService).mockReturnValue(
       messageContext as never,
     );
+    vi.mocked(d.ChatSettingsService).mockReturnValue({
+      Get: vi.fn().mockResolvedValue({
+        chapterGenerationUseCompressedMessages: true,
+      }),
+    } as never);
     vi.mocked(d.UserChatProjection).mockReturnValue({
       GetMessages: vi.fn(() => [
         { id: "message-1", type: "user", deleted: false },
@@ -103,9 +106,10 @@ describe("useAddChapter", () => {
     await act(async () => result.current.handleGenerate());
 
     expect(generation.generateChapterDraft).toHaveBeenCalledWith(LLM_MESSAGES);
-    expect(
-      messageContext.buildChapterGenerationSnapshot,
-    ).toHaveBeenCalledOnce();
+    expect(messageContext.buildContext).toHaveBeenCalledWith(
+      { history: true, plans: true },
+      {},
+    );
     expect(result.current.showModal).toBe(false);
     expect(result.current.pendingDraftStatus).toBe("ready");
     expect(notifications.show).toHaveBeenCalledWith(

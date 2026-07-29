@@ -13,8 +13,6 @@ export interface PlanPreset {
   suggestionRequestSettings?: OpenRouterRequestSettings;
   refreshInterval: number;
   consolidateMessageHistory: boolean;
-  hideOtherPlans: boolean;
-  excludeOwnPlanFromHistory: boolean;
   createdAtUtcMs: number;
   updatedAtUtcMs: number;
 }
@@ -22,6 +20,27 @@ export interface PlanPreset {
 export interface PlanPresets {
   presets: PlanPreset[];
 }
+
+export const normalizePlanPreset = (preset: PlanPreset): PlanPreset => ({
+  id: preset.id,
+  name: preset.name,
+  prompt: preset.prompt,
+  model: preset.model,
+  modelRequestSettings: preset.modelRequestSettings,
+  suggestionPrompt: preset.suggestionPrompt,
+  suggestionModel: preset.suggestionModel,
+  suggestionRequestSettings: preset.suggestionRequestSettings,
+  refreshInterval: preset.refreshInterval,
+  consolidateMessageHistory: preset.consolidateMessageHistory,
+  createdAtUtcMs: preset.createdAtUtcMs,
+  updatedAtUtcMs: preset.updatedAtUtcMs,
+});
+
+export const normalizePlanPresets = (
+  presets: PlanPresets | undefined,
+): PlanPresets => ({
+  presets: (presets?.presets ?? []).map(normalizePlanPreset),
+});
 
 export const STORY_PLAN_PRESET_ID = "default-story-plan";
 
@@ -31,8 +50,6 @@ export const STORY_PLAN_BUILT_IN_PRESET: PlanPreset = {
   prompt: DEFAULT_PLAN_PROMPT,
   refreshInterval: DEFAULT_REFRESH_INTERVAL,
   consolidateMessageHistory: false,
-  hideOtherPlans: false,
-  excludeOwnPlanFromHistory: false,
   createdAtUtcMs: 0,
   updatedAtUtcMs: 0,
 };

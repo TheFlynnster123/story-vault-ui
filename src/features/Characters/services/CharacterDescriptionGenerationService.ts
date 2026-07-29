@@ -3,6 +3,12 @@ import type { LLMMessage } from "../../../services/CQRS/LLMChatProjection";
 import { toUserMessage } from "../../../services/Utils/MessageUtils";
 import { DEFAULT_SYSTEM_PROMPTS } from "../../Prompts/services/SystemPrompts";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const CHARACTER_DESCRIPTION_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 export class CharacterDescriptionGenerationService {
   private chatId: string;
@@ -12,7 +18,9 @@ export class CharacterDescriptionGenerationService {
   }
 
   generateDescription = async (characterName: string): Promise<string> => {
-    const messages = this.getChatMessages();
+    const messages = await d
+      .LLMMessageContextService(this.chatId)
+      .buildContext(CHARACTER_DESCRIPTION_CONTEXT_SELECTION);
     const prompt = await this.getCharacterDescriptionPrompt(characterName);
     const { model, requestSettings } =
       await this.getCharacterDescriptionModel();
@@ -24,9 +32,6 @@ export class CharacterDescriptionGenerationService {
 
     return cleanDescription(response);
   };
-
-  private getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(this.chatId).GetMessages();
 
   private getCharacterDescriptionPrompt = async (
     characterName: string,

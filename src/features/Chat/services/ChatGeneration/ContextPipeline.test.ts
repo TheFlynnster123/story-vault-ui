@@ -7,7 +7,7 @@ import type {
   BookCreatedEvent,
   ChapterCreatedEvent,
 } from "../../../../services/CQRS/events/ChatEvent";
-import { MessageCreatedEventUtil } from "../../../../services/CQRS/events/MessageCreatedEventUtil";
+import { createGeneratedTextMessageEvent } from "../../../../services/CQRS/tests/TextMessageEventTestUtils";
 import { NoteCreatedEventUtil } from "../../../../services/CQRS/events/NoteEventUtils";
 import { PlanCreatedEventUtil } from "../../../../services/CQRS/events/PlanEventUtils";
 import { ReasoningCreatedEventUtil } from "../../../../services/CQRS/events/ReasoningEventUtils";
@@ -21,8 +21,8 @@ describe("context pipeline parity", () => {
   it("preserves exact cross-source ordering through projection and durable composition", () => {
     const projection = new LLMChatProjection();
     const story = StoryCreatedEventUtil.Create("The winter city");
-    const openingUser = MessageCreatedEventUtil.Create("user", "Open the gate");
-    const openingAssistant = MessageCreatedEventUtil.Create(
+    const openingUser = createGeneratedTextMessageEvent("user", "Open the gate");
+    const openingAssistant = createGeneratedTextMessageEvent(
       "assistant",
       "The gate opens",
     );
@@ -32,7 +32,7 @@ describe("context pipeline parity", () => {
       "Reach the observatory",
     );
     const note = NoteCreatedEventUtil.Create("Keep the snowstorm active", null);
-    const recentUser = MessageCreatedEventUtil.Create(
+    const recentUser = createGeneratedTextMessageEvent(
       "user",
       "Mara steps through",
     );

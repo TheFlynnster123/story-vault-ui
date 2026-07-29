@@ -5,12 +5,12 @@ import {
   type LLMMessage,
 } from "../LLMChatProjection";
 import type {
-  MessageCreatedEvent,
   MessageEditedEvent,
   MessageDeletedEvent,
   MessagesDeletedEvent,
   CivitJobCreatedEvent,
 } from "../events/ChatEvent";
+import { createTextMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("LLMChatProjection - Core Operations", () => {
   let projection: LLMChatProjection;
@@ -502,8 +502,8 @@ describe("LLMChatProjection - Core Operations", () => {
     messageId: string,
     role: "user" | "assistant" | "system",
     content: string
-  ): MessageCreatedEvent {
-    return { type: "MessageCreated", messageId, role, content };
+  ) {
+    return createTextMessageEvent(messageId, role, content);
   }
 
   function processMessageCreated(
@@ -512,13 +512,7 @@ describe("LLMChatProjection - Core Operations", () => {
     role: "user" | "assistant" | "system",
     content: string
   ): void {
-    const event: MessageCreatedEvent = {
-      type: "MessageCreated",
-      messageId,
-      role,
-      content,
-    };
-    proj.process(event);
+    proj.process(createTextMessageEvent(messageId, role, content));
   }
 
   function processMessageEdited(

@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { LLMChatProjection } from "../LLMChatProjection";
 import type {
-  MessageCreatedEvent,
   MessageEditedEvent,
   MessageDeletedEvent,
   ChapterCreatedEvent,
 } from "../events/ChatEvent";
+import { createTextMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("LLMChatProjection - Performance", () => {
   let projection: LLMChatProjection;
@@ -460,13 +460,7 @@ describe("LLMChatProjection - Performance", () => {
     role: "user" | "assistant" | "system",
     content: string,
   ): void {
-    const event: MessageCreatedEvent = {
-      type: "MessageCreated",
-      messageId,
-      role,
-      content,
-    };
-    proj.process(event);
+    proj.process(createTextMessageEvent(messageId, role, content));
   }
 
   function processMessageEdited(

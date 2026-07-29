@@ -199,6 +199,32 @@ describe("DiscussionService", () => {
 
       expect(mockConfig.getChatMessages).toHaveBeenCalled();
     });
+
+    it("reuses base chat context across preview and conversation turns", async () => {
+      const service = new DiscussionService(mockConfig);
+
+      await service.getLLMContext();
+      await service.sendMessage("First question");
+      await service.getLLMContext();
+
+      expect(mockConfig.getChatMessages).toHaveBeenCalledOnce();
+    });
+
+    it("retries base context after a failed load", async () => {
+      vi.mocked(mockConfig.getChatMessages)
+        .mockRejectedValueOnce(new Error("Context unavailable"))
+        .mockResolvedValueOnce([]);
+      const service = new DiscussionService(mockConfig);
+
+      await expect(service.getLLMContext()).rejects.toThrow(
+        "Context unavailable",
+      );
+      await expect(service.getLLMContext()).resolves.toEqual([
+        expect.objectContaining({ role: "system" }),
+      ]);
+
+      expect(mockConfig.getChatMessages).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("generateFromFeedback", () => {

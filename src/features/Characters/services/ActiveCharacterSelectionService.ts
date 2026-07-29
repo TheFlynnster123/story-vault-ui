@@ -12,6 +12,13 @@ import {
   findCharacterByName,
   normalizeCharacterName,
 } from "./CharacterNameMatcher";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const ACTIVE_CHARACTER_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+  recentHistoryOnly: true,
+} as const satisfies LLMContextSelection;
 
 export interface ActiveCharacterSelection {
   existingCharacterIds: string[];
@@ -50,14 +57,13 @@ export class ActiveCharacterSelectionService {
   ): Promise<ActiveCharacterSelection> {
     const contextMessages = await d
       .LLMMessageContextService(this.chatId)
-      .buildGenerationRequestMessages(false);
-    const recentMessages = selectRecentSceneMessages(contextMessages);
+      .buildContext(ACTIVE_CHARACTER_CONTEXT_SELECTION);
     const settings = await this.getPromptSettings();
     const response = await d
       .OpenRouterChatAPI()
       .postStructuredChat<unknown>(
         buildActiveCharacterMessages(
-          recentMessages,
+          contextMessages,
           settings.prompt,
           characters,
         ),
@@ -69,7 +75,7 @@ export class ActiveCharacterSelectionService {
         "chat",
       );
 
-    return normalizeActiveSelection(response, characters, recentMessages);
+    return normalizeActiveSelection(response, characters, contextMessages);
   }
 
   private async getPromptSettings(): Promise<{
@@ -90,11 +96,6 @@ export class ActiveCharacterSelectionService {
     };
   }
 }
-
-const selectRecentSceneMessages = (messages: LLMMessage[]): LLMMessage[] => {
-  const projectedMessages = messages.filter((message) => message.id);
-  return projectedMessages.slice(-ACTIVE_CHARACTER_LOOKBACK_MESSAGES);
-};
 
 const buildActiveCharacterMessages = (
   contextMessages: LLMMessage[],
@@ -195,7 +196,6 @@ const resemblesKnownCharacterName = (
     );
   });
 
-const ACTIVE_CHARACTER_LOOKBACK_MESSAGES = 12;
 const MAX_ACTIVE_CHARACTERS = 20;
 const MAX_NEW_CHARACTERS_PER_SELECTION = 3;
 const MAX_CHARACTER_NAME_LENGTH = 80;

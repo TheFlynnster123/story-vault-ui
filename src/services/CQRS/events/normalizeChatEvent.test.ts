@@ -2,6 +2,28 @@ import { describe, expect, it } from "vitest";
 import { normalizeChatEvent } from "./normalizeChatEvent";
 
 describe("normalizeChatEvent", () => {
+  it.each([
+    ["user", "UserMessageCreated"],
+    ["assistant", "AssistantResponseCreated"],
+    ["system", "InstructionCreated"],
+  ] as const)(
+    "converts a legacy %s message into a semantic event",
+    (role, expectedType) => {
+      expect(
+        normalizeChatEvent({
+          type: "MessageCreated",
+          messageId: "message-1",
+          role,
+          content: "Remember this",
+        }),
+      ).toEqual({
+        type: expectedType,
+        messageId: "message-1",
+        content: "Remember this",
+      });
+    },
+  );
+
   it("converts a legacy job creation into a workflow creation", () => {
     expect(
       normalizeChatEvent({

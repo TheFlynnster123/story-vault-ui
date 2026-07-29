@@ -10,6 +10,12 @@ import {
   subscribeToChapterCreationDraft,
   type ChapterCreationDraft,
 } from "../../../services/ChapterCreationDraft";
+import type { LLMContextSelection } from "../../../services/ChatGeneration/LLMMessageContextService";
+
+const CHAPTER_SNAPSHOT_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 interface UseAddChapterParams {
   chatId: string;
@@ -105,9 +111,14 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
     getChapterMessageIds(d.UserChatProjection(chatId).GetMessages());
 
   const getGenerationSnapshot = async () => {
+    const chatSettings = await d.ChatSettingsService(chatId).Get();
+    const contextInput =
+      chatSettings?.chapterGenerationUseCompressedMessages === true
+        ? {}
+        : { disableMessageCompression: true as const };
     const contextSnapshot = await d
       .LLMMessageContextService(chatId)
-      .buildChapterGenerationSnapshot();
+      .buildContext(CHAPTER_SNAPSHOT_CONTEXT_SELECTION, contextInput);
 
     return {
       coveredMessageIds: getCoveredMessageIds(),

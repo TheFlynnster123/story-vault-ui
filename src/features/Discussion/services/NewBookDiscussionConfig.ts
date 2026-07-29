@@ -38,7 +38,7 @@ export const createNewBookDiscussionConfig = (
       })
       .join("\n\n");
 
-  const getChatMessages = (): LLMMessage[] => {
+  const getChatMessages = async (): Promise<LLMMessage[]> => {
     const summariesContent = buildChapterSummariesContent();
     if (!summariesContent) return [];
 

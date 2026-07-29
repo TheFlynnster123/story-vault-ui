@@ -34,6 +34,11 @@ describe("NewChapterDiscussionConfig", () => {
     vi.mocked(d.LLMChatProjection).mockReturnValue(
       mockLLMChatProjection as any,
     );
+    vi.mocked(d.LLMMessageContextService).mockReturnValue({
+      buildContext: vi
+        .fn()
+        .mockResolvedValue(mockLLMChatProjection.GetMessages()),
+    } as any);
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue(
       mockOpenRouterChatAPI as any,
     );
@@ -51,9 +56,9 @@ describe("NewChapterDiscussionConfig", () => {
   });
 
   describe("getChatMessages", () => {
-    it("should return messages from LLMChatProjection", () => {
+    it("should return messages from shared context", async () => {
       const config = createNewChapterDiscussionConfig(testChatId, testTitle);
-      const messages = config.getChatMessages();
+      const messages = await config.getChatMessages();
       expect(messages).toEqual([
         { id: "message-1", role: "user", content: "Hello" },
         { id: "message-2", role: "assistant", content: "World" },

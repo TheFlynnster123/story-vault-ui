@@ -1,13 +1,24 @@
 import type {
+  AssistantResponseCreatedEvent,
   ChatEvent,
   CivitJobCreatedEvent,
   CivitJobUpdatedEvent,
   CivitWorkflowCreatedEvent,
   CivitWorkflowUpdatedEvent,
+  InstructionCreatedEvent,
+  UserMessageCreatedEvent,
 } from "./ChatEvent";
+
+export interface LegacyMessageCreatedEvent {
+  type: "MessageCreated";
+  messageId: string;
+  role: "assistant" | "user" | "system";
+  content: string;
+}
 
 export type PersistedChatEvent =
   | ChatEvent
+  | LegacyMessageCreatedEvent
   | CivitJobCreatedEvent
   | CivitJobUpdatedEvent;
 
@@ -16,6 +27,10 @@ export type PersistedChatEvent =
  * workflow event shape to the rest of the application.
  */
 export const normalizeChatEvent = (event: PersistedChatEvent): ChatEvent => {
+  if (event.type === "MessageCreated") {
+    return normalizeLegacyMessage(event);
+  }
+
   if (event.type === "CivitJobCreated") {
     const { type: legacyType, jobId, ...rest } = event;
     void legacyType;
@@ -42,4 +57,22 @@ export const normalizeChatEvent = (event: PersistedChatEvent): ChatEvent => {
   }
 
   return event;
+};
+
+const normalizeLegacyMessage = (
+  event: LegacyMessageCreatedEvent,
+):
+  | UserMessageCreatedEvent
+  | AssistantResponseCreatedEvent
+  | InstructionCreatedEvent => {
+  const { messageId, content } = event;
+
+  switch (event.role) {
+    case "user":
+      return { type: "UserMessageCreated", messageId, content };
+    case "assistant":
+      return { type: "AssistantResponseCreated", messageId, content };
+    case "system":
+      return { type: "InstructionCreated", messageId, content };
+  }
 };

@@ -7,7 +7,7 @@ vi.mock("../../../../services/Dependencies");
 
 describe("AgentFlowService", () => {
   const chatId = "chat-1";
-  const buildGenerationRequestMessages = vi.fn();
+  const buildContext = vi.fn();
   const postStructuredChat = vi.fn();
   const getAgentFlowState = vi.fn();
   const saveAgentFlowState = vi.fn();
@@ -15,7 +15,7 @@ describe("AgentFlowService", () => {
   beforeEach(() => {
     vi.resetAllMocks();
 
-    buildGenerationRequestMessages.mockResolvedValue([
+    buildContext.mockResolvedValue([
       { id: "msg-1", role: "user", content: "Remember she hates roses." },
     ]);
 
@@ -37,7 +37,7 @@ describe("AgentFlowService", () => {
     saveAgentFlowState.mockResolvedValue(undefined);
 
     vi.mocked(d.LLMMessageContextService).mockReturnValue({
-      buildGenerationRequestMessages,
+      buildContext,
     } as unknown as ReturnType<typeof d.LLMMessageContextService>);
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue({
       postStructuredChat,
@@ -63,6 +63,13 @@ describe("AgentFlowService", () => {
       pendingSuggestion: suggestion,
     });
     expect(service.CurrentSuggestion).toBe(suggestion);
+    expect(buildContext).toHaveBeenCalledWith({
+      history: true,
+      memories: true,
+      characterSheets: true,
+      continuityHistories: true,
+      plans: true,
+    });
   });
 
   it("restores a pending suggestion after refresh", async () => {

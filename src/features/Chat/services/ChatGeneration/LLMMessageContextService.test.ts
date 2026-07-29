@@ -1,1002 +1,407 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  vi,
-  type Mocked,
-} from "vitest";
-import { LLMMessageContextService } from "./LLMMessageContextService";
-import type { Memory } from "../../../Memories/services/Memory";
-import type { MemoriesService } from "../../../Memories/services/MemoriesService";
-import type { ChatSettingsService } from "../Chat/ChatSettingsService";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
-  LLMContextProjectionPolicy,
   LLMChatProjection,
+  LLMContextProjectionPolicy,
   LLMMessage,
 } from "../../../../services/CQRS/LLMChatProjection";
 import { d } from "../../../../services/Dependencies";
-import type { ChatSettings } from "../Chat/ChatSettings";
-import type { SystemPromptsService } from "../../../Prompts/services/SystemPromptsService";
-import { DEFAULT_SYSTEM_PROMPTS } from "../../../Prompts/services/SystemPrompts";
-import type { SystemSettingsService } from "../../../SystemSettings/services/SystemSettingsService";
-import { DEFAULT_TRAILING_CHAPTER_MESSAGES } from "../../../SystemSettings/services/SystemSettings";
 import type { CharacterDescriptionsService } from "../../../Characters/services/CharacterDescriptionsService";
+import type { MemoriesService } from "../../../Memories/services/MemoriesService";
+import type { SystemSettingsService } from "../../../SystemSettings/services/SystemSettingsService";
+import type { ChatSettings } from "../Chat/ChatSettings";
+import type { ChatSettingsService } from "../Chat/ChatSettingsService";
+import { LLMMessageContextService } from "./LLMMessageContextService";
 
 vi.mock("../../../../services/Dependencies");
 
-describe("LLMMessageContextService", () => {
-  const testChatId = "test-chat-123";
+const CHAT_ID = "chat-1";
+const getContext = vi.fn();
+const HISTORY = Array.from({ length: 15 }, (_, index): LLMMessage => ({
+  id: `message-${index + 1}`,
+  type: "message",
+  role: index % 2 === 0 ? "user" : "assistant",
+  content: `Message ${index + 1}`,
+}));
 
-  let ChatSettingsService: Mocked<ChatSettingsService>;
-  let LLMChatProjection: Mocked<LLMChatProjection>;
-  let MemoriesService: Mocked<MemoriesService>;
-  let SystemPromptsService: Mocked<SystemPromptsService>;
-  let SystemSettingsService: Mocked<SystemSettingsService>;
-  let CharacterDescriptionsService: Mocked<CharacterDescriptionsService>;
-  const ContinuityHistoryContextService = {
-    buildContext: vi.fn(),
-  };
+describe("LLMMessageContextService", () => {
+  const getChatSettings = vi.fn();
+  const getSystemSettings = vi.fn();
+  const getMemories = vi.fn();
+  const getCharacters = vi.fn();
+  const buildContinuityContext = vi.fn();
 
   beforeEach(() => {
-    ChatSettingsService = {
-      Get: vi.fn().mockResolvedValue(createDefaultChatSettings()),
-    } as unknown as Mocked<ChatSettingsService>;
-
-    const getMessages = vi.fn().mockReturnValue(createMockChatMessages());
-    LLMChatProjection = {
-      GetMessages: getMessages,
-      GetContext: vi
-        .fn()
-        .mockImplementation((policy: LLMContextProjectionPolicy) => ({
-          messages: getMessages(policy),
-          trace: [],
-        })),
-    } as unknown as Mocked<LLMChatProjection>;
-
-    MemoriesService = {
-      get: vi.fn().mockResolvedValue([]),
-    } as unknown as Mocked<MemoriesService>;
-
-    SystemPromptsService = {
-      Get: vi.fn().mockResolvedValue(DEFAULT_SYSTEM_PROMPTS),
-    } as unknown as Mocked<SystemPromptsService>;
-
-    SystemSettingsService = {
-      Get: vi.fn().mockResolvedValue(undefined),
-    } as unknown as Mocked<SystemSettingsService>;
-
-    CharacterDescriptionsService = {
-      get: vi.fn().mockResolvedValue([]),
-    } as unknown as Mocked<CharacterDescriptionsService>;
-    ContinuityHistoryContextService.buildContext.mockResolvedValue({
+    vi.clearAllMocks();
+    getContext.mockReturnValue({ messages: HISTORY, trace: [] });
+    getChatSettings.mockResolvedValue(defaultChatSettings());
+    getSystemSettings.mockResolvedValue(undefined);
+    getMemories.mockResolvedValue([]);
+    getCharacters.mockResolvedValue([]);
+    buildContinuityContext.mockResolvedValue({
       messages: [],
       selections: [],
-      trailingMessageCount: 5,
+      trailingMessageCount: 0,
     });
 
-    vi.mocked(d.ChatSettingsService).mockReturnValue(ChatSettingsService);
-    vi.mocked(d.LLMChatProjection).mockReturnValue(LLMChatProjection);
-    vi.mocked(d.MemoriesService).mockReturnValue(MemoriesService);
-    vi.mocked(d.SystemPromptsService).mockReturnValue(SystemPromptsService);
-    vi.mocked(d.SystemSettingsService).mockReturnValue(SystemSettingsService);
-    vi.mocked(d.CharacterDescriptionsService).mockReturnValue(
-      CharacterDescriptionsService,
-    );
-    vi.mocked(d.ContinuityHistoryContextService).mockReturnValue(
-      ContinuityHistoryContextService as never,
-    );
+    vi.mocked(d.LLMChatProjection).mockReturnValue({
+      GetContext: getContext,
+    } as unknown as LLMChatProjection);
+    vi.mocked(d.ChatSettingsService).mockReturnValue({
+      Get: getChatSettings,
+    } as unknown as ChatSettingsService);
+    vi.mocked(d.SystemSettingsService).mockReturnValue({
+      Get: getSystemSettings,
+    } as unknown as SystemSettingsService);
+    vi.mocked(d.MemoriesService).mockReturnValue({
+      get: getMemories,
+    } as unknown as MemoriesService);
+    vi.mocked(d.CharacterDescriptionsService).mockReturnValue({
+      get: getCharacters,
+    } as unknown as CharacterDescriptionsService);
+    vi.mocked(d.ContinuityHistoryContextService).mockReturnValue({
+      buildContext: buildContinuityContext,
+    } as never);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  it("returns no context and fetches nothing for an empty selection", async () => {
+    const result = await createService().buildContext();
+
+    expect(result).toEqual([]);
+    expect(getContext).not.toHaveBeenCalled();
+    expect(getChatSettings).not.toHaveBeenCalled();
+    expect(getSystemSettings).not.toHaveBeenCalled();
+    expect(getMemories).not.toHaveBeenCalled();
+    expect(getCharacters).not.toHaveBeenCalled();
+    expect(buildContinuityContext).not.toHaveBeenCalled();
   });
 
-  // ---- buildMemoryMessages Tests ----
-  describe("buildMemoryMessages", () => {
-    it("should return empty array when no memories provided", () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = service.buildMemoryMessages([]);
-
-      expect(result).toEqual([]);
+  it("uses configured projection policy for history and excludes Plans by default", async () => {
+    getSystemSettings.mockResolvedValue({
+      chapterCompressionSettings: { trailingChapterMessages: 4 },
+      messageCompressionSettings: { enabled: true, afterMessages: 9 },
+    });
+    getChatSettings.mockResolvedValue({
+      ...defaultChatSettings(),
+      reasoningExpiresAfterMessages: 7,
     });
 
-    it("should combine memories into single system message", () => {
-      const service = new LLMMessageContextService(testChatId);
-      const memories = createMockMemories();
+    await createService().buildContext({ history: true });
 
-      const result = service.buildMemoryMessages(memories);
-
-      expect(result).toHaveLength(1);
-      expectSystemMessage(
-        result[0],
-        "# Memories\r\nMemory content 1\r\nMemory content 2",
-      );
-    });
-
-    it("should filter out empty memory content", () => {
-      const service = new LLMMessageContextService(testChatId);
-      const memories = createMemoriesWithEmptyContent();
-
-      const result = service.buildMemoryMessages(memories);
-
-      expect(result).toHaveLength(1);
-      expectSystemMessage(result[0], "# Memories\r\nValid content");
-    });
-
-    it("should return empty array when all memories have empty content", () => {
-      const service = new LLMMessageContextService(testChatId);
-      const memories = createAllEmptyMemories();
-
-      const result = service.buildMemoryMessages(memories);
-
-      expect(result).toEqual([]);
+    expectProjectionPolicy({
+      trailingChapterMessages: 4,
+      reasoningRetentionMessages: 7,
+      messageCompressionAfterMessages: 9,
+      planSelection: { mode: "exclude-all" },
     });
   });
 
-  // ---- buildGenerationRequestMessages Tests ----
-  describe("buildGenerationRequestMessages", () => {
-    it("floats character sheets before the configured trailing chat messages", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        characterSheetsTrailingMessageCount: 2,
+  it("includes Plans only when selected", async () => {
+    await createService().buildContext({ history: true, plans: true });
+
+    expectProjectionPolicy({
+      planSelection: { mode: "include" },
+    });
+  });
+
+  it.each([
+    {
+      settings: { reasoningEnabled: false },
+      expectedRetention: 0,
+    },
+    {
+      settings: { reasoningExpiresAfterMessages: null },
+      expectedRetention: null,
+    },
+    {
+      settings: {},
+      expectedRetention: 5,
+    },
+  ])(
+    "resolves reasoning retention from chat settings",
+    async ({ settings, expectedRetention }) => {
+      getChatSettings.mockResolvedValue({
+        ...defaultChatSettings(),
+        ...settings,
       });
-      LLMChatProjection.GetMessages.mockReturnValue([
-        { id: "msg-1", type: "message", role: "user", content: "One" },
-        { id: "msg-2", type: "message", role: "assistant", content: "Two" },
-        { id: "msg-3", type: "message", role: "user", content: "Three" },
-        { id: "msg-4", type: "message", role: "assistant", content: "Four" },
-      ]);
-      CharacterDescriptionsService.get.mockResolvedValue([
-        {
-          id: "character-1",
-          name: "Mara",
-          appearance: "dark curls",
-          sheetItems: ["A determined navigator."],
-          detectedActive: true,
-          createdAt: "2026-01-01",
-          updatedAt: "2026-01-01",
-        },
-      ]);
 
-      const result = await new LLMMessageContextService(
-        testChatId,
-      ).buildGenerationRequestMessages();
+      await createService().buildContext({ history: true });
 
-      expect(result[0].id).toBe("msg-1");
-      expect(result[1].id).toBe("msg-2");
-      expect(result[2].content).toContain("# Character Sheets");
-      expect(result[3].id).toBe("msg-3");
-      expect(result[4].id).toBe("msg-4");
-      expect(result[5].content).toBe("Test prompt");
-    });
-
-    it("includes only effectively active sheets and formats explicit bullets", async () => {
-      CharacterDescriptionsService.get.mockResolvedValue([
-        {
-          id: "active",
-          name: "Mara",
-          appearance: "must not enter text context",
-          sheetItems: ["Navigator", "Carries the brass key"],
-          detectedActive: true,
-          createdAt: "2026-01-01",
-          updatedAt: "2026-01-01",
-        },
-        {
-          id: "inactive",
-          name: "Ivo",
-          appearance: "",
-          sheetItems: ["Left the city"],
-          detectedActive: false,
-          createdAt: "2026-01-01",
-          updatedAt: "2026-01-01",
-        },
-        {
-          id: "overridden",
-          name: "Nell",
-          appearance: "",
-          sheetItems: ["Watching from the ridge"],
-          detectedActive: false,
-          activeOverride: true,
-          createdAt: "2026-01-01",
-          updatedAt: "2026-01-01",
-        },
-        {
-          id: "untracked",
-          name: "POV",
-          appearance: "must not enter image context",
-          sheetItems: ["Must not enter text context"],
-          isTracked: false,
-          detectedActive: true,
-          activeOverride: true,
-          createdAt: "2026-01-01",
-          updatedAt: "2026-01-01",
-        },
-      ]);
-
-      const result = await new LLMMessageContextService(
-        testChatId,
-      ).buildGenerationRequestMessages();
-      const sheetMessage = result.find((message) =>
-        message.content.includes("# Character Sheets"),
-      );
-
-      expect(sheetMessage?.content).toContain("## Mara");
-      expect(sheetMessage?.content).toContain("- Navigator");
-      expect(sheetMessage?.content).toContain("- Carries the brass key");
-      expect(sheetMessage?.content).toContain("## Nell");
-      expect(sheetMessage?.content).not.toContain("## Ivo");
-      expect(sheetMessage?.content).not.toContain("## POV");
-      expect(sheetMessage?.content).not.toContain(
-        "must not enter text context",
-      );
-    });
-
-    it("should fetch chat settings for the correct chatId", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildGenerationRequestMessages();
-
-      expect(d.ChatSettingsService).toHaveBeenCalledWith(testChatId);
-    });
-
-    it("should get chat messages from LLMChatProjection", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildGenerationRequestMessages();
-
-      expect(d.LLMChatProjection).toHaveBeenCalledWith(testChatId);
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalled();
-    });
-
-    it("passes the system trailing chapter setting into projection selection", async () => {
-      SystemSettingsService.Get.mockResolvedValue({
-        chapterCompressionSettings: {
-          trailingChapterMessages: 3,
-        },
+      expectProjectionPolicy({
+        reasoningRetentionMessages: expectedRetention,
       });
-      const service = new LLMMessageContextService(testChatId);
+    },
+  );
 
-      await service.buildGenerationRequestMessages();
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ trailingChapterMessages: 3 }),
-      );
+  it("can disable configured message compression for a frozen snapshot", async () => {
+    getSystemSettings.mockResolvedValue({
+      messageCompressionSettings: { enabled: true, afterMessages: 8 },
     });
 
-    it("should default trailing chapter message setting when system setting is unset", async () => {
-      const service = new LLMMessageContextService(testChatId);
+    await createService().buildContext(
+      { history: true },
+      { disableMessageCompression: true },
+    );
 
-      await service.buildGenerationRequestMessages();
+    expectProjectionPolicy({ messageCompressionAfterMessages: null });
+  });
 
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
+  it("uses a history override without reading the projection", async () => {
+    const override = [message("one"), message("two")];
+
+    const result = await createService().buildContext(
+      { history: true },
+      { historyOverride: override },
+    );
+
+    expect(result).toEqual(override);
+    expect(result).not.toBe(override);
+    expect(getContext).not.toHaveBeenCalled();
+  });
+
+  it("still excludes Plans from an override unless explicitly selected", async () => {
+    const override = [message("story", "story"), message("plan", "plan")];
+
+    const withoutPlans = await createService().buildContext(
+      { history: true },
+      { historyOverride: override },
+    );
+    const withPlans = await createService().buildContext(
+      { history: true, plans: true },
+      { historyOverride: override },
+    );
+
+    expect(withoutPlans).toEqual([message("story", "story")]);
+    expect(withPlans).toEqual(override);
+  });
+
+  it("truncates history before a regeneration target", async () => {
+    getContext.mockReturnValue({
+      messages: HISTORY,
+      trace: HISTORY.map((entry) => ({
+        id: entry.id!,
+        type: "message",
+        included: true,
+        buffered: false,
+      })),
+    });
+
+    const result = await createService().buildContextWithTrace(
+      { history: true },
+      { beforeMessageId: "message-4" },
+    );
+
+    expect(result.messages.map((entry) => entry.id)).toEqual([
+      "message-1",
+      "message-2",
+      "message-3",
+    ]);
+    expect(result.trace.projection.slice(3)).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
-          trailingChapterMessages: DEFAULT_TRAILING_CHAPTER_MESSAGES,
+          id: "message-4",
+          included: false,
+          exclusionReason: "regeneration-truncated",
         }),
-      );
-    });
-
-    it("enables message compression in projection policy from system settings", async () => {
-      SystemSettingsService.Get.mockResolvedValue({
-        messageCompressionSettings: {
-          enabled: true,
-          afterMessages: 5,
-        },
-      });
-
-      await new LLMMessageContextService(
-        testChatId,
-      ).buildGenerationRequestMessages();
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ messageCompressionAfterMessages: 5 }),
-      );
-    });
-
-    it("disables message compression in projection policy by default", async () => {
-      await new LLMMessageContextService(
-        testChatId,
-      ).buildGenerationRequestMessages();
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ messageCompressionAfterMessages: null }),
-      );
-    });
-
-    it("should fetch memories", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildGenerationRequestMessages();
-
-      expect(d.MemoriesService).toHaveBeenCalledWith(testChatId);
-      expect(MemoriesService.get).toHaveBeenCalled();
-    });
-
-    it("should include the response prompt by default", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildGenerationRequestMessages();
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("system");
-      expect(lastMessage.content).toBe("Test prompt");
-    });
-
-    it("should exclude the response prompt when requested", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildGenerationRequestMessages(false);
-
-      const hasResponsePrompt = result.some((m) => m.content === "Test prompt");
-      expect(hasResponsePrompt).toBe(false);
-    });
-
-    it("should build messages in correct order", async () => {
-      const service = new LLMMessageContextService(testChatId);
-      MemoriesService.get.mockResolvedValue(createMockMemories());
-
-      const result = await service.buildGenerationRequestMessages();
-
-      expectMessagesContainChatMessages(result);
-      expectMessagesContainMemories(result);
-      expectResponsePromptIsLast(result);
-    });
-
-    it("inserts selected continuity histories at their independent trailing-message offset", async () => {
-      ContinuityHistoryContextService.buildContext.mockResolvedValue({
-        messages: [
-          {
-            role: "system",
-            content:
-              "# Relevant Continuity Histories\n\n## The Brass Key\nThe key is now held by Mara.",
-          },
-        ],
-        selections: [
-          {
-            historyId: "history-1",
-            revisionId: "revision-2",
-            title: "The Brass Key",
-            reason: "The latest turn mentions the vault.",
-          },
-        ],
-        trailingMessageCount: 1,
-      });
-
-      const request = await new LLMMessageContextService(
-        testChatId,
-      ).buildGenerationRequestWithTrace();
-
-      expect(request.messages[0].id).toBe("msg-1");
-      expect(request.messages[1].content).toContain(
-        "# Relevant Continuity Histories",
-      );
-      expect(request.messages[2].id).toBe("msg-2");
-      expect(request.messages[3].content).toBe("Test prompt");
-      expect(request.trace.sections[3]).toEqual({
-        source: "continuity-histories",
-        messageCount: 1,
-        messageIds: [],
-        itemIds: ["history-1"],
-        selections: [
-          expect.objectContaining({
-            historyId: "history-1",
-            revisionId: "revision-2",
-          }),
-        ],
-      });
-    });
-
-    it("returns a source trace for durable context and appended instructions", async () => {
-      MemoriesService.get.mockResolvedValue(createMockMemories());
-      const service = new LLMMessageContextService(testChatId);
-
-      const request = await service.buildGenerationRequestWithTrace(
-        true,
-        "Keep it tense",
-      );
-
-      expect(request.trace.sections).toEqual([
-        {
-          source: "earlier-history",
-          messageCount: 0,
-          messageIds: [],
-        },
-        {
-          source: "memories",
-          messageCount: 1,
-          messageIds: [expect.any(String)],
-        },
-        { source: "character-sheets", messageCount: 0, messageIds: [] },
-        {
-          source: "continuity-histories",
-          messageCount: 0,
-          messageIds: [],
-          itemIds: [],
-          selections: [],
-        },
-        {
-          source: "recent-history",
-          messageCount: 2,
-          messageIds: ["msg-1", "msg-2"],
-        },
-      ]);
-      expect(request.trace.projection).toEqual([]);
-      expect(request.trace.appendedSources).toEqual([
-        "response-prompt",
-        "guidance",
-      ]);
-    });
-
-    it("should append guidance message when guidance is provided", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildGenerationRequestMessages(
-        true,
-        "Write a dramatic scene",
-      );
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("user");
-      expect(lastMessage.content).toContain("Write a dramatic scene");
-    });
-
-    it("should not append guidance message when guidance is undefined", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildGenerationRequestMessages(true);
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe("Test prompt");
-    });
-
-    it("should not append guidance message when guidance is empty", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildGenerationRequestMessages(true, "   ");
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe("Test prompt");
-    });
-
-    it("should place guidance after the response prompt", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildGenerationRequestMessages(
-        true,
-        "Be concise",
-      );
-
-      const storyPromptIndex = result.findIndex(
-        (m) => m.content === "Test prompt",
-      );
-      const guidanceIndex = result.findIndex((m) =>
-        m.content.includes("Be concise"),
-      );
-      expect(guidanceIndex).toBeGreaterThan(storyPromptIndex);
-    });
-  });
-
-  describe("buildReasoningRequestMessages", () => {
-    it("should consolidate chat history and use system reasoning prompt by default", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildReasoningRequestMessages();
-
-      expect(result).toHaveLength(1);
-      const [message] = result;
-      expect(message.role).toBe("system");
-      expect(message.content).toContain("Chat History:");
-      expect(message.content).toContain("Reasoning Instructions:");
-      expect(message.content).toContain(DEFAULT_SYSTEM_PROMPTS.reasoningPrompt);
-    });
-
-    it("should use a chat-specific reasoning prompt override when configured", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        reasoningPromptOverride: "Custom chat reasoning prompt",
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildReasoningRequestMessages();
-
-      expect(result[0].content).toContain("Custom chat reasoning prompt");
-    });
-
-    it("should append guidance after the consolidated reasoning context", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildReasoningRequestMessages("Go darker");
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("user");
-      expect(lastMessage.content).toContain("Go darker");
-      expect(result[result.length - 2].content).toContain(
-        DEFAULT_SYSTEM_PROMPTS.reasoningPrompt,
-      );
-    });
-
-    it("should send chat context as an array when consolidation is disabled", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        reasoningConsolidateMessageHistory: false,
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildReasoningRequestMessages();
-
-      expect(result.length).toBeGreaterThan(1);
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("system");
-      expect(lastMessage.content).toBe(DEFAULT_SYSTEM_PROMPTS.reasoningPrompt);
-    });
-
-    it("loads chat settings and system prompts once", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildReasoningRequestMessages();
-
-      expect(ChatSettingsService.Get).toHaveBeenCalledOnce();
-      expect(SystemPromptsService.Get).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe("reasoning retention configuration", () => {
-    it("selects projection context with retention 0 when reasoning is disabled", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        reasoningEnabled: false,
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildGenerationRequestMessages(false);
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ reasoningRetentionMessages: 0 }),
-      );
-    });
-
-    it("sets reasoning retention to configured value", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        reasoningExpiresAfterMessages: 2,
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildGenerationRequestMessages(false);
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ reasoningRetentionMessages: 2 }),
-      );
-    });
-
-    it("sets reasoning retention to null when expiration is disabled", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        reasoningExpiresAfterMessages: null,
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildGenerationRequestMessages(false);
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ reasoningRetentionMessages: null }),
-      );
-    });
-
-    it("uses default retention when no override configured", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildGenerationRequestMessages(false);
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ reasoningRetentionMessages: 4 }),
-      );
-    });
-  });
-
-  // ---- buildRegenerationRequestMessages Tests ----
-  describe("buildRegenerationRequestMessages", () => {
-    it("should include feedback message when feedback is provided", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildRegenerationRequestMessages(
-        "msg-2",
-        "Original content",
-        "Make it shorter",
-      );
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toContain("Original content");
-      expect(lastMessage.content).toContain("Make it shorter");
-    });
-
-    it("should not include feedback message when feedback is undefined", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildRegenerationRequestMessages(
-        "msg-2",
-        "Original content",
-      );
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).not.toContain("Original content");
-    });
-
-    it("should not include feedback message when feedback is empty", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildRegenerationRequestMessages(
-        "msg-2",
-        "Original content",
-        "   ",
-      );
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).not.toContain("Please regenerate");
-    });
-
-    it("should not include the response prompt", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildRegenerationRequestMessages(
-        "msg-2",
-        "Original",
-        "Feedback",
-      );
-
-      const hasResponsePrompt = result.some((m) => m.content === "Test prompt");
-      expect(hasResponsePrompt).toBe(false);
-    });
-
-    it("should only include messages before the regenerated message", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildRegenerationRequestMessages(
-        "msg-2",
-        "Original content",
-        "Feedback",
-      );
-
-      const chatMessageIds = result.filter((m) => m.id).map((m) => m.id);
-
-      expect(chatMessageIds).toContain("msg-1");
-      expect(chatMessageIds).not.toContain("msg-2");
-    });
-  });
-
-  describe("buildChapterDraftRequestMessages", () => {
-    it("includes character sheets in chapter context", async () => {
-      CharacterDescriptionsService.get.mockResolvedValue([
-        {
-          id: "character-1",
-          name: "Mara",
-          appearance: "dark curls",
-          sheetItems: ["A determined navigator."],
-          detectedActive: true,
-          createdAt: "2026-01-01",
-          updatedAt: "2026-01-01",
-        },
-      ]);
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildChapterDraftRequestMessages(
-        createMockChatMessages(),
-      );
-
-      expect(
-        result.some((message) =>
-          message.content.includes("# Character Sheets"),
-        ),
-      ).toBe(true);
-    });
-
-    it("uses the captured chat snapshot", async () => {
-      const service = new LLMMessageContextService(testChatId);
-      const snapshot = createMockChatMessages();
-
-      const result = await service.buildChapterDraftRequestMessages(snapshot);
-
-      expect(result.slice(0, -1)).toEqual(snapshot);
-      expect(LLMChatProjection.GetMessages).not.toHaveBeenCalled();
-    });
-
-    it("requests a structured title and summary together", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildChapterDraftRequestMessages(
-        createMockChatMessages(),
-      );
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.role).toBe("user");
-      expect(lastMessage.content).toContain("generate a brief summary");
-      expect(lastMessage.content).toContain(
-        "generate a concise, engaging title",
-      );
-      expect(lastMessage.content).toContain(
-        "exactly two string fields: title and summary",
-      );
-    });
-
-    it("uses both configured chapter prompts", async () => {
-      SystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        chapterSummaryPrompt: "Custom summary instructions",
-        chapterTitlePrompt: "Custom title instructions",
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildChapterDraftRequestMessages(
-        createMockChatMessages(),
-      );
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toContain("Custom summary instructions");
-      expect(lastMessage.content).toContain("Custom title instructions");
-    });
-
-    it("loads shared chapter context and prompts once", async () => {
-      const service = new LLMMessageContextService(testChatId);
-
-      await service.buildChapterDraftRequestMessages(createMockChatMessages());
-
-      expect(MemoriesService.get).toHaveBeenCalledOnce();
-      expect(CharacterDescriptionsService.get).toHaveBeenCalledOnce();
-      expect(SystemPromptsService.Get).toHaveBeenCalledOnce();
-      expect(ChatSettingsService.Get).toHaveBeenCalledOnce();
-    });
-
-    it("falls back to both default prompts", async () => {
-      SystemPromptsService.Get.mockResolvedValue(undefined);
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildChapterDraftRequestMessages(
-        createMockChatMessages(),
-      );
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toContain(
-        DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt,
-      );
-      expect(lastMessage.content).toContain(
-        DEFAULT_SYSTEM_PROMPTS.chapterTitlePrompt,
-      );
-    });
-  });
-
-  describe("buildChapterGenerationSnapshot", () => {
-    it("uses saved compressions when both the chat and global settings enable them", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        chapterGenerationUseCompressedMessages: true,
-      });
-      SystemSettingsService.Get.mockResolvedValue({
-        messageCompressionSettings: {
-          enabled: true,
-          afterMessages: 5,
-        },
-      });
-
-      await new LLMMessageContextService(
-        testChatId,
-      ).buildChapterGenerationSnapshot();
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ messageCompressionAfterMessages: 5 }),
-      );
-    });
-
-    it("uses originals by default even when global compression is enabled", async () => {
-      SystemSettingsService.Get.mockResolvedValue({
-        messageCompressionSettings: {
-          enabled: true,
-          afterMessages: 5,
-        },
-      });
-
-      await new LLMMessageContextService(
-        testChatId,
-      ).buildChapterGenerationSnapshot();
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ messageCompressionAfterMessages: null }),
-      );
-    });
-
-    it("uses originals when global compression is disabled despite the chat setting", async () => {
-      ChatSettingsService.Get.mockResolvedValue({
-        ...createDefaultChatSettings(),
-        chapterGenerationUseCompressedMessages: true,
-      });
-      SystemSettingsService.Get.mockResolvedValue({
-        messageCompressionSettings: {
-          enabled: false,
-          afterMessages: 5,
-        },
-      });
-
-      await new LLMMessageContextService(
-        testChatId,
-      ).buildChapterGenerationSnapshot();
-
-      expect(LLMChatProjection.GetMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ messageCompressionAfterMessages: null }),
-      );
-    });
-  });
-
-  // ---- buildBookSummaryRequestMessages Tests ----
-  describe("buildBookSummaryRequestMessages", () => {
-    it("includes character sheets before book summaries", async () => {
-      CharacterDescriptionsService.get.mockResolvedValue([
-        {
-          id: "character-1",
-          name: "Mara",
-          appearance: "dark curls",
-          sheetItems: ["A determined navigator."],
-          detectedActive: true,
-          createdAt: "2026-01-01",
-          updatedAt: "2026-01-01",
-        },
-      ]);
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildBookSummaryRequestMessages([
-        "Summary 1",
-      ]);
-
-      expect(result[0].content).toContain("# Character Sheets");
-      expect(result[1].content).toContain("Chapter 1:");
-    });
-
-    it("should include chapter summaries as system message", async () => {
-      const service = new LLMMessageContextService(testChatId);
-      const summaries = ["Chapter 1 summary", "Chapter 2 summary"];
-
-      const result = await service.buildBookSummaryRequestMessages(summaries);
-
-      // Should have summaries message + prompt message
-      expect(result).toHaveLength(2);
-      expect(result[0].content).toContain("Chapter 1:");
-      expect(result[0].content).toContain("Chapter 1 summary");
-      expect(result[0].content).toContain("Chapter 2:");
-      expect(result[0].content).toContain("Chapter 2 summary");
-    });
-
-    it("should include default book summary prompt as last message", async () => {
-      SystemPromptsService.Get.mockResolvedValue(undefined);
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildBookSummaryRequestMessages([
-        "Summary 1",
-      ]);
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(
-        DEFAULT_SYSTEM_PROMPTS.bookSummaryPrompt,
-      );
-    });
-
-    it("should use user-configured book summary prompt", async () => {
-      const customPrompt = "Custom book summary instructions";
-      SystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        bookSummaryPrompt: customPrompt,
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildBookSummaryRequestMessages([
-        "Summary 1",
-      ]);
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(customPrompt);
-    });
-  });
-
-  // ---- buildBookTitleRequestMessages Tests ----
-  describe("buildBookTitleRequestMessages", () => {
-    it("should include chapter summaries as system message", async () => {
-      const service = new LLMMessageContextService(testChatId);
-      const summaries = ["Chapter 1 summary", "Chapter 2 summary"];
-
-      const result = await service.buildBookTitleRequestMessages(summaries);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].content).toContain("Chapter 1:");
-      expect(result[0].content).toContain("Chapter 2:");
-    });
-
-    it("should include default book title prompt as last message", async () => {
-      SystemPromptsService.Get.mockResolvedValue(undefined);
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildBookTitleRequestMessages(["Summary 1"]);
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(DEFAULT_SYSTEM_PROMPTS.bookTitlePrompt);
-    });
-
-    it("should use user-configured book title prompt", async () => {
-      const customPrompt = "Custom book title instructions";
-      SystemPromptsService.Get.mockResolvedValue({
-        ...DEFAULT_SYSTEM_PROMPTS,
-        bookTitlePrompt: customPrompt,
-      });
-      const service = new LLMMessageContextService(testChatId);
-
-      const result = await service.buildBookTitleRequestMessages(["Summary 1"]);
-
-      const lastMessage = result[result.length - 1];
-      expect(lastMessage.content).toBe(customPrompt);
-    });
-  });
-
-  // ---- Helper Functions ----
-  function createDefaultChatSettings(): ChatSettings {
-    return {
-      timestampCreatedUtcMs: Date.now(),
-      chatTitle: "Test Chat",
-      prompt: "Test prompt",
-    };
-  }
-
-  function createMockChatMessages(): LLMMessage[] {
-    return [
-      { id: "msg-1", role: "user", content: "Hello" },
-      { id: "msg-2", role: "assistant", content: "Hi there!" },
-    ];
-  }
-
-  function createMockMemories(): Memory[] {
-    return [
-      { id: "mem-1", content: "Memory content 1" },
-      { id: "mem-2", content: "Memory content 2" },
-    ];
-  }
-
-  function createMemoriesWithEmptyContent(): Memory[] {
-    return [
-      { id: "mem-1", content: "" },
-      { id: "mem-2", content: "Valid content" },
-      { id: "mem-3", content: "   " },
-    ];
-  }
-
-  function createAllEmptyMemories(): Memory[] {
-    return [
-      { id: "mem-1", content: "" },
-      { id: "mem-2", content: "   " },
-    ];
-  }
-
-  function expectSystemMessage(
-    message: LLMMessage,
-    expectedContent: string,
-  ): void {
-    expect(message.role).toBe("system");
-    expect(message.content).toBe(expectedContent);
-  }
-
-  function expectResponsePromptIsLast(messages: LLMMessage[]): void {
-    const lastMessage = messages[messages.length - 1];
-    expect(lastMessage.role).toBe("system");
-    expect(lastMessage.content).toBe("Test prompt");
-  }
-
-  function expectMessagesContainChatMessages(messages: LLMMessage[]): void {
-    const userMessage = messages.find((m) => m.content === "Hello");
-    const assistantMessage = messages.find((m) => m.content === "Hi there!");
-    expect(userMessage).toBeDefined();
-    expect(assistantMessage).toBeDefined();
-  }
-
-  function expectMessagesContainMemories(messages: LLMMessage[]): void {
-    const memoryMessage = messages.find((m) =>
-      m.content.includes("# Memories"),
+        expect.objectContaining({
+          id: "message-15",
+          included: false,
+          exclusionReason: "regeneration-truncated",
+        }),
+      ]),
     );
-    expect(memoryMessage).toBeDefined();
-  }
+  });
+
+  it("keeps the last 12 persisted history messages when requested", async () => {
+    getContext.mockReturnValue({
+      messages: [
+        { role: "system", content: "Transient" },
+        ...HISTORY,
+      ],
+      trace: [],
+    });
+
+    const result = await createService().buildContext({
+      history: true,
+      recentHistoryOnly: true,
+    });
+
+    expect(result).toHaveLength(12);
+    expect(result[0].id).toBe("message-4");
+    expect(result[11].id).toBe("message-15");
+  });
+
+  it("can select only visible Plan messages", async () => {
+    getContext.mockReturnValue({
+      messages: [
+        message("story", "story"),
+        message("plan", "plan"),
+      ],
+      trace: [],
+    });
+
+    const result = await createService().buildContext({ plans: true });
+
+    expect(result).toEqual([message("plan", "plan")]);
+  });
+
+  it("fetches and formats only selected Memories", async () => {
+    getMemories.mockResolvedValue([
+      { content: "First memory" },
+      { content: " " },
+      { content: "Second memory" },
+    ]);
+
+    const result = await createService().buildContext({ memories: true });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        role: "system",
+        content: "# Memories\r\nFirst memory\r\nSecond memory",
+      }),
+    ]);
+    expect(getMemories).toHaveBeenCalledOnce();
+    expect(getCharacters).not.toHaveBeenCalled();
+    expect(getContext).not.toHaveBeenCalled();
+  });
+
+  it("fetches and formats only tracked active Character Sheets", async () => {
+    getCharacters.mockResolvedValue([
+      character("active", true, true, ["Keeps a brass compass."]),
+      character("inactive", true, false, ["Should be omitted."]),
+      character("untracked", false, true, ["Should be omitted."]),
+    ]);
+
+    const result = await createService().buildContext({
+      characterSheets: true,
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        role: "system",
+        content:
+          "# Character Sheets\r\n## active\n- Keeps a brass compass.",
+      }),
+    ]);
+    expect(getCharacters).toHaveBeenCalledOnce();
+    expect(getMemories).not.toHaveBeenCalled();
+  });
+
+  it("inserts selected durable sources before the configured recent history", async () => {
+    getChatSettings.mockResolvedValue({
+      ...defaultChatSettings(),
+      characterSheetsTrailingMessageCount: 2,
+    });
+    getMemories.mockResolvedValue([{ content: "Remember this." }]);
+    getCharacters.mockResolvedValue([
+      character("Mara", true, true, ["Navigator"]),
+    ]);
+
+    const result = await createService().buildContext({
+      history: true,
+      memories: true,
+      characterSheets: true,
+    });
+
+    expect(result.slice(-4).map((entry) => entry.content)).toEqual([
+      "# Memories\r\nRemember this.",
+      "# Character Sheets\r\n## Mara\n- Navigator",
+      "Message 14",
+      "Message 15",
+    ]);
+  });
+
+  it("selects and traces Continuity Histories only when requested", async () => {
+    buildContinuityContext.mockResolvedValue({
+      messages: [{ role: "system", content: "# Continuity History" }],
+      selections: [{ historyId: "history-1", revisionId: "revision-1" }],
+      trailingMessageCount: 1,
+    });
+
+    const result = await createService().buildContextWithTrace({
+      history: true,
+      continuityHistories: true,
+    });
+
+    expect(buildContinuityContext).toHaveBeenCalledWith(HISTORY, undefined);
+    expect(result.messages[result.messages.length - 2]?.content).toBe(
+      "# Continuity History",
+    );
+    expect(
+      result.trace.sections.find(
+        (section) => section.source === "continuity-histories",
+      )?.itemIds,
+    ).toEqual(["history-1"]);
+  });
+
+  it("can select Continuity Histories without including chat history", async () => {
+    buildContinuityContext.mockResolvedValue({
+      messages: [{ role: "system", content: "# Continuity History" }],
+      selections: [{ historyId: "history-1", revisionId: "revision-1" }],
+      trailingMessageCount: 1,
+    });
+
+    const result = await createService().buildContext({
+      continuityHistories: true,
+    });
+
+    expect(buildContinuityContext).toHaveBeenCalledWith(HISTORY, undefined);
+    expect(result).toEqual([
+      expect.objectContaining({
+        role: "system",
+        content: "# Continuity History",
+      }),
+    ]);
+  });
+
+  it("does not fetch unselected durable sources", async () => {
+    await createService().buildContext({ history: true });
+
+    expect(getMemories).not.toHaveBeenCalled();
+    expect(getCharacters).not.toHaveBeenCalled();
+    expect(buildContinuityContext).not.toHaveBeenCalled();
+  });
 });
+
+const createService = (): LLMMessageContextService =>
+  new LLMMessageContextService(CHAT_ID);
+
+const expectProjectionPolicy = (
+  expected: Partial<LLMContextProjectionPolicy>,
+): void => {
+  expect(getLastProjectionPolicy()).toEqual(expect.objectContaining(expected));
+};
+
+const getLastProjectionPolicy = (): LLMContextProjectionPolicy =>
+  getContext.mock.calls[getContext.mock.calls.length - 1]?.[0] as LLMContextProjectionPolicy;
+
+const defaultChatSettings = (): ChatSettings =>
+  ({
+    prompt: "Continue",
+    reasoningEnabled: true,
+    reasoningExpiresAfterMessages: 5,
+    characterSheetsTrailingMessageCount: 5,
+  }) as ChatSettings;
+
+const message = (content: string, type = "message"): LLMMessage => ({
+  id: content,
+  type,
+  role: "system",
+  content,
+});
+
+const character = (
+  name: string,
+  tracked: boolean,
+  active: boolean,
+  sheetItems: string[],
+) =>
+  ({
+    id: name,
+    name,
+    isTracked: tracked,
+    detectedActive: active,
+    sheetItems,
+    appearance: "",
+    createdAt: "2026-01-01",
+    updatedAt: "2026-01-01",
+  }) as never;

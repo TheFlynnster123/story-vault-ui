@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { d } from "../../../services/Dependencies";
-import type { PlanPreset, PlanPresets } from "../services/PlanPreset";
+import {
+  normalizePlanPresets,
+  type PlanPreset,
+  type PlanPresets,
+} from "../services/PlanPreset";
 import type { OpenRouterRequestSettings } from "../../OpenRouter/services/OpenRouterRequestSettings";
 
 interface SavePresetArgs {
@@ -11,8 +15,6 @@ interface SavePresetArgs {
   modelRequestSettings?: OpenRouterRequestSettings;
   refreshInterval: number;
   consolidateMessageHistory: boolean;
-  hideOtherPlans: boolean;
-  excludeOwnPlanFromHistory: boolean;
 }
 
 interface UsePlanPresetsResult {
@@ -34,18 +36,18 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
 
   const blob = () => d.PlanPresetsManagedBlob();
 
-  const load = async () => {
-    const stored = await blob().get();
-    setData(stored || DEFAULT_VALUE);
-    setIsLoading(false);
-  };
-
   useEffect(() => {
-    const unsubscribe = blob().subscribe(() => {
-      load();
+    const managedBlob = blob();
+    const load = async () => {
+      const stored = await managedBlob.get();
+      setData(normalizePlanPresets(stored));
+      setIsLoading(false);
+    };
+    const unsubscribe = managedBlob.subscribe(() => {
+      void load();
     });
 
-    load();
+    void load();
 
     return () => {
       unsubscribe();
@@ -66,12 +68,10 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
     modelRequestSettings,
     refreshInterval,
     consolidateMessageHistory,
-    hideOtherPlans,
-    excludeOwnPlanFromHistory,
   }) => {
     const now = Date.now();
     const trimmedName = normalizePresetName(name);
-    const stored = (await blob().get()) || DEFAULT_VALUE;
+    const stored = normalizePlanPresets(await blob().get());
     const existingIndex = stored.presets.findIndex(
       (p: PlanPreset) => p.id === id,
     );
@@ -88,8 +88,6 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
         modelRequestSettings,
         refreshInterval,
         consolidateMessageHistory,
-        hideOtherPlans,
-        excludeOwnPlanFromHistory,
         updatedAtUtcMs: now,
       };
     } else {
@@ -102,8 +100,6 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
         modelRequestSettings,
         refreshInterval,
         consolidateMessageHistory,
-        hideOtherPlans,
-        excludeOwnPlanFromHistory,
         createdAtUtcMs: now,
         updatedAtUtcMs: now,
       };
@@ -125,7 +121,7 @@ export const usePlanPresets = (): UsePlanPresetsResult => {
   const deletePreset: UsePlanPresetsResult["deletePreset"] = async (
     presetId: string,
   ) => {
-    const stored = (await blob().get()) || DEFAULT_VALUE;
+    const stored = normalizePlanPresets(await blob().get());
     await blob().save({
       presets: stored.presets.filter((p: PlanPreset) => p.id !== presetId),
     });

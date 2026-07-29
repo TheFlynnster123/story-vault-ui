@@ -10,6 +10,11 @@ import {
   isDueForRefresh,
   resetMessageCounter,
 } from "./Plan";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const PLAN_CONTEXT_SELECTION = {
+  history: true,
+} as const satisfies LLMContextSelection;
 
 export const getPlanGenerationServiceInstance = createInstanceCache(
   (chatId: string) => new PlanGenerationService(chatId),
@@ -269,7 +274,7 @@ export class PlanGenerationService {
     if (!plan) return;
 
     await this.trackGeneration(planId, async () => {
-      const chatMessages = this.getChatMessages(plan);
+      const chatMessages = await this.getChatMessages();
       await this.regeneratePlan(plan, chatMessages);
       this.resetCounter(planId);
     });
@@ -300,11 +305,7 @@ export class PlanGenerationService {
     if (!plan) return;
 
     await this.trackGeneration(planDefinitionId, async () => {
-      const chatMessages = plan.hideOtherPlans
-        ? d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans()
-        : d
-            .LLMChatProjection(this.chatId)
-            .GetMessagesExcludingPlan(planDefinitionId);
+      const chatMessages = await this.getChatMessages();
 
       const promptMessages = priorContent
         ? buildUpdatePromptMessages(chatMessages, plan, priorContent, feedback)
@@ -346,7 +347,7 @@ export class PlanGenerationService {
       plan.suggestionRequestSettings ??
       systemPrompts.planSuggestionRequestSettings;
 
-    const chatMessages = this.getChatMessagesForSuggestion(plan);
+    const chatMessages = await this.getChatMessages();
     const promptMessages = buildPlanSuggestionPromptMessages(
       chatMessages,
       plan,
@@ -375,7 +376,7 @@ export class PlanGenerationService {
     await Promise.all(
       duePlans.map((plan) =>
         this.trackGeneration(plan.id, async () => {
-          const chatMessages = this.getChatMessages(plan);
+          const chatMessages = await this.getChatMessages();
           await this.regeneratePlan(plan, chatMessages);
           this.resetCounter(plan.id);
         }),
@@ -392,22 +393,10 @@ export class PlanGenerationService {
     planService.savePlans(updatedPlans);
   };
 
-  private getChatMessages = (plan: Plan): LLMMessage[] => {
-    if (plan.hideOtherPlans) {
-      return d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans();
-    }
-    if (plan.excludeOwnPlanFromHistory) {
-      return d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(plan.id);
-    }
-    return d.LLMChatProjection(this.chatId).GetMessages();
-  };
-
-  private getChatMessagesForSuggestion = (plan: Plan): LLMMessage[] => {
-    if (plan.hideOtherPlans) {
-      return d.LLMChatProjection(this.chatId).GetMessagesExcludingAllPlans();
-    }
-    return d.LLMChatProjection(this.chatId).GetMessagesExcludingPlan(plan.id);
-  };
+  private getChatMessages = (): Promise<LLMMessage[]> =>
+    d
+      .LLMMessageContextService(this.chatId)
+      .buildContext(PLAN_CONTEXT_SELECTION);
 
   private findPlanDefinition = (planDefinitionId: string): Plan | undefined =>
     d

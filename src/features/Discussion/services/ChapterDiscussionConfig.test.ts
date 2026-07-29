@@ -60,6 +60,11 @@ describe("ChapterDiscussionConfig", () => {
     vi.mocked(d.LLMChatProjection).mockReturnValue(
       mockLLMChatProjection as any,
     );
+    vi.mocked(d.LLMMessageContextService).mockReturnValue({
+      buildContext: vi
+        .fn()
+        .mockResolvedValue(mockLLMChatProjection.GetMessages()),
+    } as any);
     vi.mocked(d.OpenRouterChatAPI).mockReturnValue(
       mockOpenRouterChatAPI as any,
     );

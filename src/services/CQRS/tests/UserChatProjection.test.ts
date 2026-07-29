@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type {
-  CivitJobCreatedEvent,
-  MessageCreatedEvent,
+  TextMessageCreatedEvent,
   MessageDeletedEvent,
   MessageEditedEvent,
   MessagesDeletedEvent,
@@ -11,6 +10,7 @@ import {
   getUserChatProjectionInstance,
   UserChatProjection,
 } from "../UserChatProjection";
+import { createUserMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("UserChatProjection - Core Operations", () => {
   let projection: UserChatProjection;
@@ -31,10 +31,9 @@ describe("UserChatProjection - Core Operations", () => {
       projection.subscribe(callback);
 
       // Process an event to trigger notification
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(event);
@@ -82,10 +81,9 @@ describe("UserChatProjection - Core Operations", () => {
       projection.subscribe(callback1);
       projection.subscribe(callback2);
 
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(event);
@@ -100,10 +98,9 @@ describe("UserChatProjection - Core Operations", () => {
 
       unsubscribe();
 
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(event);
@@ -117,12 +114,11 @@ describe("UserChatProjection - Core Operations", () => {
 
       const events = [
         {
-          type: "MessageCreated",
+          type: "UserMessageCreated",
           messageId: "m1",
-          role: "user",
           content: "test",
           timestamp: Date.now(),
-        } as MessageCreatedEvent,
+        } as TextMessageCreatedEvent,
         {
           type: "MessageEdited",
           messageId: "m1",
@@ -150,23 +146,20 @@ describe("UserChatProjection - Core Operations", () => {
 
       const events = [
         {
-          type: "MessageCreated",
+          type: "UserMessageCreated",
           messageId: "m1",
-          role: "user",
           content: "first",
-        } as MessageCreatedEvent,
+        } as TextMessageCreatedEvent,
         {
-          type: "MessageCreated",
+          type: "AssistantResponseCreated",
           messageId: "m2",
-          role: "assistant",
           content: "second",
-        } as MessageCreatedEvent,
+        } as TextMessageCreatedEvent,
         {
-          type: "MessageCreated",
+          type: "UserMessageCreated",
           messageId: "m3",
-          role: "user",
           content: "third",
-        } as MessageCreatedEvent,
+        } as TextMessageCreatedEvent,
       ];
 
       projection.processBatch(events);
@@ -178,11 +171,10 @@ describe("UserChatProjection - Core Operations", () => {
     it("should apply all events in order", () => {
       projection.processBatch([
         {
-          type: "MessageCreated",
+          type: "UserMessageCreated",
           messageId: "m1",
-          role: "user",
           content: "original",
-        } as MessageCreatedEvent,
+        } as TextMessageCreatedEvent,
         {
           type: "MessageEdited",
           messageId: "m1",
@@ -207,10 +199,9 @@ describe("UserChatProjection - Core Operations", () => {
   // ---- MessageCreated Event Tests ----
   describe("MessageCreated Event Processing", () => {
     it("should add user message with correct type 'user-message'", () => {
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "Hello",
       };
 
@@ -223,10 +214,9 @@ describe("UserChatProjection - Core Operations", () => {
     });
 
     it("should add system message with correct type 'system-message'", () => {
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "InstructionCreated",
         messageId: "msg-1",
-        role: "system",
         content: "System message",
       };
 
@@ -236,10 +226,9 @@ describe("UserChatProjection - Core Operations", () => {
     });
 
     it("should add assistant message with correct type 'assistant'", () => {
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "AssistantResponseCreated",
         messageId: "msg-1",
-        role: "assistant",
         content: "Assistant response",
       };
 
@@ -249,10 +238,9 @@ describe("UserChatProjection - Core Operations", () => {
     });
 
     it("should initialize message with hiddenByChapterId as undefined", () => {
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
 
@@ -262,10 +250,9 @@ describe("UserChatProjection - Core Operations", () => {
     });
 
     it("should initialize message with deleted as false", () => {
-      const event: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const event: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
 
@@ -279,10 +266,9 @@ describe("UserChatProjection - Core Operations", () => {
   describe("MessageEdited Event Processing", () => {
     it("should update content of existing message", () => {
       // Add message first
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "Original",
       };
       projection.process(addEvent);
@@ -311,10 +297,9 @@ describe("UserChatProjection - Core Operations", () => {
 
     it("should preserve other message properties when editing", () => {
       // Add message
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "Original",
       };
       projection.process(addEvent);
@@ -338,10 +323,9 @@ describe("UserChatProjection - Core Operations", () => {
   describe("MessageDeleted Event Processing", () => {
     it("should mark message as deleted (deleted = true)", () => {
       // Add message
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(addEvent);
@@ -367,10 +351,9 @@ describe("UserChatProjection - Core Operations", () => {
 
     it("should preserve message content when marking deleted", () => {
       // Add message
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "Important content",
       };
       projection.process(addEvent);
@@ -392,10 +375,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should mark multiple messages as deleted", () => {
       // Add multiple messages
       ["msg-1", "msg-2", "msg-3"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -424,10 +406,9 @@ describe("UserChatProjection - Core Operations", () => {
 
     it("should handle mix of existing and non-existent IDs", () => {
       // Add one message
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(addEvent);
@@ -446,10 +427,9 @@ describe("UserChatProjection - Core Operations", () => {
       // Add 100 messages
       const messageIds = Array.from({ length: 100 }, (_, i) => `msg-${i}`);
       messageIds.forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -464,87 +444,6 @@ describe("UserChatProjection - Core Operations", () => {
 
       const allDeleted = projection.Messages.every((m) => m.deleted === true);
       expect(allDeleted).toBe(true);
-    });
-  });
-
-  // ---- CivitJobCreated Event Tests ----
-  describe("CivitJobCreated Event Processing", () => {
-    it("should normalize a legacy job into a workflow message", () => {
-      const event: CivitJobCreatedEvent = {
-        type: "CivitJobCreated",
-        jobId: "job-123",
-        prompt: "Generate image",
-      };
-
-      projection.process(event);
-
-      expect(projection.Messages).toHaveLength(1);
-      expect(projection.Messages[0].type).toBe("civit-workflow");
-      expect(projection.Messages[0].id).toBe("job-123");
-    });
-
-    it("should store jobId and prompt in data", () => {
-      const event: CivitJobCreatedEvent = {
-        type: "CivitJobCreated",
-        jobId: "job-123",
-        prompt: "Generate a cat",
-      };
-
-      projection.process(event);
-
-      expect(projection.Messages[0].data).toMatchObject({
-        workflowId: "job-123",
-        prompt: "Generate a cat",
-      });
-    });
-
-    it("should initialize with deleted as false", () => {
-      const event: CivitJobCreatedEvent = {
-        type: "CivitJobCreated",
-        jobId: "job-123",
-        prompt: "test",
-      };
-
-      projection.process(event);
-
-      expect(projection.Messages[0].deleted).toBe(false);
-    });
-
-    it("should initialize with hiddenByChapterId as undefined", () => {
-      const event: CivitJobCreatedEvent = {
-        type: "CivitJobCreated",
-        jobId: "job-123",
-        prompt: "test",
-      };
-
-      projection.process(event);
-
-      expect(projection.Messages[0].hiddenByChapterId).toBeUndefined();
-    });
-
-    it("should normalize a legacy job update into a workflow patch", () => {
-      projection.process({
-        type: "CivitJobCreated",
-        jobId: "image-gen-1",
-        prompt: "",
-        generationStatus: "determining-character",
-      });
-
-      projection.process({
-        type: "CivitJobUpdated",
-        messageId: "image-gen-1",
-        patch: {
-          jobId: "workflow-1",
-          prompt: "final prompt",
-          generationStatus: "submitted",
-        },
-      });
-
-      expect(projection.Messages[0].data).toMatchObject({
-        workflowId: "workflow-1",
-        prompt: "final prompt",
-        generationStatus: "submitted",
-      });
     });
   });
 
@@ -596,10 +495,9 @@ describe("UserChatProjection - Core Operations", () => {
   // ---- GetMessage Tests ----
   describe("GetMessage", () => {
     it("should return message by ID when it exists", () => {
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(addEvent);
@@ -618,10 +516,9 @@ describe("UserChatProjection - Core Operations", () => {
 
     it("should return deleted messages (not filtered)", () => {
       // Add and delete message
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(addEvent);
@@ -644,10 +541,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should return only visible, non-deleted messages", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -661,10 +557,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should filter out messages with hiddenByChapterId set", () => {
       // Add messages
       ["msg-1", "msg-2"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -682,10 +577,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should filter out deleted messages", () => {
       // Add messages
       ["msg-1", "msg-2"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -707,10 +601,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should filter out both hidden and deleted messages", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -733,10 +626,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should return empty array when all messages are hidden/deleted", () => {
       // Add messages
       ["msg-1", "msg-2"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -758,10 +650,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should return all messages when none are hidden/deleted", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -776,12 +667,9 @@ describe("UserChatProjection - Core Operations", () => {
   // ---- Complex Integration Scenarios ----
   describe("Complex Integration Scenarios", () => {
     it("should handle rapid sequential events correctly", () => {
-      const events = Array.from({ length: 50 }, (_, i) => ({
-        type: "MessageCreated" as const,
-        messageId: `msg-${i}`,
-        role: "user" as const,
-        content: `Content ${i}`,
-      }));
+      const events = Array.from({ length: 50 }, (_, i) =>
+        createUserMessageEvent(`msg-${i}`, `Content ${i}`),
+      );
 
       events.forEach((event) => projection.process(event));
 
@@ -790,10 +678,9 @@ describe("UserChatProjection - Core Operations", () => {
 
     it("should handle all message event types in single projection instance", () => {
       // Add
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "Original",
       };
       projection.process(addEvent);
@@ -807,10 +694,9 @@ describe("UserChatProjection - Core Operations", () => {
       projection.process(editEvent);
 
       // Add another
-      const addEvent2: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent2: TextMessageCreatedEvent = {
+        type: "AssistantResponseCreated",
         messageId: "msg-2",
-        role: "assistant",
         content: "Response",
       };
       projection.process(addEvent2);
@@ -831,10 +717,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should preserve state across multiple process() calls", () => {
       // Add messages in separate process calls
       for (let i = 0; i < 5; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: `msg-${i}`,
-          role: "user",
           content: `Content ${i}`,
         };
         projection.process(event);
@@ -848,10 +733,9 @@ describe("UserChatProjection - Core Operations", () => {
     it("should maintain message order after various operations", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -876,10 +760,9 @@ describe("UserChatProjection - Core Operations", () => {
   // ---- Immutable Updates (React.memo compatibility) ----
   describe("Immutable Updates — new object references on mutation", () => {
     it("should produce a new message reference when edited", () => {
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "Original",
       };
       projection.process(addEvent);
@@ -899,10 +782,9 @@ describe("UserChatProjection - Core Operations", () => {
     });
 
     it("should produce a new message reference when deleted", () => {
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(addEvent);
@@ -922,11 +804,10 @@ describe("UserChatProjection - Core Operations", () => {
     it("should produce new references for batch-deleted messages", () => {
       ["msg-1", "msg-2"].forEach((id) =>
         projection.process({
-          type: "MessageCreated",
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: id,
-        } as MessageCreatedEvent),
+        } as TextMessageCreatedEvent),
       );
       const before1 = projection.Messages[0];
       const before2 = projection.Messages[1];
@@ -943,11 +824,10 @@ describe("UserChatProjection - Core Operations", () => {
     it("should not change references for unaffected messages", () => {
       ["msg-1", "msg-2"].forEach((id) =>
         projection.process({
-          type: "MessageCreated",
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: id,
-        } as MessageCreatedEvent),
+        } as TextMessageCreatedEvent),
       );
       const untouched = projection.Messages[0];
 

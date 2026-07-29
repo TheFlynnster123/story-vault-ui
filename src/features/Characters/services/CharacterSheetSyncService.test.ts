@@ -7,7 +7,7 @@ vi.mock("../../../services/Dependencies");
 
 describe("CharacterSheetSyncService", () => {
   const contextService = {
-    buildGenerationRequestMessages: vi.fn(),
+    buildContext: vi.fn(),
   };
   const promptsService = { Get: vi.fn() };
   const api = { postStructuredChat: vi.fn() };
@@ -18,7 +18,7 @@ describe("CharacterSheetSyncService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    contextService.buildGenerationRequestMessages.mockResolvedValue([
+    contextService.buildContext.mockResolvedValue([
       { id: "1", role: "user", content: "Mara hands Ivo the key." },
     ]);
     promptsService.Get.mockResolvedValue(undefined);
@@ -47,9 +47,13 @@ describe("CharacterSheetSyncService", () => {
       },
       { characterId: "ivo", sheetItems: ["Carries the brass key"] },
     ]);
-    expect(contextService.buildGenerationRequestMessages).toHaveBeenCalledWith(
-      false,
-    );
+    expect(contextService.buildContext).toHaveBeenCalledWith({
+      history: true,
+      memories: true,
+      characterSheets: true,
+      continuityHistories: true,
+      plans: true,
+    });
     const payload = api.postStructuredChat.mock.calls[0][0].at(-1).content;
     expect(payload).toContain('"currentItems":["Navigator"]');
   });

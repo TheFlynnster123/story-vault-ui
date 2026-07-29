@@ -7,6 +7,12 @@ import {
   getChapterMessageIds,
   saveChapterCreationDraft,
 } from "../../Chat/services/ChapterCreationDraft";
+import type { LLMContextSelection } from "../../Chat/services/ChatGeneration/LLMMessageContextService";
+
+const NEW_CHAPTER_DISCUSSION_CONTEXT_SELECTION = {
+  history: true,
+  plans: true,
+} as const satisfies LLMContextSelection;
 
 /**
  * Creates a DiscussionConfig for discussing a new chapter's summary BEFORE
@@ -29,8 +35,10 @@ export const createNewChapterDiscussionConfig = (
     d.UserChatProjection(chatId).GetMessages(),
   );
 
-  const getChatMessages = (): LLMMessage[] =>
-    d.LLMChatProjection(chatId).GetMessages();
+  const getChatMessages = (): Promise<LLMMessage[]> =>
+    d
+      .LLMMessageContextService(chatId)
+      .buildContext(NEW_CHAPTER_DISCUSSION_CONTEXT_SELECTION);
 
   const resolvedPrompt = (): string =>
     chapterSummaryPrompt || DEFAULT_SYSTEM_PROMPTS.chapterSummaryPrompt;
@@ -67,7 +75,7 @@ export const createNewChapterDiscussionConfig = (
     modelOverride?: string,
     requestSettingsOverride?: OpenRouterRequestSettings,
   ): Promise<void> => {
-    const chatMessages = getChatMessages();
+    const chatMessages = await getChatMessages();
     const systemPrompt = [
       resolvedPrompt(),
       ``,

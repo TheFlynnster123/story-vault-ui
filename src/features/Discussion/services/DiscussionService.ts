@@ -19,6 +19,7 @@ export class DiscussionService {
   private messages: DiscussionMessage[] = [];
   private generating: boolean = false;
   private subscribers = new Set<() => void>();
+  private baseContextPromise?: Promise<LLMMessage[]>;
 
   constructor(config: DiscussionConfig) {
     this.config = config;
@@ -45,7 +46,8 @@ export class DiscussionService {
     | undefined => this.config.getDefaultRequestSettings?.();
 
   /** Returns the full prompt that will be sent to the LLM on the next call. */
-  public getLLMContext = (): LLMMessage[] => this.buildConversationPrompt();
+  public getLLMContext = (): Promise<LLMMessage[]> =>
+    this.buildConversationPrompt();
 
   /**
    * Sends a user message and gets an LLM response in context.
@@ -63,7 +65,7 @@ export class DiscussionService {
     this.notifySubscribers();
 
     try {
-      const promptMessages = this.buildConversationPrompt();
+      const promptMessages = await this.buildConversationPrompt();
       const model = modelOverride || this.config.getDefaultModel();
       const requestSettings =
         requestSettingsOverride ?? this.config.getDefaultRequestSettings?.();
@@ -161,7 +163,7 @@ export class DiscussionService {
     this.notifySubscribers();
 
     try {
-      const promptMessages = this.buildConversationPrompt();
+      const promptMessages = await this.buildConversationPrompt();
       promptMessages.push({ role: "user", content: initialPrompt });
 
       const model = modelOverride || this.config.getDefaultModel();
@@ -210,8 +212,8 @@ export class DiscussionService {
     return this.generateFromFeedback(modelOverride, requestSettingsOverride);
   };
 
-  private buildConversationPrompt = (): LLMMessage[] => {
-    const chatMessages = this.config.getChatMessages();
+  private buildConversationPrompt = async (): Promise<LLMMessage[]> => {
+    const chatMessages = await this.getBaseContext();
     const systemPrompt = this.config.buildSystemPrompt();
 
     const conversationMessages: LLMMessage[] = this.messages.map((m) => ({
@@ -224,6 +226,18 @@ export class DiscussionService {
       toSystemMessage(systemPrompt),
       ...conversationMessages,
     ];
+  };
+
+  private getBaseContext = (): Promise<LLMMessage[]> => {
+    if (!this.baseContextPromise) {
+      this.baseContextPromise = Promise.resolve()
+        .then(() => this.config.getChatMessages())
+        .catch((error) => {
+          this.baseContextPromise = undefined;
+          throw error;
+        });
+    }
+    return this.baseContextPromise;
   };
 
   private formatConversationAsFeedback = (): string =>

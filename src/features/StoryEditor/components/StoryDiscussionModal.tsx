@@ -98,7 +98,7 @@ const StoryDiscussionModalContent: React.FC<
   const {
     messages,
     isGenerating,
-    getLLMContext,
+    llmContext,
     sendMessage,
     sendFinalFeedbackAndGenerate,
     acceptMessage,
@@ -147,7 +147,7 @@ const StoryDiscussionModalContent: React.FC<
       />
 
       <StoryDiscussionChatSurface>
-        <StoryLLMContextPanel context={getLLMContext()} />
+        <StoryLLMContextPanel context={llmContext} />
         <ScrollArea style={{ flex: 1 }} offsetScrollbars>
           <Stack gap="sm" p="xs">
             {messages.length === 0 && (

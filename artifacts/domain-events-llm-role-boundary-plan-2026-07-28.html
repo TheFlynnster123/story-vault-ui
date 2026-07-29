@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A plan to remove LLM wire roles from persisted Story Vault events while preserving authorship and fixing Claude Sonnet 5 request ordering."
+    />
+    <title>Domain events and LLM role boundary plan</title>
+    <style>
+      :root {
+        --ink: #18211d;
+        --muted: #5d6862;
+        --paper: #f3f0e8;
+        --card: #fffdf8;
+        --line: #d7d1c4;
+        --green: #23634b;
+        --green-soft: #e1eee6;
+        --blue: #305f79;
+        --blue-soft: #e4edf3;
+        --amber: #926419;
+        --amber-soft: #f5ead4;
+        --red: #8d4037;
+        --red-soft: #f4e2df;
+        --violet: #675181;
+        --violet-soft: #eee8f4;
+        --shadow: 0 15px 36px rgba(36, 43, 38, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(48, 95, 121, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(48, 95, 121, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 28px 28px;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.52;
+      }
+
+      a {
+        color: var(--blue);
+        text-underline-offset: 0.2em;
+      }
+
+      a:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid #d49d31;
+        outline-offset: 4px;
+        border-radius: 4px;
+      }
+
+      code {
+        padding: 0.12em 0.36em;
+        border: 1px solid #d8d4ca;
+        border-radius: 5px;
+        background: #f0eee8;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.91em;
+      }
+
+      .wrap {
+        width: min(1160px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        padding: 60px 0 34px;
+      }
+
+      .eyebrow,
+      .label {
+        margin: 0 0 9px;
+        color: var(--green);
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 960px;
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2.35rem, 6vw, 5.15rem);
+        font-weight: 500;
+        letter-spacing: -0.045em;
+        line-height: 0.98;
+      }
+
+      .lede {
+        max-width: 860px;
+        margin: 23px 0 0;
+        color: #3d4842;
+        font-size: clamp(1.05rem, 2vw, 1.3rem);
+      }
+
+      .verdict {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 17px;
+        align-items: start;
+        margin-top: 28px;
+        padding: 21px;
+        border: 1px solid #9ebfac;
+        border-left: 6px solid var(--green);
+        border-radius: 12px;
+        background: #f0f8f3;
+        box-shadow: var(--shadow);
+      }
+
+      .mark {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--green);
+        color: white;
+        font-weight: 900;
+      }
+
+      .verdict h2 {
+        margin: 0 0 4px;
+        font-size: 1.08rem;
+      }
+
+      .verdict p {
+        margin: 0;
+      }
+
+      main {
+        padding-bottom: 64px;
+      }
+
+      section {
+        margin-top: 30px;
+        padding: 29px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 253, 248, 0.95);
+        box-shadow: var(--shadow);
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(1.45rem, 3vw, 2rem);
+        letter-spacing: -0.025em;
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 1.04rem;
+      }
+
+      p {
+        margin-top: 8px;
+      }
+
+      .intro {
+        max-width: 850px;
+        margin: 8px 0 22px;
+        color: var(--muted);
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .idea {
+        padding: 20px;
+        border-radius: 12px;
+      }
+
+      .keep {
+        border: 1px solid #9fc6b4;
+        background: var(--green-soft);
+      }
+
+      .remove {
+        border: 1px solid #d5b278;
+        background: var(--amber-soft);
+      }
+
+      .idea ul {
+        margin-bottom: 0;
+        padding-left: 20px;
+      }
+
+      .idea li + li {
+        margin-top: 7px;
+      }
+
+      .system-map {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1.1fr) 48px minmax(0, 0.9fr);
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .layer {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+      }
+
+      .domain {
+        border-top: 5px solid var(--green);
+      }
+
+      .compiler {
+        border-top: 5px solid var(--violet);
+      }
+
+      .transport {
+        border-top: 5px solid var(--blue);
+      }
+
+      .layer p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .mini-list {
+        display: grid;
+        gap: 7px;
+        margin-top: 14px;
+      }
+
+      .mini-list code {
+        display: block;
+        width: 100%;
+        padding: 7px 8px;
+        overflow-wrap: anywhere;
+      }
+
+      .arrow {
+        display: grid;
+        place-items: center;
+        color: var(--green);
+        font-size: 1.9rem;
+      }
+
+      .compare {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .evidence-case {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--card);
+      }
+
+      .evidence-case strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .evidence-case p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .evidence-case.pass {
+        border-left: 5px solid var(--green);
+      }
+
+      .evidence-case.fail {
+        border-left: 5px solid var(--red);
+        background: var(--red-soft);
+      }
+
+      .chain {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+      }
+
+      .current {
+        border-top: 5px solid var(--red);
+      }
+
+      .target {
+        border-top: 5px solid var(--green);
+      }
+
+      .messages {
+        display: grid;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .message {
+        display: grid;
+        grid-template-columns: 86px 1fr;
+        gap: 10px;
+        align-items: start;
+        padding: 10px 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8f6f0;
+      }
+
+      .message strong {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+      }
+
+      .message span {
+        color: var(--muted);
+        font-size: 0.87rem;
+      }
+
+      .system strong {
+        color: var(--amber);
+      }
+
+      .assistant strong {
+        color: var(--blue);
+      }
+
+      .user strong {
+        color: var(--green);
+      }
+
+      .bad {
+        margin-top: 13px;
+        padding: 12px 13px;
+        border-left: 5px solid var(--red);
+        background: var(--red-soft);
+        font-size: 0.89rem;
+      }
+
+      .good {
+        margin-top: 13px;
+        padding: 12px 13px;
+        border-left: 5px solid var(--green);
+        background: var(--green-soft);
+        font-size: 0.89rem;
+      }
+
+      .recency {
+        margin-top: 16px;
+        padding: 15px 17px;
+        border-left: 5px solid var(--amber);
+        background: var(--amber-soft);
+      }
+
+      .recency p {
+        margin: 0;
+      }
+
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        counter-reset: phase;
+      }
+
+      .phase {
+        position: relative;
+        min-height: 190px;
+        padding: 47px 15px 15px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--card);
+        counter-increment: phase;
+      }
+
+      .phase::before {
+        position: absolute;
+        top: 14px;
+        left: 15px;
+        display: grid;
+        width: 25px;
+        height: 25px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--green);
+        color: white;
+        content: counter(phase);
+        font-size: 0.76rem;
+        font-weight: 900;
+      }
+
+      .phase p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .fast-fix {
+        border-color: #a5bfce;
+        background: linear-gradient(135deg, #fbfdfe, var(--blue-soft));
+      }
+
+      .fix-grid {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .fix-card {
+        min-height: 150px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--card);
+      }
+
+      .fix-card p {
+        margin-bottom: 0;
+        color: var(--muted);
+      }
+
+      .fix-arrow {
+        color: var(--green);
+        font-size: 1.8rem;
+      }
+
+      .checks {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .check {
+        display: grid;
+        grid-template-columns: 25px 1fr;
+        gap: 10px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+      }
+
+      .check::before {
+        display: grid;
+        width: 22px;
+        height: 22px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--green-soft);
+        color: var(--green);
+        content: "✓";
+        font-weight: 900;
+      }
+
+      .check p {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+
+      details {
+        margin-top: 18px;
+      }
+
+      summary {
+        width: fit-content;
+        cursor: pointer;
+        color: var(--blue);
+        font-weight: 750;
+      }
+
+      .sources {
+        display: grid;
+        gap: 8px;
+        padding-left: 20px;
+        color: var(--muted);
+      }
+
+      footer {
+        padding-bottom: 40px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      @media (max-width: 920px) {
+        .system-map {
+          grid-template-columns: 1fr;
+        }
+
+        .arrow {
+          min-height: 30px;
+          transform: rotate(90deg);
+        }
+
+        .timeline {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 650px) {
+        .wrap {
+          width: calc(100% - 20px);
+        }
+
+        header {
+          padding-top: 38px;
+        }
+
+        section {
+          padding: 20px 16px;
+        }
+
+        .verdict,
+        .split,
+        .compare,
+        .evidence-grid,
+        .timeline,
+        .checks,
+        .fix-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .fix-arrow {
+          transform: rotate(90deg);
+          text-align: center;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: white;
+        }
+
+        section,
+        .verdict {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="wrap">
+      <p class="eyebrow">Architecture decision · Story Vault · 28 July 2026</p>
+      <h1>Persist meaning. Compile protocol roles later.</h1>
+      <p class="lede">
+        Removing raw LLM roles from new events is the right boundary. It does
+        not fix Sonnet by itself. The controlled Sonnet 4.5/5 comparison
+        confirmed one failing shape: a reasoning-as-assistant turn followed by
+        a trailing system prompt. Keep the user-configured response prompt at
+        the end, but compile it as a user task instead.
+      </p>
+      <aside class="verdict" aria-labelledby="verdict-title">
+        <div class="mark" aria-hidden="true">✓</div>
+        <div>
+          <h2 id="verdict-title">Confirmed by the four-case model probe</h2>
+          <p>
+            Do not persist <code>role</code>. Do persist who authored the text,
+            encoded as domain events such as <code>UserMessageCreated</code>
+            and <code>AssistantResponseCreated</code>. The LLM adapter alone
+            should decide whether those facts become user, assistant, system,
+            or consolidated prompt content.
+          </p>
+        </div>
+      </aside>
+    </header>
+
+    <main class="wrap">
+      <section aria-labelledby="boundary-heading">
+        <p class="label">The boundary</p>
+        <h2 id="boundary-heading">Authorship is domain data; role is wire data</h2>
+        <p class="intro">
+          Eliminating both would make the UI and future projections unable to
+          distinguish a human turn from generated prose.
+        </p>
+        <div class="split">
+          <article class="idea keep">
+            <h3>Keep as durable facts</h3>
+            <ul>
+              <li>A user added text.</li>
+              <li>Story Vault generated a response.</li>
+              <li>A reasoning artifact was generated.</li>
+              <li>A story, plan, note, chapter, or book changed.</li>
+              <li>Stable IDs used by editing, deletion, compression, and summaries.</li>
+            </ul>
+          </article>
+          <article class="idea remove">
+            <h3>Remove from persisted models</h3>
+            <ul>
+              <li><code>role: "user" | "assistant" | "system"</code>.</li>
+              <li>The generic <code>MessageCreated(role, content)</code> writer.</li>
+              <li><code>AddSystemMessage</code>, which has no production caller today.</li>
+              <li>LLM terminology in domain projections and event utilities.</li>
+              <li>Assumptions that one stored item always equals one wire message.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="architecture-heading">
+        <p class="label">Target architecture</p>
+        <h2 id="architecture-heading">Three layers, one owner for protocol roles</h2>
+        <p class="intro">
+          Only the final layer requires <code>role</code>. The rest of the
+          application works with semantic chat facts.
+        </p>
+        <div class="system-map">
+          <article class="layer domain">
+            <h3>1 · Event store & domain</h3>
+            <p>Records what happened without knowing an LLM protocol.</p>
+            <div class="mini-list">
+              <code>UserMessageCreated</code>
+              <code>AssistantResponseCreated</code>
+              <code>ReasoningCreated</code>
+              <code>StoryCreated · PlanCreated · NoteCreated …</code>
+            </div>
+          </article>
+          <div class="arrow" aria-hidden="true">→</div>
+          <article class="layer compiler">
+            <h3>2 · LLM context compiler</h3>
+            <p>
+              Selects durable facts, formats sections, applies retention, and
+              chooses a provider-safe turn sequence.
+            </p>
+            <div class="mini-list">
+              <code>leading stable instructions</code>
+              <code>conversation turns</code>
+              <code>reasoning context</code>
+              <code>terminal response contract</code>
+            </div>
+          </article>
+          <div class="arrow" aria-hidden="true">→</div>
+          <article class="layer transport">
+            <h3>3 · LLM request model</h3>
+            <p>
+              Owns the only remaining protocol type:
+              <code>LLMMessage.role</code>.
+            </p>
+            <div class="mini-list">
+              <code>system</code>
+              <code>user</code>
+              <code>assistant</code>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="evidence-heading">
+        <p class="label">Latest finding</p>
+        <h2 id="evidence-heading">The failure is the transition, not system messages generally</h2>
+        <p class="intro">
+          Sonnet 4.5 returned content for all four requests. Sonnet 5 returned
+          content for three; only case 3 failed. That isolates the incompatible
+          tail to <code>assistant → system</code> after reasoning.
+        </p>
+        <div class="evidence-grid">
+          <article class="evidence-case pass">
+            <strong>1 · Passed</strong>
+            <p><code>system → user → system</code></p>
+          </article>
+          <article class="evidence-case pass">
+            <strong>2 · Passed</strong>
+            <p><code>system → user → user</code></p>
+          </article>
+          <article class="evidence-case fail">
+            <strong>3 · Sonnet 5 failed</strong>
+            <p><code>system → user → assistant → system</code></p>
+          </article>
+          <article class="evidence-case pass">
+            <strong>4 · Passed</strong>
+            <p><code>system → user → assistant → user</code></p>
+          </article>
+        </div>
+        <aside class="recency">
+          <p>
+            <strong>Conclusion:</strong> do not broadly ban terminal system
+            messages based on this test. Repair the response path by compiling
+            its trailing task as <code>user</code>, which changes only the
+            failing transition and preserves prompt recency.
+          </p>
+        </aside>
+      </section>
+
+      <section aria-labelledby="sonnet-heading">
+        <p class="label">Why cleanup alone is insufficient</p>
+        <h2 id="sonnet-heading">The compiler must change the final sequence</h2>
+        <p class="intro">
+          Moving the same mapping out of the event model would reproduce the
+          same failure. The actual fix is the target request shape.
+        </p>
+        <div class="compare">
+          <article class="chain current">
+            <h3>Current response request</h3>
+            <div class="messages">
+              <div class="message user">
+                <strong>user</strong>
+                <span>The user’s story turn.</span>
+              </div>
+              <div class="message assistant">
+                <strong>assistant</strong>
+                <span>Persisted <code>ReasoningCreated</code> projection.</span>
+              </div>
+              <div class="message system">
+                <strong>system</strong>
+                <span>The chat response prompt appended at the end.</span>
+              </div>
+            </div>
+            <div class="bad">
+              The probe reproduced this exact <code>assistant → system</code>
+              tail: Sonnet 4.5 succeeded, while Sonnet 5 returned no content.
+            </div>
+          </article>
+          <article class="chain target">
+            <h3>Target response request</h3>
+            <div class="messages">
+              <div class="message system">
+                <strong>system</strong>
+                <span>
+                  Optional, minimal app-owned rules that are truly stable.
+                </span>
+              </div>
+              <div class="message user">
+                <strong>user</strong>
+                <span>
+                  Story content, selected durable context, and conversation
+                  turns remain near their chronological positions.
+                </span>
+              </div>
+              <div class="message assistant">
+                <strong>assistant</strong>
+                <span>Reasoning artifact, if retained as an assistant turn.</span>
+              </div>
+              <div class="message user">
+                <strong>user</strong>
+                <span>
+                  The full user-configured <code>chatSettings.prompt</code>,
+                  framed as the immediate response task.
+                </span>
+              </div>
+            </div>
+            <div class="good">
+              The response prompt stays maximally recent and Sonnet receives
+              the required terminal user turn.
+            </div>
+          </article>
+        </div>
+        <aside class="recency">
+          <p>
+            <strong>No duplication is required for the first fix.</strong>
+            <code>chatSettings.prompt</code> is already user-configurable and
+            response-specific, so keep its full content at the end as
+            <code>user</code>. Reserve a leading system message for minimal
+            application-owned rules, if Story Vault actually needs any.
+          </p>
+        </aside>
+      </section>
+
+      <section class="fast-fix" aria-labelledby="sequence-heading">
+        <p class="label">Recommended sequence</p>
+        <h2 id="sequence-heading">Fix compatibility first, then clean the model</h2>
+        <p class="intro">
+          The request change is small and validates the diagnosis. The event
+          migration is broader, but the controlled probe now gives both changes
+          a concrete regression contract.
+        </p>
+        <div class="fix-grid">
+          <article class="fix-card">
+            <h3>Compatibility patch</h3>
+            <p>
+              Change the final <code>chatSettings.prompt</code> from
+              <code>toSystemMessage(...)</code> to
+              <code>toUserMessage(...)</code>. It stays recent and gives
+              Sonnet a valid conversational ending.
+            </p>
+          </article>
+          <div class="fix-arrow" aria-hidden="true">→</div>
+          <article class="fix-card">
+            <h3>Architectural cleanup</h3>
+            <p>
+              Replace new generic role-bearing events with semantic event
+              types. Keep legacy reads working at the event-store boundary.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="migration-heading">
+        <p class="label">Migration plan</p>
+        <h2 id="migration-heading">Five safe, separable changes</h2>
+        <p class="intro">
+          Each phase has an observable outcome and can be reviewed without
+          rewriting persisted chat history.
+        </p>
+        <div class="timeline">
+          <article class="phase">
+            <h3>Repair request order</h3>
+            <p>
+              Compile the response prompt as the final user task. Add a Sonnet
+              regression test around reasoning → response.
+            </p>
+          </article>
+          <article class="phase">
+            <h3>Add semantic events</h3>
+            <p>
+              Introduce <code>UserMessageCreated</code> and
+              <code>AssistantResponseCreated</code> with IDs and content only.
+            </p>
+          </article>
+          <article class="phase">
+            <h3>Normalize legacy data</h3>
+            <p>
+              Convert old <code>MessageCreated</code> roles at the existing
+              normalization boundary. Do not rewrite stored event blobs.
+            </p>
+          </article>
+          <article class="phase">
+            <h3>Update projections</h3>
+            <p>
+              UI, compression, history maintenance, and editing consume event
+              semantics—not LLM roles. Preserve existing visible behavior.
+            </p>
+          </article>
+          <article class="phase">
+            <h3>Delete old writers</h3>
+            <p>
+              Remove <code>MessageCreatedEventUtil</code>,
+              <code>AddSystemMessage</code>, role-based projection mapping, and
+              obsolete tests after replay coverage passes.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="verification-heading">
+        <p class="label">Completion criteria</p>
+        <h2 id="verification-heading">The boundary is real only if tests enforce it</h2>
+        <p class="intro">
+          These checks distinguish a structural improvement from a type rename.
+        </p>
+        <div class="checks">
+          <div class="check">
+            <p>New persisted chat events contain no LLM <code>role</code> field.</p>
+          </div>
+          <div class="check">
+            <p>Old role-bearing chats replay to the same UI timeline and stable IDs.</p>
+          </div>
+          <div class="check">
+            <p>Only the LLM request layer imports or constructs <code>LLMMessage</code>.</p>
+          </div>
+          <div class="check">
+            <p>Reasoning followed by response generation ends with a user message.</p>
+          </div>
+          <div class="check">
+            <p>The full configured response prompt remains last and is compiled as user.</p>
+          </div>
+          <div class="check">
+            <p>No system-role message is inserted after conversational turns begin.</p>
+          </div>
+          <div class="check">
+            <p>Sonnet 5 and existing configured models return non-empty streamed content.</p>
+          </div>
+          <div class="check">
+            <p>Editing, deletion, chapter coverage, compression, and continuity boundaries retain their behavior.</p>
+          </div>
+          <div class="check">
+            <p>No new generic “system message” domain operation remains.</p>
+          </div>
+        </div>
+        <details>
+          <summary>Implemented repository evidence</summary>
+          <ul class="sources">
+            <li>
+              Current text events are semantic and role-free in
+              <code>src/services/CQRS/events/ChatEvent.ts</code>.
+            </li>
+            <li>
+              <code>ChatService</code> writes
+              <code>UserMessageCreated</code> and
+              <code>AssistantResponseCreated</code>; it no longer exposes a
+              system-message writer.
+            </li>
+            <li>
+              Legacy <code>MessageCreated.role</code> data is isolated in
+              <code>normalizeChatEvent.ts</code> and converted without
+              rewriting stored history.
+            </li>
+            <li>
+              <code>LLMChatProjection</code> now assigns protocol roles from
+              semantic event meaning.
+            </li>
+            <li>
+              <code>TextGenerationService</code> compiles the trailing response
+              prompt as a user task.
+            </li>
+            <li>
+              The reasoning regression test asserts the repaired terminal
+              sequence is <code>assistant → user</code>.
+            </li>
+          </ul>
+        </details>
+      </section>
+    </main>
+
+    <footer class="wrap">
+      Implementation status: semantic events, legacy normalization, projection
+      mapping, and the terminal-user Sonnet fix are applied and covered by
+      focused regression tests.
+    </footer>
+  </body>
+</html>

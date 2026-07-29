@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { UserChatProjection } from "../UserChatProjection";
 import type {
-  MessageCreatedEvent,
+  TextMessageCreatedEvent,
   MessageEditedEvent,
   MessageDeletedEvent,
   ChapterCreatedEvent,
 } from "../events/ChatEvent";
+import { createTextMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("UserChatProjection - Performance Stress Tests", () => {
   describe("Large-Scale Message Processing", () => {
@@ -15,12 +16,11 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
       // Generate and process 50,000 messages
       for (let i = 0; i < 50000; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
-          messageId: `msg-${i}`,
-          role: i % 3 === 0 ? "user" : i % 3 === 1 ? "assistant" : "system",
-          content: `Message content ${i}`,
-        };
+        const event = createTextMessageEvent(
+          `msg-${i}`,
+          i % 3 === 0 ? "user" : i % 3 === 1 ? "assistant" : "system",
+          `Message content ${i}`,
+        );
         projection.process(event);
       }
 
@@ -36,10 +36,9 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
       // Add 10,000 messages first
       for (let i = 0; i < 10000; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: `msg-${i}`,
-          role: "user",
           content: `Original ${i}`,
         };
         projection.process(event);
@@ -70,10 +69,9 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
       // Add 10,000 messages first
       for (let i = 0; i < 10000; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: `msg-${i}`,
-          role: "user",
           content: `Content ${i}`,
         };
         projection.process(event);
@@ -102,10 +100,9 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
       // Add 50,000 messages (half will be deleted)
       for (let i = 0; i < 50000; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: `msg-${i}`,
-          role: "user",
           content: `Content ${i}`,
         };
         projection.process(event);
@@ -138,10 +135,9 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
       // Add 50,000 messages (50 messages per chapter × 1,000 chapters)
       for (let i = 0; i < 50000; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: `msg-${i}`,
-          role: "user",
           content: `Content ${i}`,
         };
         projection.process(event);
@@ -182,10 +178,9 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
       // Add 10,000 messages
       for (let i = 0; i < 10000; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: `msg-${i}`,
-          role: "user",
           content: `Content ${i}`,
         };
         projection.process(event);
@@ -225,10 +220,9 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
         if (operation === 0) {
           // Add message
-          const event: MessageCreatedEvent = {
-            type: "MessageCreated",
+          const event: TextMessageCreatedEvent = {
+            type: "UserMessageCreated",
             messageId: `msg-${i}`,
-            role: "user",
             content: `Content ${i}`,
           };
           projection.process(event);
@@ -273,10 +267,9 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
       // Process 1,000 events (each triggers all 1,000 subscribers)
       for (let i = 0; i < 1000; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: `msg-${i}`,
-          role: "user",
           content: `Content ${i}`,
         };
         projection.process(event);
@@ -298,10 +291,9 @@ describe("UserChatProjection - Performance Stress Tests", () => {
 
       // Add 100,000 messages
       for (let i = 0; i < 100000; i++) {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: `msg-${i}`,
-          role: "user",
           content: `Content ${i}`,
         };
         projection.process(event);

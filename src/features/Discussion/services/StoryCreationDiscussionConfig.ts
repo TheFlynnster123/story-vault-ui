@@ -10,7 +10,7 @@ import type { DiscussionConfig } from "./DiscussionConfig";
 export const createStoryCreationDiscussionConfig = (
   onStoryGenerated: (story: string) => void,
 ): DiscussionConfig => {
-  const getChatMessages = (): LLMMessage[] => [];
+  const getChatMessages = async (): Promise<LLMMessage[]> => [];
 
   const buildSystemPrompt = (): string =>
     [

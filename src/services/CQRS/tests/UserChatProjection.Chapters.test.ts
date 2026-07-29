@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { UserChatProjection } from "../UserChatProjection";
 import type {
-  MessageCreatedEvent,
+  TextMessageCreatedEvent,
   ChapterCreatedEvent,
   ChapterEditedEvent,
   ChapterDeletedEvent,
@@ -35,10 +35,9 @@ describe("UserChatProjection - Chapter Operations", () => {
     it("should set hiddenByChapterId on all covered messages", () => {
       // Add messages first
       ["msg-1", "msg-2", "msg-3"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -121,10 +120,9 @@ describe("UserChatProjection - Chapter Operations", () => {
     it("should not affect messages not in coveredMessageIds", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3", "msg-4"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -237,10 +235,9 @@ describe("UserChatProjection - Chapter Operations", () => {
     it("should unhide all covered messages (set hiddenByChapterId to undefined)", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -305,10 +302,9 @@ describe("UserChatProjection - Chapter Operations", () => {
 
     it("should preserve covered message content when unhiding", () => {
       // Add message
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "Important content",
       };
       projection.process(addEvent);
@@ -341,10 +337,9 @@ describe("UserChatProjection - Chapter Operations", () => {
     it("should return all messages covered by chapter", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -375,10 +370,9 @@ describe("UserChatProjection - Chapter Operations", () => {
 
     it("should return empty array if chapterId points to non-chapter message", () => {
       // Add regular message
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "Not a chapter",
       };
       projection.process(addEvent);
@@ -407,10 +401,9 @@ describe("UserChatProjection - Chapter Operations", () => {
     it("should only return messages in coveredMessageIds list", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3", "msg-4"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -435,10 +428,9 @@ describe("UserChatProjection - Chapter Operations", () => {
     it("should include deleted messages in covered messages (not filtered)", () => {
       // Add messages
       ["msg-1", "msg-2"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -469,10 +461,9 @@ describe("UserChatProjection - Chapter Operations", () => {
   describe("Complex Chapter Scenarios", () => {
     it("should handle message hidden by chapter, then chapter deleted (message visible again)", () => {
       // Add message
-      const addEvent: MessageCreatedEvent = {
-        type: "MessageCreated",
+      const addEvent: TextMessageCreatedEvent = {
+        type: "UserMessageCreated",
         messageId: "msg-1",
-        role: "user",
         content: "test",
       };
       projection.process(addEvent);
@@ -509,10 +500,9 @@ describe("UserChatProjection - Chapter Operations", () => {
     it("should handle multiple chapters covering different messages", () => {
       // Add messages
       ["msg-1", "msg-2", "msg-3", "msg-4"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);
@@ -553,10 +543,9 @@ describe("UserChatProjection - Chapter Operations", () => {
     it("should handle chapter creation → edit → delete workflow", () => {
       // Add messages
       ["msg-1", "msg-2"].forEach((id) => {
-        const event: MessageCreatedEvent = {
-          type: "MessageCreated",
+        const event: TextMessageCreatedEvent = {
+          type: "UserMessageCreated",
           messageId: id,
-          role: "user",
           content: `Content ${id}`,
         };
         projection.process(event);

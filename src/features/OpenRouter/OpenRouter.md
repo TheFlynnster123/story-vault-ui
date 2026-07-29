@@ -84,9 +84,27 @@ Example mapping used by the credits viewer:
 - `OpenRouterModelsAPI` is a direct browser call because the models endpoint is public.
 - `OpenRouterChatAPI` and `postChatStream()` go through Story Vault endpoints (`/api/PostChat` and `/api/PostChatStream`) because the backend does more than simple path forwarding for chat generation.
 
-## Text Generation Usage
+## LLM Request Usage
 
-All AI text generation flows through `OpenRouterChatAPI.postChat()`. Below is a complete list of every call site:
+All LLM requests flow through `OpenRouterChatAPI`: plain requests use
+`postChat()`, live chat/reasoning uses `postChatStream()`, and schema-constrained
+work uses `postStructuredChat()`.
+
+Reusable Story Vault context is assembled before transport by
+`LLMMessageContextService`. Its source flags are false by default, and each
+pipeline declares its own selection near its prompt construction. The generic
+builder knows only reusable sources and projection mechanics; response prompts,
+feedback, target entities, schemas, labels, models, and request settings remain
+owned by the calling feature.
+
+Chat continuation deliberately appends its response prompt as the terminal
+`user` message. This avoids the trailing-system-message ordering that breaks
+some newer models.
+
+`RequestTracker` records projection and rendered-section traces for inspection.
+Text generation adds its own task-specific appended-source labels. During
+regeneration, the target response and later projected messages are reported as
+`regeneration-truncated`, matching the messages actually sent.
 
 ### Model Resolution Hierarchy
 
@@ -95,11 +113,12 @@ Each call site resolves the LLM model in this order:
 2. **Global default model** — from `SystemSettings.chatGenerationSettings.model`
 3. **OpenRouter default** — if no model is specified, OpenRouter uses its own default
 
-### Chat Response Generation
+### Streaming Chat and Reasoning
 
 | Caller | File | Method | Model Source |
 |--------|------|--------|-------------|
 | `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `generateResponse()` | Global default |
+| `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `generateReasoning()` | Reasoning prompt override, then global default |
 | `TextGenerationService` | `Chat/services/ChatGeneration/TextGenerationService.ts` | `regenerateResponse()` | Global default |
 
 ### Chapter Generation
@@ -107,6 +126,7 @@ Each call site resolves the LLM model in this order:
 | Caller | File | Method | Model Source |
 |--------|------|--------|-------------|
 | `ChapterGenerationService` | `Chat/services/ChatGeneration/ChapterGenerationService.ts` | `generateChapterDraft()` | `SystemPrompts.chapterSummaryModel` |
+| `BookGenerationService` | `Chat/services/ChatGeneration/BookGenerationService.ts` | `generateBookSummary()` / `generateBookTitle()` | Corresponding Book prompt model |
 
 ### Image Prompt Generation
 
@@ -121,6 +141,19 @@ Each call site resolves the LLM model in this order:
 |--------|------|--------|-------------|
 | `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `regeneratePlanFromMessage()` | `Plan.model` (per-plan) |
 | `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `regeneratePlan()` (private) | `Plan.model` (per-plan) |
+| `PlanGenerationService` | `Plans/services/PlanGenerationService.ts` | `generateSuggestions()` | `Plan.suggestionModel` (per-plan) |
+
+### Maintenance and Structured Analysis
+
+- Message compression
+- Agent intent analysis
+- Active-character selection and Character Sheet synchronization
+- Continuity History selection and maintenance
+- Story, Chapter, Book, Plan, and new-content discussions
+
+The code-derived request-by-request matrix, including present and missing
+context for each pipeline, lives in
+`artifacts/context/story-vault-llm-request-context-inventory-2026-07-26.html`.
 
 ### Story Generation
 

@@ -4,11 +4,11 @@ import type {
   BookCreatedEvent,
   ChapterCreatedEvent,
 } from "../events/ChatEvent";
-import { MessageCreatedEventUtil } from "../events/MessageCreatedEventUtil";
 import { NoteCreatedEventUtil } from "../events/NoteEventUtils";
 import { PlanCreatedEventUtil } from "../events/PlanEventUtils";
 import { ReasoningCreatedEventUtil } from "../events/ReasoningEventUtils";
 import { StoryCreatedEventUtil } from "../events/StoryCreatedEventUtil";
+import { createGeneratedTextMessageEvent } from "./TextMessageEventTestUtils";
 
 describe("LLMChatProjection context trace", () => {
   let projection: LLMChatProjection;
@@ -64,7 +64,7 @@ describe("LLMChatProjection context trace", () => {
     const reasoning = ReasoningCreatedEventUtil.Create("Private thought");
     projection.process(note);
     projection.process(reasoning);
-    projection.process(MessageCreatedEventUtil.Create("user", "Continue"));
+    projection.process(createGeneratedTextMessageEvent("user", "Continue"));
 
     const trace = projection.GetContext({
       reasoningRetentionMessages: 0,
@@ -81,10 +81,7 @@ describe("LLMChatProjection context trace", () => {
     projection.process(plan);
 
     const excluded = projection.GetContext({
-      planSelection: {
-        mode: "exclude-definition",
-        planDefinitionId: "plan-1",
-      },
+      planSelection: { mode: "exclude-all" },
     });
     const included = projection.GetContext();
 
@@ -108,7 +105,7 @@ describe("LLMChatProjection context trace", () => {
 
   const createMessages = (count: number): string[] =>
     Array.from({ length: count }, (_, index) => {
-      const event = MessageCreatedEventUtil.Create(
+      const event = createGeneratedTextMessageEvent(
         index % 2 === 0 ? "user" : "assistant",
         `Message ${index + 1}`,
       );

@@ -28,10 +28,8 @@ describe("PlanGenerationService", () => {
     AddPlanMessage: ReturnType<typeof vi.fn>;
   };
 
-  let mockLLMChatProjection: {
-    GetMessages: ReturnType<typeof vi.fn>;
-    GetMessagesExcludingPlan: ReturnType<typeof vi.fn>;
-    GetMessagesExcludingAllPlans: ReturnType<typeof vi.fn>;
+  let mockLLMMessageContextService: {
+    buildContext: ReturnType<typeof vi.fn>;
   };
 
   let mockErrorService: {
@@ -64,14 +62,8 @@ describe("PlanGenerationService", () => {
       AddPlanMessage: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockLLMChatProjection = {
-      GetMessages: vi.fn().mockReturnValue(createMockChatMessages()),
-      GetMessagesExcludingPlan: vi
-        .fn()
-        .mockReturnValue(createMockChatMessages()),
-      GetMessagesExcludingAllPlans: vi
-        .fn()
-        .mockReturnValue(createMockChatMessages()),
+    mockLLMMessageContextService = {
+      buildContext: vi.fn().mockResolvedValue(createMockChatMessages()),
     };
 
     mockErrorService = {
@@ -90,8 +82,8 @@ describe("PlanGenerationService", () => {
       mockOpenRouterChatAPI as any,
     );
     vi.mocked(d.ChatService).mockReturnValue(mockChatService as any);
-    vi.mocked(d.LLMChatProjection).mockReturnValue(
-      mockLLMChatProjection as any,
+    vi.mocked(d.LLMMessageContextService).mockReturnValue(
+      mockLLMMessageContextService as any,
     );
     vi.mocked(d.ErrorService).mockReturnValue(mockErrorService as any);
     vi.mocked(d.SystemPromptsService).mockReturnValue(
@@ -470,15 +462,17 @@ describe("PlanGenerationService", () => {
       expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
     });
 
-    it("should use LLMChatProjection for chat messages", async () => {
+    it("should request history without plans from the shared context builder", async () => {
       const service = new PlanGenerationService(testChatId);
       const plan = createPlan({ id: "plan-1" });
       mockPlanService.getPlans.mockReturnValue([plan]);
 
       await service.generatePlanNow("plan-1");
 
-      expect(d.LLMChatProjection).toHaveBeenCalledWith(testChatId);
-      expect(mockLLMChatProjection.GetMessages).toHaveBeenCalled();
+      expect(d.LLMMessageContextService).toHaveBeenCalledWith(testChatId);
+      expect(mockLLMMessageContextService.buildContext).toHaveBeenCalledWith({
+        history: true,
+      });
     });
 
     it("should not affect other plans' counters", async () => {
@@ -510,16 +504,16 @@ describe("PlanGenerationService", () => {
       expect(mockChatService.AddPlanMessage).not.toHaveBeenCalled();
     });
 
-    it("should get chat messages excluding the plan being regenerated", async () => {
+    it("should request plan-free history when regenerating", async () => {
       const service = new PlanGenerationService(testChatId);
       const plan = createPlan({ id: "plan-1" });
       mockPlanService.getPlans.mockReturnValue([plan]);
 
       await service.regeneratePlanFromMessage("plan-1", "old content");
 
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingPlan,
-      ).toHaveBeenCalledWith("plan-1");
+      expect(mockLLMMessageContextService.buildContext).toHaveBeenCalledWith({
+        history: true,
+      });
     });
 
     it("should use update prompt with prior content when priorContent is provided", async () => {
@@ -992,7 +986,7 @@ describe("PlanGenerationService", () => {
       });
       mockPlanService.getPlans.mockReturnValue([plan]);
 
-      mockLLMChatProjection.GetMessages.mockReturnValue([
+      mockLLMMessageContextService.buildContext.mockResolvedValue([
         { id: "1", role: "user", content: "User message" },
         { id: "2", role: "assistant", content: "Assistant response" },
         { id: "3", role: "system", content: "System note" },
@@ -1219,16 +1213,16 @@ describe("PlanGenerationService", () => {
       expect(lastMessage.content).toContain("Existing plan content");
     });
 
-    it("should get chat messages excluding the plan being suggested", async () => {
+    it("should request plan-free history when suggesting", async () => {
       const service = new PlanGenerationService(testChatId);
       const plan = createPlan({ id: "plan-1" });
       mockPlanService.getPlans.mockReturnValue([plan]);
 
       await service.suggestPlanDirections("plan-1");
 
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingPlan,
-      ).toHaveBeenCalledWith("plan-1");
+      expect(mockLLMMessageContextService.buildContext).toHaveBeenCalledWith({
+        history: true,
+      });
     });
 
     it("should normalize blank and duplicate suggestions", async () => {
@@ -1255,81 +1249,10 @@ describe("PlanGenerationService", () => {
     });
   });
 
-  // ---- Hide Other Plans Tests ----
-  describe("hideOtherPlans", () => {
-    it("should use GetMessagesExcludingAllPlans when hideOtherPlans is true", async () => {
-      const service = new PlanGenerationService(testChatId);
-      const plan = createPlan({
-        id: "plan-1",
-        hideOtherPlans: true,
-      });
-      mockPlanService.getPlans.mockReturnValue([plan]);
-
-      await service.generatePlanNow("plan-1");
-
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingAllPlans,
-      ).toHaveBeenCalled();
-      expect(mockLLMChatProjection.GetMessages).not.toHaveBeenCalled();
-    });
-
-    it("should use GetMessages when hideOtherPlans is false", async () => {
-      const service = new PlanGenerationService(testChatId);
-      const plan = createPlan({
-        id: "plan-1",
-        hideOtherPlans: false,
-      });
-      mockPlanService.getPlans.mockReturnValue([plan]);
-
-      await service.generatePlanNow("plan-1");
-
-      expect(mockLLMChatProjection.GetMessages).toHaveBeenCalled();
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingAllPlans,
-      ).not.toHaveBeenCalled();
-    });
-
-    it("should use GetMessagesExcludingAllPlans for regeneratePlanFromMessage when hideOtherPlans is true", async () => {
-      const service = new PlanGenerationService(testChatId);
-      const plan = createPlan({
-        id: "plan-1",
-        hideOtherPlans: true,
-      });
-      mockPlanService.getPlans.mockReturnValue([plan]);
-
-      await service.regeneratePlanFromMessage("plan-1", "prior content");
-
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingAllPlans,
-      ).toHaveBeenCalled();
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingPlan,
-      ).not.toHaveBeenCalled();
-    });
-
-    it("should use GetMessagesExcludingPlan for regeneratePlanFromMessage when hideOtherPlans is false", async () => {
-      const service = new PlanGenerationService(testChatId);
-      const plan = createPlan({
-        id: "plan-1",
-        hideOtherPlans: false,
-      });
-      mockPlanService.getPlans.mockReturnValue([plan]);
-
-      await service.regeneratePlanFromMessage("plan-1", "prior content");
-
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingPlan,
-      ).toHaveBeenCalledWith("plan-1");
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingAllPlans,
-      ).not.toHaveBeenCalled();
-    });
-
-    it("should use GetMessagesExcludingAllPlans for cadence-based regeneration when hideOtherPlans is true", async () => {
+  describe("standardized plan context", () => {
+    it("uses the same minimal selection for cadence-based updates", async () => {
       const service = new PlanGenerationService(testChatId);
       const duePlan = createPlan({
-        id: "plan-1",
-        hideOtherPlans: true,
         refreshInterval: 1,
         messagesSinceLastUpdate: 0,
       });
@@ -1338,103 +1261,21 @@ describe("PlanGenerationService", () => {
       service.onMessageSent();
       await flushPromises();
 
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingAllPlans,
-      ).toHaveBeenCalled();
+      expect(mockLLMMessageContextService.buildContext).toHaveBeenCalledWith({
+        history: true,
+      });
     });
 
-    it("should use GetMessages for cadence-based regeneration when hideOtherPlans is false", async () => {
+    it("uses the same minimal selection for manual generation", async () => {
       const service = new PlanGenerationService(testChatId);
-      const duePlan = createPlan({
-        id: "plan-1",
-        hideOtherPlans: false,
-        refreshInterval: 1,
-        messagesSinceLastUpdate: 0,
-      });
-      mockPlanService.getPlans.mockReturnValue([duePlan]);
-
-      service.onMessageSent();
-      await flushPromises();
-
-      expect(mockLLMChatProjection.GetMessages).toHaveBeenCalled();
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingAllPlans,
-      ).not.toHaveBeenCalled();
-    });
-  });
-
-  // ---- Exclude Own Plan From History Tests ----
-  describe("excludeOwnPlanFromHistory", () => {
-    it("should use GetMessagesExcludingPlan when excludeOwnPlanFromHistory is true", async () => {
-      const service = new PlanGenerationService(testChatId);
-      const plan = createPlan({
-        id: "plan-1",
-        excludeOwnPlanFromHistory: true,
-      });
+      const plan = createPlan();
       mockPlanService.getPlans.mockReturnValue([plan]);
 
-      await service.generatePlanNow("plan-1");
+      await service.generatePlanNow(plan.id);
 
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingPlan,
-      ).toHaveBeenCalledWith("plan-1");
-      expect(mockLLMChatProjection.GetMessages).not.toHaveBeenCalled();
-    });
-
-    it("should use GetMessages when excludeOwnPlanFromHistory is false", async () => {
-      const service = new PlanGenerationService(testChatId);
-      const plan = createPlan({
-        id: "plan-1",
-        excludeOwnPlanFromHistory: false,
+      expect(mockLLMMessageContextService.buildContext).toHaveBeenCalledWith({
+        history: true,
       });
-      mockPlanService.getPlans.mockReturnValue([plan]);
-
-      await service.generatePlanNow("plan-1");
-
-      expect(mockLLMChatProjection.GetMessages).toHaveBeenCalled();
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingPlan,
-      ).not.toHaveBeenCalled();
-    });
-
-    it("should use GetMessagesExcludingPlan for cadence-based regeneration when excludeOwnPlanFromHistory is true", async () => {
-      const service = new PlanGenerationService(testChatId);
-      const duePlan = createPlan({
-        id: "plan-1",
-        excludeOwnPlanFromHistory: true,
-        refreshInterval: 1,
-        messagesSinceLastUpdate: 0,
-      });
-      mockPlanService.getPlans.mockReturnValue([duePlan]);
-
-      service.onMessageSent();
-      await flushPromises();
-
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingPlan,
-      ).toHaveBeenCalledWith("plan-1");
-      expect(mockLLMChatProjection.GetMessages).not.toHaveBeenCalled();
-    });
-
-    it("should prioritize hideOtherPlans over excludeOwnPlanFromHistory", async () => {
-      const service = new PlanGenerationService(testChatId);
-      const plan = createPlan({
-        id: "plan-1",
-        hideOtherPlans: true,
-        excludeOwnPlanFromHistory: true,
-      });
-      mockPlanService.getPlans.mockReturnValue([plan]);
-
-      await service.generatePlanNow("plan-1");
-
-      // Should use GetMessagesExcludingAllPlans when hideOtherPlans is true
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingAllPlans,
-      ).toHaveBeenCalled();
-      expect(
-        mockLLMChatProjection.GetMessagesExcludingPlan,
-      ).not.toHaveBeenCalled();
-      expect(mockLLMChatProjection.GetMessages).not.toHaveBeenCalled();
     });
   });
 
@@ -1455,8 +1296,6 @@ describe("PlanGenerationService", () => {
       refreshInterval: 5,
       messagesSinceLastUpdate: 0,
       consolidateMessageHistory: false,
-      hideOtherPlans: false,
-      excludeOwnPlanFromHistory: false,
       ...overrides,
     };
   }
