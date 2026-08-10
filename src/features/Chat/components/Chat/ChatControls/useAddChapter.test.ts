@@ -100,7 +100,7 @@ describe("useAddChapter", () => {
     expect(result.current.title).toBe("Discussed title");
   });
 
-  it("generates from an immutable snapshot without opening the editor", async () => {
+  it("generates from an immutable snapshot and opens the editor", async () => {
     const { result } = renderChapterCreation();
 
     await act(async () => result.current.handleGenerate());
@@ -110,10 +110,15 @@ describe("useAddChapter", () => {
       { history: true, plans: true },
       {},
     );
-    expect(result.current.showModal).toBe(false);
+    expect(result.current.showModal).toBe(true);
+    expect(result.current.view).toBe("editor");
     expect(result.current.pendingDraftStatus).toBe("ready");
     expect(notifications.show).toHaveBeenCalledWith(
-      expect.objectContaining({ position: "top-right", loading: true }),
+      expect.objectContaining({
+        position: "top-right",
+        loading: true,
+        autoClose: 2000,
+      }),
     );
     expect(notifications.update).toHaveBeenCalledWith(
       expect.objectContaining({ position: "top-right", color: "green" }),
