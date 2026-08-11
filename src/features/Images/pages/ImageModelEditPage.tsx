@@ -125,6 +125,7 @@ const ImageModelEditPage: React.FC = () => {
       ...imageModel,
       name: loadedModel.name,
       trainedWords: loadedModel.trainedWords,
+      importWarnings: loadedModel.importWarnings,
       input: { ...loadedModel.input },
     };
     setImageModel(updatedModel);
@@ -195,6 +196,11 @@ const ImageModelEditPage: React.FC = () => {
           />
         ) : (
         <Stack>
+          {imageModel.importWarnings?.map((warning) => (
+            <Alert key={warning} color="yellow" title="Best-effort import">
+              {warning}
+            </Alert>
+          ))}
           <ModelSampleImage
             sampleImageJobId={imageModel.sampleWorkflowId}
             size="large"
@@ -248,7 +254,6 @@ const ImageModelEditPage: React.FC = () => {
     </Page>
   );
 };
-useParams;
 const PageHeader: React.FC<{
   onBack: () => void;
   modelName: string;

@@ -446,6 +446,7 @@ describe("ImageGenerationService", () => {
       mockCharacterDescriptionsService.updateCharacter,
     ).toHaveBeenCalledWith("char-1", {
       appearance: "Dark hair, green eyes, narrow jawline",
+      preferredImage: undefined,
     });
     expect(
       mockImageGenerator.generatePromptWithCharacterContext,
@@ -461,6 +462,49 @@ describe("ImageGenerationService", () => {
         workflowId: "job-3",
         modelName: "Test Model",
       }),
+    );
+  });
+
+  it("saves and uses the selected image model for a generated appearance", async () => {
+    const preferredImage = {
+      id: "portrait-model",
+      source: "system" as const,
+    };
+    mockCharacterDescriptionGenerationService.generateDescription.mockResolvedValue(
+      "Dark hair, green eyes, narrow jawline",
+    );
+    mockCharacterDescriptionsService.createBlankCharacter.mockResolvedValue({
+      id: "char-1",
+      name: "Sarah Chen",
+      appearance: "",
+    });
+    mockImageGenerator.generatePromptWithCharacterContext.mockResolvedValue(
+      "image prompt",
+    );
+    mockImageGenerator.triggerJob.mockResolvedValue({
+      jobId: "job-portrait",
+      workflowId: "job-portrait",
+      modelName: "Portrait Model",
+      fullPrompt: "full combined prompt",
+    });
+
+    await service.resolveMissingCharacterDescription(
+      "Sarah Chen",
+      "generate",
+      preferredImage,
+    );
+
+    expect(
+      mockCharacterDescriptionsService.updateCharacter,
+    ).toHaveBeenCalledWith("char-1", {
+      appearance: "Dark hair, green eyes, narrow jawline",
+      preferredImage,
+    });
+    expect(mockImageGenerator.triggerJob).toHaveBeenCalledWith(
+      "image prompt",
+      preferredImage,
+      "Dark hair, green eyes, narrow jawline",
+      expect.any(Function),
     );
   });
 

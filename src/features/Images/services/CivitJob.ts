@@ -34,6 +34,12 @@ export interface WorkflowCost {
   currency?: string;
 }
 
+export interface WorkflowSchedulingDetails {
+  priority?: string;
+  precedingJobs?: number;
+  expectedCompleteAt?: string;
+}
+
 export interface WorkflowTransaction {
   type?: string;
   amount?: number;
@@ -44,8 +50,16 @@ export interface WorkflowStep {
   name: string;
   $type: string;
   status: WorkflowStatus;
+  priority?: string;
   jobs?: {
     cost?: number;
+    status?: WorkflowStatus;
+    queuePosition?: {
+      support?: string;
+      precedingJobs?: number;
+      startAt?: string;
+      completeAt?: string;
+    };
   }[];
   output?:
     | {
@@ -69,6 +83,7 @@ export interface WorkflowImageResult {
   isLoading: boolean;
   error?: string | undefined;
   cost?: WorkflowCost | undefined;
+  scheduling?: WorkflowSchedulingDetails | undefined;
 }
 
 export type CivitJobResult = WorkflowImageResult;

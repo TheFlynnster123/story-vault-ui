@@ -57,4 +57,48 @@ describe("OpenRouterModelsAPI", () => {
       );
     });
   });
+
+  describe("getModelEndpoints", () => {
+    it("returns provider pricing and uptime for a model", async () => {
+      const endpoints = [
+        {
+          provider_name: "Azure",
+          name: "Azure | GPT-4",
+          tag: "azure",
+          pricing: { prompt: "0.000001", completion: "0.000002" },
+          uptime_last_1d: 99.9,
+        },
+      ];
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ data: { endpoints } }), { status: 200 }),
+      );
+
+      await expect(api.getModelEndpoints("openai/gpt-4")).resolves.toEqual(
+        endpoints,
+      );
+    });
+
+    it("calls the endpoints API with an encoded model slug", async () => {
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ data: { endpoints: [] } }), {
+          status: 200,
+        }),
+      );
+
+      await api.getModelEndpoints("openai/gpt-4:free");
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "https://openrouter.ai/api/v1/models/openai/gpt-4%3Afree/endpoints",
+      );
+    });
+
+    it("rejects an invalid model ID before fetching", async () => {
+      const fetchSpy = vi.spyOn(global, "fetch");
+
+      await expect(api.getModelEndpoints("invalid-model")).rejects.toThrow(
+        "Invalid OpenRouter model ID",
+      );
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
 });

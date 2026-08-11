@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interactive Civitai Ecosystem Resolver</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #5a6478;
+      --paper: #f4f7fb;
+      --card: #ffffff;
+      --line: #cdd6e4;
+      --navy: #243c67;
+      --blue: #2e5fa8;
+      --blue-soft: #e8f0fb;
+      --green: #17664c;
+      --green-soft: #e7f5ee;
+      --amber: #895616;
+      --amber-soft: #fff3db;
+      --red: #963939;
+      --red-soft: #fbecec;
+      --purple: #694b96;
+      --purple-soft: #f1ebfa;
+      --shadow: 0 12px 34px rgba(29, 46, 79, 0.09);
+      --radius: 17px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    button, select, textarea { font: inherit; }
+    a { color: var(--blue); }
+    a:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+      outline: 3px solid #e2a83f;
+      outline-offset: 3px;
+    }
+
+    code {
+      padding: 0.12rem 0.34rem;
+      border: 1px solid #d7deea;
+      border-radius: 6px;
+      background: #f2f5f9;
+      color: #263650;
+      font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .wrap { width: min(1260px, calc(100% - 32px)); margin: 0 auto; }
+
+    header {
+      padding: 48px 0 30px;
+      border-bottom: 1px solid var(--line);
+      background: #eaf0f9;
+    }
+
+    .eyebrow {
+      margin: 0 0 9px;
+      color: var(--blue);
+      font-size: 0.76rem;
+      font-weight: 850;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 950px;
+      margin: 0;
+      color: #13213b;
+      font-size: clamp(2rem, 4.5vw, 3.75rem);
+      line-height: 1.05;
+      letter-spacing: -0.045em;
+    }
+
+    .lede {
+      max-width: 900px;
+      margin: 18px 0 0;
+      color: #3f4d66;
+      font-size: clamp(1rem, 2vw, 1.2rem);
+    }
+
+    .contract-note {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      max-width: 980px;
+      margin-top: 22px;
+      padding: 15px 17px;
+      border: 1px solid #b8c8df;
+      border-radius: 13px;
+      background: rgba(255,255,255,0.7);
+    }
+
+    .contract-note strong { color: var(--navy); }
+    .mark {
+      display: grid;
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--navy);
+      color: white;
+      font-weight: 900;
+    }
+
+    main { padding: 34px 0 70px; }
+    section + section { margin-top: 38px; }
+
+    h2 {
+      margin: 0 0 8px;
+      color: #172845;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      letter-spacing: -0.025em;
+    }
+
+    h3 { margin: 0; font-size: 1.04rem; }
+    p { margin-top: 0; }
+    .section-note { max-width: 850px; margin: 0 0 20px; color: var(--muted); }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto;
+      gap: 14px;
+      align-items: end;
+      margin-bottom: 16px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    label { display: block; color: #31405a; font-size: 0.86rem; font-weight: 800; }
+
+    select {
+      width: 100%;
+      margin-top: 7px;
+      padding: 10px 12px;
+      border: 1px solid #aebbd0;
+      border-radius: 9px;
+      background: white;
+      color: var(--ink);
+    }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: flex-end; }
+
+    button {
+      min-height: 42px;
+      padding: 9px 14px;
+      border: 1px solid #9fb0ca;
+      border-radius: 9px;
+      background: white;
+      color: #29436f;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    button:hover { background: var(--blue-soft); }
+    button.primary { border-color: var(--navy); background: var(--navy); color: white; }
+    button.primary:hover { background: #1a3159; }
+
+    .source-note {
+      margin: 0 0 16px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--blue);
+      background: var(--blue-soft);
+      color: #3e4e69;
+      font-size: 0.9rem;
+    }
+
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .workbench .panel:first-child { display: flex; flex-direction: column; }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 17px;
+      border-bottom: 1px solid var(--line);
+      background: #edf2f8;
+    }
+
+    .panel-head small { color: var(--muted); }
+
+    textarea {
+      display: block;
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 600px;
+      resize: vertical;
+      padding: 18px;
+      border: 0;
+      background: #172238;
+      color: #edf3fb;
+      font: 0.82rem/1.52 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      tab-size: 2;
+    }
+
+    .trace { padding: 17px; }
+
+    .status-banner {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 14px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .status-banner.supported { border-color: #9ac9b3; background: var(--green-soft); }
+    .status-banner.unsupported { border-color: #dfbe80; background: var(--amber-soft); }
+    .status-banner.ambiguous, .status-banner.invalid { border-color: #dfa5a5; background: var(--red-soft); }
+    .status-icon { font-size: 1.25rem; line-height: 1.2; }
+    .status-banner p { margin: 4px 0 0; color: #455067; }
+
+    .trace-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: trace;
+    }
+
+    .trace-list li {
+      position: relative;
+      display: grid;
+      grid-template-columns: 31px minmax(0, 1fr);
+      gap: 11px;
+      align-items: start;
+      margin: 0;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fbfcfe;
+      counter-increment: trace;
+    }
+
+    .trace-list li::before {
+      content: counter(trace);
+      display: grid;
+      width: 27px;
+      height: 27px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--navy);
+      color: white;
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .trace-list p { margin: 4px 0 0; color: var(--muted); font-size: 0.89rem; }
+    .trace-list .badge { grid-column: 2; justify-self: start; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 850;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge.used, .badge.supported { background: var(--green-soft); color: var(--green); }
+    .badge.corroborates { background: var(--blue-soft); color: var(--blue); }
+    .badge.warning, .badge.unsupported { background: var(--amber-soft); color: var(--amber); }
+    .badge.ignored { background: #eceff4; color: #606a7b; }
+    .badge.conflict, .badge.invalid, .badge.ambiguous { background: var(--red-soft); color: var(--red); }
+
+    .mutation-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .mutation-row button { min-height: 36px; padding: 7px 10px; font-size: 0.82rem; }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .result-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .result-card.current { border-top: 5px solid var(--red); }
+    .result-card.proposed { border-top: 5px solid var(--green); }
+    .result-body { padding: 18px; }
+
+    pre {
+      overflow: auto;
+      max-height: 440px;
+      margin: 13px 0 0;
+      padding: 16px;
+      border-radius: 11px;
+      background: #172238;
+      color: #edf3fb;
+      font: 0.8rem/1.52 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .evidence-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      min-width: 880px;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #eaf0f9; color: #29436f; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    td.raw { max-width: 410px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.78rem; overflow-wrap: anywhere; }
+
+    .rules {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    summary { padding: 17px 18px; color: #233d69; cursor: pointer; font-weight: 850; }
+    details > div { padding: 0 18px 18px; color: #46536a; }
+    details ol { margin-bottom: 0; padding-left: 1.3rem; }
+    details li + li { margin-top: 8px; }
+
+    .confidence {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .confidence div { padding: 11px; border-radius: 9px; background: #f1f4f8; }
+    .confidence strong { display: block; color: #2d466f; }
+    .confidence small { color: var(--muted); }
+
+    footer {
+      padding: 23px 0 36px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 940px) {
+      .workbench, .comparison, .rules { grid-template-columns: 1fr; }
+      textarea { min-height: 470px; }
+    }
+
+    @media (max-width: 680px) {
+      header { padding-top: 36px; }
+      .toolbar { grid-template-columns: 1fr; }
+      .actions { justify-content: flex-start; }
+      .trace-list li { grid-template-columns: 31px minmax(0, 1fr); }
+      .confidence { grid-template-columns: 1fr; }
+      textarea { min-height: 430px; font-size: 0.76rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <p class="eyebrow">Executable design probe · Civitai import</p>
+      <h1>How the ecosystem resolver reaches—and proves—its answer</h1>
+      <p class="lede">Choose a real payload, edit its JSON, then resolve it. The page ranks every signal, detects conflicts, checks whether Story Vault can replay the family, and shows the exact routing fields it would submit.</p>
+      <div class="contract-note">
+        <span class="mark" aria-hidden="true">i</span>
+        <div><strong>Key distinction:</strong> resolving a family does not automatically mean replay is supported. Image <code>135352590</code> resolves confidently to Krea 2, then fails the separate replay-capability check because its LoRA-based Comfy workflow cannot be represented by the hosted Krea recipe.</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="workbench-title">
+      <h2 id="workbench-title">Try the resolver</h2>
+      <p class="section-note">The three built-in fixtures are resolver-relevant projections of live responses from Civitai’s generation-data endpoint. Large prompt and embedded Comfy workflow strings are intentionally omitted because the resolver never reads them.</p>
+
+      <div class="toolbar">
+        <label for="fixture-select">Payload fixture
+          <select id="fixture-select">
+            <option value="krea">135352590 · Krea 2 LoRA / custom Comfy</option>
+            <option value="zturbo">128214156 · Z-Image Turbo checkpoint + LoRAs</option>
+            <option value="zbase">123583085 · Z-Image Base checkpoint</option>
+          </select>
+        </label>
+        <div class="actions">
+          <button id="reset-button" type="button">Reset fixture</button>
+          <button id="resolve-button" class="primary" type="button">Resolve ecosystem</button>
+        </div>
+      </div>
+
+      <p class="source-note" id="source-note"></p>
+
+      <div class="workbench">
+        <article class="panel" aria-labelledby="json-title">
+          <div class="panel-head">
+            <h3 id="json-title">Incoming JSON</h3>
+            <small>Editable</small>
+          </div>
+          <textarea id="json-input" spellcheck="false" aria-label="Editable incoming Civitai JSON"></textarea>
+        </article>
+
+        <article class="panel" aria-labelledby="trace-title">
+          <div class="panel-head">
+            <h3 id="trace-title">Resolution trace</h3>
+            <small>Highest-confidence evidence wins</small>
+          </div>
+          <div class="trace">
+            <div id="status-banner" class="status-banner supported" role="status" aria-live="polite"></div>
+            <ol id="trace-list" class="trace-list"></ol>
+            <div class="mutation-row" aria-label="Payload mutation examples">
+              <button id="remove-checkpoint" type="button">Remove checkpoint</button>
+              <button id="create-conflict" type="button">Inject conflicting Krea label</button>
+              <button id="strip-evidence" type="button">Strip all family evidence</button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="comparison-title">
+      <h2 id="comparison-title">Current behavior vs. proposed result</h2>
+      <p class="section-note">This makes the design falsifiable: you can see exactly when the proposed resolver differs from today’s AIR-only fallback.</p>
+      <div class="comparison">
+        <article class="result-card current">
+          <div class="panel-head"><h3>Current mapper simulation</h3><span class="badge conflict">AIR-only</span></div>
+          <div class="result-body">
+            <p id="current-summary"></p>
+            <pre id="current-output" aria-label="Current mapper output"></pre>
+          </div>
+        </article>
+        <article class="result-card proposed">
+          <div class="panel-head"><h3>Proposed resolver output</h3><span id="proposed-badge" class="badge supported">Supported</span></div>
+          <div class="result-body">
+            <p id="proposed-summary"></p>
+            <pre id="proposed-output" aria-label="Proposed resolver output"></pre>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="evidence-title">
+      <h2 id="evidence-title">Evidence ledger</h2>
+      <p class="section-note">Every claim is inspectable. Lower-ranked evidence may corroborate the winner or raise a warning, but it cannot silently override a checkpoint AIR.</p>
+      <div class="evidence-wrap">
+        <table>
+          <thead>
+            <tr><th>Rank</th><th>Signal</th><th>Raw value</th><th>Normalized family</th><th>Disposition</th></tr>
+          </thead>
+          <tbody id="evidence-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="rules-title">
+      <h2 id="rules-title">The resolver contract</h2>
+      <div class="rules">
+        <details open>
+          <summary>Decision order</summary>
+          <div>
+            <ol>
+              <li><strong>Checkpoint AIR ecosystem</strong> — structural and resource-specific.</li>
+              <li><strong>Checkpoint <code>baseModel</code></strong> — strong fallback if AIR is missing.</li>
+              <li><strong>Other resource AIR ecosystems</strong> — permits LoRA-only Z-Image imports.</li>
+              <li><strong>Other resource <code>baseModel</code></strong> — corroborating family label.</li>
+              <li><strong><code>params.Model</code> filename</strong> — last-resort heuristic only.</li>
+            </ol>
+            <p>If equally ranked signals disagree, resolution stops as ambiguous. Lower-ranked disagreement is preserved as a warning.</p>
+          </div>
+        </details>
+        <details open>
+          <summary>Confidence and replay are separate</summary>
+          <div>
+            <div class="confidence">
+              <div><strong>High</strong><small>Checkpoint AIR or checkpoint base model</small></div>
+              <div><strong>Medium</strong><small>Resource AIR or base model</small></div>
+              <div><strong>Low</strong><small>Filename heuristic only</small></div>
+            </div>
+            <p style="margin-top:14px"><strong>Z-Image:</strong> replayable as <code>ecosystem: "zImage"</code> and <code>model: "turbo" | "base"</code>.</p>
+            <p><strong>Krea 2:</strong> recognized, but this importer reports unsupported replay while the source depends on a custom Comfy LoRA workflow.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Interactive resolver design based on inspected Story Vault UI code and live Civitai response shapes · 2026-08-10</div>
+  </footer>
+
+  <script>
+    const fixtures = {
+      krea: {
+        label: "Image 135352590 · exact resolver-relevant fields",
+        source: "https://civitai.com/api/generation/data?type=image&id=135352590",
+        payload: {
+          type: "image",
+          remixOfId: 135352590,
+          remixOf: {
+            id: 135352590,
+            type: "image",
+            url: "e379b40a-144e-4c05-aedc-be86d9dfd91e",
+            similarity: 1,
+            createdAt: "2026-06-30T17:03:17.391Z"
+          },
+          resources: [
+            {
+              id: 3084537,
+              name: "Krea2 (v0.5)",
+              baseModel: "Krea 2",
+              canGenerate: true,
+              strength: 1.5,
+              air: "urn:air:krea2:lora:civitai:2268008@3084537",
+              model: {
+                id: 2268008,
+                name: "Realistic Snapshot (Z-Image-Turbo + Krea 2)",
+                type: "LORA"
+              }
+            }
+          ],
+          params: {
+            Model: "krea2_turbo_fp8_scaled",
+            sampler: null,
+            steps: null,
+            cfgScale: null,
+            width: null,
+            height: null,
+            aspectRatio: { value: "1080:1920", width: 1080, height: 1920 },
+            vaes: ["qwen_image_vae.safetensors"]
+          }
+        }
+      },
+      zturbo: {
+        label: "Image 128214156 · exact resolver-relevant fields",
+        source: "https://civitai.com/api/generation/data?type=image&id=128214156",
+        payload: {
+          type: "image",
+          remixOfId: 128214156,
+          remixOf: {
+            id: 128214156,
+            type: "image",
+            url: "cd8fb474-3866-4855-8d1a-0c7a775d8172",
+            similarity: 1,
+            createdAt: "2026-04-21T21:45:43.978Z"
+          },
+          resources: [
+            {
+              id: 2442439,
+              name: "Turbo",
+              baseModel: "ZImageTurbo",
+              canGenerate: true,
+              strength: 1,
+              air: "urn:air:zimageturbo:diffusionmodel:civitai:2168935@2442439",
+              model: { id: 2168935, name: "Z Image Turbo", type: "Checkpoint" }
+            },
+            {
+              id: 2515203,
+              name: "v1.0",
+              baseModel: "ZImageTurbo",
+              canGenerate: true,
+              strength: 1.5,
+              air: "urn:air:zimageturbo:lora:civitai:2234266@2515203",
+              model: { id: 2234266, name: "[ZIT] Detail Slider", type: "LORA" }
+            },
+            {
+              id: 2617751,
+              name: "ZIT v5 (Real Life)",
+              baseModel: "ZImageTurbo",
+              canGenerate: true,
+              strength: 1,
+              air: "urn:air:zimageturbo:lora:civitai:2268008@2617751",
+              model: { id: 2268008, name: "Realistic Snapshot (Z-Image-Turbo + Krea 2)", type: "LORA" }
+            },
+            {
+              id: 2794215,
+              name: "v1.0_Z-image-turbo",
+              baseModel: "ZImageTurbo",
+              canGenerate: true,
+              strength: 1,
+              air: "urn:air:zimageturbo:lora:civitai:2485292@2794215",
+              model: { id: 2485292, name: "MIDJOURNEY_V1_Z-image_Turbo", type: "LORA" }
+            }
+          ],
+          params: {
+            Model: null,
+            sampler: null,
+            steps: null,
+            cfgScale: null,
+            width: null,
+            height: null,
+            aspectRatio: { value: "1280:1920", width: 1280, height: 1920 },
+            vaes: null
+          }
+        }
+      },
+      zbase: {
+        label: "Image 123583085 · exact resolver-relevant fields",
+        source: "https://civitai.com/api/generation/data?type=image&id=123583085",
+        payload: {
+          type: "image",
+          remixOfId: 123583085,
+          resources: [
+            {
+              id: 2635223,
+              name: "Base",
+              baseModel: "ZImageBase",
+              air: "urn:air:zimagebase:checkpoint:civitai:2342797@2635223",
+              model: { id: 2342797, name: "Z Image Base", type: "Checkpoint" }
+            }
+          ],
+          params: {
+            Model: "z-image-base-bf16",
+            steps: 25,
+            cfgScale: 3.5,
+            aspectRatio: { value: "1024:1536", width: 1024, height: 1536 }
+          }
+        }
+      }
+    };
+
+    const priorities = {
+      "checkpoint AIR": 100,
+      "checkpoint baseModel": 90,
+      "resource AIR": 70,
+      "resource baseModel": 60,
+      "params.Model": 40
+    };
+
+    const fixtureSelect = document.getElementById("fixture-select");
+    const jsonInput = document.getElementById("json-input");
+    const sourceNote = document.getElementById("source-note");
+
+    const compact = value => String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const familyKey = value => value ? `${value.family}:${value.variant || ""}` : "unknown";
+    const familyLabel = value => {
+      if (!value) return "Unrecognized";
+      if (value.family === "zimage") return `Z-Image ${value.variant === "turbo" ? "Turbo" : "Base"}`;
+      if (value.family === "krea2") return "Krea 2";
+      if (value.family === "sdxl") return "SDXL";
+      if (value.family === "sd1") return "SD1";
+      if (value.family === "anima") return "Anima";
+      return value.family;
+    };
+
+    function parseAir(air) {
+      const match = String(air ?? "").match(/^urn:air:([^:]+):([^:]+):([^:]+):(.+)$/i);
+      return match ? { ecosystem: match[1].toLowerCase(), type: match[2].toLowerCase() } : null;
+    }
+
+    function normalizeAir(air) {
+      const parsed = parseAir(air);
+      if (!parsed) return null;
+      const key = compact(parsed.ecosystem);
+      if (key === "zimageturbo") return { family: "zimage", variant: "turbo" };
+      if (key === "zimagebase" || key === "zimage") return { family: "zimage", variant: "base" };
+      if (key === "krea2") return { family: "krea2" };
+      if (key === "anima") return { family: "anima" };
+      if (key === "sd1" || key === "sd15") return { family: "sd1" };
+      if (key === "sdxl") return { family: "sdxl" };
+      return null;
+    }
+
+    function normalizeBaseModel(baseModel) {
+      const key = compact(baseModel);
+      if (key.includes("zimageturbo")) return { family: "zimage", variant: "turbo" };
+      if (key.includes("zimagebase")) return { family: "zimage", variant: "base" };
+      if (key.includes("krea2")) return { family: "krea2" };
+      if (key.includes("anima")) return { family: "anima" };
+      if (key.includes("sd15") || key === "sd1") return { family: "sd1" };
+      if (key.includes("sdxl") || key.includes("illustrious") || key.includes("pony")) return { family: "sdxl" };
+      return null;
+    }
+
+    function normalizeFilename(filename) {
+      const key = compact(filename);
+      if (!key) return null;
+      if (key.includes("krea2")) return { family: "krea2" };
+      if (key.includes("zimage") && key.includes("base")) return { family: "zimage", variant: "base" };
+      if ((key.includes("zimage") || key.startsWith("zit")) && key.includes("turbo")) return { family: "zimage", variant: "turbo" };
+      if (key.includes("anima")) return { family: "anima" };
+      return null;
+    }
+
+    function collectEvidence(payload) {
+      const evidence = [];
+      const resources = Array.isArray(payload.resources) ? payload.resources : [];
+
+      resources.forEach((resource, index) => {
+        const checkpoint = String(resource?.model?.type ?? "").toLowerCase() === "checkpoint";
+        if (resource?.air) {
+          const signal = checkpoint ? "checkpoint AIR" : "resource AIR";
+          evidence.push({
+            signal,
+            priority: priorities[signal],
+            raw: resource.air,
+            resourceIndex: index,
+            resolution: normalizeAir(resource.air)
+          });
+        }
+        if (resource?.baseModel) {
+          const signal = checkpoint ? "checkpoint baseModel" : "resource baseModel";
+          evidence.push({
+            signal,
+            priority: priorities[signal],
+            raw: resource.baseModel,
+            resourceIndex: index,
+            resolution: normalizeBaseModel(resource.baseModel)
+          });
+        }
+      });
+
+      if (payload?.params?.Model) {
+        evidence.push({
+          signal: "params.Model",
+          priority: priorities["params.Model"],
+          raw: payload.params.Model,
+          resolution: normalizeFilename(payload.params.Model)
+        });
+      }
+      return evidence.sort((a, b) => b.priority - a.priority);
+    }
+
+    function dimensionsFrom(payload) {
+      const params = payload.params || {};
+      const ratio = params.aspectRatio || {};
+      return {
+        width: params.width || ratio.width || ratio.value?.width || 1024,
+        height: params.height || ratio.height || ratio.value?.height || 1024
+      };
+    }
+
+    function buildZImageInput(payload, resolution) {
+      const params = payload.params || {};
+      const dimensions = dimensionsFrom(payload);
+      const turbo = resolution.variant === "turbo";
+      const loras = {};
+      (payload.resources || []).forEach(resource => {
+        if (String(resource?.model?.type ?? "").toLowerCase() === "checkpoint") return;
+        const resourceFamily = normalizeAir(resource.air) || normalizeBaseModel(resource.baseModel);
+        if (resource.air && resourceFamily?.family === "zimage") {
+          loras[resource.air] = resource.strength ?? 1;
+        }
+      });
+      const input = {
+        engine: "sdcpp",
+        ecosystem: "zImage",
+        model: turbo ? "turbo" : "base",
+        operation: "createImage",
+        prompt: "[copied unchanged from params.prompt]",
+        width: dimensions.width,
+        height: dimensions.height,
+        cfgScale: params.cfgScale ?? (turbo ? 1 : 4),
+        steps: params.steps ?? (turbo ? 9 : 20)
+      };
+      if (Object.keys(loras).length) input.loras = loras;
+      return input;
+    }
+
+    function buildSupportedInput(payload, resolution, winningEvidence) {
+      const dimensions = dimensionsFrom(payload);
+      if (resolution.family === "zimage") return buildZImageInput(payload, resolution);
+      if (resolution.family === "anima") {
+        return {
+          engine: "sdcpp", ecosystem: "anima", operation: "createImage",
+          prompt: "[copied unchanged from params.prompt]",
+          width: dimensions.width, height: dimensions.height
+        };
+      }
+      if (resolution.family === "sd1" || resolution.family === "sdxl") {
+        const checkpoint = (payload.resources || []).find(resource => String(resource?.model?.type ?? "").toLowerCase() === "checkpoint");
+        if (!checkpoint?.air) return null;
+        return {
+          engine: "sdcpp", ecosystem: resolution.family, model: checkpoint.air,
+          operation: "createImage", prompt: "[copied unchanged from params.prompt]",
+          width: dimensions.width, height: dimensions.height
+        };
+      }
+      return null;
+    }
+
+    function resolvePayload(payload) {
+      const evidence = collectEvidence(payload);
+      const recognized = evidence.filter(item => item.resolution);
+      const trace = [];
+      const checkpoints = (payload.resources || []).filter(resource => String(resource?.model?.type ?? "").toLowerCase() === "checkpoint");
+      trace.push({
+        title: "Find checkpoint resources",
+        detail: checkpoints.length ? `${checkpoints.length} checkpoint resource${checkpoints.length === 1 ? "" : "s"} found.` : "No checkpoint resource found; resolver may still use LoRA metadata.",
+        badge: checkpoints.length ? "used" : "warning",
+        badgeText: checkpoints.length ? "Found" : "Fallback"
+      });
+
+      if (!recognized.length) {
+        trace.push({ title: "Normalize evidence", detail: "No AIR ecosystem, base-model alias, or filename matched a known family.", badge: "invalid", badgeText: "No match" });
+        trace.push({ title: "Stop safely", detail: "The importer must not create a model with an empty identifier.", badge: "invalid", badgeText: "Unresolved" });
+        evidence.forEach(item => item.disposition = "ignored");
+        return { status: "ambiguous", reason: "No recognized ecosystem evidence was found.", evidence, trace, output: null };
+      }
+
+      const highestPriority = recognized[0].priority;
+      const leaders = recognized.filter(item => item.priority === highestPriority);
+      const leaderKeys = [...new Set(leaders.map(item => familyKey(item.resolution)))];
+      trace.push({
+        title: "Rank normalized evidence",
+        detail: `Top rank is ${highestPriority}, supplied by ${leaders.map(item => item.signal).join(", ")}.`,
+        badge: "used",
+        badgeText: `Rank ${highestPriority}`
+      });
+
+      if (leaderKeys.length > 1) {
+        leaders.forEach(item => item.disposition = "conflict");
+        evidence.filter(item => !item.disposition).forEach(item => item.disposition = "ignored");
+        trace.push({ title: "Check equal-rank conflicts", detail: "Equally strong signals disagree, so guessing would be unsafe.", badge: "conflict", badgeText: "Ambiguous" });
+        return { status: "ambiguous", reason: "Equally ranked ecosystem signals conflict.", evidence, trace, output: null };
+      }
+
+      const winner = leaders[0];
+      const winnerKey = familyKey(winner.resolution);
+      let lowerConflictCount = 0;
+      evidence.forEach(item => {
+        if (!item.resolution) item.disposition = "ignored";
+        else if (item === winner) item.disposition = "used";
+        else if (familyKey(item.resolution) === winnerKey) item.disposition = "corroborates";
+        else { item.disposition = "conflict"; lowerConflictCount += 1; }
+      });
+      trace.push({
+        title: "Check conflicts",
+        detail: lowerConflictCount ? `${lowerConflictCount} lower-ranked signal${lowerConflictCount === 1 ? " disagrees" : "s disagree"}; winner is retained with a warning.` : "All recognized lower-ranked signals agree with the winner.",
+        badge: lowerConflictCount ? "warning" : "corroborates",
+        badgeText: lowerConflictCount ? "Warning" : "Agrees"
+      });
+      trace.push({
+        title: "Resolve family",
+        detail: `${familyLabel(winner.resolution)} selected from ${winner.signal}: ${winner.raw}`,
+        badge: "used",
+        badgeText: highestPriority >= 90 ? "High confidence" : highestPriority >= 60 ? "Medium confidence" : "Low confidence"
+      });
+
+      if (winner.resolution.family === "krea2") {
+        trace.push({
+          title: "Check replay capability",
+          detail: "Recognized as Krea 2, but this source uses a LoRA/custom Comfy path and Story Vault's current hosted Krea contract cannot replay it faithfully.",
+          badge: "unsupported",
+          badgeText: "Unsupported"
+        });
+        return {
+          status: "unsupported",
+          reason: "Krea 2 was resolved confidently, but its custom Comfy LoRA workflow is not representable by the current hosted Krea recipe.",
+          resolution: winner.resolution,
+          confidence: highestPriority >= 90 ? "high" : highestPriority >= 60 ? "medium" : "low",
+          evidence, trace,
+          output: { kind: "unsupported-replay", family: "krea2", imageId: String(payload.remixOfId || payload.remixOf?.id || "unknown"), reason: "Source depends on a Krea 2 LoRA/custom Comfy workflow." }
+        };
+      }
+
+      const output = buildSupportedInput(payload, winner.resolution, winner);
+      if (!output) {
+        trace.push({ title: "Check replay capability", detail: "Family is known, but a required checkpoint AIR is missing.", badge: "unsupported", badgeText: "Unsupported" });
+        return { status: "unsupported", reason: "Family resolved, but the required checkpoint identifier is missing.", resolution: winner.resolution, evidence, trace, output: null };
+      }
+
+      trace.push({
+        title: "Build family contract",
+        detail: winner.resolution.family === "zimage" ? `Emit ecosystem \"zImage\" and model \"${winner.resolution.variant}\"; the checkpoint AIR is evidence, not the model field.` : "Emit the family-specific orchestration shape.",
+        badge: "supported",
+        badgeText: "Replayable"
+      });
+      return {
+        status: "supported",
+        reason: `${familyLabel(winner.resolution)} resolved and mapped to a supported orchestration contract.`,
+        resolution: winner.resolution,
+        confidence: highestPriority >= 90 ? "high" : highestPriority >= 60 ? "medium" : "low",
+        evidence, trace, output
+      };
+    }
+
+    function currentMapperSimulation(payload) {
+      const resources = Array.isArray(payload.resources) ? payload.resources : [];
+      const primary = resources.find(resource => String(resource?.model?.type ?? "").toLowerCase() === "checkpoint") || resources[0];
+      const checkpoint = String(primary?.model?.type ?? "").toLowerCase() === "checkpoint";
+      const baseMap = {
+        anima: "urn:air:anima:checkpoint:civitai:2458426@2945208",
+        illustrious: "urn:air:sdxl:checkpoint:civitai:795765@889818",
+        "sd 1.5": "urn:air:sd1:checkpoint:civitai:4384@128713",
+        autismmix_pony: "urn:air:sdxl:checkpoint:civitai:288584@324619"
+      };
+      const modelAir = checkpoint ? (primary?.air || "") : (baseMap[String(resources[0]?.baseModel || "").toLowerCase()] || "");
+      const parsed = parseAir(modelAir);
+      const ecosystem = parsed?.ecosystem === "anima" ? "anima" : (parsed?.ecosystem === "sd1" || parsed?.ecosystem === "sd15") ? "sd1" : "sdxl";
+      return {
+        engine: "sdcpp",
+        ecosystem,
+        operation: "createImage",
+        model: ecosystem === "anima" ? undefined : modelAir,
+        diffuserModel: ecosystem === "anima" ? (modelAir || undefined) : undefined
+      };
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>\"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[character]);
+    }
+
+    function displayJson(value) {
+      return JSON.stringify(value, (key, item) => item === undefined ? undefined : item, 2);
+    }
+
+    function renderStatus(result) {
+      const banner = document.getElementById("status-banner");
+      const supported = result.status === "supported";
+      const icon = supported ? "✓" : result.status === "unsupported" ? "!" : "×";
+      const heading = supported ? "Supported and replayable" : result.status === "unsupported" ? "Resolved, but replay is unsupported" : "Resolution stopped";
+      banner.className = `status-banner ${result.status}`;
+      banner.innerHTML = `<span class="status-icon" aria-hidden="true">${icon}</span><div><strong>${heading}</strong><p>${escapeHtml(result.reason)}</p></div>`;
+    }
+
+    function renderTrace(result) {
+      const list = document.getElementById("trace-list");
+      list.innerHTML = result.trace.map(item => `<li><div><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.detail)}</p></div><span class="badge ${item.badge}">${escapeHtml(item.badgeText)}</span></li>`).join("");
+    }
+
+    function renderEvidence(result) {
+      const body = document.getElementById("evidence-body");
+      if (!result.evidence.length) {
+        body.innerHTML = '<tr><td colspan="5">No evidence fields were present.</td></tr>';
+        return;
+      }
+      body.innerHTML = result.evidence.map(item => `<tr>
+        <td>${item.priority}</td>
+        <td><strong>${escapeHtml(item.signal)}</strong>${item.resourceIndex === undefined ? "" : `<br><small>resource[${item.resourceIndex}]</small>`}</td>
+        <td class="raw">${escapeHtml(item.raw)}</td>
+        <td>${escapeHtml(familyLabel(item.resolution))}</td>
+        <td><span class="badge ${item.disposition}">${escapeHtml(item.disposition)}</span></td>
+      </tr>`).join("");
+    }
+
+    function renderComparison(payload, result) {
+      const current = currentMapperSimulation(payload);
+      const currentWrong = current.model === "" || (result.resolution?.family === "zimage" && current.ecosystem === "sdxl");
+      document.getElementById("current-summary").textContent = currentWrong
+        ? "The current mapper either leaves the model empty or misclassifies the family as SDXL."
+        : "The current mapper happened to produce a plausible legacy-family shape.";
+      document.getElementById("current-output").textContent = displayJson(current);
+
+      const badge = document.getElementById("proposed-badge");
+      badge.className = `badge ${result.status}`;
+      badge.textContent = result.status === "supported" ? "Supported" : result.status === "unsupported" ? "Unsupported replay" : "Stopped safely";
+      document.getElementById("proposed-summary").textContent = result.status === "supported"
+        ? "The output uses the resolved family's actual orchestration contract. Prompt fields are represented by a placeholder because they were intentionally omitted from these fixtures."
+        : "The resolver returns a typed failure instead of a broken image model.";
+      document.getElementById("proposed-output").textContent = displayJson(result.output || { kind: "unresolved-import", reason: result.reason });
+    }
+
+    function resolveEditor() {
+      let payload;
+      try {
+        payload = JSON.parse(jsonInput.value);
+      } catch (error) {
+        const result = {
+          status: "invalid",
+          reason: `Invalid JSON: ${error.message}`,
+          evidence: [],
+          trace: [{ title: "Parse JSON", detail: error.message, badge: "invalid", badgeText: "Invalid" }],
+          output: null
+        };
+        renderStatus(result);
+        renderTrace(result);
+        renderEvidence(result);
+        document.getElementById("current-summary").textContent = "Current behavior cannot be simulated until the JSON parses.";
+        document.getElementById("current-output").textContent = "{}";
+        document.getElementById("proposed-summary").textContent = "Correct the JSON and resolve again.";
+        document.getElementById("proposed-output").textContent = displayJson({ kind: "invalid-json", reason: result.reason });
+        return;
+      }
+      const result = resolvePayload(payload);
+      renderStatus(result);
+      renderTrace(result);
+      renderEvidence(result);
+      renderComparison(payload, result);
+    }
+
+    function loadFixture(key) {
+      const fixture = fixtures[key];
+      jsonInput.value = JSON.stringify(fixture.payload, null, 2);
+      sourceNote.innerHTML = `<strong>${escapeHtml(fixture.label)}.</strong> Source: <a href="${fixture.source}" target="_blank" rel="noreferrer">Civitai generation-data JSON</a>.`;
+      resolveEditor();
+    }
+
+    fixtureSelect.addEventListener("change", () => loadFixture(fixtureSelect.value));
+    document.getElementById("reset-button").addEventListener("click", () => loadFixture(fixtureSelect.value));
+    document.getElementById("resolve-button").addEventListener("click", resolveEditor);
+
+    document.getElementById("remove-checkpoint").addEventListener("click", () => {
+      try {
+        const payload = JSON.parse(jsonInput.value);
+        payload.resources = (payload.resources || []).filter(resource => String(resource?.model?.type ?? "").toLowerCase() !== "checkpoint");
+        jsonInput.value = JSON.stringify(payload, null, 2);
+        resolveEditor();
+      } catch { resolveEditor(); }
+    });
+
+    document.getElementById("create-conflict").addEventListener("click", () => {
+      try {
+        const payload = JSON.parse(jsonInput.value);
+        if (payload.resources?.[0]) payload.resources[0].baseModel = "Krea 2";
+        else payload.resources = [{ baseModel: "Krea 2", model: { type: "LORA" } }];
+        jsonInput.value = JSON.stringify(payload, null, 2);
+        resolveEditor();
+      } catch { resolveEditor(); }
+    });
+
+    document.getElementById("strip-evidence").addEventListener("click", () => {
+      try {
+        const payload = JSON.parse(jsonInput.value);
+        (payload.resources || []).forEach(resource => { delete resource.air; delete resource.baseModel; });
+        if (payload.params) delete payload.params.Model;
+        jsonInput.value = JSON.stringify(payload, null, 2);
+        resolveEditor();
+      } catch { resolveEditor(); }
+    });
+
+    const requestedFixture = new URLSearchParams(window.location.search).get("fixture");
+    if (requestedFixture && fixtures[requestedFixture]) fixtureSelect.value = requestedFixture;
+    loadFixture(fixtureSelect.value);
+    const requestedMutation = new URLSearchParams(window.location.search).get("mutation");
+    if (requestedMutation === "remove-checkpoint") document.getElementById("remove-checkpoint").click();
+    if (requestedMutation === "conflict") document.getElementById("create-conflict").click();
+    if (requestedMutation === "strip-evidence") document.getElementById("strip-evidence").click();
+  </script>
+</body>
+</html>

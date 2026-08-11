@@ -1,5 +1,5 @@
 import "./ChatMessage.styled.ts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 import { MessageItem, MessageContentWrapper } from "./ChatMessage.styled.ts";
 import { Stack, Button, Loader, Group, Divider } from "@mantine/core";
@@ -10,10 +10,13 @@ import {
   RiRefreshLine,
   RiChat3Line,
   RiImageEditLine,
+  RiErrorWarningLine,
+  RiForbidLine,
 } from "react-icons/ri";
 import { MessageOverlay } from "./ChatEntryButtons/MessageOverlay.tsx";
 import { RegenerateFeedbackModal } from "./ChatEntryButtons/RegenerateFeedbackModal.tsx";
 import { ViewPromptModal } from "./ChatEntryButtons/ViewPromptModal.tsx";
+import { ViewImageErrorModal } from "./ChatEntryButtons/ViewImageErrorModal.tsx";
 import { DeleteConfirmModal } from "./ChatEntryButtons/DeleteConfirmModal.tsx";
 import { InspectMessageButton } from "./ChatEntryButtons/InspectMessageButton.tsx";
 import { Theme } from "../../../../../components/Theme";
@@ -22,6 +25,11 @@ import type {
 } from "../../../../../services/CQRS/UserChatProjection.ts";
 import { useCivitJob } from "../../../../Images/hooks/useCivitJob.ts";
 import { d } from "../../../../../services/Dependencies.ts";
+import type { WorkflowSchedulingDetails } from "../../../../Images/services/CivitJob.ts";
+import {
+  formatExpectedCompletion,
+  formatQueuePosition,
+} from "./CivitJobSchedulingFormatters.ts";
 
 const MessageContent = styled.div`
   width: 100%;
@@ -74,6 +82,41 @@ const StatusLine = styled.span`
   line-height: 1.4;
 `;
 
+const SchedulingLine = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  gap: 0.3rem 0.8rem;
+  justify-content: center;
+  line-height: 1.35;
+  width: 100%;
+`;
+
+const PriorityDetail = styled.span`
+  color: rgba(208, 191, 255, 0.9);
+`;
+
+const QueuePositionDetail = styled.span`
+  color: rgba(116, 192, 252, 0.9);
+`;
+
+const ExpectedCompletionDetail = styled.span`
+  color: rgba(99, 230, 190, 0.9);
+`;
+
+const FailedImageIcon = styled.div`
+  color: rgba(255, 107, 107, 0.82);
+  height: 120px;
+  position: relative;
+  width: 120px;
+`;
+
+const FailedStatusText = styled.span`
+  color: #ffa8a8;
+  font-size: 1rem;
+  font-weight: 800;
+`;
+
 const CostLine = styled.div`
   color: rgba(255, 255, 255, 0.68);
   font-size: 0.75rem;
@@ -113,7 +156,7 @@ const LoadingImageIndicator = ({
     >
       <RiImageLine size={120} />
       <Group gap="sm" justify="center" wrap="wrap">
-        <Loader size="sm" color="white" />
+        <Loader size="sm" color="white" aria-label="Generating image" />
         {children ?? <span>Generating...</span>}
       </Group>
       {characterName && (
@@ -142,6 +185,35 @@ const LoadingImageIndicator = ({
   </LoadingBubble>
 );
 
+const FailedImageIndicator = () => (
+  <LoadingBubble>
+    <Group
+      gap="md"
+      justify="center"
+      style={{
+        flexDirection: "column",
+        padding: "40px 20px",
+        width: "100%",
+      }}
+    >
+      <FailedImageIcon role="img" aria-label="No image generated">
+        <RiImageLine size={120} aria-hidden />
+        <RiForbidLine
+          size={56}
+          aria-hidden
+          style={{
+            bottom: 4,
+            color: "#ff6b6b",
+            position: "absolute",
+            right: 2,
+          }}
+        />
+      </FailedImageIcon>
+      <FailedStatusText>Failed</FailedStatusText>
+    </Group>
+  </LoadingBubble>
+);
+
 interface CivitJobMessageProps {
   chatId: string;
   message: CivitWorkflowChatMessage;
@@ -157,6 +229,7 @@ export const CivitJobMessage = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteType, setDeleteType] = useState<"single" | "fromHere">("single");
   const [showPromptModal, setShowPromptModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedback, setFeedback] = useState("");
 
@@ -192,14 +265,20 @@ export const CivitJobMessage = ({
     message.data?.prompt || message.data?.sceneDescription
   );
   const generatedModelName = message.data?.modelName ?? message.data?.modelId;
-
-  const getErrorMessage = () => {
-    if (isPendingGeneration) return null;
-    if (jobStatus?.error) return "Failed to load photo";
-    if (!photoBase64 && !shouldShowLoadingIndicator())
-      return "No photo available";
-    return null;
-  };
+  const hasGenerationFailed =
+    message.data?.generationStatus === "failed" || !!jobStatus?.error;
+  const generationError = hasGenerationFailed
+    ? (message.data?.generationStatus === "failed"
+        ? message.data.generationError
+        : jobStatus?.error) || "Image generation failed."
+    : undefined;
+  const unavailableImageMessage =
+    !isPendingGeneration &&
+    !hasGenerationFailed &&
+    !photoBase64 &&
+    !shouldShowLoadingIndicator()
+      ? "No photo available"
+      : undefined;
 
   const handleDeleteClick = (type: "single" | "fromHere") => {
     setDeleteType(type);
@@ -242,24 +321,38 @@ export const CivitJobMessage = ({
             <LoadingImageIndicator
               modelName={message.data?.modelName}
               characterName={message.data?.characterName}
-            />
+            >
+              <span>Generating...</span>
+              <WorkflowSchedulingStatus details={jobStatus?.scheduling} />
+            </LoadingImageIndicator>
           )}
-          {isPendingGeneration && (
+          {hasGenerationFailed && <FailedImageIndicator />}
+          {isPendingGeneration && !hasGenerationFailed && (
             <GenerationStatusPreview
               status={message.data.generationStatus}
               characterName={message.data.characterName}
-              error={message.data.generationError}
               modelName={message.data.modelName}
             />
           )}
-          {getErrorMessage() && (
-            <LoadingBubble>{getErrorMessage()}</LoadingBubble>
+          {unavailableImageMessage && (
+            <LoadingBubble>{unavailableImageMessage}</LoadingBubble>
           )}
           {photoBase64 && <StoryPhoto src={photoBase64} alt="Story Photo" />}
         </MessageContent>
 
         <MessageOverlay show={showButtons} onBackdropClick={toggle}>
           <Stack gap="xs" justify="center">
+            {hasGenerationFailed && generationError && (
+              <Button
+                size="xs"
+                variant="light"
+                color="red"
+                leftSection={<RiErrorWarningLine size={14} />}
+                onClick={() => setShowErrorModal(true)}
+              >
+                View Error
+              </Button>
+            )}
             {canViewPrompt && (
               <Button
                 size="xs"
@@ -370,6 +463,12 @@ export const CivitJobMessage = ({
           onClose={() => setShowPromptModal(false)}
         />
 
+        <ViewImageErrorModal
+          opened={showErrorModal}
+          error={generationError ?? "Image generation failed."}
+          onClose={() => setShowErrorModal(false)}
+        />
+
         <RegenerateFeedbackModal
           opened={showFeedbackModal}
           feedback={feedback}
@@ -382,28 +481,69 @@ export const CivitJobMessage = ({
   );
 };
 
+export const WorkflowSchedulingStatus = ({
+  details,
+}: {
+  details?: WorkflowSchedulingDetails;
+}) => {
+  const [now, setNow] = useState(() => Date.now());
+  const expectedCompleteAt = details?.expectedCompleteAt;
+
+  useEffect(() => {
+    if (!expectedCompleteAt) return;
+
+    const expectedCompleteAtMs = Date.parse(expectedCompleteAt);
+    if (!Number.isFinite(expectedCompleteAtMs)) return;
+
+    let timer: number | undefined;
+    const updateNow = () => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+      if (currentTime < expectedCompleteAtMs) {
+        timer = window.setTimeout(updateNow, 1000);
+      }
+    };
+
+    timer = window.setTimeout(updateNow, 1000);
+    return () => window.clearTimeout(timer);
+  }, [expectedCompleteAt]);
+
+  if (!details) return null;
+
+  const expectedCompletion = formatExpectedCompletion(expectedCompleteAt, now);
+  return (
+    <SchedulingLine aria-label="Generation scheduling details">
+      {details.priority && (
+        <PriorityDetail>
+          {formatPriority(details.priority)} priority
+        </PriorityDetail>
+      )}
+      {details.precedingJobs !== undefined && (
+        <QueuePositionDetail>
+          {formatQueuePosition(details.precedingJobs)}
+        </QueuePositionDetail>
+      )}
+      {expectedCompletion && (
+        <ExpectedCompletionDetail>
+          {expectedCompletion}
+        </ExpectedCompletionDetail>
+      )}
+    </SchedulingLine>
+  );
+};
+
+const formatPriority = (priority: string): string =>
+  `${priority.charAt(0).toUpperCase()}${priority.slice(1)}`;
+
 const GenerationStatusPreview = ({
   status,
   characterName,
-  error,
   modelName,
 }: {
   status?: string;
   characterName?: string;
-  error?: string;
   modelName?: string;
 }) => {
-  if (status === "failed") {
-    return (
-      <LoadingImageIndicator modelName={modelName} characterName={characterName}>
-        <StatusLine>
-          <StatusHighlight $color="#ff6b6b">Failed</StatusHighlight>
-          <StatusText>{error ? `: ${error}` : "to generate image"}</StatusText>
-        </StatusLine>
-      </LoadingImageIndicator>
-    );
-  }
-
   if (status === "missing-character-description") {
     return (
       <LoadingImageIndicator modelName={modelName} characterName={characterName}>

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import {
   Badge,
   Button,
+  Collapse,
   Divider,
   Group,
   Stack,
@@ -8,8 +10,14 @@ import {
   Text,
   Textarea,
   TextInput,
+  UnstyledButton,
 } from "@mantine/core";
-import { RiDeleteBinLine, RiImageLine } from "react-icons/ri";
+import {
+  RiArrowDownSLine,
+  RiArrowUpSLine,
+  RiDeleteBinLine,
+  RiImageLine,
+} from "react-icons/ri";
 import { GenerateButton } from "../../AI/components/GenerateButton";
 import { Theme } from "../../../components/Theme";
 import type {
@@ -58,6 +66,8 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   onPreferredImageChange,
   onDelete,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(!character.name.trim());
+  const displayName = character.name.trim() || "Unnamed Character";
   const active = isCharacterActive(character);
   const tracked = isCharacterTracked(character);
   const autoAcceptChanges = doesCharacterAutoAcceptChanges(character);
@@ -65,145 +75,164 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   const hasBlankSheetItem = character.sheetItems.some((item) => !item.trim());
 
   return (
-    <Stack gap="md">
-      <Group justify="space-between" align="flex-end">
-        <TextInput
-          label="Character Name"
-          placeholder="e.g., Sarah Chen"
-          value={character.name}
-          style={{ flex: 1 }}
-          onChange={(event) => onNameChange(event.currentTarget.value)}
-          styles={characterInputStyles}
-        />
-        <Stack gap={2} align="flex-end">
-          <Switch
-            label="Active"
-            checked={active}
-            onChange={(event) =>
-              onActivityOverrideChange(event.currentTarget.checked)
-            }
-          />
-          {character.activeOverride !== undefined ? (
-            <Button
-              size="compact-xs"
-              variant="subtle"
-              onClick={onUseAutomaticActivity}
-            >
-              Use automatic activity
-            </Button>
-          ) : (
-            <Text size="xs" c="dimmed">
-              Automatically detected
-            </Text>
-          )}
-        </Stack>
-      </Group>
-
-      <Group gap="xs">
-        <Badge color={active ? "green" : "gray"} variant="light">
-          {active ? "Active" : "Inactive"}
-        </Badge>
-        {character.activeOverride !== undefined && (
-          <Badge color="indigo" variant="light">
-            User override
-          </Badge>
-        )}
-        {!tracked && (
-          <Badge color="orange" variant="light">
-            Not AI tracked
-          </Badge>
-        )}
-        {tracked && autoAcceptChanges && (
-          <Badge color="teal" variant="light">
-            Auto-accepts AI changes
-          </Badge>
-        )}
-        {character.sheetSource && (
-          <Badge color="gray" variant="outline">
-            Sheet last updated{" "}
-            {character.sheetSource === "auto" ? "by AI" : "manually"}
-          </Badge>
-        )}
-      </Group>
-
-      <Group align="flex-start" gap="xl">
-        <Switch
-          label="Track with AI"
-          description="Allow AI activity detection, sheet updates, and generated context."
-          checked={tracked}
-          onChange={(event) =>
-            onTrackingChange(event.currentTarget.checked)
-          }
-        />
-        <Switch
-          label="Automatically accept AI changes"
-          description="Apply this existing character's AI updates without review."
-          checked={autoAcceptChanges}
-          disabled={!tracked}
-          onChange={(event) =>
-            onAutoAcceptChangesChange(event.currentTarget.checked)
-          }
-        />
-      </Group>
-
-      <CharacterSheetItemsEditor
-        items={character.sheetItems}
-        onAdd={onAddSheetItem}
-        onChange={onSheetItemsChange}
-      />
-
-      <Group align="center">
-        <GenerateButton
-          size="xs"
-          loading={isGenerating}
-          disabled={
-            hasPendingProposal ||
-            !tracked ||
-            !character.name.trim() ||
-            hasBlankSheetItem ||
-            isGenerating
-          }
-          onClick={onGenerateOrUpdate}
-        >
-          {hasSheet ? "Update sheet" : "Generate sheet"}
-        </GenerateButton>
-        {hasPendingProposal && (
-          <Text size="xs" c="dimmed">
-            Review the pending character proposal from the chat control first.
-          </Text>
-        )}
-        {generationStatus && (
-          <Text size="xs" c="dimmed">
-            {generationStatus}
-          </Text>
-        )}
-      </Group>
-
-      <Textarea
-        label="Character Appearance"
-        description="Stable physical traits used for image generation. Exclude actions, poses, scenes, and temporary clothing."
-        placeholder="Face shape, eye color, hair, age, build, distinctive features..."
-        value={character.appearance}
-        minRows={3}
-        autosize
-        onChange={(event) => onAppearanceChange(event.currentTarget.value)}
-        styles={characterInputStyles}
-      />
-
-      <PreferredImageControl
-        preferredImage={character.preferredImage}
-        onChange={onPreferredImageChange}
-      />
-
-      <Button
-        variant="outline"
-        color="red"
-        leftSection={<RiDeleteBinLine />}
-        style={{ alignSelf: "flex-start" }}
-        onClick={onDelete}
+    <Stack gap="sm">
+      <UnstyledButton
+        aria-expanded={isExpanded}
+        aria-label={`${isExpanded ? "Collapse" : "Expand"} character ${displayName}`}
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+        style={{ width: "100%" }}
       >
-        Delete Character
-      </Button>
+        <Group justify="space-between" wrap="nowrap" py="xs">
+          <Group gap="xs" wrap="nowrap">
+            {isExpanded ? <RiArrowUpSLine /> : <RiArrowDownSLine />}
+            <Text fw={600}>{displayName}</Text>
+          </Group>
+          <Badge color={active ? "green" : "gray"} variant="light">
+            {active ? "Active" : "Inactive"}
+          </Badge>
+        </Group>
+      </UnstyledButton>
+
+      <Collapse in={isExpanded} transitionDuration={0}>
+        <Stack gap="md" pb="sm">
+          <Group justify="space-between" align="flex-end">
+            <TextInput
+              label="Character Name"
+              placeholder="e.g., Sarah Chen"
+              value={character.name}
+              style={{ flex: 1 }}
+              onChange={(event) => onNameChange(event.currentTarget.value)}
+              styles={characterInputStyles}
+            />
+            <Stack gap={2} align="flex-end">
+              <Switch
+                label="Active"
+                checked={active}
+                onChange={(event) =>
+                  onActivityOverrideChange(event.currentTarget.checked)
+                }
+              />
+              {character.activeOverride !== undefined ? (
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  onClick={onUseAutomaticActivity}
+                >
+                  Use automatic activity
+                </Button>
+              ) : (
+                <Text size="xs" c="dimmed">
+                  Automatically detected
+                </Text>
+              )}
+            </Stack>
+          </Group>
+
+          <Group gap="xs">
+            {character.activeOverride !== undefined && (
+              <Badge color="indigo" variant="light">
+                User override
+              </Badge>
+            )}
+            {!tracked && (
+              <Badge color="orange" variant="light">
+                Not AI tracked
+              </Badge>
+            )}
+            {tracked && autoAcceptChanges && (
+              <Badge color="teal" variant="light">
+                Auto-accepts AI changes
+              </Badge>
+            )}
+            {character.sheetSource && (
+              <Badge color="gray" variant="outline">
+                Sheet last updated{" "}
+                {character.sheetSource === "auto" ? "by AI" : "manually"}
+              </Badge>
+            )}
+          </Group>
+
+          <Group align="flex-start" gap="xl">
+            <Switch
+              label="Track with AI"
+              description="Allow AI activity detection, sheet updates, and generated context."
+              checked={tracked}
+              onChange={(event) =>
+                onTrackingChange(event.currentTarget.checked)
+              }
+            />
+            <Switch
+              label="Automatically accept AI changes"
+              description="Apply this existing character's AI updates without review."
+              checked={autoAcceptChanges}
+              disabled={!tracked}
+              onChange={(event) =>
+                onAutoAcceptChangesChange(event.currentTarget.checked)
+              }
+            />
+          </Group>
+
+          <Textarea
+            label="Character Appearance"
+            description="Stable physical traits used for image generation. Exclude actions, poses, scenes, and temporary clothing."
+            placeholder="Face shape, eye color, hair, age, build, distinctive features..."
+            value={character.appearance}
+            minRows={3}
+            autosize
+            onChange={(event) => onAppearanceChange(event.currentTarget.value)}
+            styles={characterInputStyles}
+          />
+
+          <PreferredImageControl
+            preferredImage={character.preferredImage}
+            onChange={onPreferredImageChange}
+          />
+
+          <CharacterSheetItemsEditor
+            items={character.sheetItems}
+            onAdd={onAddSheetItem}
+            onChange={onSheetItemsChange}
+          />
+
+          <Group align="center">
+            <GenerateButton
+              size="xs"
+              loading={isGenerating}
+              disabled={
+                hasPendingProposal ||
+                !tracked ||
+                !character.name.trim() ||
+                hasBlankSheetItem ||
+                isGenerating
+              }
+              onClick={onGenerateOrUpdate}
+            >
+              {hasSheet ? "Update sheet" : "Generate sheet"}
+            </GenerateButton>
+            {hasPendingProposal && (
+              <Text size="xs" c="dimmed">
+                Review the pending character proposal from the chat control
+                first.
+              </Text>
+            )}
+            {generationStatus && (
+              <Text size="xs" c="dimmed">
+                {generationStatus}
+              </Text>
+            )}
+          </Group>
+
+          <Button
+            variant="outline"
+            color="red"
+            leftSection={<RiDeleteBinLine />}
+            style={{ alignSelf: "flex-start" }}
+            onClick={onDelete}
+          >
+            Delete Character
+          </Button>
+        </Stack>
+      </Collapse>
 
       <Divider my="sm" style={{ borderColor: Theme.character.border }} />
     </Stack>

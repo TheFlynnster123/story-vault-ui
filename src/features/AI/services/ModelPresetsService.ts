@@ -43,6 +43,43 @@ export class ModelPresetsService {
     modelId,
     requestSettings,
   }: SaveModelPreset): Promise<ModelPreset> {
+    const { savedPreset, updatedPresets } = await this.upsertPreset({
+      id,
+      name,
+      modelId,
+      requestSettings,
+    });
+
+    await this.blob().save({ presets: updatedPresets });
+    return savedPreset;
+  }
+
+  async savePresetDebounced({
+    id,
+    name,
+    modelId,
+    requestSettings,
+  }: SaveModelPreset): Promise<ModelPreset> {
+    const { savedPreset, updatedPresets } = await this.upsertPreset({
+      id,
+      name,
+      modelId,
+      requestSettings,
+    });
+
+    this.blob().saveDebounced({ presets: updatedPresets });
+    return savedPreset;
+  }
+
+  private async upsertPreset({
+    id,
+    name,
+    modelId,
+    requestSettings,
+  }: SaveModelPreset): Promise<{
+    savedPreset: ModelPreset;
+    updatedPresets: ModelPreset[];
+  }> {
     const trimmedName = name.trim();
     if (!trimmedName) {
       throw new Error("Preset name is required");
@@ -68,8 +105,7 @@ export class ModelPresetsService {
         )
       : [...presets, savedPreset];
 
-    await this.blob().save({ presets: updatedPresets });
-    return savedPreset;
+    return { savedPreset, updatedPresets };
   }
 
   async deletePreset(presetId: string): Promise<void> {

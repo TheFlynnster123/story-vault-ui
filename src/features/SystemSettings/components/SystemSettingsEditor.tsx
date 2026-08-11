@@ -175,6 +175,7 @@ export const SystemSettingsEditor: React.FC = () => {
             repetition_penalty: requestSettings?.repetition_penalty,
             seed: requestSettings?.seed,
             retry: requestSettings?.retry,
+            provider: requestSettings?.provider,
           })
         }
         withDescription

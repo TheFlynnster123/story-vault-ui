@@ -77,6 +77,8 @@ The scheduler mapping step in `SaveImageModel` translates human-readable names (
 
 **`BaseModelMapper`** (`modelGeneration/BaseModelMapper.ts`): maps CivitAI base model strings (e.g. `"illustrious"`, `"sd 1.5"`) to AIR URNs for use as the `model` field.
 
+**`ImageGenerationTargetResolver`** (`modelGeneration/ImageGenerationTargetResolver.ts`): resolves structured CivitAI metadata into a supported generation contract. The explicit adapter set is SD1, SDXL (including Pony and Illustrious checkpoints), Anima, Z-Image, and Krea 2. Checkpoint-backed SD models retain their AIR, Z-Image maps to its stable `turbo` or `base` selector, and Krea metadata maps to its native hosted FAL recipe with warnings for unsupported source features. Unknown families fail explicitly instead of silently falling back to SDXL.
+
 **`ImageModelMapper`** (`modelGeneration/ImageModelMapper.ts`): creates an `ImageModel` from a `GeneratedImage` (a CivitAI API response). Used by `ModelFromImage` to reverse-engineer a model from an existing generated image.
 
 ---
@@ -316,6 +318,7 @@ Images/
       BaseModelMapper.ts
       GeneratedImage.ts
       GeneratedImageQuery.ts
+      ImageGenerationTargetResolver.ts
       ImageIdExtractor.ts
       ImageModel.ts
       ImageModelFromGeneratedImageService.ts

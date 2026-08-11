@@ -9,6 +9,7 @@ describe("ModelPresetsService", () => {
   let stored: ModelPresets;
   const get = vi.fn();
   const save = vi.fn();
+  const saveDebounced = vi.fn();
   const subscribe = vi.fn();
 
   beforeEach(() => {
@@ -17,10 +18,14 @@ describe("ModelPresetsService", () => {
     save.mockImplementation(async (value: ModelPresets) => {
       stored = value;
     });
+    saveDebounced.mockImplementation((value: ModelPresets) => {
+      stored = value;
+    });
     subscribe.mockReturnValue(vi.fn());
     vi.spyOn(d, "ModelPresetsManagedBlob").mockReturnValue({
       get,
       save,
+      saveDebounced,
       subscribe,
     } as unknown as ReturnType<typeof d.ModelPresetsManagedBlob>);
     vi.spyOn(Date, "now").mockReturnValue(1_000);
@@ -84,6 +89,26 @@ describe("ModelPresetsService", () => {
     expect(updated.updatedAtUtcMs).toBe(2_000);
     expect(updated.name).toBe("Final");
     expect(updated.modelId).toBe("second/model");
+  });
+
+  it("updates a preset through the managed blob debounce", async () => {
+    const service = createService();
+    const original = await service.savePreset({
+      name: "Draft",
+      modelId: "first/model",
+    });
+    vi.mocked(Date.now).mockReturnValue(2_000);
+
+    const updated = await service.savePresetDebounced({
+      id: original.id,
+      name: "Final",
+      modelId: "second/model",
+      requestSettings: { top_p: 0.9 },
+    });
+
+    expect(saveDebounced).toHaveBeenCalledWith({ presets: [updated] });
+    expect(await service.getPresets()).toEqual([updated]);
+    expect(updated.createdAtUtcMs).toBe(1_000);
   });
 
   it("deletes a preset from the managed blob", async () => {

@@ -95,6 +95,45 @@ describe("CivitJobOrchestrator", () => {
       });
     });
 
+    it("should include image scheduling details while workflow is in progress", async () => {
+      mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
+      mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue({
+        ...createInProgressWorkflow(),
+        status: "scheduled",
+        steps: [
+          {
+            name: "$0",
+            $type: "imageGen",
+            status: "scheduled",
+            priority: "low",
+            jobs: [
+              {
+                status: "scheduled",
+                queuePosition: {
+                  support: "available",
+                  precedingJobs: 4,
+                  startAt: "2026-08-10T23:57:44.0404687Z",
+                  completeAt: "2026-08-10T23:58:38.2777568Z",
+                },
+              },
+            ],
+          },
+        ],
+      } satisfies Workflow);
+
+      const orchestrator = new CivitJobOrchestrator();
+      const result = await orchestrator.getOrPollPhoto(chatId, jobId);
+
+      expect(result).toEqual({
+        isLoading: true,
+        scheduling: {
+          priority: "low",
+          precedingJobs: 4,
+          expectedCompleteAt: "2026-08-10T23:58:38.2777568Z",
+        },
+      });
+    });
+
     it("should fall back to debit transaction cost when total is unavailable", async () => {
       mockPhotoStorageService.getStoredPhoto.mockResolvedValue(null);
       mockCivitOrchestrationAPI.getWorkflow.mockResolvedValue({

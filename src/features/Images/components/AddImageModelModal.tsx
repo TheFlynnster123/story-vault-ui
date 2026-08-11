@@ -14,6 +14,7 @@ import { RiAddLine, RiDownloadLine } from "react-icons/ri";
 import { d } from "../../../services/Dependencies";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
 import { v4 as uuidv4 } from "uuid";
+import { ImageModelImportError } from "../services/modelGeneration/ImageGenerationTargetResolver";
 
 interface AddImageModelModalProps {
   opened: boolean;
@@ -91,8 +92,12 @@ export const AddImageModelModal: React.FC<AddImageModelModalProps> = ({
           "Could not load a model from the provided image ID or URL.",
         );
       }
-    } catch {
-      setImportError("Failed to import model. Check the ID or URL and retry.");
+    } catch (error) {
+      setImportError(
+        error instanceof ImageModelImportError
+          ? error.message
+          : "Failed to import model. Check the ID or URL and retry.",
+      );
     } finally {
       setImporting(false);
     }

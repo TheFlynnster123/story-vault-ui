@@ -10,6 +10,7 @@ import { useChatInputExpansion } from "../../hooks/useChatInputExpansion";
 import { useLongPress } from "../../hooks/useLongPress";
 import { SendGuidanceModal } from "./SendGuidanceModal";
 import { MissingCharacterDescriptionModal } from "./MissingCharacterDescriptionModal.tsx";
+import type { PreferredImage } from "../../../Characters/services/CharacterDescription";
 
 export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
   const navigate = useNavigate();
@@ -66,9 +67,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
     }
   };
 
-  const handleGenerateMissingDescription = async () => {
+  const handleGenerateMissingDescription = async (
+    preferredImage: PreferredImage | undefined,
+  ) => {
     await runCharacterDescriptionResolution(async () => {
-      await resolveMissingCharacterDescription("generate");
+      await resolveMissingCharacterDescription("generate", preferredImage);
     });
   };
 
@@ -128,6 +131,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ chatId }) => {
 
       <MissingCharacterDescriptionModal
         isOpen={!!missingCharacterName}
+        chatId={chatId}
         characterName={missingCharacterName ?? ""}
         isWorking={isResolvingCharacterDescription}
         onGenerate={handleGenerateMissingDescription}

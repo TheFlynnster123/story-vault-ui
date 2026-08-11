@@ -35,6 +35,9 @@ export type ImageModel = {
    */
   trainedWords?: string[];
 
+  /** Details from the source image that could not be represented by its hosted recipe. */
+  importWarnings?: string[];
+
   /**
    * Optional CivitAI Orchestration workflow step priority.
    * If unset, the API uses its default scheduling priority.

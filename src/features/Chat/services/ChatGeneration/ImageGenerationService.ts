@@ -2,6 +2,7 @@ import { d } from "../../../../services/Dependencies";
 import {
   getCharacterAppearance,
   isCharacterTracked,
+  type PreferredImage,
 } from "../../../Characters/services/CharacterDescription";
 import { GenerationOrchestrator } from "./GenerationOrchestrator";
 import { createInstanceCache } from "../../../../services/Utils/getOrCreateInstance";
@@ -67,6 +68,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
   async resolveMissingCharacterDescription(
     characterName: string,
     decision: MissingCharacterDescriptionDecision,
+    preferredImage?: PreferredImage,
   ): Promise<GenerateImageResult> {
     const pending = this.PendingMissingCharacter;
     this.PendingMissingCharacter = undefined;
@@ -77,6 +79,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
         pending.messageId,
         characterName,
         decision,
+        preferredImage,
       );
     }
 
@@ -107,6 +110,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
         const saved = await this.saveGeneratedCharacterDescription(
           characterName,
           generatedDescription,
+          preferredImage,
         );
 
         await this.runImageGenerationSteps(
@@ -117,6 +121,8 @@ export class ImageGenerationService extends GenerationOrchestrator {
                 description: generatedDescription,
               }
             : noCharacterContext(),
+          undefined,
+          { preferredImage },
         );
 
         return { type: "started" };
@@ -203,13 +209,15 @@ export class ImageGenerationService extends GenerationOrchestrator {
   private async runImageGenerationSteps(
     characterContext: CharacterContext,
     messageId?: string,
+    modelChoice?: { preferredImage: PreferredImage | undefined },
   ): Promise<void> {
     this.setStatus("Generating image prompt...");
     const messageList = await d
       .LLMMessageContextService(this.chatId)
       .buildContext(IMAGE_PROMPT_CONTEXT_SELECTION);
-    const preferredImage =
-      await this.resolveCharacterPreferredImage(characterContext);
+    const preferredImage = modelChoice
+      ? modelChoice.preferredImage
+      : await this.resolveCharacterPreferredImage(characterContext);
     const selectedModelName = messageId
       ? await this.resolveSelectedModelName(preferredImage)
       : undefined;
@@ -382,6 +390,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
     messageId: string,
     characterName: string,
     decision: MissingCharacterDescriptionDecision,
+    preferredImage?: PreferredImage,
   ): Promise<GenerateImageResult> {
     if (decision === "manual") {
       await this.createBlankCharacterRecord(characterName);
@@ -408,6 +417,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
     const saved = await this.saveGeneratedCharacterDescription(
       characterName,
       generatedDescription,
+      preferredImage,
     );
 
     await this.runImageGenerationSteps(
@@ -419,6 +429,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
           }
         : noCharacterContext(),
       messageId,
+      { preferredImage },
     );
 
     return { type: "started" };
@@ -658,6 +669,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
   private saveGeneratedCharacterDescription = async (
     characterName: string,
     description: string,
+    preferredImage: PreferredImage | undefined,
   ): Promise<boolean> => {
     const characterService = d.CharacterDescriptionsService(this.chatId);
     const existing = await characterService.findByName(characterName);
@@ -669,6 +681,7 @@ export class ImageGenerationService extends GenerationOrchestrator {
 
     await characterService.updateCharacter(character.id, {
       appearance: description,
+      preferredImage,
     });
     return true;
   };

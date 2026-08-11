@@ -200,7 +200,10 @@ describe("useChatGeneration", () => {
       let returned!: string;
       await act(async () => {
         returned =
-          await result.current.resolveMissingCharacterDescription("generate");
+          await result.current.resolveMissingCharacterDescription("generate", {
+            id: "portrait-model",
+            source: "system",
+          });
       });
 
       // Modal is already closed before the slow generation completes
@@ -210,7 +213,10 @@ describe("useChatGeneration", () => {
       // Service was invoked with correct args
       expect(
         mockImageGeneration.resolveMissingCharacterDescription,
-      ).toHaveBeenCalledWith("Sarah Chen", "generate");
+      ).toHaveBeenCalledWith("Sarah Chen", "generate", {
+        id: "portrait-model",
+        source: "system",
+      });
 
       // Resolve the background work so the promise doesn't stay dangling
       resolveGeneration();

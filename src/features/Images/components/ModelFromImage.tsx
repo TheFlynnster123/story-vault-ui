@@ -7,6 +7,7 @@ import {
 } from "react-icons/ri";
 import { d } from "../../../services/Dependencies";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import { ImageModelImportError } from "../services/modelGeneration/ImageGenerationTargetResolver";
 
 interface ModelFromImageProps {
   onModelLoaded: (model: ImageModel) => void;
@@ -48,7 +49,9 @@ export const ModelFromImage: React.FC<ModelFromImageProps> = ({
         e,
       );
       setError(
-        "Failed to load model. Please check the URL or ID and try again.",
+        e instanceof ImageModelImportError
+          ? e.message
+          : "Failed to load model. Please check the URL or ID and try again.",
       );
     } finally {
       setIsLoading(false);

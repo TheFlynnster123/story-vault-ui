@@ -2,6 +2,30 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "../../../../testing";
 import { MissingCharacterDescriptionModal } from "./MissingCharacterDescriptionModal";
 
+vi.mock("../../../Images/components/CharacterImageModelModal", () => ({
+  CharacterImageModelModal: ({
+    opened,
+    noSelectionLabel,
+    onSelect,
+  }: {
+    opened: boolean;
+    noSelectionLabel: string;
+    onSelect: (
+      selection: { id: string; source: "system" } | undefined,
+    ) => void;
+  }) =>
+    opened ? (
+      <div>
+        <button onClick={() => onSelect(undefined)}>{noSelectionLabel}</button>
+        <button
+          onClick={() => onSelect({ id: "portrait-model", source: "system" })}
+        >
+          Portrait Model
+        </button>
+      </div>
+    ) : null,
+}));
+
 describe("MissingCharacterDescriptionModal", () => {
   const renderModal = (isOpen: boolean) => {
     const onGenerate = vi.fn();
@@ -12,6 +36,7 @@ describe("MissingCharacterDescriptionModal", () => {
     render(
       <MissingCharacterDescriptionModal
         isOpen={isOpen}
+        chatId="chat-1"
         characterName="Sarah Chen"
         onGenerate={onGenerate}
         onCreateManually={onCreateManually}
@@ -43,13 +68,38 @@ describe("MissingCharacterDescriptionModal", () => {
     expect(screen.getByText("Skip for now")).toBeInTheDocument();
   });
 
-  it("calls onGenerate when generate option is clicked", async () => {
+  it("asks for an image model before generating", async () => {
     const user = userEvent.setup();
     const { onGenerate } = renderModal(true);
 
     await user.click(screen.getByText("Generate Appearance"));
 
-    expect(onGenerate).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("System default")).toBeInTheDocument();
+    expect(screen.getByText("Portrait Model")).toBeInTheDocument();
+    expect(onGenerate).not.toHaveBeenCalled();
+  });
+
+  it("generates with the system default when no model is specified", async () => {
+    const user = userEvent.setup();
+    const { onGenerate } = renderModal(true);
+
+    await user.click(screen.getByText("Generate Appearance"));
+    await user.click(screen.getByText("System default"));
+
+    expect(onGenerate).toHaveBeenCalledWith(undefined);
+  });
+
+  it("generates with the selected image model", async () => {
+    const user = userEvent.setup();
+    const { onGenerate } = renderModal(true);
+
+    await user.click(screen.getByText("Generate Appearance"));
+    await user.click(screen.getByText("Portrait Model"));
+
+    expect(onGenerate).toHaveBeenCalledWith({
+      id: "portrait-model",
+      source: "system",
+    });
   });
 
   it("calls onCreateManually when manual option is clicked", async () => {

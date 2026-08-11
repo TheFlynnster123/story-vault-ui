@@ -43,12 +43,13 @@ export const AdditionalModelsComponent: React.FC<
   };
 
   const handleRemoveNetwork = (urn: string) => {
-    const { [urn]: _, ...rest } = imageModel.input.loras || {};
+    const remainingLoras = { ...imageModel.input.loras };
+    delete remainingLoras[urn];
     onChange({
       ...imageModel,
       input: {
         ...imageModel.input,
-        loras: rest,
+        loras: remainingLoras,
       },
     });
   };
@@ -73,6 +74,8 @@ export const AdditionalModelsComponent: React.FC<
   };
 
   const loras = imageModel.input.loras || {};
+
+  if (imageModel.input.engine === "fal") return null;
 
   return (
     <Paper withBorder p="md" mt="md">

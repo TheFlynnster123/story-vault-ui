@@ -499,6 +499,110 @@ describe("ImageModelMapper", () => {
       expect(result.clipSkip).toBeUndefined();
     });
 
+    it("maps Z-Image Turbo imports to the stable recipe selector", () => {
+      const checkpoint = {
+        ...createMockCheckpointResource(),
+        air: "urn:air:zimageturbo:diffusionmodel:civitai:2168935@2442439",
+        baseModel: "ZImageTurbo",
+      };
+      const lora = {
+        ...createMockLoraResource(),
+        air: "urn:air:zimageturbo:lora:civitai:2234266@2515203",
+        baseModel: "ZImageTurbo",
+        strength: 1.5,
+      };
+      const params = {
+        ...createMockGeneratedImageParams(),
+        steps: undefined,
+        cfgScale: undefined,
+        aspectRatio: { value: "2:3", width: 1280, height: 1920 },
+      };
+
+      const result = mapper.mapToImageGenInput(
+        createMockGeneratedImage([checkpoint, lora], params),
+      );
+
+      expect(result.ecosystem).toBe("zImage");
+      expect(result.model).toBe("turbo");
+      expect(result.steps).toBe(9);
+      expect(result.cfgScale).toBe(1);
+      expect(result.schedule).toBe("simple");
+      expect(result.width).toBe(1280);
+      expect(result.height).toBe(1920);
+      expect(result.loras).toEqual({ [lora.air]: 1.5 });
+    });
+
+    it("maps Z-Image Base imports to the base recipe selector", () => {
+      const checkpoint = {
+        ...createMockCheckpointResource(),
+        air: "urn:air:zimagebase:checkpoint:civitai:2342797@2635223",
+        baseModel: "ZImageBase",
+      };
+      const params = {
+        ...createMockGeneratedImageParams(),
+        Model: "z-image-base-bf16",
+      };
+
+      const result = mapper.mapToImageGenInput(
+        createMockGeneratedImage([checkpoint], params),
+      );
+
+      expect(result.ecosystem).toBe("zImage");
+      expect(result.model).toBe("base");
+    });
+
+    it("maps Krea 2 imports to the hosted FAL recipe", () => {
+      const lora = {
+        ...createMockLoraResource(),
+        air: "urn:air:krea2:lora:civitai:2268008@3084537",
+        baseModel: "Krea 2",
+      };
+      const params = {
+        ...createMockGeneratedImageParams(),
+        Model: "krea2_turbo_fp8_scaled",
+        aspectRatio: { value: "1080:1920", width: 1080, height: 1920 },
+      };
+
+      const result = mapper.mapToImageGenInput(
+        createMockGeneratedImage([lora], params),
+      );
+
+      expect(result).toEqual({
+        engine: "fal",
+        ecosystem: "krea2",
+        operation: "createImage",
+        model: "krea2",
+        prompt: "beautiful landscape",
+        size: "medium",
+        aspectRatio: "9:16",
+        creativity: "medium",
+        seed: undefined,
+      });
+    });
+
+    it("records omitted Krea source features as import warnings", () => {
+      const lora = {
+        ...createMockLoraResource(),
+        air: "urn:air:krea2:lora:civitai:2268008@3084537",
+        baseModel: "Krea 2",
+      };
+      const params = {
+        ...createMockGeneratedImageParams(),
+        Model: "krea2_turbo_fp8_scaled",
+      };
+
+      const result = mapper.FromGeneratedImage(
+        createMockGeneratedImage([lora], params),
+      );
+
+      expect(result.importWarnings).toEqual([
+        "The source Krea 2 LoRA is not supported by the hosted Krea recipe and was omitted.",
+        "Krea 2 does not support negative prompts, so the source negative prompt was omitted.",
+        "The source checkpoint and sampler settings were converted to hosted Krea 2 defaults.",
+      ]);
+      expect(result.trainedWords).toEqual([]);
+    });
+
     it("should handle different sampler types", () => {
       SchedulerMapper.mockReturnValue({ sampleMethod: "euler_a" });
       const params = {
@@ -544,12 +648,12 @@ describe("ImageModelMapper", () => {
       );
     });
 
-    it("should handle missing primary resource", () => {
+    it("should reject metadata without a usable model resource", () => {
       const generatedImage = createMockGeneratedImage([]);
 
-      const result = mapper.mapToImageGenInput(generatedImage);
-
-      expect(result.model).toBe("");
+      expect(() => mapper.mapToImageGenInput(generatedImage)).toThrow(
+        /does not identify a checkpoint/,
+      );
     });
 
     it("should include loras in mapping", () => {
@@ -741,20 +845,16 @@ describe("ImageModelMapper", () => {
       });
     });
 
-    it("should handle minimal GeneratedImage", () => {
+    it("should reject a GeneratedImage without model resources", () => {
       const generatedImage = createMockGeneratedImage(
         [],
         createMockGeneratedImageParams(),
         11111,
       );
 
-      const result = mapper.FromGeneratedImage(generatedImage);
-
-      expect(result.id).toEqual(expect.any(String));
-      expect(result.name).toBe("Generated Model 11111");
-      expect(result.input.model).toBe("");
-      expect(result.input.loras).toEqual({});
-      expect(result.trainedWords).toEqual([]);
+      expect(() => mapper.FromGeneratedImage(generatedImage)).toThrow(
+        /does not identify a checkpoint/,
+      );
     });
 
     it("should not include checkpoint in loras (case-insensitive)", () => {

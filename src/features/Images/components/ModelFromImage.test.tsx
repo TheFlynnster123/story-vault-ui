@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../../testing";
 import { ModelFromImage } from "./ModelFromImage";
 import type { ImageModel } from "../services/modelGeneration/ImageModel";
+import { ImageModelImportError } from "../services/modelGeneration/ImageGenerationTargetResolver";
 
 const mockGenerateImageModel = vi.fn();
 
@@ -167,6 +168,21 @@ describe("ModelFromImage", () => {
         screen.getByText("Failed to load model from the provided image ID"),
       ).toBeDefined();
     });
+  });
+
+  it("shows the reason when the source ecosystem is unsupported", async () => {
+    const reason =
+      "Story Vault does not yet have a generation adapter for the detected model family: flux1.";
+    mockGenerateImageModel.mockRejectedValue(new ImageModelImportError(reason));
+
+    render(<ModelFromImage onModelLoaded={mockOnModelLoaded} />);
+
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "135352590" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Load Model/ }));
+
+    await waitFor(() => expect(screen.getByText(reason)).toBeDefined());
   });
 
   it("should handle Enter key press", async () => {

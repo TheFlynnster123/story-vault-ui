@@ -47,6 +47,7 @@ export const resolveVariant = (
         ? o.appendImageGenerationPromptToBase
         : parent.appendImageGenerationPromptToBase,
     trainedWords: "trainedWords" in o ? o.trainedWords : parent.trainedWords,
+    importWarnings: parent.importWarnings,
     priority: "priority" in o ? o.priority : parent.priority,
   };
 };
