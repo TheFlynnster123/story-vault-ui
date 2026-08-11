@@ -26,11 +26,23 @@ export interface CharacterImageModelModalProps {
   chatId: string;
   currentSelection?: PreferredImage;
   onSelect: (selection: PreferredImage | undefined) => void;
+  title?: string;
+  noSelectionLabel?: string;
+  noSelectionDescription?: string;
 }
 
 export const CharacterImageModelModal: React.FC<
   CharacterImageModelModalProps
-> = ({ opened, onClose, chatId, currentSelection, onSelect }) => {
+> = ({
+  opened,
+  onClose,
+  chatId,
+  currentSelection,
+  onSelect,
+  title = "Preferred Image Model",
+  noSelectionLabel = "No preference",
+  noSelectionDescription = "Use the chat-level selection",
+}) => {
   const [search, setSearch] = useState("");
   const { chatImageVariants } = useChatImageVariants(chatId);
   const { userImageModels } = useImageModels();
@@ -76,7 +88,7 @@ export const CharacterImageModelModal: React.FC<
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Preferred Image Model"
+      title={title}
       size="md"
     >
       <Stack>
@@ -97,8 +109,8 @@ export const CharacterImageModelModal: React.FC<
           <Stack gap="xs">
             {/* No preference option */}
             <ModelRow
-              label="No preference"
-              sublabel="Use the chat-level selection"
+              label={noSelectionLabel}
+              sublabel={noSelectionDescription}
               isSelected={!currentSelection}
               onClick={() => handleSelect(undefined)}
             />

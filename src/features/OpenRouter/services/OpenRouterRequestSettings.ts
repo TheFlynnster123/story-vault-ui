@@ -27,6 +27,10 @@ export interface RequestRetrySettings {
   retryDelaySeconds?: number;
 }
 
+export interface OpenRouterProviderSelection {
+  only: string[];
+}
+
 export type OpenRouterAdvancedParameterKey =
   (typeof OPENROUTER_ADVANCED_PARAMETER_KEYS)[number];
 
@@ -41,6 +45,7 @@ export interface OpenRouterRequestSettings {
   repetition_penalty?: number;
   seed?: number;
   retry?: RequestRetrySettings;
+  provider?: OpenRouterProviderSelection;
 }
 
 export const supportsParameter = (
@@ -69,6 +74,11 @@ export const filterSettingsForModel = (
   if (settings.retry) {
     filtered.retry = settings.retry;
   }
+  if (settings.provider?.only.length) {
+    filtered.provider = {
+      only: [...new Set(settings.provider.only.filter(Boolean))],
+    };
+  }
 
   return Object.keys(filtered).length > 0 ? filtered : undefined;
 };
@@ -78,6 +88,7 @@ export const hasOpenRouterRequestSettings = (
 ): boolean =>
   !!settings &&
   (settings.retry !== undefined ||
+    settings.provider !== undefined ||
     OPENROUTER_ADVANCED_PARAMETER_KEYS.some(
       (key) => settings[key] !== undefined,
     ));

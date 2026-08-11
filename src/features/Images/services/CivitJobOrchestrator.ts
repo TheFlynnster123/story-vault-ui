@@ -1,4 +1,9 @@
-import type { CivitJobResult, Workflow, WorkflowCost } from "./CivitJob";
+import type {
+  CivitJobResult,
+  Workflow,
+  WorkflowCost,
+  WorkflowSchedulingDetails,
+} from "./CivitJob";
 import { IN_PROGRESS_WORKFLOW_STATUSES } from "./CivitJob";
 import { d } from "../../../services/Dependencies";
 
@@ -18,7 +23,9 @@ export class CivitJobOrchestrator {
       const workflow = await d.CivitOrchestrationAPI().getWorkflow(workflowId);
       const cost = getWorkflowCost(workflow);
 
-      if (isInProgress(workflow)) return this.loadingResponse(cost);
+      if (isInProgress(workflow)) {
+        return this.loadingResponse(cost, getWorkflowScheduling(workflow));
+      }
 
       const imageUrl = getFirstImageUrl(workflow);
 
@@ -49,9 +56,13 @@ export class CivitJobOrchestrator {
     };
   }
 
-  private loadingResponse = (cost?: WorkflowCost): CivitJobResult => ({
+  private loadingResponse = (
+    cost?: WorkflowCost,
+    scheduling?: WorkflowSchedulingDetails,
+  ): CivitJobResult => ({
     isLoading: true,
     ...(cost ? { cost } : {}),
+    ...(scheduling ? { scheduling } : {}),
   });
 
   private storedPhotoResponse = (photoBase64: string): CivitJobResult => ({
@@ -121,3 +132,33 @@ export const getWorkflowCost = (
 
   return undefined;
 };
+
+export const getWorkflowScheduling = (
+  workflow: Workflow,
+): WorkflowSchedulingDetails | undefined => {
+  const imageStep =
+    workflow.steps?.find(
+      (step) =>
+        step.$type === "imageGen" &&
+        step.jobs?.some((job) => job.queuePosition),
+    ) ?? workflow.steps?.find((step) => step.$type === "imageGen");
+  if (!imageStep) return undefined;
+
+  const queuePosition = imageStep.jobs?.find(
+    (job) => job.queuePosition,
+  )?.queuePosition;
+  const scheduling: WorkflowSchedulingDetails = {
+    ...(imageStep.priority ? { priority: imageStep.priority } : {}),
+    ...(isNonNegativeNumber(queuePosition?.precedingJobs)
+      ? { precedingJobs: queuePosition.precedingJobs }
+      : {}),
+    ...(queuePosition?.completeAt
+      ? { expectedCompleteAt: queuePosition.completeAt }
+      : {}),
+  };
+
+  return Object.keys(scheduling).length > 0 ? scheduling : undefined;
+};
+
+const isNonNegativeNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0;

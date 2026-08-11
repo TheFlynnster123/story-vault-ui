@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Z-Image and Krea Import Routing Fix Plan</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #586176;
+      --paper: #f6f8fc;
+      --card: #ffffff;
+      --line: #ced5e2;
+      --navy: #263d6a;
+      --blue: #315fa8;
+      --blue-soft: #eaf1fb;
+      --green: #17664c;
+      --green-soft: #e8f5ef;
+      --amber: #8a5614;
+      --amber-soft: #fff3dc;
+      --red: #9a3434;
+      --red-soft: #fbecec;
+      --shadow: 0 12px 36px rgba(28, 45, 78, 0.09);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a { color: var(--blue); }
+    a:focus-visible { outline: 3px solid #e3a63a; outline-offset: 3px; border-radius: 4px; }
+
+    code {
+      padding: 0.12rem 0.34rem;
+      border: 1px solid #d9dfeb;
+      border-radius: 6px;
+      background: #f3f5f9;
+      color: #26344e;
+      font: 0.92em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .wrap {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 56px 0 34px;
+      background: #eaf0f9;
+      border-bottom: 1px solid #ccd5e4;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--blue);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 900px;
+      margin: 0;
+      color: #13213b;
+      font-size: clamp(2rem, 5vw, 4rem);
+      line-height: 1.04;
+      letter-spacing: -0.045em;
+    }
+
+    .lede {
+      max-width: 880px;
+      margin: 20px 0 0;
+      color: #3f4c65;
+      font-size: clamp(1.02rem, 2vw, 1.24rem);
+    }
+
+    .outcome {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: start;
+      max-width: 930px;
+      margin-top: 26px;
+      padding: 18px 20px;
+      border: 1px solid #b8c8e0;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.68);
+    }
+
+    .outcome strong { color: var(--navy); }
+    .outcome-mark {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--navy);
+      color: white;
+      font-weight: 900;
+    }
+
+    main { padding: 40px 0 72px; }
+    section { margin-top: 42px; }
+    section:first-child { margin-top: 0; }
+
+    h2 {
+      margin: 0 0 8px;
+      color: #172845;
+      font-size: clamp(1.45rem, 3vw, 2.1rem);
+      letter-spacing: -0.025em;
+    }
+
+    h3 { margin: 0; font-size: 1.04rem; }
+    .section-note { max-width: 780px; margin: 0 0 22px; color: var(--muted); }
+
+    .snapshot {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .panel,
+    .step,
+    .decision,
+    .verify-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .panel { padding: 24px; }
+    .panel.bad { border-top: 5px solid var(--red); }
+    .panel.good { border-top: 5px solid var(--green); }
+
+    .tag {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .bad .tag { background: var(--red-soft); color: var(--red); }
+    .good .tag { background: var(--green-soft); color: var(--green); }
+    .arrow {
+      display: grid;
+      place-items: center;
+      color: var(--blue);
+      font-size: 2rem;
+      font-weight: 900;
+    }
+
+    ul { margin: 14px 0 0; padding-left: 1.2rem; }
+    li + li { margin-top: 8px; }
+
+    .case-strip {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 1px;
+      overflow: hidden;
+      margin-top: 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--line);
+    }
+
+    .case-cell { padding: 16px 18px; background: var(--card); }
+    .case-cell small { display: block; color: var(--muted); font-weight: 700; }
+    .case-cell strong { display: block; margin-top: 4px; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      counter-reset: flow;
+    }
+
+    .step {
+      position: relative;
+      min-height: 210px;
+      padding: 20px;
+      counter-increment: flow;
+    }
+
+    .step::before {
+      content: counter(flow);
+      display: grid;
+      width: 32px;
+      height: 32px;
+      margin-bottom: 16px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--navy);
+      color: white;
+      font-weight: 900;
+    }
+
+    .step:not(:last-child)::after {
+      content: "›";
+      position: absolute;
+      top: 94px;
+      right: -13px;
+      z-index: 2;
+      color: var(--blue);
+      font-size: 1.7rem;
+      font-weight: 900;
+    }
+
+    .step p { margin: 9px 0 0; color: var(--muted); font-size: 0.94rem; }
+
+    .priority {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .priority span {
+      padding: 5px 9px;
+      border: 1px solid #c7d2e4;
+      border-radius: 8px;
+      background: var(--blue-soft);
+      color: #284c84;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .decision { padding: 20px; border-top: 5px solid var(--blue); }
+    .decision:nth-child(3) { border-top-color: var(--green); }
+    .decision:nth-child(4) { border-top-color: var(--amber); }
+    .decision .route { margin-top: 12px; color: var(--muted); }
+    .decision .result {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      font-size: 0.9rem;
+      font-weight: 750;
+    }
+
+    .code-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 12px 0 0;
+      padding: 18px;
+      border-radius: 12px;
+      background: #18243a;
+      color: #e9f0fa;
+      font: 0.83rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      tab-size: 2;
+    }
+
+    .sequence {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: build;
+    }
+
+    .sequence li {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      gap: 16px;
+      align-items: start;
+      margin: 0;
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+      counter-increment: build;
+    }
+
+    .sequence li::before {
+      content: counter(build);
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--navy);
+      color: white;
+      font-weight: 900;
+    }
+
+    .sequence p { margin: 5px 0 0; color: var(--muted); }
+    .files { max-width: 260px; color: #4b5870; font-size: 0.82rem; text-align: right; }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    th, td { padding: 14px 16px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #eaf0f9; color: #253d66; font-size: 0.82rem; letter-spacing: 0.035em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    .pass { color: var(--green); font-weight: 800; }
+    .warn { color: var(--amber); font-weight: 800; }
+
+    .callouts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .verify-card { padding: 22px; }
+    .verify-card.risk { background: var(--amber-soft); border-color: #e6c78c; }
+    .verify-card.done { background: var(--green-soft); border-color: #a7d0bd; }
+
+    footer {
+      padding: 24px 0 38px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 980px) {
+      .flow { grid-template-columns: 1fr 1fr; }
+      .step { min-height: 0; }
+      .step:not(:last-child)::after { display: none; }
+      .decision-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      header { padding-top: 40px; }
+      .snapshot, .code-grid, .callouts { grid-template-columns: 1fr; }
+      .snapshot .arrow { transform: rotate(90deg); }
+      .case-strip { grid-template-columns: 1fr; }
+      .flow, .decision-grid { grid-template-columns: 1fr; }
+      .sequence li { grid-template-columns: 40px 1fr; }
+      .files { grid-column: 2; max-width: none; text-align: left; }
+      .table-wrap { overflow-x: auto; }
+      table { min-width: 700px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <p class="eyebrow">Implementation plan · image model import</p>
+      <h1>Route model families explicitly—never manufacture an empty AIR</h1>
+      <p class="lede">Replace the current AIR-only assumption with a family resolver that produces valid SD, Anima, and Z-Image recipes, while clearly rejecting Krea/Comfy images that the hosted workflow cannot faithfully replay.</p>
+      <div class="outcome">
+        <span class="outcome-mark" aria-hidden="true">✓</span>
+        <div><strong>Desired outcome:</strong> importing an image either creates a valid, submit-ready model configuration or explains exactly why replay is unsupported. Blank model fields and silent SDXL fallback disappear.</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="diagnosis">
+      <h2 id="diagnosis">The behavior change</h2>
+      <p class="section-note">Image <code>135352590</code> is the forcing case: its only resource is a Krea 2 LoRA, even though the model title also mentions Z-Image.</p>
+      <div class="snapshot">
+        <article class="panel bad">
+          <span class="tag">Today</span>
+          <h3>AIR is treated as universal</h3>
+          <ul>
+            <li>No checkpoint → look up <code>baseModel</code> in a four-entry map.</li>
+            <li><code>Krea 2</code> misses the map → return <code>""</code>.</li>
+            <li>Unknown ecosystem → silently classify as <code>sdxl</code>.</li>
+            <li>UI displays a blank <strong>Model (AIR)</strong> and allows saving it.</li>
+          </ul>
+        </article>
+        <div class="arrow" aria-hidden="true">→</div>
+        <article class="panel good">
+          <span class="tag">Target</span>
+          <h3>Family and replay capability come first</h3>
+          <ul>
+            <li>Resolve the actual family from structured evidence.</li>
+            <li>Project it into that family’s orchestration contract.</li>
+            <li>Z-Image uses <code>model: "turbo" | "base"</code>, not an AIR.</li>
+            <li>Unsupported Krea/Comfy replay returns a precise message.</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="case-strip" aria-label="Example classification for image 135352590">
+        <div class="case-cell"><small>Evidence</small><strong><code>baseModel: "Krea 2"</code></strong></div>
+        <div class="case-cell"><small>Classification</small><strong>Krea 2 / local Comfy workflow</strong></div>
+        <div class="case-cell"><small>Importer result</small><strong>Unsupported replay—not blank AIR</strong></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="resolver">
+      <h2 id="resolver">New import flow</h2>
+      <p class="section-note">One resolver owns classification. Mappers and UI consume its explicit result rather than guessing independently.</p>
+      <div class="flow">
+        <article class="step">
+          <h3>Read raw metadata</h3>
+          <p>Keep resources, <code>baseModel</code>, AIR ecosystems, and the optional <code>params.Model</code> filename hint.</p>
+        </article>
+        <article class="step">
+          <h3>Resolve family</h3>
+          <p>Normalize aliases such as <code>zimageturbo</code>, <code>ZImageTurbo</code>, and <code>Krea 2</code>.</p>
+          <div class="priority" aria-label="Evidence priority">
+            <span>checkpoint AIR</span><span>base model</span><span>filename</span><span>LoRA AIR</span>
+          </div>
+        </article>
+        <article class="step">
+          <h3>Check replay support</h3>
+          <p>Separate “recognized family” from “can be reproduced by our current orchestration input.”</p>
+        </article>
+        <article class="step">
+          <h3>Build typed input</h3>
+          <p>Create a family-specific payload. Do not emit <code>model: ""</code> or incompatible fields.</p>
+        </article>
+        <article class="step">
+          <h3>Render honest UI</h3>
+          <p>Show an AIR field only for AIR-backed families, a variant selector for Z-Image, or an actionable import error.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="routes">
+      <h2 id="routes">Routing decisions</h2>
+      <p class="section-note">The same import service can support multiple contracts without pretending they all use checkpoint AIRs.</p>
+      <div class="decision-grid">
+        <article class="decision">
+          <h3>SD1 / SDXL</h3>
+          <p class="route">Checkpoint AIR remains the model identifier. Existing behavior is preserved.</p>
+          <p class="result"><code>engine: "sdcpp"</code><br><code>model: urn:air:…</code></p>
+        </article>
+        <article class="decision">
+          <h3>Anima</h3>
+          <p class="route">Use the built-in Anima ecosystem; retain an optional diffuser override only when truly present.</p>
+          <p class="result"><code>ecosystem: "anima"</code><br><code>diffuserModel?: urn:air:…</code></p>
+        </article>
+        <article class="decision">
+          <h3>Z-Image</h3>
+          <p class="route">Map AIR/base-family evidence to the built-in variant token. Preserve compatible LoRAs.</p>
+          <p class="result"><code>ecosystem: "zImage"</code><br><code>model: "turbo" | "base"</code></p>
+        </article>
+        <article class="decision">
+          <h3>Krea 2 / custom Comfy</h3>
+          <p class="route">Recognize it, but do not claim fidelity: current hosted Krea rejects LoRAs and uses a different FAL schema.</p>
+          <p class="result">Return <code>unsupported-replay</code> with detected family and reason.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="payloads">
+      <h2 id="payloads">The two important outputs</h2>
+      <div class="code-grid">
+        <article class="panel good">
+          <span class="tag">Supported</span>
+          <h3>Actual Z-Image Turbo import</h3>
+          <pre aria-label="Z-Image Turbo input example">{
+  engine: "sdcpp",
+  ecosystem: "zImage",
+  model: "turbo",
+  operation: "createImage",
+  cfgScale: 1,
+  steps: 9,
+  loras: {
+    "urn:air:zimageturbo:lora:…": 1
+  }
+}</pre>
+        </article>
+        <article class="panel bad">
+          <span class="tag">Explicitly unsupported</span>
+          <h3>Image 135352590</h3>
+          <pre aria-label="Unsupported Krea import result example">{
+  kind: "unsupported-replay",
+  family: "krea2",
+  imageId: "135352590",
+  reason: "The source uses a Krea 2 LoRA in
+           a custom Comfy workflow. The hosted
+           Krea recipe does not accept LoRAs."
+}</pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="sequence">
+      <h2 id="sequence">Implementation sequence</h2>
+      <p class="section-note">The order keeps each change testable and prevents the UI from getting ahead of the submission contract.</p>
+      <ol class="sequence">
+        <li>
+          <div><h3>Introduce a family resolution result</h3><p>Add a small, pure resolver returning SD, Anima, Z-Image variant, or unsupported replay. Give evidence precedence one searchable home.</p></div>
+          <div class="files"><code>modelGeneration/ModelFamilyResolver.ts</code></div>
+        </li>
+        <li>
+          <div><h3>Represent family-specific inputs</h3><p>Turn <code>ImageGenInput</code> into a discriminated contract keyed by <code>engine</code> and <code>ecosystem</code>. Include <code>zImage</code>; do not make Krea fields masquerade as SD fields.</p></div>
+          <div class="files"><code>api/ImageGenInput.ts</code><br><code>ImageModelVariant.ts</code></div>
+        </li>
+        <li>
+          <div><h3>Replace AIR-only mapping</h3><p>Map the resolver result directly. Remove the empty-string fallback and make incompatible or missing evidence an explicit import failure.</p></div>
+          <div class="files"><code>ImageModelMapper.ts</code><br><code>BaseModelMapper.ts</code></div>
+        </li>
+        <li>
+          <div><h3>Normalize Z-Image at submission</h3><p>Guarantee the exact Civitai shape: <code>sdcpp</code> + <code>zImage</code> + <code>turbo/base</code>. Retain Anima normalization and SD behavior.</p></div>
+          <div class="files"><code>CivitOrchestrationAPI.ts</code></div>
+        </li>
+        <li>
+          <div><h3>Make the editor family-aware</h3><p>Rename “Model (AIR)” only where it is an AIR. Show a Base/Turbo selector for Z-Image. Surface the unsupported Krea explanation in both import entry points.</p></div>
+          <div class="files"><code>ParametersComponent.tsx</code><br><code>ModelFromImage.tsx</code><br><code>AddImageModelModal.tsx</code></div>
+        </li>
+        <li>
+          <div><h3>Lock the behavior with fixtures</h3><p>Use captured payload shapes rather than live API calls. Assert both import result and final submitted JSON.</p></div>
+          <div class="files"><code>ImageModelMapper.test.ts</code><br><code>CivitOrchestrationAPI.test.ts</code><br><code>ModelFromImage.test.tsx</code></div>
+        </li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="validation">
+      <h2 id="validation">Regression matrix</h2>
+      <p class="section-note">Completion means exact payload semantics, not merely a non-empty text field.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Fixture</th><th>Expected classification</th><th>Expected result</th><th>Key assertion</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>135352590</code></td><td>Krea 2 / custom Comfy</td><td class="warn">Unsupported replay</td><td>No model is saved; UI explains LoRA incompatibility.</td></tr>
+            <tr><td>Z-Image checkpoint AIR</td><td>Z-Image Turbo</td><td class="pass">Valid import</td><td><code>ecosystem === "zImage"</code> and <code>model === "turbo"</code>.</td></tr>
+            <tr><td>Z-Image LoRA only</td><td>Z-Image Turbo inferred</td><td class="pass">Valid import</td><td>No blank model; LoRA remains in <code>loras</code>.</td></tr>
+            <tr><td>Z-Image Base evidence</td><td>Z-Image Base</td><td class="pass">Valid import</td><td><code>model === "base"</code> with base defaults preserved.</td></tr>
+            <tr><td>Existing Pony / Illustrious</td><td>SDXL</td><td class="pass">Unchanged</td><td>Checkpoint AIR and LoRAs submit exactly as before.</td></tr>
+            <tr><td>Existing Anima</td><td>Anima</td><td class="pass">Unchanged</td><td>No accidental <code>model</code> field in the submitted payload.</td></tr>
+            <tr><td>Conflicting resource families</td><td>Highest-confidence evidence</td><td class="warn">Deterministic result</td><td>Checkpoint AIR wins; unresolved conflicts fail explicitly.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="guardrails">
+      <h2 id="guardrails">Guardrails and completion criteria</h2>
+      <div class="callouts">
+        <article class="verify-card risk">
+          <h3>Keep this out of scope</h3>
+          <ul>
+            <li>Do not execute arbitrary embedded Comfy workflows from image metadata.</li>
+            <li>Do not “fix” Krea by dropping its LoRA without telling the user.</li>
+            <li>Do not add a fake Krea or Z-Image checkpoint AIR to <code>BaseModelMapper</code>.</li>
+          </ul>
+        </article>
+        <article class="verify-card done">
+          <h3>Done when</h3>
+          <ul>
+            <li>No supported import can produce <code>model: ""</code>.</li>
+            <li>Z-Image generates the documented orchestration payload.</li>
+            <li>Krea/Comfy limitations are visible before save or generation.</li>
+            <li>SD1, SDXL, Pony, Illustrious, and Anima tests remain green.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Plan based on the inspected Story Vault UI importer and Civitai’s current Z-Image and Krea orchestration contracts · 2026-08-10</div>
+  </footer>
+</body>
+</html>

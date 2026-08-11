@@ -41,6 +41,23 @@ const MOCK_MODELS = [
   },
 ];
 
+const MOCK_ENDPOINTS = [
+  {
+    name: "Azure | GPT-4",
+    provider_name: "Azure",
+    tag: "azure",
+    pricing: { prompt: "0.00000015", completion: "0.0000006" },
+    uptime_last_1d: 99.92,
+  },
+  {
+    name: "OpenAI | GPT-4",
+    provider_name: "OpenAI",
+    tag: "openai",
+    pricing: { prompt: "0.0000002", completion: "0.0000008" },
+    uptime_last_1d: 99.99,
+  },
+];
+
 type MockModel = (typeof MOCK_MODELS)[number];
 
 const createModelsResponse = (models: MockModel[]) => ({ data: models });
@@ -49,12 +66,45 @@ describe("ModelSelectorModal", () => {
   let queryClient: QueryClient;
   let storedPresets: ModelPreset[];
   let presetSubscribers: Array<() => void>;
+  let savePreset: ReturnType<
+    typeof vi.fn<[SaveModelPreset], Promise<ModelPreset>>
+  >;
+  let savePresetDebounced: ReturnType<
+    typeof vi.fn<[SaveModelPreset], Promise<ModelPreset>>
+  >;
 
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     storedPresets = [];
     presetSubscribers = [];
+    const upsertPreset = async ({
+      id,
+      name,
+      modelId,
+      requestSettings,
+    }: SaveModelPreset): Promise<ModelPreset> => {
+      const existingPreset = id
+        ? storedPresets.find((preset) => preset.id === id)
+        : undefined;
+      const preset: ModelPreset = {
+        id: existingPreset?.id ?? `preset-${storedPresets.length + 1}`,
+        name: name.trim(),
+        modelId,
+        requestSettings,
+        createdAtUtcMs: existingPreset?.createdAtUtcMs ?? Date.now(),
+        updatedAtUtcMs: Date.now(),
+      };
+      storedPresets = existingPreset
+        ? storedPresets.map((storedPreset) =>
+            storedPreset.id === preset.id ? preset : storedPreset,
+          )
+        : [preset, ...storedPresets];
+      presetSubscribers.forEach((subscriber) => subscriber());
+      return preset;
+    };
+    savePreset = vi.fn(upsertPreset);
+    savePresetDebounced = vi.fn(upsertPreset);
     vi.spyOn(d, "ModelPresetsService").mockReturnValue({
       getPresets: vi.fn(async () => [...storedPresets]),
       subscribe: vi.fn((callback: () => void) => {
@@ -65,21 +115,8 @@ describe("ModelSelectorModal", () => {
           );
         };
       }),
-      savePreset: vi.fn(
-        async ({ name, modelId, requestSettings }: SaveModelPreset) => {
-          const preset: ModelPreset = {
-            id: `preset-${storedPresets.length + 1}`,
-            name: name.trim(),
-            modelId,
-            requestSettings,
-            createdAtUtcMs: Date.now(),
-            updatedAtUtcMs: Date.now(),
-          };
-          storedPresets = [preset, ...storedPresets];
-          presetSubscribers.forEach((subscriber) => subscriber());
-          return preset;
-        },
-      ),
+      savePreset,
+      savePresetDebounced,
       deletePreset: vi.fn(async (presetId: string) => {
         storedPresets = storedPresets.filter(
           (preset) => preset.id !== presetId,
@@ -98,11 +135,13 @@ describe("ModelSelectorModal", () => {
   });
 
   const mockModels = (models: MockModel[] = MOCK_MODELS) => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(JSON.stringify(createModelsResponse(models)), {
-        status: 200,
-      }),
-    );
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.endsWith("/endpoints")
+        ? { data: { endpoints: MOCK_ENDPOINTS } }
+        : createModelsResponse(models);
+      return new Response(JSON.stringify(body), { status: 200 });
+    });
   };
 
   const renderModal = (
@@ -121,6 +160,13 @@ describe("ModelSelectorModal", () => {
     );
 
   const openBrowseModels = async () => {
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole("button", {
+          name: "Search and configure a model",
+        }),
+      );
     await screen.findByLabelText("Search models");
   };
 
@@ -136,17 +182,24 @@ describe("ModelSelectorModal", () => {
     expect(screen.queryByText("Configure setup")).not.toBeInTheDocument();
   });
 
-  it("opens on other models while keeping setups available", async () => {
+  it("opens with current, add, and saved preset sections in order", async () => {
     mockModels();
     renderModal();
 
     expect(await screen.findByText("Configure setup")).toBeInTheDocument();
-    expect(screen.getByLabelText("Search models")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Other models" })).toHaveAttribute(
-      "aria-current",
-      "page",
+    const currentSection = screen.getByText("Current model");
+    const addSection = screen.getByText("Add new model");
+    const presetsSection = screen.getByText("Saved presets");
+    expect(currentSection.compareDocumentPosition(addSection)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
     );
-    expect(screen.getByRole("button", { name: "My setups" })).toBeInTheDocument();
+    expect(addSection.compareDocumentPosition(presetsSection)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.queryByLabelText("Search models")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Search and configure a model" }),
+    ).toBeInTheDocument();
   });
 
   it("browses all available models", async () => {
@@ -209,7 +262,9 @@ describe("ModelSelectorModal", () => {
     const user = userEvent.setup();
     await openModel("GPT-4");
 
-    await user.click(screen.getByRole("button", { name: "Other models" }));
+    await user.click(
+      screen.getByRole("button", { name: "Back to model search" }),
+    );
 
     expect(screen.getByLabelText("Search models")).toBeInTheDocument();
     expect(onSelect).not.toHaveBeenCalled();
@@ -234,7 +289,7 @@ describe("ModelSelectorModal", () => {
     ).toContain("openai/gpt-4");
   });
 
-  it("defaults to other models and provides a highlighted current model", async () => {
+  it("highlights the current model at the top of the list", async () => {
     mockModels();
     renderModal({
       selectedModelId: "openai/gpt-4",
@@ -242,9 +297,8 @@ describe("ModelSelectorModal", () => {
     });
 
     expect(await screen.findByText("Configure setup")).toBeInTheDocument();
-    expect(screen.getByLabelText("Search models")).toBeInTheDocument();
     const currentModelButton = await screen.findByRole("button", {
-      name: "Current model: GPT-4",
+      name: /GPT-4.*Active/,
     });
     expect(currentModelButton).toHaveTextContent("Active");
     expect(screen.getAllByText("GPT-4")).toHaveLength(1);
@@ -261,12 +315,42 @@ describe("ModelSelectorModal", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Current model: GPT-4",
+        name: /GPT-4.*Active/,
       }),
     );
 
     expect(await screen.findByLabelText("Temperature")).toHaveValue("0.6");
-    expect(screen.getAllByText("Active")).toHaveLength(2);
+    expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("reopens an active preset as the saved preset", async () => {
+    storedPresets = [
+      {
+        id: "preset-1",
+        name: "Focused",
+        modelId: "openai/gpt-4",
+        requestSettings: { temperature: 0.2 },
+        createdAtUtcMs: 1,
+        updatedAtUtcMs: 1,
+      },
+    ];
+    mockModels();
+    renderModal({
+      selectedModelId: "openai/gpt-4",
+      selectedRequestSettings: { temperature: 0.2 },
+    });
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: /Focused.*Active/ }),
+    );
+
+    expect(await screen.findByLabelText("Editing saved preset")).toBeVisible();
+    expect(screen.getByLabelText("Preset name for GPT-4")).toHaveValue(
+      "Focused",
+    );
+    expect(screen.getByLabelText("Temperature")).toHaveValue("0.2");
+    expect(savePresetDebounced).not.toHaveBeenCalled();
   });
 
   it("edits supported settings and applies them together", async () => {
@@ -297,7 +381,7 @@ describe("ModelSelectorModal", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Current model: GPT-4",
+        name: /GPT-4.*Active/,
       }),
     );
     await user.click(
@@ -310,6 +394,45 @@ describe("ModelSelectorModal", () => {
     await user.click(screen.getByLabelText("Enable retries"));
     expect(screen.getByLabelText("Retry delay in seconds")).toHaveValue("0");
     expect(screen.getByLabelText("Number of Retries")).toHaveValue("1");
+  });
+
+  it("shows provider pricing and applies only selected providers", async () => {
+    mockModels();
+    const onSelect = vi.fn();
+    renderModal({ onSelect });
+    const user = userEvent.setup();
+    await openModel("GPT-4");
+
+    await user.click(
+      await screen.findByLabelText("Advanced settings for GPT-4"),
+    );
+    expect(screen.getByText("Enable all providers")).toBeInTheDocument();
+    expect(screen.queryByText("azure")).not.toBeInTheDocument();
+    const providerToggle = screen.getByLabelText("Provider routing for GPT-4");
+    await waitFor(() => expect(providerToggle).toBeEnabled());
+    await user.click(providerToggle);
+
+    expect(screen.getByText("Only selected providers")).toBeInTheDocument();
+    expect(screen.getByText("azure")).toBeInTheDocument();
+    expect(screen.getByText("openai")).toBeInTheDocument();
+    const bestInputPrice = screen.getByLabelText("Input price $0.15");
+    expect(bestInputPrice).toHaveAttribute("title", "Best available");
+    expect(bestInputPrice.style.background).not.toBe("");
+    expect(screen.getByLabelText("Input price $0.20")).toHaveAttribute(
+      "title",
+      "33.3% above best",
+    );
+    expect(screen.getByLabelText("Uptime 99.92%")).toHaveAttribute(
+      "title",
+      "0.1% below best",
+    );
+
+    await user.click(screen.getByLabelText("Enable provider openai"));
+    await user.click(screen.getByRole("button", { name: "Use this setup" }));
+
+    expect(onSelect).toHaveBeenCalledWith("openai/gpt-4", {
+      provider: { only: ["azure"] },
+    });
   });
 
   it("shows saved setups and applies one explicitly", async () => {
@@ -328,14 +451,93 @@ describe("ModelSelectorModal", () => {
     renderModal({ onSelect });
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole("button", { name: "My setups" }));
     await user.click(await screen.findByText("Focused"));
     expect(onSelect).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Save as new" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Update preset" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Editing saved preset")).toHaveStyle({
+      borderColor: "rgba(250, 176, 5, 0.72)",
+    });
+    expect(screen.getByText("Editing preset")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Use this setup" }));
 
     expect(onSelect).toHaveBeenCalledWith("openai/gpt-4", {
       temperature: 0.2,
     });
+    expect(savePreset).not.toHaveBeenCalled();
+    expect(savePresetDebounced).not.toHaveBeenCalled();
+  });
+
+  it("automatically updates a saved preset in place", async () => {
+    storedPresets = [
+      {
+        id: "preset-1",
+        name: "Focused",
+        modelId: "openai/gpt-4",
+        requestSettings: { temperature: 0.2 },
+        createdAtUtcMs: 1,
+        updatedAtUtcMs: 1,
+      },
+    ];
+    mockModels();
+    renderModal();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByText("Focused"));
+    await user.clear(screen.getByLabelText("Temperature"));
+    await user.type(screen.getByLabelText("Temperature"), "0.7");
+    await user.clear(screen.getByLabelText("Preset name for GPT-4"));
+    await user.type(
+      screen.getByLabelText("Preset name for GPT-4"),
+      "Focused revision",
+    );
+
+    await waitFor(() =>
+      expect(savePresetDebounced).toHaveBeenLastCalledWith({
+        id: "preset-1",
+        name: "Focused revision",
+        modelId: "openai/gpt-4",
+        requestSettings: { temperature: 0.7 },
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Back to model list" }),
+    );
+    expect(await screen.findByText("Focused revision")).toBeInTheDocument();
+    expect(screen.getByText("1 saved")).toBeInTheDocument();
+  });
+
+  it("saves a copy of an existing preset as new", async () => {
+    storedPresets = [
+      {
+        id: "preset-1",
+        name: "Focused",
+        modelId: "openai/gpt-4",
+        requestSettings: { temperature: 0.2 },
+        createdAtUtcMs: 1,
+        updatedAtUtcMs: 1,
+      },
+    ];
+    mockModels();
+    renderModal();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByText("Focused"));
+    await user.click(screen.getByRole("button", { name: "Save as new" }));
+
+    expect(savePreset).toHaveBeenCalledWith({
+      name: "Focused",
+      modelId: "openai/gpt-4",
+      requestSettings: { temperature: 0.2 },
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Back to model list" }),
+    );
+    expect(await screen.findByText("2 saved")).toBeInTheDocument();
   });
 
   it("saves the current draft as a reusable setup", async () => {
@@ -345,7 +547,7 @@ describe("ModelSelectorModal", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Current model: GPT-4",
+        name: /GPT-4.*Active/,
       }),
     );
     await user.type(
@@ -353,9 +555,14 @@ describe("ModelSelectorModal", () => {
       "Creative draft",
     );
     await user.click(screen.getByRole("button", { name: "Save as new" }));
-    await user.click(screen.getByRole("button", { name: "My setups" }));
+    await user.click(
+      screen.getByRole("button", { name: "Back to model list" }),
+    );
 
-    expect(await screen.findByText("Creative draft")).toBeInTheDocument();
+    expect(await screen.findByText("1 saved")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Creative draft.*Active/ }),
+    ).toBeInTheDocument();
   });
 
   it("deletes a saved setup from the list", async () => {
@@ -372,7 +579,6 @@ describe("ModelSelectorModal", () => {
     renderModal();
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole("button", { name: "My setups" }));
     await user.click(
       await screen.findByLabelText("Delete preset Temporary"),
     );
@@ -382,7 +588,7 @@ describe("ModelSelectorModal", () => {
     );
   });
 
-  it("shows recently used models as remembered choices", async () => {
+  it("keeps recently used models out of the saved preset list", async () => {
     localStorage.setItem(
       "story-vault-recent-models",
       JSON.stringify(["openai/gpt-4"]),
@@ -390,11 +596,10 @@ describe("ModelSelectorModal", () => {
     mockModels();
     renderModal();
 
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "My setups" }));
-    expect(await screen.findByText("Recently used")).toBeInTheDocument();
-    expect(screen.getByText("GPT-4")).toBeInTheDocument();
+    expect(await screen.findByText("Saved presets")).toBeInTheDocument();
+    expect(screen.getByText("No saved presets yet.")).toBeInTheDocument();
+    expect(screen.queryByText("Recently used")).not.toBeInTheDocument();
+    expect(screen.queryByText("GPT-4")).not.toBeInTheDocument();
   });
 
   it("closes from the modal close button", async () => {
@@ -413,6 +618,7 @@ describe("ModelSelectorModal", () => {
     renderModal();
 
     expect(await screen.findByText("Configure setup")).toBeInTheDocument();
+    await openBrowseModels();
     expect(await screen.findByText("0 models available")).toBeInTheDocument();
     expect(screen.getByLabelText("Search models")).toBeInTheDocument();
   });

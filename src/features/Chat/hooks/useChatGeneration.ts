@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect } from "react";
 import { d } from "../../../services/Dependencies";
 import { OpenRouterError } from "../../OpenRouter/services/OpenRouterError";
 import type { MissingCharacterDescriptionDecision } from "../services/ChatGeneration/ImageGenerationService";
+import type { PreferredImage } from "../../Characters/services/CharacterDescription";
 
 const isAlreadyHandled = (e: unknown): boolean => e instanceof OpenRouterError;
 
@@ -100,6 +101,7 @@ export const useChatGeneration = (chatId: string) => {
   const resolveMissingCharacterDescription = useCallback(
     async (
       decision: MissingCharacterDescriptionDecision,
+      preferredImage?: PreferredImage,
     ): Promise<"none" | "navigate-to-characters"> => {
       const activeMissingCharacterName =
         missingCharacterName ??
@@ -118,7 +120,7 @@ export const useChatGeneration = (chatId: string) => {
         // because orchestrate() keeps IsLoading = true throughout.
         setMissingCharacterName(null);
         imageGeneration
-          .resolveMissingCharacterDescription(name, decision)
+          .resolveMissingCharacterDescription(name, decision, preferredImage)
           .catch((e) => {
             if (!isAlreadyHandled(e)) {
               d.ErrorService().log(

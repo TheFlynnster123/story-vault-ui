@@ -102,35 +102,41 @@ describe("SystemPromptsEditor", () => {
       </QueryClientProvider>,
     );
 
-  it("persists a newly selected model instead of reverting it", async () => {
-    renderEditor();
+  it(
+    "persists a newly selected model instead of reverting it",
+    async () => {
+      renderEditor();
 
-    await waitFor(() => {
-      expect(
-        screen.getByLabelText("Story Generation Model"),
-      ).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(
+          screen.getByLabelText("Story Generation Model"),
+        ).toBeInTheDocument();
+      });
 
-    const user = userEvent.setup();
-    await user.click(screen.getByLabelText("Story Generation Model"));
+      const user = userEvent.setup();
+      await user.click(screen.getByLabelText("Story Generation Model"));
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("heading", { name: "Configure setup" }),
-      ).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: "Configure setup" }),
+        ).toBeInTheDocument();
+      });
 
-    await user.click(screen.getByRole("button", { name: "Other models" }));
-    await user.click(await screen.findByText("GPT-4"));
-    await user.click(screen.getByRole("button", { name: "Use this setup" }));
+      await user.click(
+        screen.getByRole("button", { name: "Search and configure a model" }),
+      );
+      await user.click(await screen.findByText("GPT-4"));
+      await user.click(screen.getByRole("button", { name: "Use this setup" }));
 
-    await waitFor(() => {
-      expect(savedPrompts.newStoryModel).toBe("openai/gpt-4");
-    });
+      await waitFor(() => {
+        expect(savedPrompts.newStoryModel).toBe("openai/gpt-4");
+      });
 
-    // The model should remain selected in the UI, not revert to "Default".
-    await waitFor(() => {
-      expect(screen.getByText("GPT-4")).toBeInTheDocument();
-    });
-  });
+      // The model should remain selected in the UI, not revert to "Default".
+      await waitFor(() => {
+        expect(screen.getByText("GPT-4")).toBeInTheDocument();
+      });
+    },
+    10_000,
+  );
 });

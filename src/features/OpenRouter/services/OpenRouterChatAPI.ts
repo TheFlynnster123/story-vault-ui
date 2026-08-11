@@ -28,12 +28,13 @@ interface UsageResponse {
   cost: number | null;
 }
 
-interface PostChatRequest extends OpenRouterRequestSettings {
+interface PostChatRequest extends Omit<OpenRouterRequestSettings, "provider"> {
   messages: CleanMessage[];
   model?: string;
   response_format?: OpenRouterResponseFormat;
   provider?: {
     require_parameters?: boolean;
+    only?: string[];
   };
   plugins?: Array<{ id: string; [key: string]: unknown }>;
 }
@@ -552,10 +553,18 @@ const applyModelOverride = (
     delete requestBody[key];
   }
 
-  Object.assign(
-    requestBody,
-    getProviderRequestSettings(requestSettingsOverride),
-  );
+  const requireParameters = requestBody.provider?.require_parameters;
+  delete requestBody.provider;
+
+  const overrideSettings = getProviderRequestSettings(requestSettingsOverride);
+  Object.assign(requestBody, overrideSettings);
+
+  if (requireParameters) {
+    requestBody.provider = {
+      ...overrideSettings.provider,
+      require_parameters: true,
+    };
+  }
 };
 
 const getProviderRequestSettings = (
@@ -577,6 +586,11 @@ const getProviderRequestSettings = (
     if (value !== undefined) {
       (providerSettings as Record<string, unknown>)[key] = value;
     }
+  }
+  if (settings.provider?.only.length) {
+    providerSettings.provider = {
+      only: settings.provider.only,
+    };
   }
   return providerSettings;
 };

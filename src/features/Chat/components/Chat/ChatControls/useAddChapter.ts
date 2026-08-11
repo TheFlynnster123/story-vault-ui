@@ -54,7 +54,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
         message: "You can keep chatting while the draft is generated.",
         position: "top-right",
         loading: true,
-        autoClose: false,
+        autoClose: 2000,
         withCloseButton: false,
       });
 
@@ -73,6 +73,7 @@ export const useAddChapter = ({ chatId }: UseAddChapterParams) => {
           contextSnapshot: undefined,
           status: "ready",
         });
+        setModalView("editor");
         notifications.update({
           id: notificationId,
           title: "Chapter draft ready",

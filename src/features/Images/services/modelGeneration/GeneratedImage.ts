@@ -3,7 +3,7 @@
  * This data comes from the endpoint https://civitai.com/api/generation/data?type=image&id=[number]
  */
 export type GeneratedImage = {
-  type: "image" | any;
+  type: string;
   remixOf: {
     id: number;
   };
@@ -44,11 +44,13 @@ export type GeneratedImageAspectRatio = {
 export type GeneratedImageParams = {
   prompt: string;
   negativePrompt: string;
-  cfgScale: number;
-  steps: number;
+  cfgScale?: number | null;
+  steps?: number | null;
   sampler?: string;
   width?: number;
   height?: number;
   aspectRatio?: string | GeneratedImageAspectRatio;
   clipSkip: number;
+  Model?: string;
+  seed?: number | null;
 };

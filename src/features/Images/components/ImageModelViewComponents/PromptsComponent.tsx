@@ -26,6 +26,7 @@ export const PromptsComponent: React.FC<PromptsComponentProps> = ({
 
   const prompt = imageModel.input.prompt ?? "";
   const trainedWords = imageModel.trainedWords ?? [];
+  const supportsNegativePrompt = imageModel.input.engine !== "fal";
 
   const isWordInPrompt = (word: string): boolean => {
     const words = prompt.split(",").map((w) => w.trim().toLowerCase());
@@ -59,13 +60,17 @@ export const PromptsComponent: React.FC<PromptsComponentProps> = ({
           onToggle={toggleTrainedWord}
         />
       )}
-      <Textarea
-        label="Negative Prompt"
-        value={imageModel.input.negativePrompt || ""}
-        onChange={(e) => handlePromptChange("negativePrompt", e.target.value)}
-        autosize
-        minRows={3}
-      />
+      {supportsNegativePrompt && (
+        <Textarea
+          label="Negative Prompt"
+          value={imageModel.input.negativePrompt || ""}
+          onChange={(e) =>
+            handlePromptChange("negativePrompt", e.target.value)
+          }
+          autosize
+          minRows={3}
+        />
+      )}
     </Stack>
   );
 };

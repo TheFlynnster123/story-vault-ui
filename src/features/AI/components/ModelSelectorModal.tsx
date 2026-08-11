@@ -20,20 +20,27 @@ import {
   ScrollArea,
   Select,
   Stack,
+  Switch,
   Text,
   TextInput,
   Title,
 } from "@mantine/core";
 import {
-  RiApps2Line,
+  RiAddLine,
+  RiArrowLeftLine,
   RiArrowRightSLine,
-  RiBookmarkLine,
   RiDeleteBinLine,
   RiRobot2Line,
 } from "react-icons/ri";
 import { d } from "../../../services/Dependencies";
-import { useOpenRouterModels } from "../../OpenRouter/hooks/useOpenRouterModels";
-import type { OpenRouterModel } from "../../OpenRouter/services/OpenRouterModelsAPI";
+import {
+  useOpenRouterModelEndpoints,
+  useOpenRouterModels,
+} from "../../OpenRouter/hooks/useOpenRouterModels";
+import type {
+  OpenRouterModel,
+  OpenRouterModelEndpoint,
+} from "../../OpenRouter/services/OpenRouterModelsAPI";
 import {
   OPENROUTER_REASONING_EFFORTS,
   type OpenRouterReasoningEffort,
@@ -45,7 +52,15 @@ import {
   supportsParameter,
   type OpenRouterRequestSettings,
 } from "../../OpenRouter/services/OpenRouterRequestSettings";
-import type { ModelPreset } from "../services/ModelPresetsService";
+import type {
+  ModelPreset,
+  SaveModelPreset,
+} from "../services/ModelPresetsService";
+import {
+  getRelativeMetricDifference,
+  getRelativeMetricHue,
+  type MetricPreference,
+} from "./RelativeMetricColor";
 
 const RECOMMENDED_MODEL_IDS = new Set([
   "deepseek/deepseek-v3.2-speciale",
@@ -149,16 +164,24 @@ const NUMBER_PARAMETERS = [
   },
 ] as const;
 
-type PickerView = "setups" | "browse";
-type PickerScreen = "list" | "detail";
+type PickerScreen = "home" | "browse" | "detail";
 type DraftSource = "current" | "preset" | "model";
 
 interface ModelDraft {
   modelId: string;
   name: string;
   source: DraftSource;
+  presetId?: string;
   requestSettings?: OpenRouterRequestSettings;
 }
+
+const getPresetSnapshot = (preset: SaveModelPreset): string =>
+  JSON.stringify({
+    id: preset.id,
+    name: preset.name.trim(),
+    modelId: preset.modelId,
+    requestSettings: preset.requestSettings,
+  });
 
 const useMobileViewport = (): boolean => {
   const query = "(max-width: 48em)";
@@ -213,6 +236,74 @@ const formatPrice = (price?: string): string => {
   return `$${perMillion.toFixed(2)}`;
 };
 
+const formatUptime = (uptime?: number | null): string =>
+  typeof uptime === "number" ? `${uptime.toFixed(2)}%` : "—";
+
+const parsePricePerMillion = (price?: string): number | undefined => {
+  if (!price) return undefined;
+  const value = Number(price);
+  return Number.isFinite(value) ? value * 1_000_000 : undefined;
+};
+
+const getBestValue = (
+  values: Array<number | undefined>,
+  preference: MetricPreference,
+): number | undefined => {
+  const availableValues = values.filter(
+    (value): value is number => value !== undefined,
+  );
+  if (availableValues.length === 0) return undefined;
+  return preference === "lower"
+    ? Math.min(...availableValues)
+    : Math.max(...availableValues);
+};
+
+const RelativeMetric: React.FC<{
+  label: string;
+  displayValue: string;
+  value?: number;
+  bestValue?: number;
+  preference: MetricPreference;
+}> = ({ label, displayValue, value, bestValue, preference }) => {
+  const hue = getRelativeMetricHue(value, bestValue, preference);
+  const relativeDifference = getRelativeMetricDifference(
+    value,
+    bestValue,
+    preference,
+  );
+  const comparison =
+    relativeDifference === undefined
+      ? "Comparison unavailable"
+      : relativeDifference === 0
+        ? "Best available"
+        : `${(relativeDifference * 100).toFixed(1)}% ${
+            preference === "lower" ? "above" : "below"
+          } best`;
+
+  return (
+    <Text
+      component="span"
+      size="xs"
+      c={hue === undefined ? "dimmed" : undefined}
+      aria-label={`${label} ${displayValue}`}
+      title={comparison}
+      style={
+        hue === undefined
+          ? undefined
+          : {
+              padding: "1px 5px",
+              borderRadius: 5,
+              color: `hsl(${hue}, 72%, 72%)`,
+              background: `hsla(${hue}, 70%, 45%, 0.14)`,
+              border: `1px solid hsla(${hue}, 65%, 55%, 0.3)`,
+            }
+      }
+    >
+      {displayValue}
+    </Text>
+  );
+};
+
 const matchesSearch = (model: OpenRouterModel, query: string): boolean => {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return true;
@@ -230,6 +321,35 @@ const deduplicateModels = (models: OpenRouterModel[]): OpenRouterModel[] => {
     seenIds.add(model.id);
     return true;
   });
+};
+
+const getRequestSettingsSnapshot = (
+  settings: OpenRouterRequestSettings | undefined,
+  model: OpenRouterModel,
+): string => {
+  const filteredSettings = filterSettingsForModel(settings, model);
+  if (!filteredSettings) return "";
+
+  return JSON.stringify({
+    ...filteredSettings,
+    provider: filteredSettings.provider
+      ? { only: [...filteredSettings.provider.only].sort() }
+      : undefined,
+  });
+};
+
+const findMatchingPreset = (
+  presets: ModelPreset[],
+  model: OpenRouterModel,
+  requestSettings: OpenRouterRequestSettings | undefined,
+): ModelPreset | undefined => {
+  const activeSettings = getRequestSettingsSnapshot(requestSettings, model);
+  return presets.find(
+    (preset) =>
+      preset.modelId === model.id &&
+      getRequestSettingsSnapshot(preset.requestSettings, model) ===
+        activeSettings,
+  );
 };
 
 const updateRequestSetting = (
@@ -330,183 +450,237 @@ const ModelListItem: React.FC<{
   </Paper>
 );
 
-type NavigationDestination = PickerView | "current";
-
-const NavigationItem: React.FC<{
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-  active: boolean;
-  current?: boolean;
-  disabled?: boolean;
-  badge?: string;
-  ariaLabel: string;
-  onClick: () => void;
-}> = ({
-  label,
-  description,
-  icon,
-  active,
-  current = false,
-  disabled = false,
-  badge,
-  ariaLabel,
-  onClick,
-}) => {
-  const accentColor = current ? "#35d1bc" : "#8b9eff";
-  const activeBackground = current
-    ? "rgba(53, 209, 188, 0.13)"
-    : "rgba(113, 135, 255, 0.14)";
-  const idleBackground = current
-    ? "rgba(53, 209, 188, 0.055)"
-    : "transparent";
-  const borderColor = current
-    ? "rgba(53, 209, 188, 0.48)"
-    : active
-      ? "rgba(113, 135, 255, 0.42)"
-      : "transparent";
-
-  return (
-    <Paper
-      component="button"
-      type="button"
-      aria-label={ariaLabel}
-      aria-current={active ? "page" : undefined}
-      disabled={disabled}
-      onClick={onClick}
-      p="xs"
-      radius="md"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        minWidth: 0,
-        minHeight: 54,
-        border: `1px solid ${borderColor}`,
-        background: active ? activeBackground : idleBackground,
-        color: "inherit",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-        textAlign: "left",
-      }}
-    >
-      <Box
-        style={{
-          display: "grid",
-          placeItems: "center",
-          width: 34,
-          height: 34,
-          flex: "0 0 34px",
-          borderRadius: 9,
-          background: current
-            ? "rgba(53, 209, 188, 0.12)"
-            : "rgba(139, 158, 255, 0.1)",
-          color: accentColor,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box style={{ minWidth: 0, flex: 1 }}>
-        <Group gap={6} wrap="nowrap">
-          <Text size="xs" fw={700} truncate>
-            {label}
-          </Text>
-          {badge && (
-            <Badge size="xs" color="teal" variant="light">
-              {badge}
-            </Badge>
-          )}
-        </Group>
-        <Text
-          size="xs"
-          truncate
-          mt={2}
-          style={{ color: current ? "#35d1bc" : "#777e8e" }}
-        >
-          {description}
-        </Text>
-      </Box>
-    </Paper>
+const deduplicateEndpoints = (
+  endpoints: OpenRouterModelEndpoint[],
+): OpenRouterModelEndpoint[] => {
+  const endpointsByTag = new Map<string, OpenRouterModelEndpoint>();
+  for (const endpoint of endpoints) {
+    if (endpoint.tag && !endpointsByTag.has(endpoint.tag)) {
+      endpointsByTag.set(endpoint.tag, endpoint);
+    }
+  }
+  return [...endpointsByTag.values()].sort((left, right) =>
+    left.provider_name.localeCompare(right.provider_name),
   );
 };
 
-const SetupNavigation: React.FC<{
-  activeDestination?: NavigationDestination;
-  currentModel?: OpenRouterModel;
-  presetCount: number;
-  isMobile: boolean;
-  onBrowse: () => void;
-  onSetups: () => void;
-  onCurrent: () => void;
-}> = ({
-  activeDestination,
-  currentModel,
-  presetCount,
-  isMobile,
-  onBrowse,
-  onSetups,
-  onCurrent,
-}) => (
-  <Box
-    p="sm"
-    style={{
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1.2fr",
-      gap: 6,
-      borderBottom: "1px solid rgba(255,255,255,0.1)",
-      background: "rgba(9,11,16,0.34)",
-    }}
-  >
-    <NavigationItem
-      label="Other models"
-      description="Browse and compare"
-      icon={<RiApps2Line size={18} />}
-      active={activeDestination === "browse"}
-      ariaLabel="Other models"
-      onClick={onBrowse}
-    />
-    <NavigationItem
-      label="My setups"
-      description={`${presetCount} saved ${
-        presetCount === 1 ? "preset" : "presets"
-      }`}
-      icon={<RiBookmarkLine size={18} />}
-      active={activeDestination === "setups"}
-      ariaLabel="My setups"
-      onClick={onSetups}
-    />
-    <NavigationItem
-      label="Current model"
-      description={currentModel?.name ?? "Not available"}
-      icon={<RiRobot2Line size={18} />}
-      active={activeDestination === "current"}
-      current
-      disabled={!currentModel}
-      badge={currentModel ? "Active" : undefined}
-      ariaLabel={
-        currentModel
-          ? `Current model: ${currentModel.name}`
-          : "Current model unavailable"
-      }
-      onClick={onCurrent}
-    />
-  </Box>
-);
+const ProviderRoutingSettings: React.FC<{
+  model: OpenRouterModel;
+  settings?: OpenRouterRequestSettings;
+  onChange: (settings: OpenRouterRequestSettings | undefined) => void;
+}> = ({ model, settings, onChange }) => {
+  const { endpoints, isLoading, isError } = useOpenRouterModelEndpoints(
+    model.id,
+  );
+  const uniqueEndpoints = useMemo(
+    () => deduplicateEndpoints(endpoints),
+    [endpoints],
+  );
+  const selectedTags = settings?.provider?.only;
+  const enableAllProviders = selectedTags === undefined;
+  const lastManualSelection = useRef<{
+    modelId: string;
+    tags: string[];
+  } | undefined>(undefined);
+  useEffect(() => {
+    if (selectedTags) {
+      lastManualSelection.current = {
+        modelId: model.id,
+        tags: [...selectedTags],
+      };
+    } else if (lastManualSelection.current?.modelId !== model.id) {
+      lastManualSelection.current = undefined;
+    }
+  }, [model.id, selectedTags]);
+  const availableTags = useMemo(
+    () => new Set(uniqueEndpoints.map((endpoint) => endpoint.tag)),
+    [uniqueEndpoints],
+  );
+  const unavailableSelectedTags = (selectedTags ?? []).filter(
+    (tag) => !availableTags.has(tag),
+  );
+  const bestPromptPrice = getBestValue(
+    uniqueEndpoints.map((endpoint) =>
+      parsePricePerMillion(endpoint.pricing?.prompt),
+    ),
+    "lower",
+  );
+  const bestCompletionPrice = getBestValue(
+    uniqueEndpoints.map((endpoint) =>
+      parsePricePerMillion(endpoint.pricing?.completion),
+    ),
+    "lower",
+  );
+  const bestUptime = getBestValue(
+    uniqueEndpoints.map((endpoint) => endpoint.uptime_last_1d ?? undefined),
+    "higher",
+  );
 
-const EmptySetups: React.FC<{ onBrowse: () => void }> = ({ onBrowse }) => (
-  <Paper withBorder p="xl" ta="center">
-    <Stack align="center" gap="xs">
-      <RiRobot2Line size={28} color="#90acff" />
-      <Text fw={650}>No model setups yet</Text>
-      <Text size="sm" c="dimmed">
-        Choose a model, tune it if needed, and save it for quick reuse.
-      </Text>
-      <Button variant="light" mt="xs" onClick={onBrowse}>
-        Browse models
-      </Button>
+  const changeProviders = (only: string[] | undefined) =>
+    onChange(
+      updateRequestSetting(settings, "provider", only ? { only } : undefined),
+    );
+
+  const toggleProvider = (tag: string, checked: boolean) => {
+    const currentTags =
+      selectedTags ?? uniqueEndpoints.map((endpoint) => endpoint.tag);
+    const nextTags = checked
+      ? [...new Set([...currentTags, tag])]
+      : currentTags.filter((currentTag) => currentTag !== tag);
+    changeProviders(nextTags);
+  };
+
+  const toggleAllProviders = (checked: boolean) => {
+    if (checked) {
+      changeProviders(undefined);
+      return;
+    }
+
+    const rememberedSelection =
+      lastManualSelection.current?.modelId === model.id
+        ? lastManualSelection.current.tags
+        : undefined;
+    changeProviders(
+      rememberedSelection ?? uniqueEndpoints.map((endpoint) => endpoint.tag),
+    );
+  };
+
+  return (
+    <Stack gap="sm">
+      <Box>
+        <Text size="sm" fw={650}>
+          Model providers
+        </Text>
+        <Text size="xs" c="dimmed">
+          Enable every endpoint, or restrict this setup to selected providers.
+          Turn off the toggle to choose providers manually. Prices are per
+          million tokens; uptime is measured over the last day.
+        </Text>
+      </Box>
+      <Switch
+        aria-label={`Provider routing for ${model.name}`}
+        checked={enableAllProviders}
+        onChange={(event) => toggleAllProviders(event.currentTarget.checked)}
+        label={
+          enableAllProviders
+            ? "Enable all providers"
+            : "Only selected providers"
+        }
+        disabled={
+          enableAllProviders &&
+          (isLoading || isError || uniqueEndpoints.length === 0)
+        }
+      />
+
+      {!enableAllProviders && isLoading && (
+        <Group gap="xs">
+          <Loader size="xs" />
+          <Text size="xs" c="dimmed">
+            Loading provider pricing and uptime...
+          </Text>
+        </Group>
+      )}
+      {!enableAllProviders && isError && (
+        <Text size="xs" c="red">
+          Provider details are unavailable. Any existing routing selection is
+          unchanged.
+        </Text>
+      )}
+      {!enableAllProviders && uniqueEndpoints.length > 0 && (
+        <Stack gap="xs">
+          {uniqueEndpoints.map((endpoint) => (
+            <Paper key={endpoint.tag} withBorder p="sm">
+              <Checkbox
+                aria-label={`Enable provider ${endpoint.tag}`}
+                checked={selectedTags?.includes(endpoint.tag) ?? false}
+                onChange={(event) =>
+                  toggleProvider(endpoint.tag, event.currentTarget.checked)
+                }
+                label={
+                  <Box>
+                    <Group gap="xs">
+                      <Text size="sm" fw={600}>
+                        {endpoint.provider_name}
+                      </Text>
+                      <Badge size="xs" variant="outline" color="gray">
+                        {endpoint.tag}
+                      </Badge>
+                    </Group>
+                    <Group gap={5} mt={4} wrap="wrap">
+                      <Text component="span" size="xs" c="dimmed">
+                        Input
+                      </Text>
+                      <RelativeMetric
+                        label="Input price"
+                        displayValue={formatPrice(endpoint.pricing?.prompt)}
+                        value={parsePricePerMillion(endpoint.pricing?.prompt)}
+                        bestValue={bestPromptPrice}
+                        preference="lower"
+                      />
+                      <Text component="span" size="xs" c="dimmed">
+                        Output
+                      </Text>
+                      <RelativeMetric
+                        label="Output price"
+                        displayValue={formatPrice(endpoint.pricing?.completion)}
+                        value={parsePricePerMillion(
+                          endpoint.pricing?.completion,
+                        )}
+                        bestValue={bestCompletionPrice}
+                        preference="lower"
+                      />
+                      <Text component="span" size="xs" c="dimmed">
+                        Uptime
+                      </Text>
+                      <RelativeMetric
+                        label="Uptime"
+                        displayValue={formatUptime(endpoint.uptime_last_1d)}
+                        value={endpoint.uptime_last_1d ?? undefined}
+                        bestValue={bestUptime}
+                        preference="higher"
+                      />
+                    </Group>
+                  </Box>
+                }
+              />
+            </Paper>
+          ))}
+          {unavailableSelectedTags.map((tag) => (
+            <Paper key={tag} withBorder p="sm">
+              <Checkbox
+                aria-label={`Enable provider ${tag}`}
+                checked
+                onChange={(event) =>
+                  toggleProvider(tag, event.currentTarget.checked)
+                }
+                label={
+                  <Box>
+                    <Group gap="xs">
+                      <Text size="sm" fw={600}>
+                        Unavailable provider
+                      </Text>
+                      <Badge size="xs" variant="outline" color="gray">
+                        {tag}
+                      </Badge>
+                    </Group>
+                    <Text size="xs" c="dimmed" mt={2}>
+                      OpenRouter no longer returns details for this endpoint.
+                    </Text>
+                  </Box>
+                }
+              />
+            </Paper>
+          ))}
+          {selectedTags?.length === 0 && (
+            <Text size="xs" c="red">
+              Select at least one provider before applying this setup.
+            </Text>
+          )}
+        </Stack>
+      )}
     </Stack>
-  </Paper>
-);
+  );
+};
 
 const RequestSettingsForm: React.FC<{
   model: OpenRouterModel;
@@ -530,9 +704,7 @@ const RequestSettingsForm: React.FC<{
       supportsParameter(model, parameter.key),
   );
 
-  const renderNumberInput = (
-    parameter: (typeof NUMBER_PARAMETERS)[number],
-  ) => (
+  const renderNumberInput = (parameter: (typeof NUMBER_PARAMETERS)[number]) => (
     <NumberInput
       key={parameter.key}
       label={parameter.label}
@@ -544,10 +716,7 @@ const RequestSettingsForm: React.FC<{
       step={parameter.step}
       placeholder={parameter.placeholder}
       onChange={(value) =>
-        changeSetting(
-          parameter.key,
-          value === "" ? undefined : Number(value),
-        )
+        changeSetting(parameter.key, value === "" ? undefined : Number(value))
       }
     />
   );
@@ -581,9 +750,7 @@ const RequestSettingsForm: React.FC<{
 
       <Accordion variant="separated">
         <Accordion.Item value="advanced">
-          <Accordion.Control
-            aria-label={`Advanced settings for ${model.name}`}
-          >
+          <Accordion.Control aria-label={`Advanced settings for ${model.name}`}>
             <Group gap="xs">
               <Text size="sm" fw={650}>
                 Advanced settings
@@ -610,6 +777,12 @@ const RequestSettingsForm: React.FC<{
                   Reset
                 </Button>
               </Group>
+
+              <ProviderRoutingSettings
+                model={model}
+                settings={settings}
+                onChange={onChange}
+              />
 
               <Checkbox
                 label="Retry failed requests"
@@ -682,12 +855,12 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   const isMobile = useMobileViewport();
   const recentModelsService = useRef(d.RecentModelsService()).current;
   const modelPresetsService = useRef(d.ModelPresetsService()).current;
-  const [view, setView] = useState<PickerView>("browse");
-  const [screen, setScreen] = useState<PickerScreen>("list");
+  const [screen, setScreen] = useState<PickerScreen>("home");
   const [search, setSearch] = useState("");
   const [presets, setPresets] = useState<ModelPreset[]>([]);
   const [draft, setDraft] = useState<ModelDraft>();
   const [presetName, setPresetName] = useState("");
+  const presetAutosaveSnapshot = useRef<string | undefined>(undefined);
 
   const uniqueModels = useMemo(() => deduplicateModels(models), [models]);
   const modelsById = useMemo(
@@ -697,14 +870,12 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   const selectedModel = selectedModelId
     ? modelsById.get(selectedModelId)
     : undefined;
-  const recentModels = useMemo(
+  const activePreset = useMemo(
     () =>
-      recentModelsService
-        .getRecentModels()
-        .filter((modelId) => modelId !== selectedModelId)
-        .map((modelId) => modelsById.get(modelId))
-        .filter((model): model is OpenRouterModel => model !== undefined),
-    [modelsById, recentModelsService, selectedModelId],
+      selectedModel
+        ? findMatchingPreset(presets, selectedModel, selectedRequestSettings)
+        : undefined,
+    [presets, selectedModel, selectedRequestSettings],
   );
   const recommendedModels = useMemo(
     () =>
@@ -721,13 +892,15 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
         .filter((model) => matchesSearch(model, search))
         .filter(
           (model) =>
-            search.trim().length > 0 ||
-            !RECOMMENDED_MODEL_IDS.has(model.id),
+            search.trim().length > 0 || !RECOMMENDED_MODEL_IDS.has(model.id),
         )
         .sort((left, right) => left.name.localeCompare(right.name)),
     [search, selectedModelId, uniqueModels],
   );
   const draftModel = draft ? modelsById.get(draft.modelId) : undefined;
+  const hasValidProviderSelection =
+    !draft?.requestSettings?.provider ||
+    draft.requestSettings.provider.only.length > 0;
 
   const loadPresets = useCallback(async () => {
     setPresets(await modelPresetsService.getPresets());
@@ -735,11 +908,11 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setView("browse");
     setSearch("");
     setPresetName("");
     setDraft(undefined);
-    setScreen("list");
+    presetAutosaveSnapshot.current = undefined;
+    setScreen("home");
   }, [isOpen, selectedModelId, selectedRequestSettings]);
 
   useEffect(() => {
@@ -756,19 +929,71 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
       name: string,
       source: DraftSource,
       requestSettings?: OpenRouterRequestSettings,
+      presetId?: string,
     ) => {
       const model = modelsById.get(modelId);
+      const filteredRequestSettings = filterSettingsForModel(
+        requestSettings,
+        model,
+      );
       setDraft({
         modelId,
         name,
         source,
-        requestSettings: filterSettingsForModel(requestSettings, model),
+        presetId,
+        requestSettings: filteredRequestSettings,
       });
       setPresetName(source === "current" ? "" : name);
+      presetAutosaveSnapshot.current =
+        source === "preset" && presetId
+          ? getPresetSnapshot({
+              id: presetId,
+              name,
+              modelId,
+              requestSettings: filteredRequestSettings,
+            })
+          : undefined;
       setScreen("detail");
     },
     [modelsById],
   );
+
+  useEffect(() => {
+    if (
+      draft?.source !== "preset" ||
+      !draft.presetId ||
+      !presetName.trim() ||
+      !hasValidProviderSelection
+    ) {
+      return;
+    }
+
+    const preset: SaveModelPreset = {
+      id: draft.presetId,
+      name: presetName,
+      modelId: draft.modelId,
+      requestSettings: filterSettingsForModel(
+        draft.requestSettings,
+        draftModel,
+      ),
+    };
+    const snapshot = getPresetSnapshot(preset);
+    if (snapshot === presetAutosaveSnapshot.current) return;
+
+    presetAutosaveSnapshot.current = snapshot;
+    void modelPresetsService.savePresetDebounced(preset).catch((error) => {
+      if (presetAutosaveSnapshot.current === snapshot) {
+        presetAutosaveSnapshot.current = undefined;
+      }
+      d.ErrorService().log("Failed to auto-save model preset", error);
+    });
+  }, [
+    draft,
+    draftModel,
+    hasValidProviderSelection,
+    modelPresetsService,
+    presetName,
+  ]);
 
   const applyDraft = useCallback(() => {
     if (!draft) return;
@@ -781,7 +1006,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
     onClose();
   }, [draft, draftModel, onClose, onSelect, recentModelsService]);
 
-  const saveDraft = useCallback(async () => {
+  const saveDraftAsNew = useCallback(async () => {
     if (!draft || !presetName.trim()) return;
     await modelPresetsService.savePreset({
       name: presetName,
@@ -792,13 +1017,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
       ),
     });
     await loadPresets();
-  }, [
-    draft,
-    draftModel,
-    loadPresets,
-    modelPresetsService,
-    presetName,
-  ]);
+  }, [draft, draftModel, loadPresets, modelPresetsService, presetName]);
 
   const deletePreset = useCallback(
     async (presetId: string) => {
@@ -809,15 +1028,30 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   );
 
   const showBrowse = () => {
-    setView("browse");
-    setScreen("list");
+    setSearch("");
+    setScreen("browse");
   };
-  const showSetups = () => {
-    setView("setups");
-    setScreen("list");
-  };
-  const showCurrent = () => {
+  const showHome = () => setScreen("home");
+  const showCurrent = async () => {
     if (!selectedModel) return;
+    const matchingPreset =
+      activePreset ??
+      findMatchingPreset(
+        await modelPresetsService.getPresets(),
+        selectedModel,
+        selectedRequestSettings,
+      );
+    if (matchingPreset) {
+      showDraft(
+        matchingPreset.modelId,
+        matchingPreset.name,
+        "preset",
+        matchingPreset.requestSettings,
+        matchingPreset.id,
+      );
+      return;
+    }
+
     showDraft(
       selectedModel.id,
       "Current setup",
@@ -825,15 +1059,13 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
       selectedRequestSettings,
     );
   };
-  const hasSetups = presets.length > 0 || recentModels.length > 0;
-  const activeDestination: NavigationDestination | undefined =
-    screen === "list"
-      ? view
-      : draft?.source === "current"
-        ? "current"
-        : draft?.source === "preset"
-          ? "setups"
-          : undefined;
+  const leaveDetail = () => {
+    if (draft?.source === "model") {
+      setScreen("browse");
+      return;
+    }
+    showHome();
+  };
 
   return (
     <Modal
@@ -861,158 +1093,211 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
         content: { overflow: "hidden" },
       }}
     >
-      <SetupNavigation
-        activeDestination={activeDestination}
-        currentModel={selectedModel}
-        presetCount={presets.length}
-        isMobile={isMobile}
-        onBrowse={showBrowse}
-        onSetups={showSetups}
-        onCurrent={showCurrent}
-      />
-      {screen === "list" ? (
+      {screen === "home" && (
+        <ScrollArea style={{ flex: 1 }} p="md">
+          <Stack gap="lg">
+            <Stack gap="xs">
+              <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                Current model
+              </Text>
+              {selectedModel ? (
+                <ModelListItem
+                  model={selectedModel}
+                  label={activePreset?.name}
+                  active
+                  configured={hasOpenRouterRequestSettings(
+                    selectedRequestSettings,
+                  )}
+                  onClick={() => void showCurrent()}
+                />
+              ) : (
+                <Paper withBorder p="md">
+                  <Text size="sm" fw={650}>
+                    No model selected
+                  </Text>
+                  <Text size="xs" c="dimmed" mt={2}>
+                    The application default is currently in use.
+                  </Text>
+                </Paper>
+              )}
+            </Stack>
+
+            <Stack gap="xs">
+              <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                Add new model
+              </Text>
+              <Button
+                fullWidth
+                size="md"
+                variant="light"
+                leftSection={<RiAddLine />}
+                onClick={showBrowse}
+              >
+                Search and configure a model
+              </Button>
+            </Stack>
+
+            <Stack gap="xs">
+              <Group justify="space-between">
+                <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                  Saved presets
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {presets.length} saved
+                </Text>
+              </Group>
+              {presets.map((preset) => {
+                const model = modelsById.get(preset.modelId);
+                if (!model) return null;
+                return (
+                  <ModelListItem
+                    key={preset.id}
+                    model={model}
+                    label={preset.name}
+                    configured={hasOpenRouterRequestSettings(
+                      preset.requestSettings,
+                    )}
+                    onClick={() =>
+                      showDraft(
+                        preset.modelId,
+                        preset.name,
+                        "preset",
+                        preset.requestSettings,
+                        preset.id,
+                      )
+                    }
+                    onDelete={() => void deletePreset(preset.id)}
+                  />
+                );
+              })}
+              {presets.length === 0 && (
+                <Text size="sm" c="dimmed" ta="center" py="md">
+                  No saved presets yet.
+                </Text>
+              )}
+            </Stack>
+          </Stack>
+        </ScrollArea>
+      )}
+      {screen === "browse" && (
         <>
-          {view === "browse" && (
-            <Box
-              p="sm"
-              style={{
-                borderBottom: "1px solid rgba(255,255,255,0.1)",
-              }}
-            >
+          <Box
+            p="sm"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <Stack gap="sm">
+              <Group gap="xs">
+                <Button
+                  size="compact-sm"
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<RiArrowLeftLine />}
+                  onClick={showHome}
+                >
+                  Back to model list
+                </Button>
+                <Title order={4}>Add new model</Title>
+              </Group>
               <TextInput
                 value={search}
                 onChange={(event) => setSearch(event.currentTarget.value)}
                 placeholder="Search models by name, ID, or description..."
                 aria-label="Search models"
               />
-            </Box>
-          )}
+            </Stack>
+          </Box>
           <ScrollArea style={{ flex: 1 }} p="sm">
-            {view === "setups" ? (
-              <Stack gap="sm">
-                {!hasSetups && (
-                  <EmptySetups onBrowse={showBrowse} />
-                )}
-                {presets.length > 0 && (
-                  <Stack gap="xs">
-                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
-                      Saved setups
-                    </Text>
-                    {presets.map((preset) => {
-                      const model = modelsById.get(preset.modelId);
-                      if (!model) return null;
-                      return (
-                        <ModelListItem
-                          key={preset.id}
-                          model={model}
-                          label={preset.name}
-                          configured={hasOpenRouterRequestSettings(
-                            preset.requestSettings,
-                          )}
-                          onClick={() =>
-                            showDraft(
-                              preset.modelId,
-                              preset.name,
-                              "preset",
-                              preset.requestSettings,
-                            )
-                          }
-                          onDelete={() => void deletePreset(preset.id)}
-                        />
-                      );
-                    })}
-                  </Stack>
-                )}
-                {recentModels.length > 0 && (
-                  <Stack gap="xs">
-                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
-                      Recently used
-                    </Text>
-                    {recentModels.map((model) => (
-                      <ModelListItem
-                        key={model.id}
-                        model={model}
-                        onClick={() =>
-                          showDraft(model.id, model.name, "model")
-                        }
-                      />
-                    ))}
-                  </Stack>
-                )}
-              </Stack>
-            ) : (
-              <Stack gap="md">
-                {isLoading && (
-                  <Group justify="center" p="xl">
-                    <Loader size="sm" />
-                    <Text size="sm" c="dimmed">
-                      Loading models...
-                    </Text>
-                  </Group>
-                )}
-                {!search.trim() && recommendedModels.length > 0 && (
-                  <Stack gap="xs">
-                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
-                      Recommended
-                    </Text>
-                    {recommendedModels.map((model) => (
-                      <ModelListItem
-                        key={`recommended-${model.id}`}
-                        model={model}
-                        onClick={() =>
-                          showDraft(model.id, model.name, "model")
-                        }
-                      />
-                    ))}
-                  </Stack>
-                )}
+            <Stack gap="md">
+              {isLoading && (
+                <Group justify="center" p="xl">
+                  <Loader size="sm" />
+                  <Text size="sm" c="dimmed">
+                    Loading models...
+                  </Text>
+                </Group>
+              )}
+              {!search.trim() && recommendedModels.length > 0 && (
                 <Stack gap="xs">
-                  <Group justify="space-between">
-                    <Text size="xs" fw={750} c="dimmed" tt="uppercase">
-                      {!search.trim() && recommendedModels.length > 0
-                        ? "Other models"
-                        : "All models"}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {filteredModels.length} model
-                      {filteredModels.length === 1 ? "" : "s"} available
-                    </Text>
-                  </Group>
-                  {filteredModels.map((model) => (
+                  <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                    Recommended
+                  </Text>
+                  {recommendedModels.map((model) => (
                     <ModelListItem
-                      key={model.id}
+                      key={`recommended-${model.id}`}
                       model={model}
-                      onClick={() =>
-                        showDraft(model.id, model.name, "model")
-                      }
+                      onClick={() => showDraft(model.id, model.name, "model")}
                     />
                   ))}
-                  {!isLoading && filteredModels.length === 0 && (
-                    <Text ta="center" c="dimmed" p="xl">
-                      No models found matching &quot;{search}&quot;
-                    </Text>
-                  )}
                 </Stack>
+              )}
+              <Stack gap="xs">
+                <Group justify="space-between">
+                  <Text size="xs" fw={750} c="dimmed" tt="uppercase">
+                    {!search.trim() && recommendedModels.length > 0
+                      ? "Other models"
+                      : "All models"}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {filteredModels.length} model
+                    {filteredModels.length === 1 ? "" : "s"} available
+                  </Text>
+                </Group>
+                {filteredModels.map((model) => (
+                  <ModelListItem
+                    key={model.id}
+                    model={model}
+                    onClick={() => showDraft(model.id, model.name, "model")}
+                  />
+                ))}
+                {!isLoading && filteredModels.length === 0 && (
+                  <Text ta="center" c="dimmed" p="xl">
+                    No models found matching &quot;{search}&quot;
+                  </Text>
+                )}
               </Stack>
-            )}
+            </Stack>
           </ScrollArea>
         </>
-      ) : (
+      )}
+      {screen === "detail" && (
         <>
           <ScrollArea style={{ flex: 1 }}>
             <Stack p="md" gap="lg">
+              <Button
+                style={{ alignSelf: "flex-start" }}
+                size="compact-sm"
+                variant="subtle"
+                color="gray"
+                leftSection={<RiArrowLeftLine />}
+                onClick={leaveDetail}
+              >
+                {draft?.source === "model"
+                  ? "Back to model search"
+                  : "Back to model list"}
+              </Button>
               <Paper
                 withBorder
                 p="md"
+                aria-label={
+                  draft?.source === "preset" ? "Editing saved preset" : undefined
+                }
                 style={{
                   borderColor:
                     draft?.source === "current"
                       ? "rgba(53, 209, 188, 0.55)"
-                      : "rgba(113, 135, 255, 0.42)",
+                      : draft?.source === "preset"
+                        ? "rgba(250, 176, 5, 0.72)"
+                        : "rgba(113, 135, 255, 0.42)",
                   background:
                     draft?.source === "current"
                       ? "linear-gradient(135deg, rgba(53, 209, 188, 0.15), rgba(53, 209, 188, 0.035))"
-                      : "linear-gradient(135deg, rgba(113, 135, 255, 0.13), rgba(113, 135, 255, 0.035))",
+                      : draft?.source === "preset"
+                        ? "linear-gradient(135deg, rgba(250, 176, 5, 0.16), rgba(250, 176, 5, 0.035))"
+                        : "linear-gradient(135deg, rgba(113, 135, 255, 0.13), rgba(113, 135, 255, 0.035))",
+                  boxShadow:
+                    draft?.source === "preset"
+                      ? "inset 0 0 0 1px rgba(250, 176, 5, 0.12)"
+                      : undefined,
                 }}
               >
                 <Stack gap="xs">
@@ -1030,7 +1315,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                     )}
                     {draft?.source === "preset" && (
                       <Badge color="yellow" variant="light">
-                        Saved
+                        Editing preset
                       </Badge>
                     )}
                     {draft?.source === "model" && (
@@ -1048,8 +1333,8 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                         Prompt {formatPrice(draftModel.pricing?.prompt)} / M
                       </Badge>
                       <Badge variant="outline" color="gray">
-                        Completion{" "}
-                        {formatPrice(draftModel.pricing?.completion)} / M
+                        Completion {formatPrice(draftModel.pricing?.completion)}{" "}
+                        / M
                       </Badge>
                     </Group>
                   )}
@@ -1083,9 +1368,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                   style={{ flex: 1 }}
                   label="Setup name"
                   value={presetName}
-                  onChange={(event) =>
-                    setPresetName(event.currentTarget.value)
-                  }
+                  onChange={(event) => setPresetName(event.currentTarget.value)}
                   placeholder="Name this setup"
                   aria-label={
                     draftModel
@@ -1095,8 +1378,8 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                 />
                 <Button
                   variant="default"
-                  disabled={!presetName.trim()}
-                  onClick={() => void saveDraft()}
+                  disabled={!presetName.trim() || !hasValidProviderSelection}
+                  onClick={() => void saveDraftAsNew()}
                 >
                   Save as new
                 </Button>
@@ -1104,9 +1387,16 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
               <Text size="xs" c="dimmed">
                 {draft?.source === "current"
                   ? "This is the model currently used by this chat."
-                  : "Preview only. Nothing changes until you apply."}
+                  : draft?.source === "preset"
+                    ? "Changes to this preset save automatically. Save as new creates a copy."
+                    : "Preview only. Nothing changes until you apply."}
               </Text>
-              <Button fullWidth size="md" onClick={applyDraft}>
+              <Button
+                fullWidth
+                size="md"
+                disabled={!hasValidProviderSelection}
+                onClick={applyDraft}
+              >
                 Use this setup
               </Button>
             </Stack>

@@ -29,8 +29,25 @@ export interface OpenRouterModel {
   supported_parameters?: string[];
 }
 
+export interface OpenRouterModelEndpoint {
+  name: string;
+  provider_name: string;
+  tag: string;
+  pricing?: OpenRouterModelPricing;
+  status?: number;
+  uptime_last_5m?: number | null;
+  uptime_last_30m?: number | null;
+  uptime_last_1d?: number | null;
+}
+
 interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
+}
+
+interface OpenRouterModelEndpointsResponse {
+  data: {
+    endpoints: OpenRouterModelEndpoint[];
+  };
 }
 
 export class OpenRouterModelsAPI {
@@ -46,5 +63,27 @@ export class OpenRouterModelsAPI {
     const json: OpenRouterModelsResponse = await response.json();
 
     return json.data;
+  }
+
+  async getModelEndpoints(modelId: string): Promise<OpenRouterModelEndpoint[]> {
+    const [author, ...slugParts] = modelId.split("/");
+    const slug = slugParts.join("/");
+    if (!author || !slug) {
+      throw new Error(`Invalid OpenRouter model ID: ${modelId}`);
+    }
+
+    const url = `https://openrouter.ai/api/v1/models/${encodeURIComponent(
+      author,
+    )}/${encodeURIComponent(slug)}/endpoints`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch OpenRouter model providers: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const json: OpenRouterModelEndpointsResponse = await response.json();
+    return json.data.endpoints;
   }
 }

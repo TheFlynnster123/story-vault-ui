@@ -122,6 +122,73 @@ describe("OpenRouterChatAPI", () => {
       expect(sentBody.reasoning).toEqual({ effort: "high" });
     });
 
+    it("should restrict a configured model to its selected providers", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            model: "openai/gpt-4o-mini",
+            provider: { only: ["azure", "openai"] },
+          },
+        }),
+      } as unknown as ReturnType<typeof d.SystemSettingsService>);
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ reply: "ok" }), { status: 200 }),
+      );
+
+      await api.postChat([{ role: "user", content: "Hi" }]);
+
+      const sentBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(sentBody.provider).toEqual({ only: ["azure", "openai"] });
+    });
+
+    it("should replace system providers for an explicit model override", async () => {
+      vi.mocked(d.SystemSettingsService).mockReturnValue({
+        Get: vi.fn().mockResolvedValue({
+          chatGenerationSettings: {
+            model: "openai/gpt-4o-mini",
+            provider: { only: ["openai"] },
+          },
+        }),
+      } as unknown as ReturnType<typeof d.SystemSettingsService>);
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ reply: "ok" }), { status: 200 }),
+      );
+
+      await api.postChat(
+        [{ role: "user", content: "Hi" }],
+        "anthropic/claude-sonnet-4.6",
+        "chat",
+        "LLM",
+        { provider: { only: ["anthropic"] } },
+      );
+
+      const sentBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(sentBody.provider).toEqual({ only: ["anthropic"] });
+    });
+
+    it("should keep structured parameter filtering with selected providers", async () => {
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ reply: '{"result":"ok"}' }), {
+          status: 200,
+        }),
+      );
+
+      await api.postStructuredChat(
+        [{ role: "user", content: "Hi" }],
+        { type: "json_object" },
+        "openai/gpt-4o-mini",
+        "Structured",
+        false,
+        { provider: { only: ["azure"] } },
+      );
+
+      const sentBody = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(sentBody.provider).toEqual({
+        only: ["azure"],
+        require_parameters: true,
+      });
+    });
+
     it("should replace system reasoning settings for explicit model overrides", async () => {
       vi.mocked(d.SystemSettingsService).mockReturnValue({
         Get: vi.fn().mockResolvedValue({

@@ -4,27 +4,50 @@
  *
  * Reference: https://developer.civitai.com/orchestration/recipes/sdxl
  */
-export type ImageGenEngine = "sdcpp" | "comfy";
-export type ImageGenEcosystem = "sdxl" | "sd1" | "anima";
+export type ImageGenEngine = "sdcpp" | "comfy" | "fal";
+export type ImageGenEcosystem =
+  | "sdxl"
+  | "sd1"
+  | "anima"
+  | "zImage"
+  | "krea2";
+export type ZImageModel = "turbo" | "base";
+export type KreaSize = "medium" | "large";
+export type KreaCreativity = "raw" | "low" | "medium" | "high";
+export type KreaAspectRatio =
+  | "1:1"
+  | "4:3"
+  | "3:2"
+  | "16:9"
+  | "2.35:1"
+  | "4:5"
+  | "2:3"
+  | "9:16";
 export type ImageGenOperation = "createImage" | "createVariant";
 export type WorkflowPriority = "low" | "normal" | "high";
 
 export type ImageGenInput = {
   engine: ImageGenEngine;
-  ecosystem: ImageGenEcosystem;
+  ecosystem?: ImageGenEcosystem;
   operation: ImageGenOperation;
 
-  /** AIR URN of the checkpoint model, e.g. urn:air:sdxl:checkpoint:civitai:101055@128078 */
-  model?: string;
+  /** Checkpoint AIR for SD models, or the built-in `turbo`/`base` selector for Z-Image. */
+  model?: string | ZImageModel;
 
-  /** Optional Anima/Z-Image diffuser override. Anima does not accept `model`. */
+  /** Optional Anima diffuser override. Anima does not accept `model`. */
   diffuserModel?: string;
 
   prompt: string;
   negativePrompt?: string;
 
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
+
+  /** Krea 2 FAL fields. */
+  size?: KreaSize;
+  aspectRatio?: KreaAspectRatio;
+  creativity?: KreaCreativity;
+  imageStyleReferences?: Array<{ imageUrl: string; strength?: number }>;
 
   steps?: number;
   cfgScale?: number;
